@@ -1,23 +1,8 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
-import { Syne, DM_Sans } from 'next/font/google';
 import '../styles/tailwind.css';
 import { Toaster as SonnerToaster } from 'sonner';
 import { ThemeProvider } from '@/components/ThemeProvider';
-
-const syne = Syne({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-syne',
-  display: 'swap',
-});
-
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-dm-sans',
-  display: 'swap',
-});
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -37,7 +22,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`h-full ${syne.variable} ${dmSans.variable}`} suppressHydrationWarning>
+    <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
         <link rel="stylesheet" href="/generated.css" />
         <script dangerouslySetInnerHTML={{
@@ -56,7 +41,7 @@ export default function RootLayout({
           `,
         }} />
       </head>
-      <body className={`${dmSans.className} m-0 p-0 h-full`} suppressHydrationWarning>
+      <body className="m-0 p-0 h-full" suppressHydrationWarning>
         <ThemeProvider>
           {children}
           <SonnerToaster position="bottom-right" richColors closeButton />

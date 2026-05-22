@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import AuthCard from './components/AuthCard';
 
 export default function AuthPage() {
@@ -11,7 +12,15 @@ export default function AuthPage() {
           </span>
         </a>
       </div>
-      <AuthCard />
+      <Suspense
+        fallback={
+          <div className="mt-14 w-full max-w-md rounded-2xl border border-border bg-white p-8 text-sm font-600 text-muted-foreground shadow-sm">
+            Loading sign in...
+          </div>
+        }
+      >
+        <AuthCard />
+      </Suspense>
     </div>
   );
 }
