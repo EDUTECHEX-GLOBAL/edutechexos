@@ -1,0 +1,453 @@
+{
+  "general": [
+    {
+      "id": "gen-001",
+      "sender": "Aditya Cherikuri",
+      "initials": "AC",
+      "color": "#2563eb",
+      "timestamp": "2026-05-06T03:30:00.000Z",
+      "text": "Good morning team 👋 Sprint 12 kicks off today. Make sure your tasks are updated in the AI panel before standup."
+    },
+    {
+      "id": "gen-002",
+      "sender": "Ram K Aluru",
+      "initials": "RK",
+      "color": "#7c3aed",
+      "timestamp": "2026-05-06T03:38:00.000Z",
+      "text": "Morning! FastAPI backend for the AI agent is deployed to staging. Claude 3.5 integration is live — test it in the #skillnaav channel."
+    },
+    {
+      "id": "gen-003",
+      "sender": "Ram K Aluru",
+      "initials": "RK",
+      "color": "#7c3aed",
+      "timestamp": "2026-05-06T03:39:00.000Z",
+      "text": "Socket.io is also connected — new messages should now appear without refresh. Let me know if anyone hits reconnection issues."
+    },
+    {
+      "id": "gen-004",
+      "sender": "Sneha Agarwal",
+      "initials": "SA",
+      "color": "#0891b2",
+      "timestamp": "2026-05-06T03:52:00.000Z",
+      "text": "The new UI mockups for the SkillNaav onboarding flow are in Figma. Tagged everyone for review — please leave comments by EOD."
+    },
+    {
+      "id": "gen-005",
+      "sender": "Tarun Mehta",
+      "initials": "TM",
+      "color": "#059669",
+      "timestamp": "2026-05-06T04:35:00.000Z",
+      "text": "MongoDB indexes for the message history collection are optimized. Query times dropped from ~340ms to ~28ms on the channel feed endpoint."
+    },
+    {
+      "id": "gen-007",
+      "sender": "Priya Nair",
+      "initials": "PN",
+      "color": "#dc2626",
+      "timestamp": "2026-05-06T05:30:00.000Z",
+      "text": "Reminder: School partnership call with DPS Hyderabad is at 3 PM today. Aditya, are you joining?"
+    },
+    {
+      "id": "gen-008",
+      "sender": "Aditya Cherikuri",
+      "initials": "AC",
+      "color": "#2563eb",
+      "timestamp": "2026-05-06T05:33:00.000Z",
+      "text": "Yes, confirmed. Ram — can you prep a 5-minute product demo of EduTechExAssessa for the call?"
+    },
+    {
+      "id": "gen-009",
+      "sender": "Ram K Aluru",
+      "initials": "RK",
+      "color": "#7c3aed",
+      "timestamp": "2026-05-06T05:36:00.000Z",
+      "text": "On it. Will use the staging environment — the adaptive scoring demo should be impressive."
+    },
+    {
+      "id": "msg-1779081217637",
+      "sender": "JMS Mohan",
+      "initials": "JM",
+      "color": "#10b981",
+      "timestamp": "2026-05-18T05:13:37.637Z",
+      "text": "hi team"
+    },
+    {
+      "id": "msg-1779081394873",
+      "sender": "JMS Mohan",
+      "initials": "JM",
+      "color": "#10b981",
+      "timestamp": "2026-05-18T05:16:34.873Z",
+      "text": "📅 **Meeting Scheduled: monday**\n🕒 Time: 2026-05-18 at 10:47\n🔗 Join Link: https://meet.google.com/vfn-bqt7-a0l"
+    },
+    {
+      "id": "msg-1779124015020",
+      "sender": "Mohan K.",
+      "initials": "MK",
+      "color": "#6366f1",
+      "timestamp": "2026-05-18T17:06:55.020Z",
+      "text": "📅 **Meeting Scheduled: join**\n🕒 Time: 2026-05-18 at 22:37\n👥 Invitees: jmsmohan.07@gmail.com\n🔗 Join Link: https://meet.google.com/pcc-i6rv-948"
+    },
+    {
+      "id": "msg-1779167265273",
+      "sender": "Admin",
+      "initials": "AA",
+      "color": "#0ea5e9",
+      "timestamp": "2026-05-19T05:07:45.273Z",
+      "text": "📅 **Meeting Scheduled: TALKS**\n🕒 Time: 2026-05-19 at 10:38\n👥 Invitees: ram@edutech.com, sneha@edutech.com\n🔗 Join Link: https://meet.google.com/ddw-f0cc-r8y"
+    },
+    {
+      "id": "msg-1779180834255",
+      "sender": "Mohan K.",
+      "initials": "MK",
+      "color": "#6366f1",
+      "timestamp": "2026-05-19T08:53:54.255Z",
+      "text": "@Aditya Cherikuri",
+      "audioUrl": "/uploads/1779180834235-voice-note.webm"
+    },
+    {
+      "id": "msg-1779180850118",
+      "sender": "Mohan K.",
+      "initials": "MK",
+      "color": "#6366f1",
+      "timestamp": "2026-05-19T08:54:10.118Z",
+      "text": "",
+      "videoUrl": "/uploads/1779180850035-screen-recording.webm"
+    },
+    {
+      "id": "msg-1779181200340",
+      "sender": "Admin",
+      "initials": "A",
+      "color": "#0ea5e9",
+      "timestamp": "2026-05-19T09:00:00.340Z",
+      "text": "",
+      "files": [
+        {
+          "name": "Virat Kohli wallpaper 🆒.jpg",
+          "url": "/uploads/1779181200307-Virat_Kohli_wallpaper___.jpg",
+          "type": "image/jpeg"
+        }
+      ]
+    },
+    {
+      "id": "meeting-1779339796783",
+      "sender": "Admin",
+      "initials": "A",
+      "color": "#4f46e5",
+      "timestamp": "2026-05-21T05:03:16.783Z",
+      "text": "Meeting Scheduled: general\nTime: 2026-05-21 at 10:34\nMentioned people: @Aditya Cherikuri, @Ram K Aluru, @Sneha Agarwal, @Tarun Mehta, @Mohan Kumar, @Mohan Reddy, @Mohan Sen\nJoin Link: https://meet.google.com/uie-jxkt-vkx"
+    }
+  ],
+  "skillnaav": [
+    {
+      "id": "sk-001",
+      "sender": "Sneha Agarwal",
+      "initials": "SA",
+      "color": "#0891b2",
+      "timestamp": "2026-05-05T19:30:00.000Z",
+      "text": "The skill gap analysis UI is ready for review. Main screen shows radar chart of current vs target skills, with a recommended learning path below."
+    },
+    {
+      "id": "sk-002",
+      "sender": "Tarun Mehta",
+      "initials": "TM",
+      "color": "#059669",
+      "timestamp": "2026-05-05T21:15:00.000Z",
+      "text": "I've connected the recommendation engine API to the frontend. It's pulling from the MongoDB skills taxonomy collection."
+    },
+    {
+      "id": "sk-003",
+      "sender": "Tarun Mehta",
+      "initials": "TM",
+      "color": "#059669",
+      "timestamp": "2026-05-05T21:16:00.000Z",
+      "text": "One issue: the latency on the first recommendation fetch is ~800ms because we're not caching the taxonomy. Should we add Redis here?"
+    },
+    {
+      "id": "sk-004",
+      "sender": "Ram K Aluru",
+      "initials": "RK",
+      "color": "#7c3aed",
+      "timestamp": "2026-05-05T21:22:00.000Z",
+      "text": "Yes — add a 1-hour TTL cache on the taxonomy endpoint. The data doesn't change often. I'll review the PR."
+    },
+    {
+      "id": "sk-005",
+      "sender": "Aditya Cherikuri",
+      "initials": "AC",
+      "color": "#2563eb",
+      "timestamp": "2026-05-05T21:30:00.000Z",
+      "text": "SkillNaav v0.3 milestone: recommendation engine connected, skill radar chart in UI, student profile creation working. We're on track for the May 15 beta."
+    },
+    {
+      "id": "sk-006",
+      "sender": "Sneha Agarwal",
+      "initials": "SA",
+      "color": "#0891b2",
+      "timestamp": "2026-05-05T23:00:00.000Z",
+      "text": "Updated the Figma with the career path visualization. Added branching paths for STEM vs humanities tracks. Let me know what you think."
+    },
+    {
+      "id": "sk-007",
+      "sender": "Priya Nair",
+      "initials": "PN",
+      "color": "#dc2626",
+      "timestamp": "2026-05-05T23:30:00.000Z",
+      "text": "Content team has uploaded 340 skill definitions to the knowledge base. The AI agent should now be able to explain each skill with context."
+    },
+    {
+      "id": "sk-008",
+      "sender": "Tarun Mehta",
+      "initials": "TM",
+      "color": "#059669",
+      "timestamp": "2026-05-06T00:30:00.000Z",
+      "text": "Redis cache is deployed. First-fetch latency is now ~95ms. Subsequent fetches from cache are ~8ms."
+    },
+    {
+      "id": "sk-009",
+      "sender": "Ram K Aluru",
+      "initials": "RK",
+      "color": "#7c3aed",
+      "timestamp": "2026-05-06T02:00:00.000Z",
+      "text": "Claude 3.5 is now reading from #skillnaav context when answering student queries about career paths. Test it in the AI Agent panel."
+    },
+    {
+      "id": "sk-010",
+      "sender": "Aditya Cherikuri",
+      "initials": "AC",
+      "color": "#2563eb",
+      "timestamp": "2026-05-06T02:30:00.000Z",
+      "text": "Team — please review the SkillNaav onboarding flow Sneha posted. We need sign-off before the DPS Hyderabad demo next week."
+    },
+    {
+      "id": "msg-1779084550034",
+      "sender": "JMS Mohan",
+      "initials": "JM",
+      "color": "#10b981",
+      "timestamp": "2026-05-18T06:09:10.034Z",
+      "text": "📅 **Meeting Scheduled: topic**\n🕒 Time: 2026-05-18 at 11:40\n👥 Invitees: jmsmohan.07@gmail.com\n🔗 Join Link: https://meet.google.com/6ge-u3zs-kei"
+    },
+    {
+      "id": "meeting-1779339993527",
+      "sender": "Admin",
+      "initials": "A",
+      "color": "#4f46e5",
+      "timestamp": "2026-05-21T05:06:33.527Z",
+      "text": "Meeting Scheduled: skillnaav sync\nTime: 2026-05-21 at 10:37\nMentioned people: @Sneha Agarwal\nJoin Link: https://meet.google.com/uie-jxkt-vkx"
+    }
+  ],
+  "edutechexassessa": [
+    {
+      "id": "ea-001",
+      "sender": "Ram K Aluru",
+      "initials": "RK",
+      "color": "#7c3aed",
+      "timestamp": "2026-05-05T15:30:00.000Z",
+      "text": "Adaptive question bank is live in staging. 2,400 questions across SAT, ACT, AP, and IIT-JEE Foundation. Difficulty adjusts based on last 5 responses."
+    },
+    {
+      "id": "ea-002",
+      "sender": "Tarun Mehta",
+      "initials": "TM",
+      "color": "#059669",
+      "timestamp": "2026-05-05T17:00:00.000Z",
+      "text": "The automated scoring pipeline is working for MCQ and short answer. Essay scoring is still manual — Claude 3.5 rubric scoring is on the backlog."
+    },
+    {
+      "id": "ea-003",
+      "sender": "Priya Nair",
+      "initials": "PN",
+      "color": "#dc2626",
+      "timestamp": "2026-05-05T17:30:00.000Z",
+      "text": "Psychometric test module: MBTI and Holland Code assessments are content-complete. Need frontend integration for the results visualization."
+    },
+    {
+      "id": "ea-004",
+      "sender": "Sneha Agarwal",
+      "initials": "SA",
+      "color": "#0891b2",
+      "timestamp": "2026-05-05T18:30:00.000Z",
+      "text": "Working on the results dashboard now. Plan: score summary card at top, subject breakdown bar chart, percentile rank, and recommended next steps from AI."
+    },
+    {
+      "id": "ea-005",
+      "sender": "Aditya Cherikuri",
+      "initials": "AC",
+      "color": "#2563eb",
+      "timestamp": "2026-05-05T19:30:00.000Z",
+      "text": "This is shaping up really well. Can we add a \"share results with parent\" feature? Schools have been asking for parent-facing reports."
+    },
+    {
+      "id": "ea-006",
+      "sender": "Ram K Aluru",
+      "initials": "RK",
+      "color": "#7c3aed",
+      "timestamp": "2026-05-05T20:30:00.000Z",
+      "text": "Parent reports are feasible — PDF export via a FastAPI background task. I'll add it to the Sprint 13 backlog."
+    },
+    {
+      "id": "ea-007",
+      "sender": "Tarun Mehta",
+      "initials": "TM",
+      "color": "#059669",
+      "timestamp": "2026-05-05T22:30:00.000Z",
+      "text": "CLAT module is 60% complete. The legal reasoning question bank needs 200 more questions. Priya, can the content team prioritize that?"
+    },
+    {
+      "id": "ea-008",
+      "sender": "Priya Nair",
+      "initials": "PN",
+      "color": "#dc2626",
+      "timestamp": "2026-05-06T00:00:00.000Z",
+      "text": "On it — I'll assign Kavitha to CLAT legal reasoning questions this week. Should be done by Thursday."
+    },
+    {
+      "id": "ea-009",
+      "sender": "Aditya Cherikuri",
+      "initials": "AC",
+      "color": "#2563eb",
+      "timestamp": "2026-05-06T01:30:00.000Z",
+      "text": "EduTechExAssessa is the centerpiece of the DPS demo on Friday. Make sure the adaptive scoring and the results dashboard are polished."
+    },
+    {
+      "id": "meeting-1779340058310",
+      "sender": "Admin",
+      "initials": "A",
+      "color": "#4f46e5",
+      "timestamp": "2026-05-21T05:07:38.310Z",
+      "text": "Meeting Scheduled: edutechexassessa sync\nTime: 2026-05-21 at 10:45\nMentioned people: @Mohan Reddy\nJoin Link: https://meet.google.com/uie-jxkt-vkx"
+    }
+  ],
+  "edutechex": [
+    {
+      "id": "etx-001",
+      "sender": "Aditya Cherikuri",
+      "initials": "AC",
+      "color": "#2563eb",
+      "timestamp": "2026-05-05T11:30:00.000Z",
+      "text": "Cambridge IGCSE Foundation Course update: all 8 subject modules are content-complete. Teacher Training module for Cambridge methodology is in review."
+    },
+    {
+      "id": "etx-002",
+      "sender": "Priya Nair",
+      "initials": "PN",
+      "color": "#dc2626",
+      "timestamp": "2026-05-05T12:30:00.000Z",
+      "text": "IB curriculum alignment is done for Math AA and Math AI. Physics and Chemistry are 80% complete — targeting end of this week."
+    },
+    {
+      "id": "etx-003",
+      "sender": "Sneha Agarwal",
+      "initials": "SA",
+      "color": "#0891b2",
+      "timestamp": "2026-05-05T13:30:00.000Z",
+      "text": "The live online class interface redesign is in Figma. Key changes: larger video grid, inline whiteboard, and a student question queue visible to the teacher."
+    },
+    {
+      "id": "etx-004",
+      "sender": "Ram K Aluru",
+      "initials": "RK",
+      "color": "#7c3aed",
+      "timestamp": "2026-05-05T14:30:00.000Z",
+      "text": "WebRTC integration for live classes is stable on Chrome and Safari. Firefox has an audio latency issue — investigating."
+    },
+    {
+      "id": "etx-005",
+      "sender": "Tarun Mehta",
+      "initials": "TM",
+      "color": "#059669",
+      "timestamp": "2026-05-05T17:30:00.000Z",
+      "text": "Teacher Training Program LMS: 12 modules uploaded, quiz engine connected, certificate generation on completion is working."
+    },
+    {
+      "id": "etx-006",
+      "sender": "Aditya Cherikuri",
+      "initials": "AC",
+      "color": "#2563eb",
+      "timestamp": "2026-05-05T19:30:00.000Z",
+      "text": "School collaboration portal: DPS Hyderabad, Oakridge International, and Chirec Public School are in the pilot cohort. Onboarding scheduled for May 12."
+    },
+    {
+      "id": "etx-007",
+      "sender": "Priya Nair",
+      "initials": "PN",
+      "color": "#dc2626",
+      "timestamp": "2026-05-05T21:30:00.000Z",
+      "text": "Foundation Course for Cambridge — parent orientation deck is ready. Covers: curriculum overview, teacher credentials, assessment schedule, and fee structure."
+    },
+    {
+      "id": "etx-008",
+      "sender": "Ram K Aluru",
+      "initials": "RK",
+      "color": "#7c3aed",
+      "timestamp": "2026-05-05T23:30:00.000Z",
+      "text": "Firefox audio latency fixed — was a codec negotiation issue in the SDP offer. All major browsers are now stable."
+    },
+    {
+      "id": "msg-1779340164338",
+      "sender": "Admin",
+      "initials": "A",
+      "color": "#4f46e5",
+      "timestamp": "2026-05-21T05:09:24.338Z",
+      "text": "hi guys"
+    }
+  ],
+  "member-ac": [
+    {
+      "id": "dm-ac-001",
+      "sender": "Aditya Cherikuri",
+      "initials": "AC",
+      "color": "#2563eb",
+      "timestamp": "2026-05-06T01:30:00.000Z",
+      "text": "Hi there! Just following up on the latest sprint tasks. Let me know if you need any assistance on the Admin Guard or IP restrictions."
+    },
+    {
+      "id": "dm-ac-002",
+      "sender": "Aditya Cherikuri",
+      "initials": "AC",
+      "color": "#2563eb",
+      "timestamp": "2026-05-06T02:30:00.000Z",
+      "text": "Also, remember to use our 2.5-flash model in your copilot queries! Let me know if it responds properly."
+    }
+  ],
+  "member-rk": [
+    {
+      "id": "dm-rk-001",
+      "sender": "Ram K Aluru",
+      "initials": "RK",
+      "color": "#7c3aed",
+      "timestamp": "2026-05-06T00:30:00.000Z",
+      "text": "Hey! The FastAPI socket connections are fully optimized. We are good to run our local environment tests whenever you are ready."
+    }
+  ],
+  "member-sa": [
+    {
+      "id": "dm-sa-001",
+      "sender": "Sneha Agarwal",
+      "initials": "SA",
+      "color": "#0891b2",
+      "timestamp": "2026-05-05T23:30:00.000Z",
+      "text": "Good morning! The new Figma design mockups for EduTechEx have been finalized. I split the layout elements as requested."
+    }
+  ],
+  "member-tm": [
+    {
+      "id": "dm-tm-001",
+      "sender": "Tarun Mehta",
+      "initials": "TM",
+      "color": "#059669",
+      "timestamp": "2026-05-05T22:30:00.000Z",
+      "text": "Hey, I checked the MongoDB indexing for direct messaging history and it is extremely fast now. Ready to push to production."
+    }
+  ],
+  "office": [
+    {
+      "id": "msg-1779345559924",
+      "sender": "Admin",
+      "initials": "A",
+      "color": "#4f46e5",
+      "timestamp": "2026-05-21T06:39:19.924Z",
+      "text": "hi"
+    }
+  ]
+}
