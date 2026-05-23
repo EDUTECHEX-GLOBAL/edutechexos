@@ -12,10 +12,34 @@ import { NextRequest, NextResponse } from 'next/server';
 function getAllowedIPs(): string[] {
   const fromEnv = process.env.ADMIN_ALLOWED_IPS;
   if (fromEnv) {
-    return fromEnv.split(',').map((ip) => ip.trim()).filter(Boolean);
+    return fromEnv.split(',').map((ip) => normalizeIP(ip)).filter(Boolean);
   }
   // Fallback hardcoded list – update this if you don't use the env var
   return ['49.205.100.5'];
+}
+
+function isAdminGuardDisabled(): boolean {
+  return process.env.ADMIN_IP_RESTRICTION_ENABLED === 'false' || process.env.NODE_ENV === 'development';
+}
+
+function normalizeIP(ip: string): string {
+  const trimmed = ip.trim();
+
+  if (trimmed.startsWith('[')) {
+    const bracketEnd = trimmed.indexOf(']');
+    return bracketEnd === -1 ? trimmed : trimmed.slice(1, bracketEnd);
+  }
+
+  if (trimmed.startsWith('::ffff:')) {
+    return trimmed.slice('::ffff:'.length);
+  }
+
+  const ipv4WithPort = trimmed.match(/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/);
+  if (ipv4WithPort) {
+    return ipv4WithPort[1];
+  }
+
+  return trimmed;
 }
 
 /** Extract the real client IP from the request, honoring common proxy headers. */
@@ -23,19 +47,23 @@ function getClientIP(req: NextRequest): string {
   const forwarded = req.headers.get('x-forwarded-for');
   if (forwarded) {
     // x-forwarded-for can be a comma-separated list; first entry is the client
-    return forwarded.split(',')[0].trim();
+    return normalizeIP(forwarded.split(',')[0]);
   }
-  return req.headers.get('x-real-ip') ?? '127.0.0.1';
+  return normalizeIP(req.headers.get('x-real-ip') ?? '127.0.0.1');
 }
 
 /** IPs that are always allowed (local development). */
-const LOCALHOST_IPS = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1', 'localhost']);
+const LOCALHOST_IPS = new Set(['127.0.0.1', '::1', '0:0:0:0:0:0:0:1', 'localhost']);
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Only enforce IP restriction on /admin and its sub-routes
   if (!pathname.startsWith('/admin')) {
+    return NextResponse.next();
+  }
+
+  if (isAdminGuardDisabled()) {
     return NextResponse.next();
   }
 
