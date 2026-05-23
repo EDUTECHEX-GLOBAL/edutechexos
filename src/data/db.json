@@ -136,6 +136,46 @@
       "color": "#4f46e5",
       "timestamp": "2026-05-21T05:03:16.783Z",
       "text": "Meeting Scheduled: general\nTime: 2026-05-21 at 10:34\nMentioned people: @Aditya Cherikuri, @Ram K Aluru, @Sneha Agarwal, @Tarun Mehta, @Mohan Kumar, @Mohan Reddy, @Mohan Sen\nJoin Link: https://meet.google.com/uie-jxkt-vkx"
+    },
+    {
+      "id": "msg-note-1779547714638",
+      "sender": "Mohan K.",
+      "initials": "MK",
+      "color": "#2563eb",
+      "timestamp": "2026-05-23T14:48:34.638Z",
+      "text": "📝 **Shared Note:**\n\n- - -"
+    },
+    {
+      "id": "msg-note-1779547731918",
+      "sender": "Mohan K.",
+      "initials": "MK",
+      "color": "#2563eb",
+      "timestamp": "2026-05-23T14:48:51.918Z",
+      "text": "📝 **Shared Note:**\n\n- - - hi channel"
+    },
+    {
+      "id": "msg-1779548419572",
+      "sender": "Admin",
+      "initials": "A",
+      "color": "#4f46e5",
+      "timestamp": "2026-05-23T15:00:19.572Z",
+      "text": "hi"
+    },
+    {
+      "id": "meeting-1779549221640",
+      "sender": "Admin",
+      "initials": "A",
+      "color": "#4f46e5",
+      "timestamp": "2026-05-23T15:13:41.640Z",
+      "text": "Meeting Scheduled: general sync\nTime: 2026-05-23 at 20:45\nMentioned people: @Aditya Cherikuri, @Ram K Aluru, @Sneha Agarwal, @Tarun Mehta, @Mohan Kumar, @Mohan Reddy, @Mohan Sen\nJoin Link: https://meet.google.com/uie-jxkt-vkx"
+    },
+    {
+      "id": "msg-1779551826901",
+      "sender": "Mohan K.",
+      "initials": "MK",
+      "color": "#dc2626",
+      "timestamp": "2026-05-23T15:57:06.901Z",
+      "text": "hi"
     }
   ],
   "skillnaav": [

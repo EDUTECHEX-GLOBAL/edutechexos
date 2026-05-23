@@ -69,21 +69,150 @@ const THURSDAY_AFTERNOON_MEET_LINK = 'https://meet.google.com/dss-wmvy-cuq';
 const FRIDAY_MEET_LINK = 'https://meet.google.com/eeq-maem-ztc';
 const SETTINGS_KEY = 'edutechex_dashboard_settings';
 const EMOJI_OPTIONS = [
-  '😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆', '😉', '😊',
-  '😋', '😎', '😍', '🥰', '😘', '😗', '😙', '😚', '🙂', '🤗',
-  '🤩', '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣', '😥',
-  '😮', '🤐', '😯', '😪', '😫', '😴', '😌', '😛', '😜', '😝',
-  '🤤', '😒', '😓', '😔', '😕', '🙃', '🤑', '😲', '☹️', '🙁',
-  '😖', '😞', '😟', '😤', '😢', '😭', '😦', '😧', '😨', '😩',
-  '🤯', '😬', '😰', '😱', '🥵', '🥶', '😳', '🤪', '😵', '😡',
-  '😠', '🤬', '👍', '👎', '👊', '✊', '🤛', '🤜', '👏', '🙌',
-  '👐', '🤲', '🤝', '🙏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈',
-  '👉', '👆', '👇', '☝️', '❤️', '🧡', '💛', '💚', '💙', '💜',
-  '🖤', '🤍', '🤎', '💕', '💞', '💓', '💗', '💖', '💘', '💝',
-  '💟', '❣️', '💌', '💔', '🔥', '⭐', '🌟', '✨', '💫', '🎉',
-  '🎊', '🎈', '🎁', '🏆', '✅', '❌', '❓', '❗', '‼️', '⁉️',
-  '💯', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪',
-  '🚀', '👀', '🎯', '💡',
+  '😀',
+  '😁',
+  '😂',
+  '🤣',
+  '😃',
+  '😄',
+  '😅',
+  '😆',
+  '😉',
+  '😊',
+  '😋',
+  '😎',
+  '😍',
+  '🥰',
+  '😘',
+  '😗',
+  '😙',
+  '😚',
+  '🙂',
+  '🤗',
+  '🤩',
+  '🤔',
+  '🤨',
+  '😐',
+  '😑',
+  '😶',
+  '🙄',
+  '😏',
+  '😣',
+  '😥',
+  '😮',
+  '🤐',
+  '😯',
+  '😪',
+  '😫',
+  '😴',
+  '😌',
+  '😛',
+  '😜',
+  '😝',
+  '🤤',
+  '😒',
+  '😓',
+  '😔',
+  '😕',
+  '🙃',
+  '🤑',
+  '😲',
+  '☹️',
+  '🙁',
+  '😖',
+  '😞',
+  '😟',
+  '😤',
+  '😢',
+  '😭',
+  '😦',
+  '😧',
+  '😨',
+  '😩',
+  '🤯',
+  '😬',
+  '😰',
+  '😱',
+  '🥵',
+  '🥶',
+  '😳',
+  '🤪',
+  '😵',
+  '😡',
+  '😠',
+  '🤬',
+  '👍',
+  '👎',
+  '👊',
+  '✊',
+  '🤛',
+  '🤜',
+  '👏',
+  '🙌',
+  '👐',
+  '🤲',
+  '🤝',
+  '🙏',
+  '✌️',
+  '🤞',
+  '🤟',
+  '🤘',
+  '🤙',
+  '👈',
+  '👉',
+  '👆',
+  '👇',
+  '☝️',
+  '❤️',
+  '🧡',
+  '💛',
+  '💚',
+  '💙',
+  '💜',
+  '🖤',
+  '🤍',
+  '🤎',
+  '💕',
+  '💞',
+  '💓',
+  '💗',
+  '💖',
+  '💘',
+  '💝',
+  '💟',
+  '❣️',
+  '💌',
+  '💔',
+  '🔥',
+  '⭐',
+  '🌟',
+  '✨',
+  '💫',
+  '🎉',
+  '🎊',
+  '🎈',
+  '🎁',
+  '🏆',
+  '✅',
+  '❌',
+  '❓',
+  '❗',
+  '‼️',
+  '⁉️',
+  '💯',
+  '🔴',
+  '🟠',
+  '🟡',
+  '🟢',
+  '🔵',
+  '🟣',
+  '🟤',
+  '⚫',
+  '⚪',
+  '🚀',
+  '👀',
+  '🎯',
+  '💡',
 ];
 
 type DashboardSettings = {
@@ -671,9 +800,7 @@ export default function EduTechExOSDashboard() {
         text:
           composerMessage.trim() ||
           `${recordedPreview.kind === 'video' ? 'Screen recording' : 'Voice note'}`,
-        ...(recordedPreview.kind === 'video'
-          ? { videoUrl: result.url }
-          : { audioUrl: result.url }),
+        ...(recordedPreview.kind === 'video' ? { videoUrl: result.url } : { audioUrl: result.url }),
       });
       setComposerMessage('');
       discardRecordedPreview();
@@ -768,7 +895,6 @@ export default function EduTechExOSDashboard() {
     (member) => member.email.toLowerCase() !== currentUserEmail
   );
   const selectedInvitees = members.filter((member) => meetInviteeIds.includes(member.id));
-
   function toggleInvitee(memberId: string) {
     setMeetInviteeIds((selected) =>
       selected.includes(memberId)
@@ -1342,7 +1468,15 @@ export default function EduTechExOSDashboard() {
               <button onClick={() => insertComposerText('`', '`')} title="Inline code">
                 `
               </button>
-              <span />              <button onClick={() => { insertComposerText('@'); setMentionMenuOpen(true); setEmojiMenuOpen(false); }} title="Mention">
+              <span />{' '}
+              <button
+                onClick={() => {
+                  insertComposerText('@');
+                  setMentionMenuOpen(true);
+                  setEmojiMenuOpen(false);
+                }}
+                title="Mention"
+              >
                 <AtSign size={17} />
               </button>
               <button onClick={() => fileInputRef.current?.click()} title="Attach file">
@@ -1359,31 +1493,32 @@ export default function EduTechExOSDashboard() {
               >
                 <Smile size={17} />
               </button>
-          <span />
-          {recordingType ? (
-            <span className="flex items-center gap-1.5 text-xs font-black text-red-500 px-1">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
-              </span>
-              {String(Math.floor(recordingDuration / 60)).padStart(2, '0')}:{String(recordingDuration % 60).padStart(2, '0')}
-            </span>
-          ) : null}
-          <button
-            onClick={() => startRecording('audio')}
-            disabled={recordingBusy || !!recordingType}
-            title="Record voice note"
-            className={recordingType === 'audio' ? 'text-red-500' : ''}
-          >
-            <Mic size={17} />
-          </button>
-          <button
-            onClick={() => startRecording('video')}
-            disabled={recordingBusy || !!recordingType}
-            title="Record screen"
-          >
-            <Video size={17} />
-          </button>
+              <span />
+              {recordingType ? (
+                <span className="flex items-center gap-1.5 text-xs font-black text-red-500 px-1">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+                  </span>
+                  {String(Math.floor(recordingDuration / 60)).padStart(2, '0')}:
+                  {String(recordingDuration % 60).padStart(2, '0')}
+                </span>
+              ) : null}
+              <button
+                onClick={() => startRecording('audio')}
+                disabled={recordingBusy || !!recordingType}
+                title="Record voice note"
+                className={recordingType === 'audio' ? 'text-red-500' : ''}
+              >
+                <Mic size={17} />
+              </button>
+              <button
+                onClick={() => startRecording('video')}
+                disabled={recordingBusy || !!recordingType}
+                title="Record screen"
+              >
+                <Video size={17} />
+              </button>
             </div>
             {(mentionMenuOpen || emojiMenuOpen) && (
               <div className="relative">
@@ -1454,7 +1589,8 @@ export default function EduTechExOSDashboard() {
                   setMentionMenuOpen(/@[\w\s.-]*$/.test(next));
                 }}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
                     sendMessage();
                   }
                 }}
@@ -1481,7 +1617,7 @@ export default function EduTechExOSDashboard() {
               <div className="flex items-center gap-4">
                 <span className="hidden items-center gap-1 text-[11px] font-black uppercase tracking-[0.08em] text-slate-300 sm:flex">
                   <Zap size={13} className="text-amber-400" />
-                  Ctrl + Enter to send
+                  Press Enter to send
                 </span>
                 <button
                   onClick={sendMessage}
@@ -1737,7 +1873,9 @@ export default function EduTechExOSDashboard() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
                   <span>
-                    <span className="block text-sm font-black text-slate-800 dark:text-slate-200">Email mentions</span>
+                    <span className="block text-sm font-black text-slate-800 dark:text-slate-200">
+                      Email mentions
+                    </span>
                     <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400">
                       Send email when people are mentioned.
                     </span>
@@ -1757,7 +1895,9 @@ export default function EduTechExOSDashboard() {
 
                 <label className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
                   <span>
-                    <span className="block text-sm font-black text-slate-800 dark:text-slate-200">Compact chat</span>
+                    <span className="block text-sm font-black text-slate-800 dark:text-slate-200">
+                      Compact chat
+                    </span>
                     <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400">
                       Use tighter message spacing.
                     </span>
