@@ -108,8 +108,6 @@ useEffect(() => {
     setSaveStatus('idle');
     localStorage.removeItem(getNoteKey(selectedPadId));
     localStorage.removeItem(getTimestampKey(selectedPadId));
-
-    // Delete note in DB (set empty content)
     void saveNoteAction(selectedPadId, '');
     return;
   }
@@ -118,23 +116,12 @@ useEffect(() => {
   const timer = setTimeout(async () => {
     localStorage.setItem(getNoteKey(selectedPadId), note);
     localStorage.setItem(getTimestampKey(selectedPadId), String(Date.now()));
-    // Persist to DB
     await saveNoteAction(selectedPadId, note);
     setIsSaving(false);
     setSaveStatus('saved');
-    // Notify channel members about the note update
-    addMessage(selectedPadId, {
-      id: `msg-note-${Date.now()}`,
-      sender: 'System',
-      initials: '🛈',
-      color: '#6b7280',
-      timestamp: new Date().toISOString(),
-      text: `📝 Note updated in #${selectedName}`,
-    });
-
   }, 500);
   return () => clearTimeout(timer);
-}, [note, selectedPadId, addMessage, selectedName]);
+}, [note, selectedPadId]);
 
   const wordCount = note.trim() ? note.trim().split(/\s+/).length : 0;
   const charCount = note.length;
@@ -197,6 +184,7 @@ useEffect(() => {
         text: `📝 Shared note from ${selectedName}\n\n${note.trim()}`,
       });
       toast.success(`Note shared to #${selectedName}`);
+      onClose();
     } catch {
       toast.error('Failed to share note.');
     }

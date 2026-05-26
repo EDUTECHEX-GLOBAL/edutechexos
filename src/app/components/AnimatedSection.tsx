@@ -10,6 +10,7 @@ interface AnimatedSectionProps {
   duration?: number;
   parallax?: number;
   threshold?: number;
+  distance?: number;
 }
 
 export default function AnimatedSection({
@@ -18,14 +19,13 @@ export default function AnimatedSection({
   id,
   delay = 0,
   direction = 'up',
-  duration = 0.9,
+  duration = 0.8,
   parallax = 0,
-  threshold = 0.08,
+  threshold = 0.05,
+  distance = 50,
 }: AnimatedSectionProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
-  const [offsetTop, setOffsetTop] = useState(0);
 
   useEffect(() => {
     const el = ref.current;
@@ -35,34 +35,30 @@ export default function AnimatedSection({
       ([entry]) => {
         if (entry.isIntersecting) {
           setTimeout(() => setIsVisible(true), delay * 1000);
+          observer.disconnect();
         }
       },
-      { threshold, rootMargin: '0px 0px -30px 0px' }
+      { threshold, rootMargin: '0px 0px -20px 0px' }
     );
 
     observer.observe(el);
-    setOffsetTop(el.offsetTop);
     return () => observer.disconnect();
   }, [delay, threshold]);
 
+  const [scrollY, setScrollY] = useState(0);
   useEffect(() => {
     if (parallax === 0) return;
     const handler = () => setScrollY(window.scrollY);
     window.addEventListener('scroll', handler, { passive: true });
-    handler();
     return () => window.removeEventListener('scroll', handler);
   }, [parallax]);
 
-  const dist = 40;
-  const hiddenTransform = direction === 'up' ? `translateY(${dist}px)`
-    : direction === 'down' ? `translateY(${-dist}px)`
-    : direction === 'left' ? `translateX(${dist}px)`
-    : direction === 'right' ? `translateX(${-dist}px)`
+  const hiddenTransform =
+    direction === 'up' ? `translateY(${distance}px)`
+    : direction === 'down' ? `translateY(${-distance}px)`
+    : direction === 'left' ? `translateX(${distance}px)`
+    : direction === 'right' ? `translateX(${-distance}px)`
     : 'none';
-
-  const parallaxOffset = parallax !== 0 && offsetTop
-    ? (scrollY - offsetTop + window.innerHeight * 0.5) * parallax * 0.05
-    : 0;
 
   return (
     <div
@@ -72,10 +68,10 @@ export default function AnimatedSection({
       style={{
         opacity: isVisible ? 1 : 0,
         transform: isVisible
-          ? `translateY(${parallaxOffset}px)`
+          ? parallax !== 0 ? `translateY(${(scrollY * parallax * 0.05)}px)` : 'none'
           : hiddenTransform,
         transition: `opacity ${duration}s cubic-bezier(0.22, 1, 0.36, 1), transform ${duration}s cubic-bezier(0.22, 1, 0.36, 1)`,
-        transitionDelay: isVisible ? '0s' : `${delay}s`,
+        transitionDelay: `${isVisible ? 0 : delay}s`,
         willChange: 'opacity, transform',
       }}
     >

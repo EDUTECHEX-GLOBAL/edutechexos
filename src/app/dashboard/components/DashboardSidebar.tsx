@@ -40,7 +40,8 @@ export default function DashboardSidebar({
     addMemberToChannel,
     removeMemberFromChannel,
   } = useDashboardStore();
-  const { theme, toggleTheme } = useTheme();
+  const { toggleTheme } = useTheme();
+  const darkMode = useDashboardStore((s) => s.darkMode);
   const [channelsExpanded, setChannelsExpanded] = useState(true);
   const [currentUser, setCurrentUser] = useState({
     name: 'Guest',
@@ -449,9 +450,9 @@ export default function DashboardSidebar({
               type="button"
               onClick={toggleTheme}
               className="flex-1 flex justify-center items-center py-1.5 rounded-lg text-slate-400 hover:bg-white hover:text-amber-500 hover:shadow-sm transition-all"
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >
-              {theme === 'dark' ? (
+              {darkMode ? (
                 <Sun size={14} strokeWidth={2} />
               ) : (
                 <Moon size={14} strokeWidth={2} />

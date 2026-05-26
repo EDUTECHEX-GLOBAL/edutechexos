@@ -17,8 +17,6 @@ export default function LandingNav() {
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
-  const isDark = ['trusted', 'how-it-works', 'cta'].includes(activeSection);
-
   const navLinks = [
     { label: 'Features', href: '#features', id: 'features' },
     { label: 'How it works', href: '#how-it-works', id: 'how-it-works' },
@@ -27,13 +25,13 @@ export default function LandingNav() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 ${
-        scrolled
-          ? isDark
-            ? 'bg-dark/70 backdrop-blur-2xl'
-            : 'bg-background/70 backdrop-blur-2xl'
-          : 'bg-transparent'
-      }`}
+      className="fixed top-0 left-0 right-0 z-50 transition-all duration-700"
+      style={{
+        backgroundColor: scrolled ? 'rgba(240,245,240,0.75)' : 'transparent',
+        backdropFilter: scrolled ? 'blur(24px)' : 'none',
+        WebkitBackdropFilter: scrolled ? 'blur(24px)' : 'none',
+        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
+      }}
     >
       <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 h-[72px] flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 no-underline group">
@@ -74,16 +72,20 @@ export default function LandingNav() {
           </Link>
           <Link
             href="/sign-up-login-screen?mode=user"
-            className="px-5 py-2 text-sm font-bold rounded-full transition-all duration-300 border"
+            className="px-5 py-2 text-sm font-bold rounded-full transition-all duration-300"
             style={{
               color: colors.body,
-              borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+              border: '1px solid rgba(0,0,0,0.1)',
             }}
           >
             Sign in
           </Link>
-          <Link href="/sign-up-login-screen?mode=user" className="btn-primary text-sm px-5 py-2">
-            Get access
+          <Link
+            href="/sign-up-login-screen?mode=user"
+            className="relative inline-flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-green-light text-white font-bold px-5 py-2 text-sm rounded-full overflow-hidden transition-all duration-500 hover:shadow-lg hover:shadow-primary/25 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full hover:translate-x-full transition-transform duration-700" />
+            <span className="relative z-10">Get access</span>
           </Link>
         </div>
 
@@ -101,19 +103,26 @@ export default function LandingNav() {
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden bg-background/95 backdrop-blur-2xl border-b border-border/40 px-6 pb-8 pt-4 flex flex-col gap-2 animate-fade-down">
+        <div
+          className="md:hidden px-6 pb-8 pt-4 flex flex-col gap-2 animate-fade-down"
+          style={{
+            backgroundColor: 'rgba(240,245,240,0.95)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+          }}
+        >
           {navLinks.map((item) => (
-            <a key={item.label} href={item.href} className="px-4 py-3 text-sm font-bold text-ink-light rounded-xl hover:bg-primary/10 transition-all" onClick={() => setMobileOpen(false)}>
+            <a key={item.label} href={item.href} className="px-4 py-3 text-sm font-bold rounded-xl hover:bg-primary/10 transition-all" style={{ color: colors.body }} onClick={() => setMobileOpen(false)}>
               {item.label}
             </a>
           ))}
-          <div className="my-2 border-t border-border/40" />
-          <Link href="/sign-up-login-screen?mode=admin&redirect=/admin" className="px-4 py-3 text-sm font-bold text-ink-light rounded-xl hover:bg-primary/10" onClick={() => setMobileOpen(false)}>
+          <div style={{ height: '1px', backgroundColor: 'rgba(0,0,0,0.06)' }} />
+          <Link href="/sign-up-login-screen?mode=admin&redirect=/admin" className="px-4 py-3 text-sm font-bold rounded-xl hover:bg-primary/10 transition-all" style={{ color: colors.body }} onClick={() => setMobileOpen(false)}>
             Admin
           </Link>
           <div className="flex flex-col gap-2 mt-1">
-            <Link href="/sign-up-login-screen?mode=user" className="btn-secondary w-full justify-center text-sm py-3" onClick={() => setMobileOpen(false)}>Sign in</Link>
-            <Link href="/sign-up-login-screen?mode=user" className="btn-primary w-full justify-center text-sm py-3" onClick={() => setMobileOpen(false)}>Get access</Link>
+            <Link href="/sign-up-login-screen?mode=user" className="block text-center px-4 py-3 text-sm font-bold rounded-xl transition-all" style={{ color: colors.body, backgroundColor: 'rgba(45,106,79,0.08)' }} onClick={() => setMobileOpen(false)}>Sign in</Link>
+            <Link href="/sign-up-login-screen?mode=user" className="block text-center px-4 py-3 text-sm font-bold rounded-xl bg-gradient-to-r from-primary to-green-light text-white" onClick={() => setMobileOpen(false)}>Get access</Link>
           </div>
         </div>
       )}

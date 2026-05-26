@@ -1,15 +1,23 @@
 /* src/app/actions/noteActions.ts */
 'use server';
 
+import connectToDatabase from '@/lib/mongoose';
 import Note from '@/models/Note';
+
+async function ensureDb() {
+  try {
+    await connectToDatabase();
+  } catch (err) {
+    console.error('Note action DB connection error:', err);
+  }
+}
 
 /**
  * Fetch a single note for a given channel.
  */
 export async function getNoteAction(channelId: string) {
   try {
-    // Ensure DB and uploads dir exist (no‑op if already initialized)
-    await import('./dbActions').then(({ ensureDbExists }) => ensureDbExists());
+    await ensureDb();
     const note = await Note.findOne({ channelId }).lean();
     if (!note) return null;
     const { _id, __v, ...rest } = note as any;
@@ -25,7 +33,7 @@ export async function getNoteAction(channelId: string) {
  */
 export async function getAllNotesAction() {
   try {
-    await import('./dbActions').then(({ ensureDbExists }) => ensureDbExists());
+    await ensureDb();
     const notes = await Note.find({}).lean();
     return notes.map((n: any) => {
       const { _id, __v, ...rest } = n;
@@ -42,7 +50,7 @@ export async function getAllNotesAction() {
  */
 export async function saveNoteAction(channelId: string, content: string) {
   try {
-    await import('./dbActions').then(({ ensureDbExists }) => ensureDbExists());
+    await ensureDb();
     const updated = await Note.findOneAndUpdate(
       { channelId },
       { content, updatedAt: new Date() },

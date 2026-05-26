@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IMessage extends Document {
-  _id: string;
+  // _id is ObjectId in Mongoose; let the base Document type handle it
   clientId?: string;
   channelId: string;
   sender: string;

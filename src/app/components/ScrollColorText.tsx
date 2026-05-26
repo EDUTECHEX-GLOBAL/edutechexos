@@ -8,11 +8,11 @@ interface ColorPalette {
 
 const palettes: ColorPalette[] = [
   { h1: '#1a2e1a', h2: '#2d6a4f', body: '#3d523d', accent: '#2d6a4f', muted: '#6b806b' },
-  { h1: '#f0f5f0', h2: '#c4b5fd', body: '#9498b0', accent: '#a78bfa', muted: '#9498b0' },
+  { h1: '#1a2e1a', h2: '#7c3aed', body: '#3d523d', accent: '#7c3aed', muted: '#6b806b' },
   { h1: '#1a2e1a', h2: '#52b788', body: '#3d523d', accent: '#2d6a4f', muted: '#6b806b' },
-  { h1: '#f0f5f0', h2: '#a78bfa', body: '#9498b0', accent: '#7c3aed', muted: '#9498b0' },
+  { h1: '#2d2d44', h2: '#7c3aed', body: '#3d523d', accent: '#7c3aed', muted: '#6b806b' },
   { h1: '#1a2e1a', h2: '#7c3aed', body: '#3d523d', accent: '#c4b5fd', muted: '#6b806b' },
-  { h1: '#f0f5f0', h2: '#52b788', body: '#9498b0', accent: '#2d6a4f', muted: '#9498b0' },
+  { h1: '#1a2e1a', h2: '#2d6a4f', body: '#3d523d', accent: '#2d6a4f', muted: '#6b806b' },
 ];
 
 function lerpColor(a: string, b: string, t: number): string {
@@ -50,7 +50,7 @@ export function ScrollColorText({
   children, as: Tag = 'span', className = '', style = {},
   colorVar = 'h1',
 }: {
-  children: React.ReactNode; as?: keyof JSX.IntrinsicElements; className?: string; style?: React.CSSProperties;
+  children: React.ReactNode; as?: React.ElementType; className?: string; style?: React.CSSProperties;
   colorVar?: keyof ColorPalette;
 }) {
   const colors = useScrollColors();

@@ -1,6 +1,26 @@
+/* Font and theme variables */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+:root {
+  --font-family: 'Inter', sans-serif;
+  --bg-primary: #f0f5f0;
+  --bg-glass: rgba(255, 255, 255, 0.6);
+  --bg-glass-dark: rgba(30, 30, 30, 0.6);
+  --accent-color: #4F46E5;
+  --text-primary: #2d6a4f;
+}
+
+/* Voice recording pulse animation */
+@keyframes pulseRed {
+  0%   { box-shadow: 0 0 0 0   rgba(255, 0, 0, 0.4); }
+  70%  { box-shadow: 0 0 0 8px rgba(255, 0, 0, 0.0); }
+  100% { box-shadow: 0 0 0 0   rgba(255, 0, 0, 0.0); }
+}
+
 .dashboard-root {
   min-height: 100vh;
-  background: linear-gradient(90deg, #f0f5f0 0 15.25rem, transparent 15.25rem), #f0f5f0;
+  background: var(--bg-primary);
+  font-family: var(--font-family);
 }
 
 .dashboard-workspace {
@@ -115,12 +135,14 @@
 }
 
 .composer {
-  overflow: hidden;
-  border: 1px solid #dde8dd;
+  backdrop-filter: blur(12px);
+  background: var(--bg-glass);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 1rem;
-  background: white;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  font-family: var(--font-family);
 }
+
 .composer:focus-within {
   border-color: rgba(45, 106, 79, 0.2);
   box-shadow:
@@ -142,15 +164,17 @@
   min-width: 1.25rem;
   align-items: center;
   justify-content: center;
-  color: #6b806b;
+  color: var(--text-primary);
   font-weight: 600;
   border-radius: 6px;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 .composer-toolbar button:hover {
-  color: #2d6a4f;
-  background: rgba(45, 106, 79, 0.04);
+  color: #fff;
+  background: var(--accent-color);
+  transform: scale(1.08);
 }
+
 .composer-toolbar span {
   height: 1.4rem;
   width: 1px;
@@ -169,7 +193,24 @@
   display: none;
 }
 
-@media (max-width: 1220px) {
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #1a1a1a;
+    --bg-glass: var(--bg-glass-dark);
+    --text-primary: #a0d8a7;
+  }
+  .composer {
+    background: var(--bg-glass);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  .dashboard-root {
+    background: var(--bg-primary);
+  }
+}
+
+/* Tablet */
+@media (max-width: 1100px) {
   .dashboard-workspace {
     grid-template-columns: 16.5rem minmax(0, 1fr);
   }
@@ -178,6 +219,7 @@
   }
 }
 
+/* Mobile */
 @media (max-width: 760px) {
   .dashboard-workspace {
     height: auto;
@@ -189,9 +231,6 @@
     max-height: none;
     border-right: 0;
     border-bottom: 1px solid #dde8dd;
-  }
-  .workspace-chat {
-    min-height: 100vh;
   }
   .chat-header {
     align-items: flex-start;

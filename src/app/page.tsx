@@ -11,12 +11,14 @@ import ScrollProgressBar from './components/ScrollProgressBar';
 import { ScrollIndicator } from './components/ScrollProgressBar';
 import FloatingOrbs from './components/FloatingOrbs';
 import DynamicBackground from './components/GradientBackground';
+import ParticleField from './components/ParticleField';
 
 export default function LandingPage() {
   return (
     <div className="relative min-h-screen bg-background">
       <SplashScreen />
       <DynamicBackground />
+      <ParticleField />
       <FloatingOrbs />
       <ScrollProgressBar />
       <ScrollIndicator />

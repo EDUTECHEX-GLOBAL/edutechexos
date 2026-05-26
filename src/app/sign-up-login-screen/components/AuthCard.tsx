@@ -12,17 +12,30 @@ export default function AuthCard() {
 
   return (
     <div className="w-full max-w-md mt-14 animate-fade-up">
-      <div className="card-premium overflow-hidden">
-        <div className="flex border-b border-border">
+      <div
+        className="overflow-hidden rounded-2xl transition-all duration-700"
+        style={{
+          backgroundColor: 'rgba(255,255,255,0.25)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          border: '1px solid rgba(255,255,255,0.3)',
+          boxShadow: '0 8px 48px rgba(0,0,0,0.06), 0 0 40px -8px rgba(45,106,79,0.1)',
+        }}
+      >
+        <div className="flex" style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
           {(isAdminMode ? ['login'] : ['login', 'signup']).map((tab) => (
             <button
               key={`tab-${tab}`}
               onClick={() => setActiveTab(tab as 'login' | 'signup')}
-              className={`flex-1 py-4 text-sm font-semibold tracking-wide transition-all duration-300 ${
+              className={`flex-1 py-4 text-sm font-bold tracking-wide transition-all duration-300 ${
                 activeTab === tab
-                  ? 'text-foreground border-b-2 border-primary bg-surface'
-                  : 'text-ink-light hover:text-ink hover:bg-secondary/50'
+                  ? 'text-foreground'
+                  : 'text-ink-light hover:text-ink'
               }`}
+              style={{
+                backgroundColor: activeTab === tab ? 'rgba(255,255,255,0.3)' : 'transparent',
+                borderBottom: activeTab === tab ? '2px solid #2d6a4f' : '2px solid transparent',
+              }}
             >
               {tab === 'login' ? 'Sign in' : 'Create account'}
             </button>
@@ -79,16 +92,30 @@ function DemoCredentials({
   };
 
   return (
-    <div className="mt-4 card-premium p-5 animate-fade-up delay-200">
-      <p className="font-mono text-[10px] font-semibold text-ink-light uppercase tracking-[0.15em] mb-3">
+    <div
+      className="mt-5 p-5 rounded-2xl transition-all duration-700"
+      style={{
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        border: '1px solid rgba(255,255,255,0.2)',
+      }}
+    >
+      <p className="font-mono text-[10px] font-bold text-ink-light uppercase tracking-[0.15em] mb-3">
         Demo accounts
       </p>
       <div className="flex flex-col gap-2">
         {accounts.map((acc, i) => (
           <div
             key={acc.role}
-            className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-surface-muted border border-border hover:border-primary/20 hover:bg-surface transition-all duration-200 animate-fade-up"
-            style={{ animationDelay: `${300 + i * 80}ms` }}
+            className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-200 animate-fade-up"
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.12)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              animationDelay: `${300 + i * 80}ms`,
+            }}
           >
             <div className="flex items-center gap-3 min-w-0">
               <span className="text-[10px] font-mono font-semibold text-ink-light w-16 flex-shrink-0">
@@ -99,14 +126,23 @@ function DemoCredentials({
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <button
                 onClick={() => handleCopy(acc.email, `email-${acc.role}`)}
-                className="text-[11px] px-2.5 py-1.5 rounded-lg border border-border hover:bg-surface text-ink-light hover:text-primary hover:border-primary/20 transition-all"
+                className="text-[11px] px-2.5 py-1.5 rounded-lg transition-all font-semibold"
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  color: '#6b806b',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                }}
                 title="Copy email"
               >
                 {copied === `email-${acc.role}` ? 'Copied' : 'Copy'}
               </button>
               <button
                 onClick={() => onUse(acc.email, acc.password)}
-                className="text-[11px] px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary-dark transition-all font-medium hover-lift"
+                className="text-[11px] px-3 py-1.5 rounded-lg font-bold transition-all hover:scale-105"
+                style={{
+                  background: 'linear-gradient(135deg, #2d6a4f, #52b788)',
+                  color: 'white',
+                }}
               >
                 Use
               </button>

@@ -1,12 +1,14 @@
 import mongoose from 'mongoose';
 import dns from 'dns';
 
-// Set DNS servers to Google's public DNS to resolve DNS resolution issues (e.g. querySrv ECONNREFUSED)
+// Set DNS servers to Google's public DNS in development to resolve DNS resolution issues
 // common on some local ISP and home networks.
-try {
-  dns.setServers(['8.8.8.8', '8.8.4.4']);
-} catch (error) {
-  console.warn('Failed to set custom DNS servers, using system defaults:', error);
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    dns.setServers(['8.8.8.8', '8.8.4.4']);
+  } catch (error) {
+    console.warn('Failed to set custom DNS servers, using system defaults:', error);
+  }
 }
 
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -36,10 +38,12 @@ async function connectToDatabase() {
       bufferCommands: false,
     };
 
-    try {
-      dns.setServers(['8.8.8.8', '8.8.4.4']);
-    } catch (e) {
-      console.error('Failed to set DNS servers inside connectToDatabase:', e);
+    if (process.env.NODE_ENV !== 'production') {
+      try {
+        dns.setServers(['8.8.8.8', '8.8.4.4']);
+      } catch (e) {
+        console.error('Failed to set DNS servers inside connectToDatabase:', e);
+      }
     }
 
     cached.promise = mongoose.connect(MONGODB_URI as string, opts).then((mongooseInstance: any) => {

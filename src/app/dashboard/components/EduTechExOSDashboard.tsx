@@ -15,25 +15,39 @@ import {
   uploadLocalFile,
 } from '@/app/actions/dbActions';
 import NotificationPanel from './NotificationPanel';
-import NotepadPanel from './NotepadPanel';
+
 import MyActivityCalendar from './MyActivityCalendar';
+import CommandPalette from './CommandPalette';
+import SearchPanel from './SearchPanel';
+
+import UserProfileModal from './UserProfileModal';
+import WikiPanel from './WikiPanel';
+import KanbanBoard from './KanbanBoard';
+import AnalyticsPanel from './AnalyticsPanel';
+import BookmarksPanel from './BookmarksPanel';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 import {
   AtSign,
+  BarChart2,
   Bell,
+  Bookmark,
+  BookOpen,
   CalendarPlus,
   Bot,
   CalendarDays,
   ChevronDown,
-  FileText,
   Hash,
   CheckSquare,
+  Command,
   Loader2,
   LogOut,
   Mic,
   Moon,
   MoreHorizontal,
   Paperclip,
+  Pin,
   Plus,
   Search,
   Send,
@@ -47,6 +61,7 @@ import {
   Video,
   X,
   Zap,
+  Layout,
 } from 'lucide-react';
 
 type AIMessage = {
@@ -315,10 +330,17 @@ export default function EduTechExOSDashboard() {
     addMessage,
     addNotification,
     loadLocalMessages,
+    loadLocalWikiPages,
     notifications,
+    typingUsers,
+    pinnedMessageIds,
+    bookmarkedMessageIds,
+    toggleBookmark,
+    toggleDarkMode: storeDarkModeToggle,
+    darkMode,
   } = useDashboardStore();
   const [copilotTab, setCopilotTab] = useState<'chat' | 'tasks'>('chat');
-  const [rightPanel, setRightPanel] = useState<'ai' | 'notepad' | 'closed'>('ai');
+  const [rightPanel, setRightPanel] = useState<'ai' | 'closed'>('ai');
   const [composerMessage, setComposerMessage] = useState('');
   const [aiInput, setAiInput] = useState('');
   const [aiMessages, setAiMessages] = useState<AIMessage[]>(MOCK_AI_RESPONSES);
@@ -356,6 +378,7 @@ export default function EduTechExOSDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLInputElement>(null);
   const aiBottomRef = useRef<HTMLDivElement>(null);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const discardRecordingRef = useRef(false);
@@ -366,6 +389,24 @@ export default function EduTechExOSDashboard() {
   const [recordedPreview, setRecordedPreview] = useState<RecordedPreview | null>(null);
   const [recordingSending, setRecordingSending] = useState(false);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Helper to stop recording and immediately send (used for screen recordings)
+  const handleStopAndSend = async () => {
+    stopRecording(true);
+    // Wait briefly for onstop to generate preview
+    await new Promise((res) => setTimeout(res, 600));
+    if (recordedPreview) {
+      await sendRecordedPreview();
+    }
+  };
+  // ─── New panel states ────────────────────────────────────────────────────────
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
+
+  const [wikiOpen, setWikiOpen] = useState(false);
+  const [kanbanOpen, setKanbanOpen] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [bookmarksPanelOpen, setBookmarksPanelOpen] = useState(false);
+  const [profileMember, setProfileMember] = useState<(typeof members)[0] | null>(null);
   const currentMember = currentUser?.email
     ? members.find((member) => member.email.toLowerCase() === currentUser.email.toLowerCase())
     : null;
@@ -429,11 +470,32 @@ export default function EduTechExOSDashboard() {
 
   useEffect(() => {
     loadLocalMessages?.();
+    loadLocalWikiPages?.();
     const interval = setInterval(() => {
       loadLocalMessages?.();
+      loadLocalWikiPages?.();
     }, 3000);
     return () => clearInterval(interval);
-  }, [loadLocalMessages]);
+  }, [loadLocalMessages, loadLocalWikiPages]);
+
+  // Sync dark mode from store on mount
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.toggle('dark', darkMode);
+    }
+  }, [darkMode]);
+
+  // Ctrl+K → command palette
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem(SETTINGS_KEY);
@@ -472,6 +534,14 @@ export default function EduTechExOSDashboard() {
   useEffect(() => {
     aiBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiMessages.length, copilotTab]);
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'auto' });
+  }, [activeChannel]);
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [channelMessages.length]);
 
   useEffect(() => {
     if (!authChecked) return;
@@ -707,9 +777,9 @@ export default function EduTechExOSDashboard() {
       setRecordingBusy(true);
       discardRecordingRef.current = false;
       const stream =
-        kind === 'video' && navigator.mediaDevices.getDisplayMedia
+        kind === 'video'
           ? await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
-          : await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          : await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
 
       const mimeType =
@@ -776,6 +846,15 @@ export default function EduTechExOSDashboard() {
     });
   }
 
+  async function blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
   async function sendRecordedPreview() {
     if (!recordedPreview || !channel) return;
 
@@ -788,11 +867,16 @@ export default function EduTechExOSDashboard() {
       );
       const formData = new FormData();
       formData.append('file', file);
-      const result = await uploadLocalFile(formData);
 
-      if (!result.success || !result.url) {
-        toast.error(`${recordedPreview.kind === 'video' ? 'Video' : 'Audio'} upload failed.`);
-        return;
+      let mediaUrl: string | null = null;
+      try {
+        const result = await uploadLocalFile(formData);
+        if (result.success && result.url) mediaUrl = result.url;
+      } catch { /* server upload failed, will use data URL */ }
+
+      // Always fall back to data URL if server upload failed (works everywhere including Vercel)
+      if (!mediaUrl) {
+        mediaUrl = await blobToDataUrl(recordedPreview.blob);
       }
 
       addMessage(channel.id, {
@@ -803,12 +887,13 @@ export default function EduTechExOSDashboard() {
         timestamp: new Date().toISOString(),
         text:
           composerMessage.trim() ||
-          `${recordedPreview.kind === 'video' ? 'Screen recording' : 'Voice note'}`,
-        ...(recordedPreview.kind === 'video' ? { videoUrl: result.url } : { audioUrl: result.url }),
+          `${recordedPreview.kind === 'video' ? '📹 Screen recording' : '🎙️ Voice note'}`,
+        ...(recordedPreview.kind === 'video' ? { videoUrl: mediaUrl } : { audioUrl: mediaUrl }),
       });
       setComposerMessage('');
-      discardRecordedPreview();
-      toast.success(`${recordedPreview.kind === 'video' ? 'Screen recording' : 'Voice note'} sent`);
+      URL.revokeObjectURL(recordedPreview.url);
+      setRecordedPreview(null);
+      toast.success(`${recordedPreview.kind === 'video' ? 'Camera recording' : 'Voice note'} sent`);
     } catch {
       toast.error(`Could not save the ${recordedPreview.kind} recording.`);
     } finally {
@@ -978,6 +1063,40 @@ export default function EduTechExOSDashboard() {
     setMeetInviteeIds([]);
   }
 
+  function startNewMeeting() {
+    if (!channel) return;
+    const meetingRoomId = `edutechexos-${Math.random().toString(36).substring(2, 11)}`;
+    const newMeetLink = `https://meet.jit.si/${meetingRoomId}`;
+
+    addMessage(channel.id, {
+      id: `meeting-started-${Date.now()}`,
+      sender: currentUser?.name ?? 'You',
+      initials: currentUser?.initials ?? 'Y',
+      color: currentUserColor,
+      timestamp: new Date().toISOString(),
+      text: `🔴 **Instant Meeting Started**\n\nClick the link below to join the video call:\n${newMeetLink}`,
+    });
+
+    const notifyMembers = activeChannelMembers.filter(
+      (member) => member.email.toLowerCase() !== currentUserEmail
+    );
+    if (notifyMembers.length > 0) {
+      addNotification({
+        type: 'mention',
+        actor: currentUser?.name ?? 'EduTechExOS',
+        actorInitials: currentUser?.initials ?? 'OS',
+        actorColor: currentUserColor,
+        channel: channel.name,
+        message: `started an instant meeting. Join: ${newMeetLink}`,
+        recipientEmails: notifyMembers.map((member) => member.email),
+      });
+    }
+
+    window.open(newMeetLink, '_blank');
+    toast.success('Dynamic meeting room created and posted to chat!');
+  }
+
+
   if (!authChecked) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-600 dark:bg-slate-950 dark:text-slate-400">
@@ -989,10 +1108,9 @@ export default function EduTechExOSDashboard() {
     );
   }
 
-  return (
-    <div
-      className={`dashboard-root dashboard-workspace text-slate-900 ${rightPanel === 'closed' ? 'dashboard-workspace-panel-closed' : ''}`}
-    >
+
+    return (
+    <div className={`dashboard-root dashboard-workspace text-slate-900 ${rightPanel === 'closed' ? 'dashboard-workspace-panel-closed' : ''}`}>
       <aside className="workspace-sidebar">
         <div className="flex h-20 items-center gap-3 border-b border-slate-200/80 px-3">
           <AppLogo size={26} />
@@ -1066,7 +1184,9 @@ export default function EduTechExOSDashboard() {
               {people.map((member) => (
                 <button
                   key={member.id}
-                  onClick={() => setActiveChannel(member.id)}
+                  onClick={() => setProfileMember(member)}
+                  onDoubleClick={() => setActiveChannel(member.id)}
+                  title={`View ${member.name} profile (double-click for DM)`}
                   className="flex w-full items-center gap-3 rounded-lg py-1.5 text-left transition hover:bg-white/70"
                 >
                   <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">
@@ -1124,6 +1244,15 @@ export default function EduTechExOSDashboard() {
               </span>
             </div>
           </div>
+          <button
+            onClick={() => setCommandPaletteOpen(true)}
+            title="Command palette (Ctrl+K)"
+            className="mt-2 flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-400 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 transition dark:border-slate-700 dark:bg-slate-800/50"
+          >
+            <Command size={13} />
+            <span>Command palette</span>
+            <kbd className="ml-auto rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-black text-slate-500 dark:bg-slate-700 dark:text-slate-400">⌘K</kbd>
+          </button>
           <div className="mt-3 grid grid-cols-4 rounded-xl bg-slate-50 p-1 dark:bg-slate-800/50">
             {[
               {
@@ -1132,9 +1261,9 @@ export default function EduTechExOSDashboard() {
                 action: () => setActivityCalendarOpen(true),
               },
               {
-                icon: theme === 'dark' ? Sun : Moon,
-                title: theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode',
-                action: () => toggleTheme(),
+                icon: darkMode ? Sun : Moon,
+                title: darkMode ? 'Switch to light mode' : 'Switch to dark mode',
+                action: () => { toggleTheme(); storeDarkModeToggle(); },
               },
               {
                 icon: Settings,
@@ -1192,12 +1321,43 @@ export default function EduTechExOSDashboard() {
               {channel?.id.startsWith('member-') ? 2 : activeChannelMembers.length}
             </button>
             <button
-              title="Search messages"
-              onClick={() => setSearchOpen((value) => !value)}
+              title="Search messages (Ctrl+K)"
+              onClick={() => setGlobalSearchOpen(true)}
               className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
             >
               <Search size={20} />
             </button>
+
+            <button
+              title="Knowledge base"
+              onClick={() => setWikiOpen(true)}
+              className="hidden h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:flex"
+            >
+              <BookOpen size={18} />
+            </button>
+            <button
+              title="Task board"
+              onClick={() => setKanbanOpen(true)}
+              className="hidden h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:flex"
+            >
+              <Layout size={18} />
+            </button>
+            <button
+              title="Saved messages"
+              onClick={() => setBookmarksPanelOpen(true)}
+              className="hidden h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 xl:flex"
+            >
+              <Bookmark size={18} />
+            </button>
+            {isAdmin && (
+              <button
+                title="Analytics"
+                onClick={() => setAnalyticsOpen(true)}
+                className="hidden h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 xl:flex"
+              >
+                <BarChart2 size={18} />
+              </button>
+            )}
             <div className="relative">
               <button
                 onClick={() => setMeetMenuOpen((value) => !value)}
@@ -1229,14 +1389,17 @@ export default function EduTechExOSDashboard() {
                     className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Video size={16} className="text-indigo-600" />
-                    Start meet
+                    Join meet
                   </button>
                   <button
-                    onClick={openScheduleMeet}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50"
+                    onClick={() => {
+                      setMeetMenuOpen(false);
+                      startNewMeeting();
+                    }}
+                    className="flex w-full items-center gap-3 border-t border-slate-100 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50"
                   >
-                    <CalendarPlus size={16} className="text-emerald-600" />
-                    Schedule meet
+                    <Plus size={16} className="text-indigo-600" />
+                    Start new meet
                   </button>
                 </div>
               )}
@@ -1252,14 +1415,7 @@ export default function EduTechExOSDashboard() {
               <Bot size={16} />
               AI
             </button>
-            <button
-              onClick={() => setRightPanel('notepad')}
-              title="Open Notepad"
-              className="hidden h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 lg:flex"
-            >
-              <FileText size={17} />
-              Notepad
-            </button>
+
             <div className="relative">
               <button
                 title="More channel actions"
@@ -1269,42 +1425,52 @@ export default function EduTechExOSDashboard() {
                 <MoreHorizontal size={20} />
               </button>
               {moreOpen && (
-                <div className="absolute right-0 top-11 z-40 w-52 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                <div className="absolute right-0 top-11 z-40 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
                   <button
-                    onClick={() => {
-                      setMoreOpen(false);
-                      setMembersOpen(true);
-                    }}
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                    onClick={() => { setMoreOpen(false); setMembersOpen(true); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
                   >
-                    View members
+                    <Users size={15} /> View members
                   </button>
                   <button
-                    onClick={() => {
-                      setMoreOpen(false);
-                      setSearchOpen(true);
-                    }}
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                    onClick={() => { setMoreOpen(false); setGlobalSearchOpen(true); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
                   >
-                    Search messages
+                    <Search size={15} /> Search messages
+                  </button>
+
+                  <button
+                    onClick={() => { setMoreOpen(false); setWikiOpen(true); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    <BookOpen size={15} /> Knowledge base
                   </button>
                   <button
-                    onClick={() => {
-                      setMoreOpen(false);
-                      setRightPanel('notepad');
-                    }}
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                    onClick={() => { setMoreOpen(false); setKanbanOpen(true); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
                   >
-                    Open notepad
+                    <Layout size={15} /> Task board
                   </button>
                   <button
-                    onClick={() => {
-                      setMoreOpen(false);
-                      toast.success(`#${channel?.name} copied to workspace clipboard`);
-                    }}
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                    onClick={() => { setMoreOpen(false); setBookmarksPanelOpen(true); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
                   >
-                    Copy channel link
+                    <Bookmark size={15} /> Saved messages
+                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => { setMoreOpen(false); setAnalyticsOpen(true); }}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                    >
+                      <BarChart2 size={15} /> Analytics
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => { setMoreOpen(false); setCommandPaletteOpen(true); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    <Command size={15} /> Command palette
                   </button>
                 </div>
               )}
@@ -1334,6 +1500,23 @@ export default function EduTechExOSDashboard() {
             </label>
           </div>
         )}
+
+        {/* Pinned messages strip */}
+        {channel && (pinnedMessageIds[channel.id]?.length ?? 0) > 0 && (() => {
+          const pinIds = pinnedMessageIds[channel.id] ?? [];
+          const lastPinned = channelMessages.find(m => m.id === pinIds[pinIds.length - 1]);
+          return (
+            <div className="flex items-center gap-3 border-b border-amber-200 bg-amber-50 px-5 py-2 text-sm">
+              <Pin size={13} className="shrink-0 text-amber-600" />
+              <span className="font-black text-amber-700">{pinIds.length} pinned</span>
+              {lastPinned && (
+                <span className="min-w-0 flex-1 truncate font-semibold text-amber-700 opacity-80">
+                  {lastPinned.text.slice(0, 80)}
+                </span>
+              )}
+            </div>
+          );
+        })()}
 
         <section className="chat-scroll">
           <div className="date-divider">
@@ -1405,10 +1588,71 @@ export default function EduTechExOSDashboard() {
                         </button>
                       </div>
                     ) : (
-                      <p className="max-w-4xl whitespace-pre-line text-[18px] font-medium leading-8 text-slate-700">
-                        {message.text}
-                      </p>
+                      <div className="prose prose-slate max-w-4xl text-[17px] leading-7 text-slate-700">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code: ({ children, className }) => {
+                              const isBlock = String(className ?? '').includes('language-');
+                              return isBlock ? (
+                                <pre className="my-2 overflow-x-auto rounded-lg bg-slate-900 px-4 py-3 text-sm text-green-400">
+                                  <code>{children}</code>
+                                </pre>
+                              ) : (
+                                <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-sm text-indigo-700">
+                                  {children}
+                                </code>
+                              );
+                            },
+                            a: ({ href, children }) => (
+                              <a href={href} target="_blank" rel="noreferrer" className="text-indigo-600 underline hover:text-indigo-800">
+                                {children}
+                              </a>
+                            ),
+                            strong: ({ children }) => <strong className="font-black text-slate-900">{children}</strong>,
+                            blockquote: ({ children }) => (
+                              <blockquote className="border-l-4 border-indigo-300 pl-4 italic text-slate-500">
+                                {children}
+                              </blockquote>
+                            ),
+                          }}
+                        >
+                          {message.text}
+                        </ReactMarkdown>
+                      </div>
                     )}
+
+                    {/* Poll renderer */}
+                    {message.poll && (
+                      <div className="mt-3 max-w-md rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
+                        <p className="mb-3 text-sm font-black text-indigo-900">{message.poll.question}</p>
+                        <div className="space-y-2">
+                          {message.poll.options.map((opt, i) => {
+                            const total = message.poll!.options.reduce((s, o) => s + o.votes.length, 0);
+                            const pct = total ? Math.round((opt.votes.length / total) * 100) : 0;
+                            return (
+                              <div key={i} className="relative overflow-hidden rounded-xl border border-indigo-200 bg-white">
+                                <div className="absolute inset-y-0 left-0 bg-indigo-100" style={{ width: `${pct}%` }} />
+                                <div className="relative flex items-center justify-between px-3 py-2">
+                                  <span className="text-sm font-bold text-slate-700">{opt.text}</span>
+                                  <span className="text-xs font-black text-indigo-600">{pct}% ({opt.votes.length})</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {/* Bookmark button */}
+                    <div className="mt-1 flex items-center gap-2">
+                      <button
+                        onClick={() => toggleBookmark(message.id)}
+                        title={bookmarkedMessageIds.includes(message.id) ? 'Remove bookmark' : 'Bookmark message'}
+                        className={`rounded-lg p-1 text-xs transition ${bookmarkedMessageIds.includes(message.id) ? 'text-amber-500' : 'text-slate-300 hover:text-amber-400'}`}
+                      >
+                        <Bookmark size={14} />
+                      </button>
+                    </div>
                     {message.audioUrl && (
                       <audio className="mt-3 w-full max-w-md" controls src={message.audioUrl}>
                         <track kind="captions" />
@@ -1442,8 +1686,32 @@ export default function EduTechExOSDashboard() {
                 </article>
               );
             })}
+            <div ref={chatBottomRef} className="h-2" />
           </div>
         </section>
+
+        {/* Typing indicators */}
+        {channel && (() => {
+          const typers = (typingUsers[channel.id] ?? []).filter(
+            name => name !== currentUser?.name
+          );
+          if (!typers.length) return null;
+          const label = typers.length === 1
+            ? `${typers[0]} is typing…`
+            : typers.length === 2
+            ? `${typers[0]} and ${typers[1]} are typing…`
+            : 'Several people are typing…';
+          return (
+            <div className="flex items-center gap-2 px-6 py-1.5 text-xs font-semibold text-slate-400">
+              <span className="flex gap-0.5">
+                {[0,1,2].map(i => (
+                  <span key={i} className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                ))}
+              </span>
+              {label}
+            </div>
+          );
+        })()}
 
         <footer className="composer-wrap">
           <div className="composer">
@@ -1604,7 +1872,7 @@ export default function EduTechExOSDashboard() {
             <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => window.open(companyMeetLink, '_blank')}
+                  onClick={startNewMeeting}
                   className="flex h-9 items-center gap-2 rounded-xl bg-indigo-50 px-3 text-xs font-black uppercase text-indigo-700"
                 >
                   <Video size={15} />
@@ -1637,12 +1905,7 @@ export default function EduTechExOSDashboard() {
       </main>
 
       <aside className={`copilot-panel ${rightPanel === 'closed' ? 'copilot-panel-closed' : ''}`}>
-        {rightPanel === 'notepad' ? (
-          <NotepadPanel
-            onClose={() => setRightPanel('ai')}
-            activeChannel={channel?.id ?? activeChannel}
-          />
-        ) : (
+        {rightPanel !== 'closed' ? (
           <>
             <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-xs font-black text-white">
@@ -1809,7 +2072,7 @@ export default function EduTechExOSDashboard() {
               </div>
             </div>
           </>
-        )}
+        ) : null}
       </aside>
 
       <NotificationPanel open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
@@ -2250,6 +2513,70 @@ export default function EduTechExOSDashboard() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── New Feature Panels ─────────────────────────────────────────────── */}
+
+      {/* Command Palette — Ctrl+K */}
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+      />
+
+      {/* Global Search Panel */}
+      {globalSearchOpen && (
+        <div className="fixed inset-0 z-[200] flex items-start justify-center bg-slate-950/50 pt-20 backdrop-blur-sm" onClick={() => setGlobalSearchOpen(false)}>
+          <div onClick={e => e.stopPropagation()} className="w-full max-w-2xl">
+            <SearchPanel onClose={() => setGlobalSearchOpen(false)} />
+          </div>
+        </div>
+      )}
+
+
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        member={profileMember}
+        onClose={() => setProfileMember(null)}
+      />
+
+      {/* Wiki / Knowledge Base Panel */}
+      {wikiOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <div className="h-full w-full max-w-4xl">
+            <WikiPanel
+              onClose={() => setWikiOpen(false)}
+              activeChannel={channel?.id ?? activeChannel}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Kanban Task Board */}
+      {kanbanOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <div className="h-full w-full max-w-5xl">
+            <KanbanBoard onClose={() => setKanbanOpen(false)} />
+          </div>
+        </div>
+      )}
+
+      {/* Analytics Panel (Admin only) */}
+      {analyticsOpen && isAdmin && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-auto">
+            <AnalyticsPanel onClose={() => setAnalyticsOpen(false)} />
+          </div>
+        </div>
+      )}
+
+      {/* Bookmarks Panel */}
+      {bookmarksPanelOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-xl max-h-[85vh] overflow-auto">
+            <BookmarksPanel onClose={() => setBookmarksPanelOpen(false)} />
           </div>
         </div>
       )}

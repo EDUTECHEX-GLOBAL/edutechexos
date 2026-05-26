@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     container: { center: true, padding: '1rem' },
@@ -32,7 +33,8 @@ module.exports = {
         mono: ['"JetBrains Mono"', 'monospace'],
       },
       fontSize: {
-        'hero-xl': ['clamp(2.8rem, 7vw, 5.5rem)', { lineHeight: '1.05', letterSpacing: '-0.035em' }],
+        'hero-xl': ['clamp(3.2rem, 8vw, 7rem)', { lineHeight: '1.0', letterSpacing: '-0.04em', fontWeight: '900' }],
+        'hero-2xl': ['clamp(4rem, 10vw, 9rem)', { lineHeight: '0.95', letterSpacing: '-0.05em', fontWeight: '900' }],
         'hero-md': ['clamp(1.5rem, 3vw, 2.5rem)', { lineHeight: '1.15', letterSpacing: '-0.025em' }],
       },
       boxShadow: {
@@ -99,6 +101,10 @@ module.exports = {
         morph: 'morph 8s ease-in-out infinite',
         'aurora-1': 'aurora-1 20s ease-in-out infinite',
         'aurora-2': 'aurora-2 25s ease-in-out infinite',
+      },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
       },
       transitionTimingFunction: {
         smooth: 'cubic-bezier(0.22, 1, 0.36, 1)',

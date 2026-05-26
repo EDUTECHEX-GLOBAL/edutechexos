@@ -1,0 +1,253 @@
+'use client';
+import React, { useMemo, useState } from 'react';
+import { useDashboardStore } from '@/store/dashboardStore';
+import { X, Mail, Copy, Check, Hash, MessageSquare, Send } from 'lucide-react';
+
+interface MemberProp {
+  id: string;
+  name: string;
+  initials: string;
+  email: string;
+  role: string;
+  status: 'online' | 'away' | 'offline';
+  color: string;
+}
+
+interface UserProfileModalProps {
+  member: MemberProp | null;
+  onClose: () => void;
+}
+
+const STATUS_CONFIG = {
+  online: { label: 'Online', color: 'bg-green-400', textColor: 'text-green-600' },
+  away: { label: 'Away', color: 'bg-amber-400', textColor: 'text-amber-600' },
+  offline: { label: 'Offline', color: 'bg-slate-400', textColor: 'text-slate-500' },
+};
+
+function formatTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const diff = Date.now() - d.getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  } catch {
+    return iso;
+  }
+}
+
+export default function UserProfileModal({ member, onClose }: UserProfileModalProps) {
+  const channels = useDashboardStore((s) => s.channels);
+  const messages = useDashboardStore((s) => s.messages);
+  const setActiveChannel = useDashboardStore((s) => s.setActiveChannel);
+
+  const [copied, setCopied] = useState(false);
+
+  if (!member) return null;
+
+  const statusCfg = STATUS_CONFIG[member.status];
+
+  // Channels this member belongs to
+  const memberChannels = useMemo(
+    () =>
+      channels.filter(
+        (ch) =>
+          !ch.id.startsWith('member-') &&
+          (ch.memberIds?.includes(member.id) ?? false)
+      ),
+    [channels, member.id]
+  );
+
+  // Last 3 messages from this member (scan all channels)
+  const recentMessages = useMemo(() => {
+    const found: Array<{
+      channelId: string;
+      channelName: string;
+      text: string;
+      timestamp: string;
+    }> = [];
+
+    Object.entries(messages).forEach(([channelId, msgs]) => {
+      const ch = channels.find((c) => c.id === channelId);
+      msgs.forEach((msg) => {
+        if (
+          msg.sender === member.name ||
+          msg.initials === member.initials
+        ) {
+          found.push({
+            channelId,
+            channelName: channelId.startsWith('member-')
+              ? 'DM'
+              : `#${ch?.name ?? channelId}`,
+            text: msg.text,
+            timestamp: msg.timestamp,
+          });
+        }
+      });
+    });
+
+    return found
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 3);
+  }, [messages, channels, member.name, member.initials]);
+
+  const handleCopyEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(member.email);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard not available
+    }
+  };
+
+  const handleSendDM = () => {
+    setActiveChannel(member.id);
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" />
+
+      {/* Card */}
+      <div
+        className="relative w-full max-w-sm rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200/80 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 z-10 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+        >
+          <X size={18} strokeWidth={2.5} />
+        </button>
+
+        {/* Header / Avatar */}
+        <div className="flex flex-col items-center px-6 pt-8 pb-5 bg-gradient-to-b from-slate-50 to-white">
+          {/* Avatar */}
+          <div
+            className="h-20 w-20 rounded-3xl flex items-center justify-center shadow-lg text-2xl font-black text-white mb-3"
+            style={{ backgroundColor: member.color }}
+          >
+            {member.initials}
+          </div>
+
+          {/* Name */}
+          <h2 className="text-lg font-black text-slate-900">{member.name}</h2>
+
+          {/* Role badge */}
+          <span className="mt-1.5 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-black uppercase tracking-widest">
+            {member.role}
+          </span>
+
+          {/* Status */}
+          <div className="flex items-center gap-1.5 mt-2.5">
+            <span className={`h-2 w-2 rounded-full ${statusCfg.color}`} />
+            <span className={`text-xs font-semibold ${statusCfg.textColor}`}>
+              {statusCfg.label}
+            </span>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="px-5 pb-5 space-y-4 border-t border-slate-100">
+          {/* Contact section */}
+          <div className="pt-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+              Contact
+            </p>
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+              <Mail size={15} className="text-slate-400 flex-shrink-0" />
+              <span className="flex-1 text-sm text-slate-700 truncate">{member.email}</span>
+              <button
+                onClick={handleCopyEmail}
+                title="Copy email"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors flex-shrink-0"
+              >
+                {copied ? (
+                  <Check size={14} className="text-green-500" strokeWidth={2.5} />
+                ) : (
+                  <Copy size={14} strokeWidth={2} />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Channels section */}
+          {memberChannels.length > 0 && (
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                Channels
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {memberChannels.map((ch) => (
+                  <span
+                    key={ch.id}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-[11px] font-semibold"
+                  >
+                    <Hash size={10} strokeWidth={3} />
+                    {ch.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recent activity section */}
+          {recentMessages.length > 0 && (
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                Recent Activity
+              </p>
+              <div className="space-y-2">
+                {recentMessages.map((msg, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-100"
+                  >
+                    <MessageSquare
+                      size={13}
+                      className="text-slate-300 flex-shrink-0 mt-0.5"
+                      strokeWidth={2}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <span className="text-[10px] font-black text-indigo-500 uppercase tracking-wide">
+                          {msg.channelName}
+                        </span>
+                        <span className="text-[10px] text-slate-400 flex-shrink-0">
+                          {formatTime(msg.timestamp)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                        {msg.text}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Send DM button */}
+          <button
+            onClick={handleSendDM}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-sm font-bold transition-colors shadow-md shadow-indigo-200"
+          >
+            <Send size={15} strokeWidth={2.5} />
+            Send DM
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
