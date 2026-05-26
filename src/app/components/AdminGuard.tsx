@@ -36,7 +36,7 @@ export default function AdminGuard({ children }: AdminGuardProps) {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground font-medium">Verifying credentials...</p>
+          <p className="text-sm text-ink-light font-medium">Verifying credentials...</p>
         </div>
       </div>
     );
@@ -45,18 +45,18 @@ export default function AdminGuard({ children }: AdminGuardProps) {
   if (isAuthorized === false) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6 text-center">
-        <div className="max-w-md w-full p-8 rounded-3xl border border-border bg-white shadow-2xl animate-fade-in-up">
+        <div className="max-w-md w-full p-8 rounded-3xl border border-border bg-surface shadow-2xl animate-fade-in-up">
           <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <ShieldAlert className="h-8 w-8 text-red-500" />
           </div>
           <h2 className="text-2xl font-bold text-foreground mb-2">Access Denied</h2>
-          <p className="text-muted-foreground mb-8">
+          <p className="text-ink-light mb-8">
             You don't have the required administrative permissions to view this page.
           </p>
           <div className="flex flex-col gap-3">
             <button
               onClick={() => router.push('/dashboard')}
-              className="btn-black py-3 rounded-xl text-sm font-semibold"
+              className="btn-primary w-full justify-center py-3 text-sm"
             >
               Return to Dashboard
             </button>

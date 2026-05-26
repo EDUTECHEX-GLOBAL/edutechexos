@@ -2,7 +2,6 @@ import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import '../styles/tailwind.css';
 import { Toaster as SonnerToaster } from 'sonner';
-import { ThemeProvider } from '@/components/ThemeProvider';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -18,34 +17,35 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="h-full" suppressHydrationWarning>
+    <html lang="en" className="h-full">
       <head>
-        <link rel="stylesheet" href="/generated.css" />
-        <script dangerouslySetInnerHTML={{
-          __html: `
-            (function() {
-              try {
-                var theme = localStorage.getItem('edutechex_theme');
-                if (!theme) {
-                  theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                }
-                if (theme === 'dark') {
-                  document.documentElement.classList.add('dark');
-                }
-              } catch(e) {}
-            })();
-          `,
-        }} />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@1,2,3,4,5,6,7,8,9,10&display=swap"
+          rel="stylesheet"
+        />
       </head>
-      <body className="m-0 p-0 h-full" suppressHydrationWarning>
-        <ThemeProvider>
-          {children}
-          <SonnerToaster position="bottom-right" richColors closeButton />
-        </ThemeProvider>
+      <body className="m-0 p-0 h-full bg-background text-foreground antialiased">
+        {children}
+        <SonnerToaster
+          position="bottom-right"
+          richColors
+          closeButton
+          toastOptions={{
+            style: {
+              fontFamily: "'Inter', system-ui, sans-serif",
+              borderRadius: '0.75rem',
+              border: '1px solid #dde8dd',
+            },
+          }}
+        />
       </body>
     </html>
   );

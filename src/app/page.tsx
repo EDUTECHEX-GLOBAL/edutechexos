@@ -6,12 +6,22 @@ import LandingHowItWorks from './components/LandingHowItWorks';
 import LandingTestimonials from './components/LandingTestimonials';
 import LandingCTA from './components/LandingCTA';
 import LandingFooter from './components/LandingFooter';
+import SplashScreen from './components/SplashScreen';
+import ScrollProgressBar from './components/ScrollProgressBar';
+import { ScrollIndicator } from './components/ScrollProgressBar';
+import FloatingOrbs from './components/FloatingOrbs';
+import DynamicBackground from './components/GradientBackground';
 
 export default function LandingPage() {
   return (
-    <div className="graph-paper-bg min-h-screen">
+    <div className="relative min-h-screen bg-background">
+      <SplashScreen />
+      <DynamicBackground />
+      <FloatingOrbs />
+      <ScrollProgressBar />
+      <ScrollIndicator />
       <LandingNav />
-      <main>
+      <main className="relative z-10">
         <LandingHero />
         <LandingTrustedBy />
         <LandingFeatures />

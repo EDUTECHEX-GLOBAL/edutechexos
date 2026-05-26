@@ -72,23 +72,26 @@ export default function LoginTrackerCalendar() {
     const existing: string[] = userLogins[email] || [];
     if (existing.includes(todayStr)) {
       // Toggle off / remove today's login
-      const updated = existing.filter(d => d !== todayStr);
+      const updated = existing.filter((d) => d !== todayStr);
       localStorage.setItem(key, JSON.stringify(updated));
-      setUserLogins(prev => ({ ...prev, [email]: updated }));
+      setUserLogins((prev) => ({ ...prev, [email]: updated }));
       toast.success(`Removed today's attendance for ${name}`);
     } else {
       // Toggle on / add today's login
       const updated = [...existing, todayStr];
       localStorage.setItem(key, JSON.stringify(updated));
-      setUserLogins(prev => ({ ...prev, [email]: updated }));
+      setUserLogins((prev) => ({ ...prev, [email]: updated }));
       toast.success(`Logged attendance today for ${name}! 🎉`);
     }
   };
 
   // Calculate high level stats
   const totalUsers = members.length;
-  const loggedInTodayCount = members.filter(m => (userLogins[m.email] || []).includes(todayStr)).length;
-  const attendancePercentage = totalUsers > 0 ? Math.round((loggedInTodayCount / totalUsers) * 100) : 0;
+  const loggedInTodayCount = members.filter((m) =>
+    (userLogins[m.email] || []).includes(todayStr)
+  ).length;
+  const attendancePercentage =
+    totalUsers > 0 ? Math.round((loggedInTodayCount / totalUsers) * 100) : 0;
 
   return (
     <div className="rounded-[2.5rem] border border-slate-100 bg-white shadow-sm overflow-hidden transition-all duration-300">
@@ -99,16 +102,24 @@ export default function LoginTrackerCalendar() {
             <Users size={18} strokeWidth={2.5} />
           </div>
           <div>
-            <h2 className="font-black text-lg text-slate-900 uppercase tracking-tight">Login Tracker</h2>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Daily Team Attendance</p>
+            <h2 className="font-black text-lg text-slate-900 uppercase tracking-tight">
+              Login Tracker
+            </h2>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+              Daily Team Attendance
+            </p>
           </div>
         </div>
 
         {/* Attendance Summary Badge */}
         <div className="flex items-center gap-4 bg-slate-50 border border-slate-100 rounded-2xl p-3 shrink-0">
           <div className="flex flex-col">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Today's Attendance</span>
-            <span className="text-sm font-black text-slate-800">{loggedInTodayCount} of {totalUsers} Active</span>
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+              Today's Attendance
+            </span>
+            <span className="text-sm font-black text-slate-800">
+              {loggedInTodayCount} of {totalUsers} Active
+            </span>
           </div>
           <div className="h-8 w-px bg-slate-200"></div>
           <div className="flex items-center gap-2">
@@ -137,21 +148,30 @@ export default function LoginTrackerCalendar() {
               const isLoggedToday = logins.includes(todayStr);
               const streak = calcStreak(logins, todayStr);
               const isSelf = member.email.toLowerCase() === currentUser?.email?.toLowerCase();
-              
+
               return (
                 <tr key={member.id} className="hover:bg-slate-50/40 transition-all group">
                   {/* Profile */}
                   <td className="px-8 py-4">
                     <div className="flex items-center gap-3.5">
-                      <div 
+                      <div
                         className="h-9 w-9 rounded-xl flex items-center justify-center font-black text-xs shadow-sm border border-slate-100"
                         style={{ color: member.color, backgroundColor: `${member.color}12` }}
                       >
                         {member.initials}
                       </div>
                       <div>
-                        <div className="font-bold text-sm text-slate-800">{member.name} {isSelf && <span className="text-[10px] text-indigo-600 font-extrabold uppercase ml-1">(You)</span>}</div>
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{member.email}</div>
+                        <div className="font-bold text-sm text-slate-800">
+                          {member.name}{' '}
+                          {isSelf && (
+                            <span className="text-[10px] text-indigo-600 font-extrabold uppercase ml-1">
+                              (You)
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          {member.email}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -187,7 +207,9 @@ export default function LoginTrackerCalendar() {
 
                   {/* Total Logins */}
                   <td className="px-8 py-4">
-                    <span className="text-sm font-black text-slate-700 tabular-nums">{logins.length} Logins</span>
+                    <span className="text-sm font-black text-slate-700 tabular-nums">
+                      {logins.length} Logins
+                    </span>
                   </td>
 
                   {/* Toggle simulated login */}

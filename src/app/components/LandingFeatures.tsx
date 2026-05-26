@@ -1,99 +1,99 @@
+'use client';
 import React from 'react';
 import { Hash, Bot, CheckSquare, Newspaper, Database, Users } from 'lucide-react';
-import Icon from '@/components/ui/AppIcon';
-
+import AnimatedSection from './AnimatedSection';
 
 const features = [
   {
-    id: 'feat-channels',
-    icon: Hash,
-    title: 'Project Channels',
-    description:
-      'Dedicated channels for every project — #skillnaav, #edutechexassessa, and more. Context stays where work happens.',
+    id: 'feat-channels', icon: Hash, title: 'Project Channels',
+    description: 'Dedicated channels for every project. Context stays where work happens.',
   },
   {
-    id: 'feat-ai',
-    icon: Bot,
-    title: 'Embedded AI Agent',
-    description:
-      'Claude 3.5 lives inside your workspace. Ask it anything about your projects and get answers cited from actual channel history.',
+    id: 'feat-ai', icon: Bot, title: 'Embedded AI Agent',
+    description: 'AI lives inside your workspace. Ask it anything about your projects and get answers cited from channel history.',
   },
   {
-    id: 'feat-tasks',
-    icon: CheckSquare,
-    title: 'Auto Task Extraction',
-    description:
-      'The AI reads every message and surfaces actionable tasks automatically — no manual ticket creation, no missed follow-ups.',
+    id: 'feat-tasks', icon: CheckSquare, title: 'Auto Task Extraction',
+    description: 'The AI reads every message and surfaces actionable tasks automatically.',
   },
   {
-    id: 'feat-digest',
-    icon: Newspaper,
-    title: 'Daily Digest',
-    description:
-      'A morning summary of what happened yesterday across all channels, generated before your team logs in.',
+    id: 'feat-digest', icon: Newspaper, title: 'Daily Digest',
+    description: 'A morning summary of what happened yesterday across all channels.',
   },
   {
-    id: 'feat-kb',
-    icon: Database,
-    title: 'Org Knowledge Base',
-    description:
-      'Every decision, design doc, and discussion becomes searchable org memory. The AI retrieves it when you need it.',
+    id: 'feat-kb', icon: Database, title: 'Org Knowledge Base',
+    description: 'Every decision, design doc, and discussion becomes searchable org memory.',
   },
   {
-    id: 'feat-onboarding',
-    icon: Users,
-    title: 'Member Onboarding',
-    description:
-      'New team members get instant context from the org knowledge base. No onboarding doc maintenance required.',
+    id: 'feat-onboarding', icon: Users, title: 'Member Onboarding',
+    description: 'New team members get instant context from the org knowledge base.',
   },
 ];
 
 export default function LandingFeatures() {
   return (
-    <section id="features" className="py-24 px-6 lg:px-10 max-w-screen-xl mx-auto">
-      {/* Section tag */}
-      <div className="flex items-center gap-4 mb-10 animate-fade-in-left">
-        <span className="font-mono text-xs font-600 tracking-[0.15em] text-muted-foreground uppercase">
-          [02 / FEATURES]
-        </span>
-        <div className="h-px flex-1 bg-border max-w-24" />
-      </div>
-      {/* Heading */}
-      <div className="mb-14 animate-fade-in-up delay-150">
-        <h2 className="font-display font-700 text-4xl md:text-5xl tracking-tight text-foreground leading-tight">
-          What lives inside.
-        </h2>
-        <p className="text-muted-foreground text-lg mt-4 max-w-xl leading-relaxed">
-          Six tightly integrated capabilities that replace five disconnected tools.
-        </p>
-      </div>
-      {/* 2×3 grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 stagger-children">
-        {features?.map((feat, i) => {
-          const Icon = feat?.icon;
-          return (
-            <div
-              key={feat?.id}
-              className="feature-card group hover-glow animate-fade-in-up"
-              style={{ animationDelay: `${200 + i * 70}ms` }}
-            >
-              <div className="flex items-start gap-4">
+    <section
+      id="features"
+      className="relative min-h-screen flex items-center justify-center px-6 lg:px-10 py-24 overflow-hidden"
+    >
+      <div className="absolute top-1/4 right-0 w-[600px] h-[600px] bg-gradient-radial from-primary/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/3 left-0 w-[500px] h-[500px] bg-gradient-radial from-lavender/4 to-transparent rounded-full blur-3xl pointer-events-none" />
+
+      <div className="relative w-full max-w-screen-2xl mx-auto">
+        <AnimatedSection direction="up">
+          <div className="max-w-3xl mb-20">
+            <span className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-primary/8 backdrop-blur-xl mb-8">
+              <span className="w-2 h-2 rounded-full bg-primary animate-neon-pulse" />
+              <span className="font-mono text-[11px] font-bold tracking-[0.2em] text-primary uppercase">What lives inside</span>
+            </span>
+            <h2 className="font-display font-bold text-4xl md:text-5xl lg:text-6xl tracking-[-0.03em] text-foreground mt-4 mb-4">
+              Everything your <span className="text-gradient-warm">team needs.</span>
+            </h2>
+            <p className="text-lg text-ink font-medium max-w-xl leading-relaxed">
+              Six tightly integrated capabilities that replace five disconnected tools — designed for the modern workflow.
+            </p>
+          </div>
+        </AnimatedSection>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {features.map((feat, i) => {
+            const Icon = feat.icon;
+            return (
+              <AnimatedSection key={feat.id} direction="up" delay={i * 0.08}>
                 <div
-                  className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3"
+                  className="group relative p-8 rounded-3xl transition-all duration-700 hover:scale-[1.02] cursor-default"
+                  style={{
+                    backgroundColor: 'rgba(255,255,255,0.15)',
+                    backdropFilter: 'blur(16px)',
+                    WebkitBackdropFilter: 'blur(16px)',
+                  }}
                 >
-                  <Icon size={18} className="text-muted-foreground group-hover:text-primary transition-colors duration-200" />
-                </div>
-                <div className="flex flex-col gap-2 pt-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-muted-foreground/60">0{i + 1}</span>
-                    <h3 className="font-display font-600 text-base text-foreground group-hover:text-primary transition-colors duration-200">{feat?.title}</h3>
+                  <div
+                    className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(45,106,79,0.06), rgba(196,181,253,0.04))',
+                    }}
+                  />
+                  <div className="relative flex items-start gap-5">
+                    <div className="w-12 h-12 rounded-2xl bg-white/40 backdrop-blur-md flex items-center justify-center flex-shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:-rotate-3">
+                      <Icon size={20} className="text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-display font-bold text-base text-foreground mb-2 group-hover:text-primary transition-colors duration-300">
+                        {feat.title}
+                      </h3>
+                      <p className="text-sm text-ink font-medium leading-relaxed">{feat.description}</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{feat?.description}</p>
+                  <div className="mt-6 pt-6 border-t border-border/30 flex items-center gap-2 text-xs font-mono font-bold" style={{ color: '#6b806b' }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span>Feature 0{i + 1}</span>
+                  </div>
                 </div>
-              </div>
-            </div>
-          );
-        })}
+              </AnimatedSection>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

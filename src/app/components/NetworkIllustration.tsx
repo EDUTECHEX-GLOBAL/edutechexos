@@ -57,9 +57,33 @@ export default function NetworkIllustration() {
         ))}
 
         {/* Secondary edges (lighter) */}
-        <line x1="100" y1="120" x2="380" y2="100" stroke="#0a0a0a" strokeWidth="1" strokeOpacity="0.08" />
-        <line x1="80" y1="340" x2="160" y2="420" stroke="#0a0a0a" strokeWidth="1" strokeOpacity="0.08" />
-        <line x1="300" y1="400" x2="160" y2="420" stroke="#0a0a0a" strokeWidth="1" strokeOpacity="0.08" />
+        <line
+          x1="100"
+          y1="120"
+          x2="380"
+          y2="100"
+          stroke="#0a0a0a"
+          strokeWidth="1"
+          strokeOpacity="0.08"
+        />
+        <line
+          x1="80"
+          y1="340"
+          x2="160"
+          y2="420"
+          stroke="#0a0a0a"
+          strokeWidth="1"
+          strokeOpacity="0.08"
+        />
+        <line
+          x1="300"
+          y1="400"
+          x2="160"
+          y2="420"
+          stroke="#0a0a0a"
+          strokeWidth="1"
+          strokeOpacity="0.08"
+        />
 
         {/* Satellite nodes */}
         {nodes?.slice(1)?.map((node) => (
@@ -111,8 +135,24 @@ export default function NetworkIllustration() {
         </text>
 
         {/* Dot pulse rings */}
-        <circle cx="240" cy="240" r="36" fill="none" stroke="#2563eb" strokeWidth="1" strokeOpacity="0.3" />
-        <circle cx="240" cy="240" r="48" fill="none" stroke="#2563eb" strokeWidth="0.5" strokeOpacity="0.15" />
+        <circle
+          cx="240"
+          cy="240"
+          r="36"
+          fill="none"
+          stroke="#2563eb"
+          strokeWidth="1"
+          strokeOpacity="0.3"
+        />
+        <circle
+          cx="240"
+          cy="240"
+          r="48"
+          fill="none"
+          stroke="#2563eb"
+          strokeWidth="0.5"
+          strokeOpacity="0.15"
+        />
       </svg>
     </div>
   );

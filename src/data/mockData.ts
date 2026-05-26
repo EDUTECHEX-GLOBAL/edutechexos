@@ -27,10 +27,34 @@ export const CHANNELS = [
     memberCount: 9,
     unread: 2,
   },
-  { id: 'member-ac', name: 'Aditya Cherikuri', description: 'Direct Message', memberCount: 2, unread: 0 },
-  { id: 'member-rk', name: 'Ram K Aluru', description: 'Direct Message', memberCount: 2, unread: 0 },
-  { id: 'member-sa', name: 'Sneha Agarwal', description: 'Direct Message', memberCount: 2, unread: 0 },
-  { id: 'member-tm', name: 'Tarun Mehta', description: 'Direct Message', memberCount: 2, unread: 0 },
+  {
+    id: 'member-ac',
+    name: 'Aditya Cherikuri',
+    description: 'Direct Message',
+    memberCount: 2,
+    unread: 0,
+  },
+  {
+    id: 'member-rk',
+    name: 'Ram K Aluru',
+    description: 'Direct Message',
+    memberCount: 2,
+    unread: 0,
+  },
+  {
+    id: 'member-sa',
+    name: 'Sneha Agarwal',
+    description: 'Direct Message',
+    memberCount: 2,
+    unread: 0,
+  },
+  {
+    id: 'member-tm',
+    name: 'Tarun Mehta',
+    description: 'Direct Message',
+    memberCount: 2,
+    unread: 0,
+  },
   { id: 'member-mk', name: 'Mohan K.', description: 'Direct Message', memberCount: 2, unread: 0 },
   { id: 'member-mr', name: 'Mohan R.', description: 'Direct Message', memberCount: 2, unread: 0 },
   { id: 'member-ms', name: 'Mohan S.', description: 'Direct Message', memberCount: 2, unread: 0 },
@@ -145,7 +169,7 @@ export const MESSAGES_BY_CHANNEL: Record<string, Message[]> = {
       initials: 'TM',
       color: '#059669',
       timestamp: d(-7, 45),
-      text: 'I\'ve connected the recommendation engine API to the frontend. It\'s pulling from the MongoDB skills taxonomy collection.',
+      text: "I've connected the recommendation engine API to the frontend. It's pulling from the MongoDB skills taxonomy collection.",
     },
     {
       id: 'sk-003',
@@ -153,7 +177,7 @@ export const MESSAGES_BY_CHANNEL: Record<string, Message[]> = {
       initials: 'TM',
       color: '#059669',
       timestamp: d(-7, 46),
-      text: 'One issue: the latency on the first recommendation fetch is ~800ms because we\'re not caching the taxonomy. Should we add Redis here?',
+      text: "One issue: the latency on the first recommendation fetch is ~800ms because we're not caching the taxonomy. Should we add Redis here?",
     },
     {
       id: 'sk-004',
@@ -161,7 +185,7 @@ export const MESSAGES_BY_CHANNEL: Record<string, Message[]> = {
       initials: 'RK',
       color: '#7c3aed',
       timestamp: d(-7, 52),
-      text: 'Yes — add a 1-hour TTL cache on the taxonomy endpoint. The data doesn\'t change often. I\'ll review the PR.',
+      text: "Yes — add a 1-hour TTL cache on the taxonomy endpoint. The data doesn't change often. I'll review the PR.",
     },
     {
       id: 'sk-005',
@@ -169,7 +193,7 @@ export const MESSAGES_BY_CHANNEL: Record<string, Message[]> = {
       initials: 'AC',
       color: '#2563eb',
       timestamp: d(-6),
-      text: 'SkillNaav v0.3 milestone: recommendation engine connected, skill radar chart in UI, student profile creation working. We\'re on track for the May 15 beta.',
+      text: "SkillNaav v0.3 milestone: recommendation engine connected, skill radar chart in UI, student profile creation working. We're on track for the May 15 beta.",
     },
     {
       id: 'sk-006',
@@ -260,7 +284,7 @@ export const MESSAGES_BY_CHANNEL: Record<string, Message[]> = {
       initials: 'RK',
       color: '#7c3aed',
       timestamp: d(-7),
-      text: 'Parent reports are feasible — PDF export via a FastAPI background task. I\'ll add it to the Sprint 13 backlog.',
+      text: "Parent reports are feasible — PDF export via a FastAPI background task. I'll add it to the Sprint 13 backlog.",
     },
     {
       id: 'ea-007',
@@ -276,7 +300,7 @@ export const MESSAGES_BY_CHANNEL: Record<string, Message[]> = {
       initials: 'PN',
       color: '#dc2626',
       timestamp: d(-4, 30),
-      text: 'On it — I\'ll assign Kavitha to CLAT legal reasoning questions this week. Should be done by Thursday.',
+      text: "On it — I'll assign Kavitha to CLAT legal reasoning questions this week. Should be done by Thursday.",
     },
     {
       id: 'ea-009',
@@ -370,7 +394,7 @@ export const MESSAGES_BY_CHANNEL: Record<string, Message[]> = {
       color: '#2563eb',
       timestamp: d(-1),
       text: 'Also, remember to use our 2.5-flash model in your copilot queries! Let me know if it responds properly.',
-    }
+    },
   ],
   'member-rk': [
     {
@@ -380,7 +404,7 @@ export const MESSAGES_BY_CHANNEL: Record<string, Message[]> = {
       color: '#7c3aed',
       timestamp: d(-3),
       text: 'Hey! The FastAPI socket connections are fully optimized. We are good to run our local environment tests whenever you are ready.',
-    }
+    },
   ],
   'member-sa': [
     {
@@ -390,7 +414,7 @@ export const MESSAGES_BY_CHANNEL: Record<string, Message[]> = {
       color: '#0891b2',
       timestamp: d(-4),
       text: 'Good morning! The new Figma design mockups for EduTechEx have been finalized. I split the layout elements as requested.',
-    }
+    },
   ],
   'member-tm': [
     {
@@ -400,16 +424,37 @@ export const MESSAGES_BY_CHANNEL: Record<string, Message[]> = {
       color: '#059669',
       timestamp: d(-5),
       text: 'Hey, I checked the MongoDB indexing for direct messaging history and it is extremely fast now. Ready to push to production.',
-    }
+    },
   ],
   'member-mk': [
-    { id: 'dm-mk-001', sender: 'Mohan K.', initials: 'MK', color: '#8b5cf6', timestamp: d(-1), text: 'Hello team, Mohan here. Ready for the sprint.' },
+    {
+      id: 'dm-mk-001',
+      sender: 'Mohan K.',
+      initials: 'MK',
+      color: '#8b5cf6',
+      timestamp: d(-1),
+      text: 'Hello team, Mohan here. Ready for the sprint.',
+    },
   ],
   'member-mr': [
-    { id: 'dm-mr-001', sender: 'Mohan R.', initials: 'MR', color: '#ef4444', timestamp: d(-1), text: 'Checking in on the project status.' },
+    {
+      id: 'dm-mr-001',
+      sender: 'Mohan R.',
+      initials: 'MR',
+      color: '#ef4444',
+      timestamp: d(-1),
+      text: 'Checking in on the project status.',
+    },
   ],
   'member-ms': [
-    { id: 'dm-ms-001', sender: 'Mohan S.', initials: 'MS', color: '#10b981', timestamp: d(-1), text: 'Looking forward to the demo.' },
+    {
+      id: 'dm-ms-001',
+      sender: 'Mohan S.',
+      initials: 'MS',
+      color: '#10b981',
+      timestamp: d(-1),
+      text: 'Looking forward to the demo.',
+    },
   ],
 };
 
@@ -490,7 +535,7 @@ export const MOCK_AI_RESPONSES = [
   {
     id: 'ai-init-001',
     role: 'assistant' as const,
-    text: 'Hi! I\'m the EduTechEx Channel Copilot. I answer from the channel you currently have open and respect your assigned channel access.',
+    text: "Hi! I'm the EduTechEx Channel Copilot. I answer from the channel you currently have open and respect your assigned channel access.",
     citation: 'EduTechExOS · Org Knowledge Base',
     timestamp: new Date('2026-05-06T08:55:00').toISOString(),
   },

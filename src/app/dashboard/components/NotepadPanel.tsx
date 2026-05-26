@@ -1,8 +1,16 @@
 'use client';
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FileText, X, Trash2, Send, Bold, Italic, Code, List, Check } from 'lucide-react';
+import { X, Trash2, Share2, Bold, Italic, Code, List, Check, Pencil, FileText, Hash } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { toast } from 'sonner';
+import { getNoteAction, saveNoteAction } from '@/app/actions/dbActions';
+// Server actions for note persistence
+
+
+
+
+
 
 interface NotepadPanelProps {
   onClose: () => void;
@@ -28,99 +36,134 @@ function getPreview(note: string) {
   return note.replace(/\s+/g, ' ').trim();
 }
 
+function formatRelativeTime(ts: number): string {
+  if (!ts) return '';
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
 export default function NotepadPanel({ onClose, activeChannel }: NotepadPanelProps) {
   const [selectedPadId, setSelectedPadId] = useState(activeChannel);
   const [note, setNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
-  const [savedPads, setSavedPads] = useState<SavedPad[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const addMessage = useDashboardStore((s) => s.addMessage);
   const channels = useDashboardStore((s) => s.channels);
 
   const channelNameById = useMemo(
-    () => new Map(channels.map((channel) => [channel.id, channel.name] as const)),
+    () => new Map(channels.map((ch) => [ch.id, ch.name] as const)),
     [channels]
   );
 
+  const recomputeSavedPads = React.useCallback(() => {
+  if (typeof window === 'undefined') return [] as SavedPad[];
+  return channels
+    .map((ch) => {
+      const stored = localStorage.getItem(getNoteKey(ch.id)) || '';
+      if (!getPreview(stored)) return null;
+      const updatedRaw = localStorage.getItem(getTimestampKey(ch.id));
+      return {
+        id: ch.id,
+        name: ch.name,
+        note: stored,
+        updatedAt: updatedRaw ? Number(updatedRaw) : 0,
+      } as SavedPad;
+    })
+    .filter((p): p is SavedPad => Boolean(p))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+}, [channels]);
+
+const savedPads = React.useMemo(() => recomputeSavedPads(), [channels]);
+
   const selectedName = channelNameById.get(selectedPadId) ?? 'Direct Message';
-  const currentPadPreview = savedPads.find((pad) => pad.id === activeChannel)?.note ?? '';
-
-  const refreshSavedPads = React.useCallback(() => {
-    const pads = channels
-      .map((channel) => {
-        const stored = localStorage.getItem(getNoteKey(channel.id)) || '';
-        const preview = getPreview(stored);
-        if (!preview) return null;
-
-        const updatedRaw = localStorage.getItem(getTimestampKey(channel.id));
-        const updatedAt = updatedRaw ? Number(updatedRaw) : 0;
-
-        return {
-          id: channel.id,
-          name: channel.name,
-          note: stored,
-          updatedAt,
-        };
-      })
-      .filter((pad): pad is SavedPad => Boolean(pad))
-      .sort((a, b) => b.updatedAt - a.updatedAt);
-
-    setSavedPads(pads);
-  }, [channels]);
 
   useEffect(() => {
     setSelectedPadId(activeChannel);
   }, [activeChannel]);
 
-  useEffect(() => {
-    const saved = localStorage.getItem(getNoteKey(selectedPadId)) || '';
-    setNote(saved);
-    setSaveStatus('idle');
-    refreshSavedPads();
-  }, [refreshSavedPads, selectedPadId]);
-
-  useEffect(() => {
-    if (!note.trim()) {
-      setIsSaving(false);
-      setSaveStatus('idle');
-      localStorage.removeItem(getNoteKey(selectedPadId));
-      localStorage.removeItem(getTimestampKey(selectedPadId));
-      refreshSavedPads();
-      return;
+useEffect(() => {
+  const loadNote = async () => {
+    // Try fetching note from MongoDB
+    const dbNote = await getNoteAction(selectedPadId);
+    if (dbNote && dbNote.content) {
+      setNote(dbNote.content);
+    } else {
+      const local = localStorage.getItem(getNoteKey(selectedPadId)) || '';
+      setNote(local);
     }
-
-    setIsSaving(true);
     setSaveStatus('idle');
-    const timer = setTimeout(() => {
-      localStorage.setItem(getNoteKey(selectedPadId), note);
-      localStorage.setItem(getTimestampKey(selectedPadId), String(Date.now()));
-      setIsSaving(false);
-      setSaveStatus('saved');
-      refreshSavedPads();
-    }, 500);
+  };
+  loadNote();
+}, [selectedPadId]);
 
-    return () => clearTimeout(timer);
-  }, [note, refreshSavedPads, selectedPadId]);
+  useEffect(() => {
+  if (!note.trim()) {
+    setIsSaving(false);
+    setSaveStatus('idle');
+    localStorage.removeItem(getNoteKey(selectedPadId));
+    localStorage.removeItem(getTimestampKey(selectedPadId));
 
-  const selectedPadPreview = getPreview(note);
+    // Delete note in DB (set empty content)
+    void saveNoteAction(selectedPadId, '');
+    return;
+  }
+  setIsSaving(true);
+  setSaveStatus('idle');
+  const timer = setTimeout(async () => {
+    localStorage.setItem(getNoteKey(selectedPadId), note);
+    localStorage.setItem(getTimestampKey(selectedPadId), String(Date.now()));
+    // Persist to DB
+    await saveNoteAction(selectedPadId, note);
+    setIsSaving(false);
+    setSaveStatus('saved');
+    // Notify channel members about the note update
+    addMessage(selectedPadId, {
+      id: `msg-note-${Date.now()}`,
+      sender: 'System',
+      initials: '🛈',
+      color: '#6b7280',
+      timestamp: new Date().toISOString(),
+      text: `📝 Note updated in #${selectedName}`,
+    });
 
-  const insertMarkdown = (prefix: string, suffix: string = '') => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+  }, 500);
+  return () => clearTimeout(timer);
+}, [note, selectedPadId, addMessage, selectedName]);
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const selected = text.substring(start, end);
-    const replacement = prefix + selected + suffix;
+  const wordCount = note.trim() ? note.trim().split(/\s+/).length : 0;
+  const charCount = note.length;
 
-    const newNote = text.substring(0, start) + replacement + text.substring(end);
+  const insertMarkdown = (prefix: string, suffix = '') => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = ta.value.substring(start, end);
+    const newNote =
+      ta.value.substring(0, start) + prefix + selected + suffix + ta.value.substring(end);
     setNote(newNote);
-
     setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
+      ta.focus();
+      ta.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
+    }, 0);
+  };
+
+  const insertHeading = () => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const lineStart = ta.value.lastIndexOf('\n', start - 1) + 1;
+    const newNote = ta.value.substring(0, lineStart) + '## ' + ta.value.substring(lineStart);
+    setNote(newNote);
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(lineStart + 3, lineStart + 3);
     }, 0);
   };
 
@@ -129,12 +172,10 @@ export default function NotepadPanel({ onClose, activeChannel }: NotepadPanelPro
       toast.error('Cannot share an empty note.');
       return;
     }
-
     try {
       const auth = localStorage.getItem('edutechex_token');
       let sender = 'Admin';
       let initials = 'A';
-      const color = '#2563eb';
       if (auth) {
         const { user } = JSON.parse(auth);
         if (user) {
@@ -147,234 +188,290 @@ export default function NotepadPanel({ onClose, activeChannel }: NotepadPanelPro
             .substring(0, 2);
         }
       }
-
       addMessage(selectedPadId, {
         id: `msg-note-${Date.now()}`,
         sender,
         initials,
-        color,
+        color: '#2563eb',
         timestamp: new Date().toISOString(),
-        text: `Shared note from ${selectedName}\n\n${note.trim()}`,
+        text: `📝 Shared note from ${selectedName}\n\n${note.trim()}`,
       });
-
-      toast.success(`Note sent to ${selectedName}.`);
+      toast.success(`Note shared to #${selectedName}`);
     } catch {
-      toast.error('Failed to share note to channel.');
+      toast.error('Failed to share note.');
     }
   };
 
   const handleClearNote = () => {
-    if (window.confirm('Are you sure you want to clear this notepad? This cannot be undone.')) {
+    if (window.confirm('Clear this notepad? This cannot be undone.')) {
       setNote('');
       localStorage.removeItem(getNoteKey(selectedPadId));
       localStorage.removeItem(getTimestampKey(selectedPadId));
       setSaveStatus('idle');
-      refreshSavedPads();
+
+      // Notify channel members about note clearance
+      addMessage(selectedPadId, {
+        id: `msg-note-${Date.now()}`,
+        sender: 'System',
+        initials: '🛈',
+        color: '#6b7280',
+        timestamp: new Date().toISOString(),
+        text: `🗑️ Note cleared in #${selectedName}`,
+      });
+
       toast.success('Notepad cleared');
     }
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]">
-      <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
-            <FileText size={16} strokeWidth={2.5} />
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-none bg-white">
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <div
+        className="flex h-14 shrink-0 items-center justify-between px-4"
+        style={{
+          background: 'linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)',
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-500/20">
+            <Pencil size={16} className="text-indigo-300" strokeWidth={2.5} />
           </div>
-          <div className="min-w-0">
-            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-indigo-600">
-              Workspace Notes
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">
+              Workspace
             </p>
-            <span className="block truncate text-sm font-black text-slate-900">
-              {savedPads.length} saved notepad{savedPads.length === 1 ? '' : 's'}
-            </span>
+            <p className="text-sm font-black leading-none text-white">Notes</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
-          title="Close Notepad"
-        >
-          <X size={16} strokeWidth={2.5} />
-        </button>
-      </div>
 
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[240px_1fr]">
-        <aside className="border-b border-slate-200 bg-slate-50/80 p-3 lg:border-b-0 lg:border-r">
+        <div className="flex items-center gap-3">
+          {savedPads.length > 0 && (
+            <span className="rounded-full bg-indigo-500/20 px-2.5 py-1 text-[11px] font-black text-indigo-300">
+              {savedPads.length} saved
+            </span>
+          )}
           <button
             type="button"
-            onClick={() => setSelectedPadId(activeChannel)}
-            className={`mb-3 w-full rounded-2xl border px-3 py-3 text-left transition ${
-              selectedPadId === activeChannel
-                ? 'border-indigo-200 bg-white shadow-sm'
-                : 'border-slate-200 bg-white/70 hover:border-slate-300'
-            }`}
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+            title="Close"
           >
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+            <X size={16} strokeWidth={2.5} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Body ───────────────────────────────────────────────── */}
+      <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: '200px 1fr' }}>
+        {/* ── Sidebar ── */}
+        <aside
+          className="flex flex-col gap-0 overflow-hidden border-r border-slate-900"
+          style={{ background: '#0f172a' }}
+        >
+          {/* Current channel */}
+          <div className="shrink-0 p-2.5">
+            <p className="mb-1.5 px-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
               Current chat
             </p>
-            <p className="mt-1 truncate text-sm font-black text-slate-900">
-              {channelNameById.get(activeChannel) ?? 'Direct Message'}
-            </p>
-            <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-slate-500">
-              {selectedPadId === activeChannel && selectedPadPreview
-                ? selectedPadPreview
-                : getPreview(currentPadPreview) || 'Start drafting notes for this chat.'}
-            </p>
-          </button>
-
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-              All saved
-            </p>
-            <span className="rounded-full bg-white px-2 py-1 text-[10px] font-black text-slate-500 shadow-sm">
-              {savedPads.length}
-            </span>
-          </div>
-
-          <div className="max-h-[28vh] space-y-2 overflow-y-auto pr-1 lg:max-h-none lg:h-[calc(100vh-15rem)]">
-            {savedPads.length ? (
-              savedPads.map((pad) => (
-                <button
-                  key={pad.id}
-                  type="button"
-                  onClick={() => setSelectedPadId(pad.id)}
-                  className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
-                    selectedPadId === pad.id
-                      ? 'border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-200'
-                      : 'border-transparent bg-white hover:border-slate-200 hover:bg-white'
+            <button
+              type="button"
+              onClick={() => setSelectedPadId(activeChannel)}
+              className={`w-full rounded-xl p-2.5 text-left transition-all ${
+                selectedPadId === activeChannel
+                  ? 'bg-indigo-600 shadow-lg shadow-indigo-900/50'
+                  : 'hover:bg-slate-800'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Hash
+                  size={11}
+                  className={selectedPadId === activeChannel ? 'text-indigo-300' : 'text-slate-500'}
+                />
+                <span
+                  className={`truncate text-xs font-black ${
+                    selectedPadId === activeChannel ? 'text-white' : 'text-slate-300'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`truncate text-xs font-black ${selectedPadId === pad.id ? 'text-white' : 'text-slate-900'}`}
-                    >
-                      {pad.name}
-                    </span>
-                    <span
-                      className={`text-[10px] font-black ${selectedPadId === pad.id ? 'text-slate-300' : 'text-slate-400'}`}
-                    >
-                      {pad.note.trim().length}
-                    </span>
-                  </div>
-                  <p
-                    className={`mt-1 line-clamp-3 text-xs font-semibold leading-5 ${selectedPadId === pad.id ? 'text-slate-200' : 'text-slate-500'}`}
-                  >
-                    {getPreview(pad.note)}
-                  </p>
-                </button>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm font-semibold text-slate-500">
-                No saved notepads yet.
+                  {channelNameById.get(activeChannel) ?? 'DM'}
+                </span>
               </div>
-            )}
+              {savedPads.find((p) => p.id === activeChannel) && (
+                <p
+                  className={`mt-1 line-clamp-2 text-[11px] leading-4 ${
+                    selectedPadId === activeChannel ? 'text-indigo-200' : 'text-slate-500'
+                  }`}
+                >
+                  {getPreview(savedPads.find((p) => p.id === activeChannel)?.note ?? '')}
+                </p>
+              )}
+              {!savedPads.find((p) => p.id === activeChannel) && (
+                <p
+                  className={`mt-1 text-[11px] italic ${
+                    selectedPadId === activeChannel ? 'text-indigo-300' : 'text-slate-600'
+                  }`}
+                >
+                  No notes yet
+                </p>
+              )}
+            </button>
+          </div>
+
+          <div className="mx-2.5 border-t border-slate-800" />
+
+          {/* All saved */}
+          <div className="flex min-h-0 flex-1 flex-col gap-0 p-2.5">
+            <p className="mb-1.5 px-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
+              All saved
+            </p>
+
+            <div className="flex-1 space-y-1 overflow-y-auto">
+              {savedPads.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-700 p-4 text-center">
+                  <FileText size={20} className="mx-auto mb-1.5 text-slate-600" />
+                  <p className="text-[11px] font-semibold text-slate-600">No saved notes yet</p>
+                </div>
+              ) : (
+                savedPads.map((pad) => (
+                  <button
+                    key={pad.id}
+                    type="button"
+                    onClick={() => setSelectedPadId(pad.id)}
+                    className={`w-full rounded-xl p-2.5 text-left transition-all ${
+                      selectedPadId === pad.id
+                        ? 'bg-indigo-600 shadow-lg shadow-indigo-900/50'
+                        : 'hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span
+                        className={`truncate text-[11px] font-black ${
+                          selectedPadId === pad.id ? 'text-white' : 'text-slate-300'
+                        }`}
+                      >
+                        {pad.name}
+                      </span>
+                      <span
+                        className={`shrink-0 text-[9px] font-semibold ${
+                          selectedPadId === pad.id ? 'text-indigo-300' : 'text-slate-600'
+                        }`}
+                      >
+                        {formatRelativeTime(pad.updatedAt)}
+                      </span>
+                    </div>
+                    <p
+                      className={`mt-1 line-clamp-2 text-[10px] leading-[1.4] ${
+                        selectedPadId === pad.id ? 'text-indigo-200' : 'text-slate-500'
+                      }`}
+                    >
+                      {getPreview(pad.note)}
+                    </p>
+                  </button>
+                ))
+              )}
+            </div>
           </div>
         </aside>
 
-        <section className="flex min-h-0 flex-1 flex-col">
-          <div className="border-b border-slate-200 px-4 py-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                  Editing note
-                </p>
-                <h3 className="text-base font-black text-slate-950">{selectedName}</h3>
+        {/* ── Editor ── */}
+        <section className="flex min-h-0 flex-1 flex-col" style={{ background: '#FFFCF0' }}>
+          {/* Editor sub-header */}
+          <div className="shrink-0 border-b border-amber-100 bg-white/80 px-4 py-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Hash size={13} className="text-slate-400" />
+                <h3 className="text-sm font-black text-slate-900">{selectedName}</h3>
               </div>
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                {isSaving && <span>Saving...</span>}
-                {saveStatus === 'saved' && (
-                  <span className="flex items-center gap-1 text-emerald-600">
-                    <Check size={12} strokeWidth={3} />
+              <div className="flex items-center gap-2">
+                {isSaving && (
+                  <span className="text-[10px] font-semibold text-amber-500">Saving…</span>
+                )}
+                {saveStatus === 'saved' && !isSaving && (
+                  <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600">
+                    <Check size={11} strokeWidth={3} />
                     Saved
+                  </span>
+                )}
+                {charCount > 0 && (
+                  <span className="text-[10px] font-semibold text-slate-400">
+                    {wordCount}w · {charCount}c
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-center gap-1 rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
-              <button
-                type="button"
-                onClick={() => insertMarkdown('**', '**')}
-                className="rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
-                title="Bold"
-              >
-                <Bold size={14} strokeWidth={2.5} />
-              </button>
-              <button
-                type="button"
-                onClick={() => insertMarkdown('*', '*')}
-                className="rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
-                title="Italic"
-              >
-                <Italic size={14} strokeWidth={2.5} />
-              </button>
-              <button
-                type="button"
-                onClick={() => insertMarkdown('`', '`')}
-                className="rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
-                title="Code"
-              >
-                <Code size={14} strokeWidth={2.5} />
-              </button>
-              <button
-                type="button"
-                onClick={() => insertMarkdown('- ')}
-                className="rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
-                title="Bullet List"
-              >
-                <List size={14} strokeWidth={2.5} />
-              </button>
-              <div className="ml-auto rounded-xl bg-slate-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
-                Auto-save on
+            {/* Formatting toolbar */}
+            <div className="mt-2 flex items-center gap-0.5 rounded-lg border border-slate-100 bg-white p-1">
+              {[
+                { icon: Bold, label: 'Bold', action: () => insertMarkdown('**', '**') },
+                { icon: Italic, label: 'Italic', action: () => insertMarkdown('*', '*') },
+                { icon: Code, label: 'Inline code', action: () => insertMarkdown('`', '`') },
+                { icon: List, label: 'Bullet', action: () => insertMarkdown('- ') },
+                { icon: Hash, label: 'Heading', action: insertHeading },
+              ].map(({ icon: Icon, label, action }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={action}
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                  title={label}
+                >
+                  <Icon size={13} strokeWidth={2.5} />
+                </button>
+              ))}
+              <div className="ml-auto flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-1">
+                <div className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-amber-600">
+                  Auto-save
+                </span>
               </div>
             </div>
           </div>
 
+          {/* Textarea */}
           <div className="min-h-0 flex-1 p-4">
             <textarea
               ref={textareaRef}
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder={`Type notes for ${selectedName} here...`}
-              className="h-full w-full resize-none rounded-[1.5rem] border border-slate-200 bg-white px-4 py-4 text-sm font-medium leading-7 text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
+              placeholder={`Start writing notes for #${selectedName}…\n\nTip: Use **bold**, *italic*, or \`code\` for formatting.`}
+              className="h-full w-full resize-none rounded-2xl border-0 bg-transparent px-4 py-4 text-sm font-medium leading-7 text-slate-800 placeholder-slate-300 outline-none"
+              style={{
+                backgroundImage:
+                  'repeating-linear-gradient(transparent, transparent 27px, #f3e8c8 27px, #f3e8c8 28px)',
+                backgroundSize: '100% 28px',
+                backgroundPositionY: '28px',
+                fontFamily: "'Georgia', 'Times New Roman', serif",
+                lineHeight: '28px',
+              }}
             />
           </div>
 
-          <div className="shrink-0 border-t border-slate-200 bg-white/80 p-4">
-            <div className="mb-3 rounded-2xl bg-slate-50 px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                Ready to send
-              </p>
-              <p className="mt-1 text-sm font-semibold text-slate-600">
-                Share this note directly into{' '}
-                <span className="font-black text-slate-900">{selectedName}</span>.
-              </p>
-            </div>
+          {/* Footer actions */}
+          <div className="shrink-0 border-t border-amber-100 bg-white/90 p-3">
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={handleClearNote}
                 disabled={!note.trim()}
-                className="flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600 transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white disabled:hover:text-slate-600"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 text-[11px] font-black uppercase tracking-[0.1em] text-slate-600 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <span className="flex items-center justify-center gap-1.5">
-                  <Trash2 size={13} />
-                  Clear
-                </span>
+                <Trash2 size={12} strokeWidth={2.5} />
+                Clear
               </button>
 
               <button
                 type="button"
                 onClick={handleShareToChannel}
                 disabled={!note.trim()}
-                className="flex-1 rounded-2xl bg-slate-950 px-3 py-3 text-[11px] font-black uppercase tracking-[0.12em] text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-[11px] font-black uppercase tracking-[0.1em] text-white transition-all disabled:cursor-not-allowed disabled:opacity-40"
+                style={{
+                  background: note.trim()
+                    ? 'linear-gradient(135deg, #4f46e5, #7c3aed)'
+                    : '#94a3b8',
+                }}
               >
-                <span className="flex items-center justify-center gap-1.5">
-                  <Send size={13} />
-                  Send to chat
-                </span>
+                <Share2 size={12} strokeWidth={2.5} />
+                Share to chat
               </button>
             </div>
           </div>

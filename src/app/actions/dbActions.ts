@@ -3,54 +3,106 @@
 import fs from 'fs/promises';
 import path from 'path';
 import nodemailer from 'nodemailer';
+import connectToDatabase from '@/lib/mongoose';
+import Message from '@/models/Message';
+import Note from '@/models/Note';
 
-const DB_FILE_PATH = path.join(process.cwd(), 'src/data/db.json');
 const UPLOADS_DIR = path.join(process.cwd(), 'public/uploads');
+
+// Global flag indicating if DB connection succeeded
+let dbConnected = false;
 
 // Ensure database and uploads directory exist
 async function ensureDbExists() {
   try {
-    await fs.mkdir(path.dirname(DB_FILE_PATH), { recursive: true });
     await fs.mkdir(UPLOADS_DIR, { recursive: true });
+  } catch (err) {
+    console.error('Error ensuring uploads dir:', err);
+  }
 
-    try {
-      await fs.access(DB_FILE_PATH);
-    } catch {
-      // Seed with initial mock data
+  try {
+    await connectToDatabase();
+    dbConnected = true;
+  } catch (err) {
+    console.error('Error connecting to MongoDB:', err);
+    dbConnected = false;
+    // Do not rethrow – downstream callers will handle the lack of a DB connection
+    return false;
+  }
+  try {
+    const count = await Message.countDocuments();
+    if (count === 0) {
+      console.log('Seeding initial mock data into MongoDB...');
       const { MESSAGES_BY_CHANNEL } = require('../../data/mockData');
-      await fs.writeFile(DB_FILE_PATH, JSON.stringify(MESSAGES_BY_CHANNEL, null, 2), 'utf-8');
+      const msgsToInsert = [];
+
+      for (const [channelId, messages] of Object.entries(MESSAGES_BY_CHANNEL)) {
+        for (const msg of messages as any[]) {
+          const { id, ...rest } = msg;
+          msgsToInsert.push({ ...rest, clientId: id, channelId });
+        }
+      }
+
+      if (msgsToInsert.length > 0) {
+        await Message.insertMany(msgsToInsert);
+        console.log('Successfully seeded MongoDB with mock data');
+      }
     }
   } catch (err) {
-    console.error('Error ensuring local DB setup:', err);
+    console.error('Error seeding MongoDB:', err);
   }
+  return true;
 }
 
 export async function getLocalMessages() {
-  await ensureDbExists();
+  // Attempt DB connection; if it fails we fall back to mock data
+  const dbOk = await ensureDbExists();
+  if (!dbOk) {
+    try {
+      const { MESSAGES_BY_CHANNEL } = require('../../data/mockData');
+      return MESSAGES_BY_CHANNEL;
+    } catch (e) {
+      console.error('Failed to load mock data fallback:', e);
+      return {};
+    }
+  }
   try {
-    const data = await fs.readFile(DB_FILE_PATH, 'utf-8');
-    return JSON.parse(data);
+    const messages = await Message.find({}).lean();
+    const grouped: Record<string, any[]> = {};
+    for (const msg of messages as any[]) {
+      const channelId = msg.channelId;
+      if (!grouped[channelId]) grouped[channelId] = [];
+      const { _id, __v, ...rest } = msg;
+      grouped[channelId].push({ ...rest, id: _id.toString() });
+    }
+    return grouped;
   } catch (err) {
-    console.error('Failed to read local messages:', err);
-    return {};
+    console.error('Failed to get messages from MongoDB:', err);
+    // Fallback to mock data so UI does not crash when DB is unavailable
+    try {
+      const { MESSAGES_BY_CHANNEL } = require('../../data/mockData');
+      return MESSAGES_BY_CHANNEL;
+    } catch (e) {
+      console.error('Failed to load mock data fallback:', e);
+      return {};
+    }
   }
 }
 
 export async function saveLocalMessage(channelId: string, message: any) {
-  await ensureDbExists();
   try {
-    const data = await fs.readFile(DB_FILE_PATH, 'utf-8');
-    const messages = JSON.parse(data);
-
-    if (!messages[channelId]) {
-      messages[channelId] = [];
-    }
-    messages[channelId].push(message);
-
-    await fs.writeFile(DB_FILE_PATH, JSON.stringify(messages, null, 2), 'utf-8');
-    return { success: true };
+    await ensureDbExists();
+    const { id, ...messageData } = message;
+    const newMessage = new Message({
+      ...messageData,
+      clientId: id,
+      channelId,
+    });
+    const savedMsg = await newMessage.save();
+    const { _id, __v, ...rest } = savedMsg.toObject();
+    return { success: true, message: { ...rest, id: _id.toString() } };
   } catch (err) {
-    console.error('Failed to save local message:', err);
+    console.error('Failed to save message to MongoDB:', err);
     return { success: false, error: String(err) };
   }
 }
@@ -88,16 +140,10 @@ export async function uploadLocalFile(formData: FormData) {
 export async function deleteLocalMessage(channelId: string, messageId: string) {
   await ensureDbExists();
   try {
-    const data = await fs.readFile(DB_FILE_PATH, 'utf-8');
-    const messages = JSON.parse(data);
-
-    if (messages[channelId]) {
-      messages[channelId] = messages[channelId].filter((msg: any) => msg.id !== messageId);
-      await fs.writeFile(DB_FILE_PATH, JSON.stringify(messages, null, 2), 'utf-8');
-    }
+    await Message.findByIdAndDelete(messageId);
     return { success: true };
   } catch (err) {
-    console.error('Failed to delete local message:', err);
+    console.error('Failed to delete message from MongoDB:', err);
     return { success: false, error: String(err) };
   }
 }
@@ -276,8 +322,10 @@ export async function sendMentionEmailNotification(
   channelName: string,
   messageText: string
 ) {
-  try {
-    let host = process.env.SMTP_HOST;
+  try 
+  {
+  
+   let host = process.env.SMTP_HOST;
     let port = Number(process.env.SMTP_PORT) || 587;
     let secure = process.env.SMTP_SECURE === 'true';
     let user = process.env.SMTP_USER;
@@ -343,15 +391,62 @@ export async function sendMentionEmailNotification(
       subject: `🔔 New Mention in #${channelName} by ${senderName}`,
       html: emailHtml,
     });
-
-    if (host === 'smtp.ethereal.email') {
-      testUrl = nodemailer.getTestMessageUrl(info) || '';
-      console.log(`Mention Email Sent! Ethereal Preview URL: ${testUrl}`);
-    }
-
-    return { success: true, previewUrl: testUrl };
   } catch (err) {
-    console.error('Failed to send mention SMTP email:', err);
+    console.error('Failed to send mention email:', err);
+    return { success: false, error: String(err) };
+  }
+}
+
+
+// Note CRUD functions moved to src/app/actions/noteActions.ts
+/**
+ * Fetch a single note for a given channel.
+ */
+export async function getNoteAction(channelId: string) {
+  try {
+    await ensureDbExists();
+    const note = await Note.findOne({ channelId }).lean();
+    if (!note) return null;
+    const { _id, __v, ...rest } = note;
+    return { ...rest, id: _id.toString() };
+  } catch (err) {
+    console.error('Failed to get note from MongoDB:', err);
+    return null;
+  }
+}
+
+/**
+ * Fetch all notes across channels.
+ */
+export async function getAllNotesAction() {
+  try {
+    await ensureDbExists();
+    const notes = await Note.find({}).lean();
+    return notes.map((n) => {
+      const { _id, __v, ...rest } = n;
+      return { ...rest, id: _id.toString() };
+    });
+  } catch (err) {
+    console.error('Failed to get all notes from MongoDB:', err);
+    return [];
+  }
+}
+
+/**
+ * Save or update a note for a channel.
+ */
+export async function saveNoteAction(channelId: string, content: string) {
+  try {
+    await ensureDbExists();
+    const updated = await Note.findOneAndUpdate(
+      { channelId },
+      { content, updatedAt: new Date() },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    ).lean();
+    const { _id, __v, ...rest } = updated;
+    return { success: true, note: { ...rest, id: _id.toString() } };
+  } catch (err) {
+    console.error('Failed to save note to MongoDB:', err);
     return { success: false, error: String(err) };
   }
 }

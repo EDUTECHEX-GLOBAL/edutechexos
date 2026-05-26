@@ -74,9 +74,10 @@ export default function ChannelMain({
     );
   }
 
-  const filteredMembers = members.filter((m) =>
-    m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredMembers = members.filter(
+    (m) =>
+      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -131,9 +132,7 @@ export default function ChannelMain({
           <button
             onClick={onToggleAI}
             className={`p-2 rounded-lg transition-colors ${
-              aiPanelOpen
-                ? 'bg-blue-600 text-white'
-                : 'text-slate-500 hover:bg-slate-100'
+              aiPanelOpen ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'
             }`}
             title="AI Panel"
           >
@@ -143,9 +142,7 @@ export default function ChannelMain({
           <button
             onClick={onToggleNotepad}
             className={`p-2 rounded-lg transition-colors ${
-              notepadOpen
-                ? 'bg-indigo-600 text-white'
-                : 'text-slate-500 hover:bg-slate-100'
+              notepadOpen ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100'
             }`}
             title="Notepad"
           >
@@ -211,7 +208,10 @@ export default function ChannelMain({
             <div className="flex-1 overflow-y-auto p-2">
               <div className="space-y-1">
                 {filteredMembers.map((member) => (
-                  <div key={member.id} className="flex items-center gap-3 rounded-lg p-3 hover:bg-slate-50">
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-3 rounded-lg p-3 hover:bg-slate-50"
+                  >
                     <div
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold text-white"
                       style={{ backgroundColor: member.color }}

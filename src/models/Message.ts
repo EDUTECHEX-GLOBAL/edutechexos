@@ -1,6 +1,8 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IMessage extends Document {
+  _id: string;
+  clientId?: string;
   channelId: string;
   sender: string;
   initials: string;
@@ -10,6 +12,9 @@ export interface IMessage extends Document {
 }
 
 const MessageSchema: Schema = new Schema({
+  // Let MongoDB generate the default ObjectId
+  // If you need a client‑side identifier, store it separately
+  clientId: { type: String, required: false },
   channelId: { type: String, required: true, index: true },
   sender: { type: String, required: true },
   initials: { type: String, required: true },

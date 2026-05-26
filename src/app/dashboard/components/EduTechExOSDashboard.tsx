@@ -429,6 +429,10 @@ export default function EduTechExOSDashboard() {
 
   useEffect(() => {
     loadLocalMessages?.();
+    const interval = setInterval(() => {
+      loadLocalMessages?.();
+    }, 3000);
+    return () => clearInterval(interval);
   }, [loadLocalMessages]);
 
   useEffect(() => {

@@ -11,15 +11,17 @@ type ChatMessage = { sender: string; text: string; timestamp: string };
 export async function summarizeChannelChat(messages: ChatMessage[]) {
   try {
     if (!process.env.GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is not configured.");
+      throw new Error('GEMINI_API_KEY is not configured.');
     }
 
     if (!messages || messages.length === 0) {
-      return { success: false, message: "No messages to summarize yet." };
+      return { success: false, message: 'No messages to summarize yet.' };
     }
 
     // 1. Format messages into a readable transcript for the AI
-    const transcript = messages.map((msg) => `[${new Date(msg.timestamp).toISOString()}] ${msg.sender}: ${msg.text}`).join('\n');
+    const transcript = messages
+      .map((msg) => `[${new Date(msg.timestamp).toISOString()}] ${msg.sender}: ${msg.text}`)
+      .join('\n');
 
     // 2. Prompt Engineering
     const prompt = `
@@ -39,7 +41,6 @@ export async function summarizeChannelChat(messages: ChatMessage[]) {
     const summaryText = result.response.text();
 
     return { success: true, data: summaryText };
-
   } catch (error) {
     console.error('Error summarizing chat:', error);
     return { success: false, error: 'Failed to generate summary' };
@@ -49,7 +50,7 @@ export async function summarizeChannelChat(messages: ChatMessage[]) {
 export async function extractActionItems(messages: ChatMessage[]) {
   try {
     if (!process.env.GEMINI_API_KEY) {
-       throw new Error("GEMINI_API_KEY is not configured.");
+      throw new Error('GEMINI_API_KEY is not configured.');
     }
 
     if (!messages || messages.length === 0) {
@@ -80,21 +81,23 @@ export async function extractActionItems(messages: ChatMessage[]) {
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const result = await model.generateContent(prompt);
-    
+
     // Strip any markdown code fences the model may have added
     let jsonString = result.response.text().trim();
-    jsonString = jsonString.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    jsonString = jsonString
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/, '')
+      .trim();
 
     // Find the JSON array if there's surrounding text
     const jsonMatch = jsonString.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       return { success: true, data: [] };
     }
-    
+
     const tasks = JSON.parse(jsonMatch[0]);
 
     return { success: true, data: tasks };
-
   } catch (error) {
     console.error('Error extracting tasks:', error);
     return { success: false, error: 'Failed to extract tasks' };
@@ -120,9 +123,12 @@ export async function askCopilot(
       };
     }
 
-    const transcript = messages && messages.length > 0 
-      ? messages.map((msg) => `[${new Date(msg.timestamp).toISOString()}] ${msg.sender}: ${msg.text}`).join('\n')
-      : "No previous messages in this channel.";
+    const transcript =
+      messages && messages.length > 0
+        ? messages
+            .map((msg) => `[${new Date(msg.timestamp).toISOString()}] ${msg.sender}: ${msg.text}`)
+            .join('\n')
+        : 'No previous messages in this channel.';
 
     const prompt = `
       You are the EduTechExOS Copilot, an AI assistant for the team. 
@@ -141,9 +147,8 @@ export async function askCopilot(
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const result = await model.generateContent(prompt);
-    
-    return { success: true, data: result.response.text() };
 
+    return { success: true, data: result.response.text() };
   } catch (error) {
     console.error('Error asking copilot:', error);
     return { success: false, error: 'Failed to get answer from Copilot' };

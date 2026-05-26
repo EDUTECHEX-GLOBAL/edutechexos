@@ -1,64 +1,85 @@
+'use client';
 import React from 'react';
+import { Quote } from 'lucide-react';
+import AnimatedSection from './AnimatedSection';
 
 const testimonials = [
   {
-    quote: "EduTechExOS completely changed how our engineering team operates. We no longer lose track of decisions in endless chat threads. The AI agent surfaces context instantly.",
-    author: "Sarah Jenkins",
-    role: "VP of Engineering, CloudScale",
-    avatar: "SJ"
+    quote: 'EduTechExOS completely changed how our engineering team operates. We no longer lose track of decisions in endless chat threads. The AI agent surfaces context instantly.',
+    author: 'Sarah Jenkins', role: 'VP of Engineering, CloudScale', initials: 'SJ',
+    gradient: 'from-primary to-green-light',
   },
   {
-    quote: "The Daily Digest feature alone saves me an hour every morning. I wake up, read the digest, and know exactly what the team accomplished while I was offline.",
-    author: "David Chen",
-    role: "Product Lead, InnovateTech",
-    avatar: "DC"
+    quote: 'The Daily Digest feature alone saves me an hour every morning. I wake up, read the digest, and know exactly what the team accomplished while I was offline.',
+    author: 'David Chen', role: 'Product Lead, InnovateTech', initials: 'DC',
+    gradient: 'from-lavender to-accent',
   },
   {
-    quote: "Onboarding used to take weeks. Now, new hires just ask the embedded AI about past projects, and they are up to speed in days. It's like having a dedicated mentor.",
-    author: "Elena Rodriguez",
-    role: "HR Director, EduFuture",
-    avatar: "ER"
-  }
+    quote: "Onboarding used to take weeks. Now, new hires just ask the embedded AI about past projects, and they are up to speed in days.",
+    author: 'Elena Rodriguez', role: 'HR Director, EduFuture', initials: 'ER',
+    gradient: 'from-green-light to-primary',
+  },
 ];
 
 export default function LandingTestimonials() {
   return (
-    <section className="py-24 px-6 lg:px-10 max-w-screen-xl mx-auto bg-muted/30 border-y border-border/50">
-      <div className="flex flex-col items-center text-center mb-16 animate-fade-in-up">
-        <span className="font-mono text-xs font-600 tracking-[0.15em] text-primary uppercase mb-4">
-          [ USER SUCCESS ]
-        </span>
-        <h2 className="font-display font-700 text-3xl md:text-4xl tracking-tight text-foreground max-w-2xl">
-          Don't just take our word for it. See how teams are evolving.
-        </h2>
-      </div>
+    <section
+      id="testimonials"
+      className="relative min-h-screen flex items-center justify-center px-6 lg:px-10 py-24 overflow-hidden"
+    >
+      <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] bg-gradient-radial from-primary/4 to-transparent rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-gradient-radial from-lavender/4 to-transparent rounded-full blur-3xl pointer-events-none" />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 stagger-children">
-        {testimonials.map((testimonial, i) => (
-          <div 
-            key={`testimonial-${i}`}
-            className="feature-card flex flex-col justify-between p-8 hover-glow bg-background"
-            style={{ animationDelay: `${150 * i}ms` }}
-          >
-            <div>
-              {/* Quote marks */}
-              <div className="text-4xl text-primary/20 font-serif leading-none mb-4">"</div>
-              <p className="text-foreground text-lg leading-relaxed mb-8 font-medium">
-                {testimonial.quote}
-              </p>
-            </div>
-            
-            <div className="flex items-center gap-4 mt-auto">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center font-display font-bold text-primary border border-primary/20">
-                {testimonial.avatar}
-              </div>
-              <div className="flex flex-col">
-                <span className="font-display font-600 text-sm text-foreground">{testimonial.author}</span>
-                <span className="text-xs text-muted-foreground">{testimonial.role}</span>
-              </div>
-            </div>
+      <div className="relative w-full max-w-screen-2xl mx-auto">
+        <AnimatedSection direction="up">
+          <div className="max-w-3xl mx-auto text-center mb-20">
+            <span className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-accent/8 backdrop-blur-xl mb-8">
+              <span className="w-2 h-2 rounded-full bg-accent animate-neon-pulse" />
+              <span className="font-mono text-[11px] font-bold tracking-[0.2em] text-accent-dark uppercase">User success</span>
+            </span>
+            <h2 className="font-display font-bold text-4xl md:text-5xl lg:text-6xl tracking-[-0.03em] text-foreground mt-4 mb-4">
+              Trusted by <span className="text-gradient-warm">industry leaders.</span>
+            </h2>
+            <p className="text-lg text-ink font-medium max-w-xl mx-auto leading-relaxed">
+              See how forward-thinking teams are evolving with EduTechExOS.
+            </p>
           </div>
-        ))}
+        </AnimatedSection>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {testimonials.map((t, i) => (
+            <AnimatedSection key={t.author} direction="up" delay={i * 0.12}>
+              <div
+                className="group relative p-8 rounded-3xl transition-all duration-700 hover:scale-[1.02] cursor-default h-full flex flex-col"
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.12)',
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)',
+                }}
+              >
+                <div
+                  className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+                  style={{ background: 'linear-gradient(135deg, rgba(45,106,79,0.04), rgba(196,181,253,0.03))' }}
+                />
+                <div className="relative mb-6">
+                  <Quote size={24} className="opacity-30 group-hover:opacity-50 transition-opacity duration-500" style={{ color: '#2d6a4f' }} />
+                </div>
+                <p className="text-foreground text-base font-medium leading-relaxed mb-8 flex-1 relative">
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+                <div className="relative flex items-center gap-4 pt-6 border-t border-border/30">
+                  <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${t.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-500`}>
+                    <span className="text-sm font-bold text-white">{t.initials}</span>
+                  </div>
+                  <div>
+                    <p className="font-display font-bold text-sm text-foreground group-hover:text-primary transition-colors duration-300">{t.author}</p>
+                    <p className="text-xs text-ink-light font-semibold">{t.role}</p>
+                  </div>
+                </div>
+              </div>
+            </AnimatedSection>
+          ))}
+        </div>
       </div>
     </section>
   );

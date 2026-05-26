@@ -1,7 +1,19 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Hash, Plus, ChevronDown, ChevronRight, LogOut, Bell, ShieldCheck, CalendarDays, LogIn, Moon, Sun } from 'lucide-react';
+import {
+  Hash,
+  Plus,
+  ChevronDown,
+  ChevronRight,
+  LogOut,
+  Bell,
+  ShieldCheck,
+  CalendarDays,
+  LogIn,
+  Moon,
+  Sun,
+} from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
 import AppLogo from '@/components/ui/AppLogo';
 import { useDashboardStore } from '@/store/dashboardStore';
@@ -13,11 +25,30 @@ interface DashboardSidebarProps {
   notifCount?: number;
 }
 
-export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }: DashboardSidebarProps) {
-  const { activeChannel, setActiveChannel, channels, addChannel, members, addMember, removeMember, addMemberToChannel, removeMemberFromChannel } = useDashboardStore();
+export default function DashboardSidebar({
+  onOpenNotifications,
+  notifCount = 0,
+}: DashboardSidebarProps) {
+  const {
+    activeChannel,
+    setActiveChannel,
+    channels,
+    addChannel,
+    members,
+    addMember,
+    removeMember,
+    addMemberToChannel,
+    removeMemberFromChannel,
+  } = useDashboardStore();
   const { theme, toggleTheme } = useTheme();
   const [channelsExpanded, setChannelsExpanded] = useState(true);
-  const [currentUser, setCurrentUser] = useState({ name: 'Guest', role: 'Viewer', initials: 'G', email: '', projects: ['general'] as string[] });
+  const [currentUser, setCurrentUser] = useState({
+    name: 'Guest',
+    role: 'Viewer',
+    initials: 'G',
+    email: '',
+    projects: ['general'] as string[],
+  });
   const [showActivityCalendar, setShowActivityCalendar] = useState(false);
 
   // New Channel states
@@ -42,7 +73,7 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
       .replace(/[^a-z0-9_-]/g, '-')
       .replace(/-+/g, '-');
 
-    if (channels.some(c => c.id === cleanName)) {
+    if (channels.some((c) => c.id === cleanName)) {
       toast.error('A channel with this name already exists!');
       return;
     }
@@ -53,7 +84,7 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
       description: newChannelDesc.trim() || 'Custom created discussion channel',
       memberCount: members.length,
       unread: 0,
-      memberIds: members.map(m => m.id),
+      memberIds: members.map((m) => m.id),
     };
 
     addChannel(newChan);
@@ -71,7 +102,7 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
     if (!newMemberName.trim() || !newMemberEmail.trim()) return;
 
     const emailClean = newMemberEmail.trim().toLowerCase();
-    if (members.some(m => m.email.toLowerCase() === emailClean)) {
+    if (members.some((m) => m.email.toLowerCase() === emailClean)) {
       toast.error('A user with this email already exists!');
       return;
     }
@@ -86,7 +117,11 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
 
     const colors = ['#2563eb', '#7c3aed', '#0891b2', '#059669', '#dc2626', '#eab308'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    const shortId = cleanName.toLowerCase().replace(/[^a-z]/g, '').slice(0, 4) + Math.floor(Math.random() * 100);
+    const shortId =
+      cleanName
+        .toLowerCase()
+        .replace(/[^a-z]/g, '')
+        .slice(0, 4) + Math.floor(Math.random() * 100);
     const memberId = `member-${shortId}`;
 
     const newMemb = {
@@ -115,10 +150,12 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
     setShowNewMemberModal(false);
   };
 
-  const storeMember = currentUser?.email ? members.find(m => m.email && m.email.toLowerCase() === currentUser.email.toLowerCase()) : null;
+  const storeMember = currentUser?.email
+    ? members.find((m) => m.email && m.email.toLowerCase() === currentUser.email.toLowerCase())
+    : null;
   const currentMemberId = storeMember ? storeMember.id : 'currentUser';
 
-  const accessibleChannels = channels.filter(ch => {
+  const accessibleChannels = channels.filter((ch) => {
     if (ch.id.startsWith('member-')) return false;
     if (currentUser?.role === 'Admin' || currentUser?.role === 'Manager') return true;
     if (!ch.memberIds) return true;
@@ -131,8 +168,12 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
       try {
         const { user } = JSON.parse(authData);
         if (user) {
-          const initials = user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
-          const projects = channels.filter(c => !c.id.startsWith('member-')).map(c => c.id);
+          const initials = user.name
+            .split(' ')
+            .map((n: string) => n[0])
+            .join('')
+            .toUpperCase();
+          const projects = channels.filter((c) => !c.id.startsWith('member-')).map((c) => c.id);
           setCurrentUser({ ...user, initials, projects });
         }
       } catch (e) {
@@ -143,9 +184,11 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
 
   useEffect(() => {
     if (currentUser) {
-      const activeChanObj = channels.find(c => c.id === activeChannel);
+      const activeChanObj = channels.find((c) => c.id === activeChannel);
       if (activeChanObj && !activeChanObj.id.startsWith('member-')) {
-        const hasAccess = currentUser.role === 'Admin' || currentUser.role === 'Manager' ||
+        const hasAccess =
+          currentUser.role === 'Admin' ||
+          currentUser.role === 'Manager' ||
           (activeChanObj.memberIds && activeChanObj.memberIds.includes(currentMemberId));
         if (!hasAccess) {
           setActiveChannel('general');
@@ -163,7 +206,9 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
             <p className="truncate text-sm font-black tracking-tight text-slate-900 uppercase">
               EduTechEx<span className="text-indigo-600">OS</span>
             </p>
-            <p className="truncate text-[10px] font-bold text-slate-400 uppercase tracking-widest">Workspace</p>
+            <p className="truncate text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              Workspace
+            </p>
           </div>
           <button
             type="button"
@@ -189,7 +234,11 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
               onClick={() => setChannelsExpanded(!channelsExpanded)}
             >
               <span className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                {channelsExpanded ? <ChevronDown size={12} strokeWidth={3} /> : <ChevronRight size={12} strokeWidth={3} />}
+                {channelsExpanded ? (
+                  <ChevronDown size={12} strokeWidth={3} />
+                ) : (
+                  <ChevronRight size={12} strokeWidth={3} />
+                )}
                 Channels
               </span>
               <span className="text-[10px] tabular-nums font-bold text-slate-400">
@@ -215,17 +264,25 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
                           setActiveChannel(ch.id);
                         }
                       }}
-                      className={`group relative flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13px] transition-all cursor-pointer select-none outline-none ${isActive
-                        ? 'active-glow font-bold text-indigo-600'
-                        : 'text-slate-500 hover:bg-slate-200/40 hover:text-slate-900'
-                        }`}
+                      className={`group relative flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[13px] transition-all cursor-pointer select-none outline-none ${
+                        isActive
+                          ? 'active-glow font-bold text-indigo-600'
+                          : 'text-slate-500 hover:bg-slate-200/40 hover:text-slate-900'
+                      }`}
                     >
-                      <Hash size={14} className={`shrink-0 ${isActive ? 'text-indigo-500' : 'text-slate-400'}`} strokeWidth={isActive ? 2.5 : 2} />
+                      <Hash
+                        size={14}
+                        className={`shrink-0 ${isActive ? 'text-indigo-500' : 'text-slate-400'}`}
+                        strokeWidth={isActive ? 2.5 : 2}
+                      />
                       <span className="min-w-0 flex-1 truncate">{ch.name}</span>
                       {canManage && (
                         <div className="absolute right-2 opacity-0 group-hover:opacity-100 flex items-center gap-1">
                           <button
-                            onClick={(e) => { e.stopPropagation(); if (isMember) removeMemberFromChannel(ch.id, currentMemberId); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isMember) removeMemberFromChannel(ch.id, currentMemberId);
+                            }}
                             disabled={!isMember}
                             title="Remove from Channel"
                             className={`p-1 rounded ${isMember ? 'text-red-500 hover:bg-red-50' : 'text-red-300 cursor-not-allowed'}`}
@@ -233,7 +290,10 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
                             <LogOut size={12} />
                           </button>
                           <button
-                            onClick={(e) => { e.stopPropagation(); if (!isMember) addMemberToChannel(ch.id, currentMemberId); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!isMember) addMemberToChannel(ch.id, currentMemberId);
+                            }}
                             disabled={isMember}
                             title="Add to Channel"
                             className={`p-1 rounded ${!isMember ? 'text-emerald-500 hover:bg-emerald-50' : 'text-emerald-300 cursor-not-allowed'}`}
@@ -258,7 +318,9 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
 
           <div>
             <div className="flex items-center justify-between px-3 sm:px-4 mb-1.5">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">People</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                People
+              </p>
               {currentUser.role === 'Admin' && (
                 <button
                   type="button"
@@ -278,20 +340,22 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
                     <button
                       type="button"
                       onClick={() => setActiveChannel(member.id)}
-                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] transition-all pr-8 ${isActive
-                        ? 'active-glow font-bold text-indigo-600'
-                        : 'text-slate-700 hover:bg-slate-200/40 hover:text-slate-900'
-                        }`}
+                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] transition-all pr-8 ${
+                        isActive
+                          ? 'active-glow font-bold text-indigo-600'
+                          : 'text-slate-700 hover:bg-slate-200/40 hover:text-slate-900'
+                      }`}
                     >
                       <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700">
                         {member.initials}
                         <span
-                          className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-slate-50 ${member.status === 'online'
-                            ? 'bg-emerald-500'
-                            : member.status === 'away'
-                              ? 'bg-amber-400'
-                              : 'bg-slate-300'
-                            }`}
+                          className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-slate-50 ${
+                            member.status === 'online'
+                              ? 'bg-emerald-500'
+                              : member.status === 'away'
+                                ? 'bg-amber-400'
+                                : 'bg-slate-300'
+                          }`}
                         />
                       </span>
                       <span className="min-w-0 flex-1 truncate">{member.name}</span>
@@ -301,7 +365,9 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm(`Are you sure you want to remove ${member.name} from the team?`)) {
+                          if (
+                            confirm(`Are you sure you want to remove ${member.name} from the team?`)
+                          ) {
                             removeMember(member.id);
                             toast.success(`${member.name} removed from the team.`);
                           }
@@ -352,11 +418,19 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
               <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 shadow-sm" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-black text-slate-800 leading-none tracking-tight" title={currentUser.name}>
+              <p
+                className="truncate text-xs font-black text-slate-800 leading-none tracking-tight"
+                title={currentUser.name}
+              >
                 {currentUser.name}
               </p>
-              <span className={`mt-1 inline-block rounded-md px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest ${currentUser.role === 'Admin' ? 'bg-indigo-600/10 text-indigo-600' : 'bg-slate-500/10 text-slate-500'
-                }`}>
+              <span
+                className={`mt-1 inline-block rounded-md px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest ${
+                  currentUser.role === 'Admin'
+                    ? 'bg-indigo-600/10 text-indigo-600'
+                    : 'bg-slate-500/10 text-slate-500'
+                }`}
+              >
                 {currentUser.role}
               </span>
             </div>
@@ -377,7 +451,11 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
               className="flex-1 flex justify-center items-center py-1.5 rounded-lg text-slate-400 hover:bg-white hover:text-amber-500 hover:shadow-sm transition-all"
               title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             >
-              {theme === 'dark' ? <Sun size={14} strokeWidth={2} /> : <Moon size={14} strokeWidth={2} />}
+              {theme === 'dark' ? (
+                <Sun size={14} strokeWidth={2} />
+              ) : (
+                <Moon size={14} strokeWidth={2} />
+              )}
             </button>
             <Link
               href="/sign-up-login-screen"
@@ -418,7 +496,9 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex justify-between items-center">
                   <span>Channel Name</span>
-                  <span className="text-[9px] text-indigo-500 font-bold uppercase tracking-wider">lowercase & hyphenated</span>
+                  <span className="text-[9px] text-indigo-500 font-bold uppercase tracking-wider">
+                    lowercase & hyphenated
+                  </span>
                 </label>
                 <input
                   type="text"
@@ -533,23 +613,28 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
                   Channel Access Permissions
                 </label>
                 <div className="space-y-2 max-h-36 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50/50">
-                  {channels.filter(ch => !ch.id.startsWith('member-')).map((ch) => (
-                    <label key={ch.id} className="flex items-center gap-2.5 text-xs font-bold text-slate-700 cursor-pointer hover:text-emerald-600 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={selectedChannels.includes(ch.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedChannels([...selectedChannels, ch.id]);
-                          } else {
-                            setSelectedChannels(selectedChannels.filter(id => id !== ch.id));
-                          }
-                        }}
-                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
-                      />
-                      <span>#{ch.name}</span>
-                    </label>
-                  ))}
+                  {channels
+                    .filter((ch) => !ch.id.startsWith('member-'))
+                    .map((ch) => (
+                      <label
+                        key={ch.id}
+                        className="flex items-center gap-2.5 text-xs font-bold text-slate-700 cursor-pointer hover:text-emerald-600 transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedChannels.includes(ch.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedChannels([...selectedChannels, ch.id]);
+                            } else {
+                              setSelectedChannels(selectedChannels.filter((id) => id !== ch.id));
+                            }
+                          }}
+                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                        />
+                        <span>#{ch.name}</span>
+                      </label>
+                    ))}
                 </div>
               </div>
 
@@ -574,4 +659,4 @@ export default function DashboardSidebar({ onOpenNotifications, notifCount = 0 }
       )}
     </>
   );
-} 
+}

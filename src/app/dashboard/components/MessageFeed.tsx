@@ -17,7 +17,8 @@ interface MessageState {
 const EMOJI_OPTIONS = ['👍', '❤️', '😂', '🔥', '👀', '✅'];
 
 export default function MessageFeed({ channelId }: MessageFeedProps) {
-  const messages = useDashboardStore((s) => s.messages[channelId]) ?? MESSAGES_BY_CHANNEL[channelId] ?? [];
+  const messages =
+    useDashboardStore((s) => s.messages[channelId]) ?? MESSAGES_BY_CHANNEL[channelId] ?? [];
   const deleteMessage = useDashboardStore((s) => s.deleteMessage);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [messageStates, setMessageStates] = useState<Record<string, MessageState>>({});
@@ -94,7 +95,7 @@ export default function MessageFeed({ channelId }: MessageFeedProps) {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
-    
+
     if (d.toDateString() === today.toDateString()) return 'Today';
     if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
     return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -115,11 +116,20 @@ export default function MessageFeed({ channelId }: MessageFeedProps) {
   // Group messages by sender and date
   const grouped = messages.map((msg, i) => {
     const prev = messages[i - 1];
-    const isFirst = i === 0 || prev?.sender !== msg.sender || 
-                    new Date(msg.timestamp).getTime() - new Date(prev.timestamp).getTime() > 5 * 60 * 1000;
-    const showDate = i === 0 || new Date(msg.timestamp).toDateString() !== new Date(prev?.timestamp).toDateString();
-    
-    return { ...msg, isFirst, showDate, dateLabel: showDate ? formatDate(msg.timestamp) : undefined };
+    const isFirst =
+      i === 0 ||
+      prev?.sender !== msg.sender ||
+      new Date(msg.timestamp).getTime() - new Date(prev.timestamp).getTime() > 5 * 60 * 1000;
+    const showDate =
+      i === 0 ||
+      new Date(msg.timestamp).toDateString() !== new Date(prev?.timestamp).toDateString();
+
+    return {
+      ...msg,
+      isFirst,
+      showDate,
+      dateLabel: showDate ? formatDate(msg.timestamp) : undefined,
+    };
   });
 
   return (
@@ -134,12 +144,16 @@ export default function MessageFeed({ channelId }: MessageFeedProps) {
             {msg.showDate && (
               <div className="my-6 flex items-center gap-3 px-4">
                 <div className="h-px flex-1 bg-slate-100" />
-                <span className="text-xs font-semibold text-slate-400 uppercase">{msg.dateLabel}</span>
+                <span className="text-xs font-semibold text-slate-400 uppercase">
+                  {msg.dateLabel}
+                </span>
                 <div className="h-px flex-1 bg-slate-100" />
               </div>
             )}
 
-            <div className={`group relative flex gap-3 px-4 py-2 hover:bg-slate-50/50 transition-colors ${msg.isFirst ? '' : 'mt-0.5'}`}>
+            <div
+              className={`group relative flex gap-3 px-4 py-2 hover:bg-slate-50/50 transition-colors ${msg.isFirst ? '' : 'mt-0.5'}`}
+            >
               {/* Avatar */}
               {msg.isFirst ? (
                 <div
@@ -169,7 +183,9 @@ export default function MessageFeed({ channelId }: MessageFeedProps) {
                     <audio className="w-full h-10 rounded-lg" controls src={msg.audioUrl}>
                       <track kind="captions" />
                     </audio>
-                    <span className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Voice note</span>
+                    <span className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Voice note
+                    </span>
                   </div>
                 )}
 
@@ -183,7 +199,9 @@ export default function MessageFeed({ channelId }: MessageFeedProps) {
                     >
                       <track kind="captions" />
                     </video>
-                    <span className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Screen recording</span>
+                    <span className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Screen recording
+                    </span>
                   </div>
                 )}
 
@@ -226,7 +244,9 @@ export default function MessageFeed({ channelId }: MessageFeedProps) {
               <div className="absolute right-3 top-1 hidden flex-shrink-0 gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-lg group-hover:flex">
                 <div className="relative">
                   <button
-                    onClick={() => setActiveEmojiPicker(activeEmojiPicker === msg.id ? null : msg.id)}
+                    onClick={() =>
+                      setActiveEmojiPicker(activeEmojiPicker === msg.id ? null : msg.id)
+                    }
                     className="flex h-7 w-7 items-center justify-center rounded text-lg hover:bg-slate-100 transition-colors"
                     title="React"
                   >

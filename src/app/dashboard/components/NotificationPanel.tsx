@@ -31,7 +31,9 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
   const markRead = useDashboardStore((s) => s.markNotificationRead);
   const dismiss = useDashboardStore((s) => s.dismissNotification);
 
-  const [filter, setFilter] = useState<'all' | 'reply' | 'reaction' | 'pin' | 'task' | 'mention'>('all');
+  const [filter, setFilter] = useState<'all' | 'reply' | 'reaction' | 'pin' | 'task' | 'mention'>(
+    'all'
+  );
   const [muted, setMuted] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const [currentEmail, setCurrentEmail] = useState('');
@@ -52,7 +54,8 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
     return notification.recipientEmails.map((email) => email.toLowerCase()).includes(currentEmail);
   });
   const unreadCount = notifications.filter((n) => !n.read).length;
-  const filtered = filter === 'all' ? notifications : notifications.filter((n) => n.type === filter);
+  const filtered =
+    filter === 'all' ? notifications : notifications.filter((n) => n.type === filter);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -87,15 +90,23 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <div className={`h-10 w-10 rounded-2xl flex items-center justify-center transition-colors ${
-              unreadCount > 0 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-100 text-slate-400'
-            }`}>
+            <div
+              className={`h-10 w-10 rounded-2xl flex items-center justify-center transition-colors ${
+                unreadCount > 0
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100'
+                  : 'bg-slate-100 text-slate-400'
+              }`}
+            >
               <Bell size={18} strokeWidth={2.5} />
             </div>
             <div>
-              <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight">Notifications</h2>
+              <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight">
+                Notifications
+              </h2>
               {unreadCount > 0 && (
-                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-0.5">{unreadCount} unread</p>
+                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-0.5">
+                  {unreadCount} unread
+                </p>
               )}
             </div>
           </div>
@@ -126,13 +137,15 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
-                  isActive 
-                    ? (cfg ? `bg-white border-2 shadow-sm` : 'bg-slate-900 text-white shadow-lg shadow-slate-100') 
+                  isActive
+                    ? cfg
+                      ? `bg-white border-2 shadow-sm`
+                      : 'bg-slate-900 text-white shadow-lg shadow-slate-100'
                     : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 border-2 border-transparent'
                 }`}
                 style={{
                   borderColor: isActive && cfg ? cfg.color : 'transparent',
-                  color: isActive && cfg ? cfg.color : undefined
+                  color: isActive && cfg ? cfg.color : undefined,
                 }}
               >
                 {cfg && <cfg.icon size={12} strokeWidth={3} />}
@@ -150,17 +163,25 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
                 <BellOff size={28} />
               </div>
               <div>
-                <p className="text-sm font-black text-slate-900 uppercase tracking-widest">All caught up</p>
-                <p className="text-[11px] font-medium text-slate-400 mt-1 leading-relaxed">No {filter !== 'all' ? filter : ''} notifications at the moment.</p>
+                <p className="text-sm font-black text-slate-900 uppercase tracking-widest">
+                  All caught up
+                </p>
+                <p className="text-[11px] font-medium text-slate-400 mt-1 leading-relaxed">
+                  No {filter !== 'all' ? filter : ''} notifications at the moment.
+                </p>
               </div>
             </div>
           ) : (
             <div className="py-2">
               <div className="px-6 py-2 flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recent Activity</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Recent Activity
+                </span>
                 {unreadCount > 0 && (
                   <button
-                    onClick={() => filtered.filter((item) => !item.read).forEach((item) => markRead(item.id))}
+                    onClick={() =>
+                      filtered.filter((item) => !item.read).forEach((item) => markRead(item.id))
+                    }
                     className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline"
                   >
                     Mark all read
@@ -174,11 +195,13 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
                   <div
                     key={notif.id}
                     className={`group relative flex gap-4 px-6 py-4 cursor-pointer transition-all border-l-4 ${
-                      notif.read ? 'border-transparent bg-transparent hover:bg-white' : 'bg-white shadow-sm ring-1 ring-slate-100/50'
+                      notif.read
+                        ? 'border-transparent bg-transparent hover:bg-white'
+                        : 'bg-white shadow-sm ring-1 ring-slate-100/50'
                     }`}
-                    style={{ 
+                    style={{
                       borderLeftColor: notif.read ? 'transparent' : cfg.color,
-                      animationDelay: `${idx * 50}ms`
+                      animationDelay: `${idx * 50}ms`,
                     }}
                     onClick={() => markRead(notif.id)}
                   >
@@ -188,9 +211,7 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
                         className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm"
                         style={{ backgroundColor: notif.actorColor }}
                       >
-                        <span className="text-xs font-black text-white">
-                          {notif.actorInitials}
-                        </span>
+                        <span className="text-xs font-black text-white">{notif.actorInitials}</span>
                       </div>
                       {/* Type badge */}
                       <div
@@ -204,7 +225,9 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-[13px] font-bold text-slate-900 leading-tight">{notif.actor}</p>
+                        <p className="text-[13px] font-bold text-slate-900 leading-tight">
+                          {notif.actor}
+                        </p>
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight whitespace-nowrap">
                           {formatRelativeTime(notif.timestamp)}
                         </span>
@@ -214,17 +237,25 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
                       </p>
                       <div className="flex items-center gap-2 mt-2.5">
                         <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-100 text-slate-500">
-                          <span className="text-[9px] font-black uppercase tracking-widest">#{notif.channel}</span>
+                          <span className="text-[9px] font-black uppercase tracking-widest">
+                            #{notif.channel}
+                          </span>
                         </div>
                         {!notif.read && (
-                          <div className="h-1.5 w-1.5 rounded-full animate-pulse ml-auto" style={{ backgroundColor: cfg.color }} />
+                          <div
+                            className="h-1.5 w-1.5 rounded-full animate-pulse ml-auto"
+                            style={{ backgroundColor: cfg.color }}
+                          />
                         )}
                       </div>
                     </div>
 
                     {/* Dismiss button */}
                     <button
-                      onClick={(e) => { e.stopPropagation(); dismiss(notif.id); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        dismiss(notif.id);
+                      }}
                       className="absolute top-4 right-4 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50"
                     >
                       <X size={12} strokeWidth={2.5} />
@@ -238,8 +269,10 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
 
         {/* Footer */}
         <div className="px-6 py-5 border-t border-slate-100 bg-white">
-          <div className={`flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] ${muted ? 'text-slate-400' : 'text-indigo-600 animate-pulse'}`}>
-             {muted ? 'Silent Mode' : 'Live Alerts Active'}
+          <div
+            className={`flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] ${muted ? 'text-slate-400' : 'text-indigo-600 animate-pulse'}`}
+          >
+            {muted ? 'Silent Mode' : 'Live Alerts Active'}
           </div>
         </div>
       </div>

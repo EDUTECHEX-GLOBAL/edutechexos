@@ -28,13 +28,22 @@ const EMOJI_LIST = [
   '🤯', '😬', '😰', '😱', '🥵', '🥶', '😳', '🤪', '😵', '😡',
   '😠', '🤬', '👍', '👎', '👊', '✊', '🤛', '🤜', '👏', '🙌',
   '👐', '🤲', '🤝', '🙏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈',
-  '👉', '👆', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜',
-  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💕',
-  '💞', '💓', '💗', '💖', '💘', '💝', '💟', '❣️', '💌', '💔',
-  '🔥', '⭐', '🌟', '✨', '💫', '🎉', '🎊', '🎈', '🎁', '🏆',
-  '✅', '❌', '❓', '❗', '‼️', '⁉️', '💯', '🔴', '🟠', '🟡',
-  '🟢', '🔵', '🟣', '🟤', '⚫', '⚪', '🚀', '👀', '🎯', '💡',
+  '👉', '👆', '👇', '☝️', '❤️', '🧡', '💛', '💚', '💙', '💜',
+  '🖤', '🤍', '🤎', '💕', '💞', '💓', '💗', '💖', '💘', '💝',
+  '💟', '❣️', '💌', '💔', '🔥', '⭐', '🌟', '✨', '💫', '🎉',
+  '🎊', '🎈', '🎁', '🏆', '✅', '❌', '❓', '❗', '‼️', '⁉️',
+  '💯', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪',
+  '🚀', '👀', '🎯', '💡',
 ];
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
 
 export default function MessageInput({ channelId, channelName }: MessageInputProps) {
   const [message, setMessage] = useState('');
@@ -52,16 +61,20 @@ export default function MessageInput({ channelId, channelName }: MessageInputPro
   const emojiPanelRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const liveVideoRef = useRef<HTMLVideoElement | null>(null);
   const discardRecordingRef = useRef(false);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Close emoji panel on outside click
   useEffect(() => {
     if (!emojiOpen) return;
     const handleClick = (e: MouseEvent) => {
       if (
-        emojiPanelRef.current && !emojiPanelRef.current.contains(e.target as Node) &&
-        emojiBtnRef.current && !emojiBtnRef.current.contains(e.target as Node)
+        emojiPanelRef.current &&
+        !emojiPanelRef.current.contains(e.target as Node) &&
+        emojiBtnRef.current &&
+        !emojiBtnRef.current.contains(e.target as Node)
       ) {
         setEmojiOpen(false);
       }
@@ -92,15 +105,8 @@ export default function MessageInput({ channelId, channelName }: MessageInputPro
     };
   }, [recordingType]);
 
-  useEffect(() => {
-    return () => {
-      if (recordedPreview) URL.revokeObjectURL(recordedPreview.url);
-    };
-  }, [recordedPreview]);
-
   const handleSend = async () => {
     if (!message.trim()) return;
-
     setIsLoading(true);
     try {
       const newMessage = {
@@ -111,7 +117,6 @@ export default function MessageInput({ channelId, channelName }: MessageInputPro
         timestamp: new Date().toISOString(),
         text: message,
       };
-
       addMessage(channelId, newMessage);
       setMessage('');
     } finally {
@@ -152,11 +157,19 @@ export default function MessageInput({ channelId, channelName }: MessageInputPro
     try {
       setRecordingBusy(true);
       discardRecordingRef.current = false;
-      const stream =
-        kind === 'video' && navigator.mediaDevices.getDisplayMedia
-          ? await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
-          : await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Always use getUserMedia — audio for voice notes, video+audio for camera recording
+      const constraints: MediaStreamConstraints =
+        kind === 'video' ? { video: true, audio: true } : { audio: true };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       mediaStreamRef.current = stream;
+
+      // Show live camera preview during video recording
+      if (kind === 'video' && liveVideoRef.current) {
+        liveVideoRef.current.srcObject = stream;
+        liveVideoRef.current.play().catch(() => {});
+      }
 
       const mimeType =
         kind === 'video'
@@ -175,6 +188,10 @@ export default function MessageInput({ channelId, channelName }: MessageInputPro
       };
 
       recorder.onstop = async () => {
+        // Stop live preview
+        if (liveVideoRef.current) {
+          liveVideoRef.current.srcObject = null;
+        }
         const stoppedStream = mediaStreamRef.current;
         stoppedStream?.getTracks().forEach((t) => t.stop());
         mediaStreamRef.current = null;
@@ -187,26 +204,29 @@ export default function MessageInput({ channelId, channelName }: MessageInputPro
         const blob = new Blob(chunks, { type: mimeType });
         setRecordedPreview((existing) => {
           if (existing) URL.revokeObjectURL(existing.url);
-          return {
-            kind,
-            blob,
-            mimeType,
-            url: URL.createObjectURL(blob),
-          };
+          return { kind, blob, mimeType, url: URL.createObjectURL(blob) };
         });
-        toast.success(`${kind === 'video' ? 'Screen recording' : 'Voice note'} ready to preview`);
+        toast.success(`${kind === 'video' ? 'Camera recording' : 'Voice note'} ready — review before sending`);
       };
 
       mediaRecorderRef.current = recorder;
       setRecordingType(kind);
       recorder.start();
-      toast.success(`${kind === 'video' ? 'Screen' : 'Voice'} recording started`);
-    } catch {
+      toast.success(`${kind === 'video' ? 'Camera' : 'Voice'} recording started`);
+    } catch (err: unknown) {
       setRecordingBusy(false);
       setRecordingType(null);
+      if (liveVideoRef.current) liveVideoRef.current.srcObject = null;
       mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
       mediaStreamRef.current = null;
-      toast.error(`Could not start ${kind} recording. Check browser permissions.`);
+      const isDenied =
+        err instanceof DOMException &&
+        (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError');
+      toast.error(
+        isDenied
+          ? `Browser blocked ${kind} access — allow permissions and try again.`
+          : `Could not start ${kind} recording. Check that a ${kind === 'video' ? 'camera' : 'microphone'} is connected.`
+      );
     }
   }
 
@@ -225,55 +245,104 @@ export default function MessageInput({ channelId, channelName }: MessageInputPro
 
   async function sendRecordedPreview() {
     if (!recordedPreview) return;
-
+    const preview = recordedPreview;
     setRecordingSending(true);
-    try {
-      const file = new File([recordedPreview.blob], `${recordedPreview.kind}-note-${Date.now()}.webm`, {
-        type: recordedPreview.mimeType,
-      });
-      const fd = new FormData();
-      fd.append('file', file);
-      const result = await uploadLocalFile(fd);
 
-      if (!result.success || !result.url) {
-        toast.error(`${recordedPreview.kind === 'video' ? 'Video' : 'Audio'} upload failed.`);
-        return;
+    try {
+      let mediaUrl: string | null = null;
+
+      // Try server upload first (works in local dev)
+      try {
+        const file = new File(
+          [preview.blob],
+          `${preview.kind}-note-${Date.now()}.webm`,
+          { type: preview.mimeType }
+        );
+        const fd = new FormData();
+        fd.append('file', file);
+        const result = await uploadLocalFile(fd);
+        if (result.success && result.url) {
+          mediaUrl = result.url;
+        }
+      } catch {
+        // Server upload unavailable — fall through to data URL
+      }
+
+      // Fallback: embed as data URL so it works in any environment
+      if (!mediaUrl) {
+        mediaUrl = await blobToDataUrl(preview.blob);
       }
 
       addMessage(channelId, {
-        id: `msg-${recordedPreview.kind}-${Date.now()}`,
+        id: `msg-${preview.kind}-${Date.now()}`,
         sender: 'You',
         initials: 'Y',
         color: '#6366f1',
         timestamp: new Date().toISOString(),
-        text: message.trim() || (recordedPreview.kind === 'video' ? 'Screen recording' : 'Voice note'),
-        ...(recordedPreview.kind === 'video' ? { videoUrl: result.url } : { audioUrl: result.url }),
+        text:
+          message.trim() ||
+          (preview.kind === 'video' ? 'Camera recording' : 'Voice note'),
+        ...(preview.kind === 'video'
+          ? { videoUrl: mediaUrl }
+          : { audioUrl: mediaUrl }),
       });
+
       setMessage('');
-      discardRecordedPreview();
-      toast.success(`${recordedPreview.kind === 'video' ? 'Screen recording' : 'Voice note'} sent`);
+      URL.revokeObjectURL(preview.url);
+      setRecordedPreview(null);
+      toast.success(
+        `${preview.kind === 'video' ? 'Camera recording' : 'Voice note'} sent!`
+      );
     } catch {
-      toast.error(`Could not save the ${recordedPreview.kind} recording.`);
+      toast.error(`Could not send the ${preview.kind} recording.`);
     } finally {
       setRecordingSending(false);
     }
   }
 
+  const handleFileAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    toast.info(`${files.length} file(s) selected — file sharing coming soon.`);
+    e.target.value = '';
+  };
+
+  const formatDuration = (s: number) =>
+    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+
   return (
-    <div className="space-y-3 py-3">
-      {/* Typing Indicator */}
-      <div className="flex items-center justify-between px-1">
-        <div className="text-xs text-slate-400">
-          {message.length > 0 && `${message.length} characters`}
-        </div>
-        {recordingType && (
-          <div className="flex items-center gap-1.5 text-xs font-bold text-red-500">
+    <div className="space-y-2 py-3">
+      {/* Live camera preview strip */}
+      {recordingType === 'video' && (
+        <div className="relative mx-1 overflow-hidden rounded-2xl border border-red-200 bg-black shadow-lg">
+          <video
+            ref={liveVideoRef}
+            className="h-36 w-full object-cover"
+            muted
+            playsInline
+          />
+          <div className="absolute bottom-2 left-3 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-black text-white backdrop-blur-sm">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
             </span>
-            {String(Math.floor(recordingDuration / 60)).padStart(2, '0')}:
-            {String(recordingDuration % 60).padStart(2, '0')}
+            LIVE · {formatDuration(recordingDuration)}
+          </div>
+        </div>
+      )}
+
+      {/* Status row */}
+      <div className="flex items-center justify-between px-1">
+        <div className="text-xs text-slate-400">
+          {message.length > 0 && `${message.length} chars`}
+        </div>
+        {recordingType === 'audio' && (
+          <div className="flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-black text-red-600">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+            </span>
+            REC · {formatDuration(recordingDuration)}
           </div>
         )}
       </div>
@@ -284,65 +353,62 @@ export default function MessageInput({ channelId, channelName }: MessageInputPro
           ref={emojiBtnRef}
           onClick={() => setEmojiOpen((v) => !v)}
           className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-            emojiOpen ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+            emojiOpen
+              ? 'bg-indigo-50 text-indigo-600'
+              : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
           }`}
           title="Add emoji"
         >
           <Smile size={16} />
         </button>
 
-        <div className="relative">
-          <button
-            onClick={() => startRecording('audio')}
-            disabled={recordingBusy || !!recordingType}
-            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-              recordingType === 'audio' ? 'text-red-500 bg-red-50' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
-            } disabled:opacity-40 disabled:cursor-not-allowed`}
-            title="Record voice note"
-          >
-            <Mic size={16} />
-          </button>
-        </div>
+        <button
+          onClick={() =>
+            recordingType === 'audio' ? stopRecording(true) : startRecording('audio')
+          }
+          disabled={recordingBusy || recordingType === 'video'}
+          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+            recordingType === 'audio'
+              ? 'animate-pulse bg-red-100 text-red-600'
+              : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+          }`}
+          title={recordingType === 'audio' ? 'Stop & preview voice note' : 'Record voice note'}
+        >
+          <Mic size={16} />
+        </button>
 
         <button
-          onClick={() => startRecording('video')}
-          disabled={recordingBusy || !!recordingType}
-          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-            recordingType === 'video' ? 'text-red-500 bg-red-50' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
-          } disabled:opacity-40 disabled:cursor-not-allowed`}
-          title="Record screen"
+          onClick={() =>
+            recordingType === 'video' ? stopRecording(true) : startRecording('video')
+          }
+          disabled={recordingBusy || recordingType === 'audio'}
+          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+            recordingType === 'video'
+              ? 'animate-pulse bg-red-100 text-red-600'
+              : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+          }`}
+          title={recordingType === 'video' ? 'Stop & preview camera recording' : 'Record camera video'}
         >
           <Video size={16} />
         </button>
 
         <div className="flex-1" />
 
-        {/* Recording controls */}
+        {/* Recording cancel */}
         {recordingType && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => stopRecording(false)}
-              className="flex h-7 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50 transition-colors"
-            >
-              <X size={12} />
-              Cancel
-            </button>
-            <button
-              onClick={() => stopRecording(true)}
-              className="flex h-7 items-center gap-1 rounded-lg bg-indigo-600 px-2.5 text-[10px] font-bold text-white hover:bg-indigo-700 transition-colors"
-            >
-              Stop & share
-            </button>
-          </div>
+          <button
+            onClick={() => stopRecording(false)}
+            className="flex h-7 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-bold text-slate-600 transition-colors hover:bg-slate-50"
+          >
+            <X size={12} />
+            Cancel
+          </button>
         )}
       </div>
 
       {/* Emoji Picker */}
       {emojiOpen && (
-        <div
-          ref={emojiPanelRef}
-          className="relative z-50"
-        >
+        <div ref={emojiPanelRef} className="relative z-50">
           <div className="absolute bottom-0 left-0 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
             <div className="mb-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
               Emoji
@@ -353,7 +419,7 @@ export default function MessageInput({ channelId, channelName }: MessageInputPro
                   key={`emoji-${idx}`}
                   type="button"
                   onClick={() => insertEmoji(emoji)}
-                  className="flex h-8 items-center justify-center rounded-lg text-lg hover:bg-indigo-50 hover:scale-110 transition-all"
+                  className="flex h-8 items-center justify-center rounded-lg text-lg transition-all hover:scale-110 hover:bg-indigo-50"
                   title={emoji}
                 >
                   {emoji}
@@ -366,78 +432,90 @@ export default function MessageInput({ channelId, channelName }: MessageInputPro
 
       {/* Input Area */}
       <div className="flex gap-2 items-end">
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleFileAttach}
+        />
         <button
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors flex-shrink-0"
+          onClick={() => fileInputRef.current?.click()}
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
           title="Attach file"
         >
           <Paperclip size={18} />
         </button>
 
-        <div className="flex-1 flex flex-col gap-2">
+        <div className="flex flex-1 flex-col gap-1.5">
           <textarea
             ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Message #${channelName}...`}
-            className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+            placeholder={`Message #${channelName}…`}
+            className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-all focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             rows={3}
           />
-          <div className="text-xs text-slate-400">
-            Press Ctrl+Enter to send
-          </div>
+          <div className="text-[11px] text-slate-400">Ctrl+Enter to send</div>
         </div>
 
         <button
           onClick={handleSend}
           disabled={!message.trim() || isLoading}
-          className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           title="Send message"
         >
           {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
         </button>
       </div>
 
+      {/* Recorded Preview Modal */}
       {recordedPreview && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            {/* Modal header */}
+            <div className="flex items-start justify-between gap-4 p-5 pb-4">
               <div>
                 <h2 className="text-lg font-black text-slate-950">
-                  Preview {recordedPreview.kind === 'video' ? 'screen recording' : 'voice note'}
+                  {recordedPreview.kind === 'video' ? '🎥 Camera recording' : '🎙️ Voice note'}
                 </h2>
-                <p className="mt-1 text-sm font-semibold text-slate-500">
-                  Review it before sending to #{channelName}.
+                <p className="mt-0.5 text-sm font-semibold text-slate-500">
+                  Review before sending to <span className="font-black text-slate-800">#{channelName}</span>
                 </p>
               </div>
               <button
                 type="button"
                 onClick={discardRecordedPreview}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                title="Discard recording"
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                title="Discard"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {recordedPreview.kind === 'video' ? (
-              <video
-                src={recordedPreview.url}
-                className="mt-5 aspect-video w-full rounded-2xl bg-black object-contain"
-                controls
-              />
-            ) : (
-              <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <audio src={recordedPreview.url} className="w-full" controls />
-              </div>
-            )}
+            {/* Preview */}
+            <div className="px-5">
+              {recordedPreview.kind === 'video' ? (
+                <video
+                  src={recordedPreview.url}
+                  className="aspect-video w-full rounded-2xl bg-black object-contain"
+                  controls
+                />
+              ) : (
+                <div className="rounded-2xl border border-slate-100 bg-gradient-to-br from-slate-50 to-indigo-50 p-4">
+                  <audio src={recordedPreview.url} className="w-full" controls />
+                </div>
+              )}
+            </div>
 
-            <div className="mt-6 flex gap-3">
+            {/* Actions */}
+            <div className="flex gap-3 p-5 pt-4">
               <button
                 type="button"
                 onClick={discardRecordedPreview}
                 disabled={recordingSending}
-                className="h-11 flex-1 rounded-xl border border-slate-200 bg-white text-sm font-black text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="h-11 flex-1 rounded-xl border border-slate-200 bg-white text-sm font-black text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Discard
               </button>
@@ -445,9 +523,16 @@ export default function MessageInput({ channelId, channelName }: MessageInputPro
                 type="button"
                 onClick={sendRecordedPreview}
                 disabled={recordingSending}
-                className="h-11 flex-1 rounded-xl bg-indigo-600 text-sm font-black text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="h-11 flex-1 rounded-xl bg-indigo-600 text-sm font-black text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {recordingSending ? 'Sending...' : 'Send'}
+                {recordingSending ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 size={16} className="animate-spin" />
+                    Sending…
+                  </span>
+                ) : (
+                  'Send'
+                )}
               </button>
             </div>
           </div>

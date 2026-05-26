@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import { MessageSquare, Smile, Pin, CheckSquare, X } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 
-
 export interface ToastData {
   id: string;
   type: 'reply' | 'reaction' | 'pin' | 'task';
@@ -38,7 +37,10 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
       setLeaving(true);
       setTimeout(() => onDismiss(toast.id), 500);
     }, 5000);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, [toast.id, onDismiss]);
 
   function handleDismiss() {
@@ -62,9 +64,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
           className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm"
           style={{ backgroundColor: toast.actorColor }}
         >
-          <span className="text-xs font-black text-white">
-            {toast.actorInitials}
-          </span>
+          <span className="text-xs font-black text-white">{toast.actorInitials}</span>
         </div>
         <div
           className="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-lg flex items-center justify-center shadow-md border-2 border-white"
@@ -83,10 +83,14 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
           >
             {cfg.label}
           </span>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">#{toast.channel}</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+            #{toast.channel}
+          </span>
         </div>
         <p className="text-[13px] font-bold text-slate-900 leading-tight">{toast.actor}</p>
-        <p className="text-xs font-medium text-slate-500 mt-1 leading-relaxed line-clamp-2">{toast.message}</p>
+        <p className="text-xs font-medium text-slate-500 mt-1 leading-relaxed line-clamp-2">
+          {toast.message}
+        </p>
       </div>
 
       {/* Dismiss */}
@@ -112,7 +116,10 @@ export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
       style={{ maxWidth: '400px' }}
     >
       {toasts.map((t) => (
-        <div key={t.id} className="pointer-events-auto w-full animate-in slide-in-from-right-10 duration-500">
+        <div
+          key={t.id}
+          className="pointer-events-auto w-full animate-in slide-in-from-right-10 duration-500"
+        >
           <ToastItem toast={t} onDismiss={onDismiss} />
         </div>
       ))}
