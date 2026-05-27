@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: edutechexos-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run dev:backend
+    autoDeploy: true
+    branch: main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        # Add your MongoDB connection string in Render's UI as a secret
+    healthCheckPath: /api/messages
