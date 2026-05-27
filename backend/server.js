@@ -12,15 +12,14 @@ app.use(express.json());
 // --- 1. MongoDB Connection ---
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
-  console.error('CRITICAL: MONGODB_URI environment variable is missing.');
-  process.exit(1);
+  console.warn('WARNING: MONGODB_URI environment variable is missing. DB routes will fail.');
 }
 
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('Successfully connected to MongoDB Atlas'))
   .catch((err) => {
-    console.error('Failed to connect to MongoDB Atlas:', err);
-    process.exit(1);
+    console.error('Failed to connect to MongoDB Atlas (non-fatal):', err);
+    // Continue without exiting; DB-dependent routes may fail gracefully
   });
 
 // --- 2. Schemas & Models ---
@@ -45,6 +44,18 @@ const WikiPageSchema = new mongoose.Schema({
 });
 const WikiPage = mongoose.model('WikiPage', WikiPageSchema);
 
+const NotificationSchema = new mongoose.Schema({
+  type: { type: String, default: 'mention' },
+  actor: { type: String, required: true },
+  actorInitials: { type: String, default: '' },
+  actorColor: { type: String, default: '#4f46e5' },
+  message: { type: String, required: true },
+  channel: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now },
+  recipientEmails: [{ type: String }],
+});
+const Notification = mongoose.model('Notification', NotificationSchema);
+
 // --- 3. API Endpoints ---
 
 // Health Check
@@ -65,6 +76,7 @@ app.get('/api/messages', async (req, res) => {
     }
     res.json({ success: true, messages: grouped });
   } catch (err) {
+    console.error('[GET /api/messages] Error:', err);
     res.status(500).json({ success: false, error: String(err) });
   }
 });
@@ -157,8 +169,51 @@ app.delete('/api/wikipages/:id', async (req, res) => {
   }
 });
 
+// GET Notifications (for a specific recipient email)
+app.get('/api/notifications', async (req, res) => {
+  try {
+    const { email } = req.query;
+    const query = email
+      ? { $or: [{ recipientEmails: { $size: 0 } }, { recipientEmails: email.toLowerCase() }] }
+      : {};
+    const notifs = await Notification.find(query).sort({ timestamp: -1 }).limit(60).lean();
+    const formatted = notifs.map(({ _id, __v, ...rest }) => ({
+      ...rest,
+      id: _id.toString(),
+      timestamp: rest.timestamp instanceof Date ? rest.timestamp.toISOString() : rest.timestamp,
+    }));
+    res.json({ success: true, notifications: formatted });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// POST Notification
+app.post('/api/notifications', async (req, res) => {
+  try {
+    const notif = new Notification(req.body);
+    const saved = await notif.save();
+    const { _id, __v, ...rest } = saved.toObject();
+    res.json({ success: true, notification: { ...rest, id: _id.toString() } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
 // Start Server
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
+const PORT = process.env.PORT || 10002;
+const server = app.listen(PORT, () => {
   console.log(`Backend Server running on port ${PORT}`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Waiting 3 seconds before retry...`);
+    setTimeout(() => {
+      server.close();
+      server.listen(PORT);
+    }, 3000);
+  } else {
+    throw err;
+  }
 });

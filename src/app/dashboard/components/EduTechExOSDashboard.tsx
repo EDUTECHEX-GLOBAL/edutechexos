@@ -17,7 +17,6 @@ import {
 import NotificationPanel from './NotificationPanel';
 
 import MyActivityCalendar from './MyActivityCalendar';
-import CommandPalette from './CommandPalette';
 import SearchPanel from './SearchPanel';
 
 import UserProfileModal from './UserProfileModal';
@@ -40,8 +39,8 @@ import {
   ChevronDown,
   Hash,
   CheckSquare,
-  Command,
   Loader2,
+  PhoneCall,
   LogOut,
   Mic,
   Moon,
@@ -56,6 +55,7 @@ import {
   Smile,
   Square,
   Sun,
+  Trash2,
   UserCheck,
   Users,
   Video,
@@ -331,11 +331,16 @@ export default function EduTechExOSDashboard() {
     addNotification,
     loadLocalMessages,
     loadLocalWikiPages,
+    loadLocalNotifications,
     notifications,
     typingUsers,
     pinnedMessageIds,
     bookmarkedMessageIds,
     toggleBookmark,
+    deleteMessage,
+    pinMessage,
+    unpinMessage,
+    toggleReaction,
     toggleDarkMode: storeDarkModeToggle,
     darkMode,
   } = useDashboardStore();
@@ -359,6 +364,8 @@ export default function EduTechExOSDashboard() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [meetMenuOpen, setMeetMenuOpen] = useState(false);
+  const [meetInputMenuOpen, setMeetInputMenuOpen] = useState(false);
+  const meetInputMenuRef = useRef<HTMLDivElement>(null);
   const [scheduleMeetOpen, setScheduleMeetOpen] = useState(false);
   const [meetTitle, setMeetTitle] = useState('');
   const [meetDate, setMeetDate] = useState('');
@@ -376,7 +383,9 @@ export default function EduTechExOSDashboard() {
     compactChat: false,
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const composerRef = useRef<HTMLInputElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const [hoverEmojiMsgId, setHoverEmojiMsgId] = useState<string | null>(null);
+  const [pinScrollIdx, setPinScrollIdx] = useState(0);
   const aiBottomRef = useRef<HTMLDivElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -399,7 +408,6 @@ export default function EduTechExOSDashboard() {
     }
   };
   // ─── New panel states ────────────────────────────────────────────────────────
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
 
   const [wikiOpen, setWikiOpen] = useState(false);
@@ -478,6 +486,14 @@ export default function EduTechExOSDashboard() {
     return () => clearInterval(interval);
   }, [loadLocalMessages, loadLocalWikiPages]);
 
+  // Poll backend notifications for the signed-in user every 5 seconds
+  useEffect(() => {
+    if (!currentUserEmail) return;
+    loadLocalNotifications?.(currentUserEmail);
+    const interval = setInterval(() => loadLocalNotifications?.(currentUserEmail), 5000);
+    return () => clearInterval(interval);
+  }, [currentUserEmail, loadLocalNotifications]);
+
   // Sync dark mode from store on mount
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -485,17 +501,6 @@ export default function EduTechExOSDashboard() {
     }
   }, [darkMode]);
 
-  // Ctrl+K → command palette
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        setCommandPaletteOpen((prev) => !prev);
-      }
-    };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem(SETTINGS_KEY);
@@ -553,6 +558,10 @@ export default function EduTechExOSDashboard() {
       setActiveChannel('general');
     }
   }, [activeChannel, authChecked, channels, currentMemberId, isAdmin, setActiveChannel]);
+
+  const scrollToBottom = () => {
+    setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 120);
+  };
 
   function sendMessage() {
     const text = composerMessage.trim();
@@ -743,6 +752,15 @@ export default function EduTechExOSDashboard() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [emojiMenuOpen]);
+
+  useEffect(() => {
+    if (!meetInputMenuOpen) return;
+    const h = (e: MouseEvent) => {
+      if (!meetInputMenuRef.current?.contains(e.target as Node)) setMeetInputMenuOpen(false);
+    };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [meetInputMenuOpen]);
 
   // Recording timer
   useEffect(() => {
@@ -1000,8 +1018,18 @@ export default function EduTechExOSDashboard() {
     setMeetTitle(`${channel?.name ?? 'Team'} sync`);
     setMeetDate(defaultDate);
     setMeetTime(defaultTime);
-    setMeetInviteeIds(availableInvitees.map((member) => member.id));
+
+    // Pre-select @mentioned people; fall back to all channel members when no @mentions typed
+    const mentionedWords = (composerMessage.match(/@(\w+)/g) ?? []).map((m) => m.slice(1).toLowerCase());
+    const preMentionedIds = mentionedWords.length > 0
+      ? availableInvitees
+          .filter((m) => mentionedWords.some((w) => m.name.toLowerCase().includes(w)))
+          .map((m) => m.id)
+      : availableInvitees.map((m) => m.id); // select all by default so form can always submit
+
+    setMeetInviteeIds(preMentionedIds);
     setMeetMenuOpen(false);
+    setMeetInputMenuOpen(false);
     setScheduleMeetOpen(true);
   }
 
@@ -1061,6 +1089,7 @@ export default function EduTechExOSDashboard() {
     setMeetDate('');
     setMeetTime('');
     setMeetInviteeIds([]);
+    scrollToBottom();
   }
 
   function startNewMeeting() {
@@ -1244,16 +1273,7 @@ export default function EduTechExOSDashboard() {
               </span>
             </div>
           </div>
-          <button
-            onClick={() => setCommandPaletteOpen(true)}
-            title="Command palette (Ctrl+K)"
-            className="mt-2 flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-400 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 transition dark:border-slate-700 dark:bg-slate-800/50"
-          >
-            <Command size={13} />
-            <span>Command palette</span>
-            <kbd className="ml-auto rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-black text-slate-500 dark:bg-slate-700 dark:text-slate-400">⌘K</kbd>
-          </button>
-          <div className="mt-3 grid grid-cols-4 rounded-xl bg-slate-50 p-1 dark:bg-slate-800/50">
+          <div className="mt-2 grid grid-cols-4 rounded-xl bg-slate-50 p-1 dark:bg-slate-800/50">
             {[
               {
                 icon: CalendarDays,
@@ -1321,7 +1341,7 @@ export default function EduTechExOSDashboard() {
               {channel?.id.startsWith('member-') ? 2 : activeChannelMembers.length}
             </button>
             <button
-              title="Search messages (Ctrl+K)"
+              title="Search messages"
               onClick={() => setGlobalSearchOpen(true)}
               className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
             >
@@ -1466,12 +1486,6 @@ export default function EduTechExOSDashboard() {
                     </button>
                   )}
 
-                  <button
-                    onClick={() => { setMoreOpen(false); setCommandPaletteOpen(true); }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
-                  >
-                    <Command size={15} /> Command palette
-                  </button>
                 </div>
               )}
             </div>
@@ -1501,192 +1515,257 @@ export default function EduTechExOSDashboard() {
           </div>
         )}
 
-        {/* Pinned messages strip */}
+        {/* Pinned messages strip — click to jump to pinned message */}
         {channel && (pinnedMessageIds[channel.id]?.length ?? 0) > 0 && (() => {
           const pinIds = pinnedMessageIds[channel.id] ?? [];
-          const lastPinned = channelMessages.find(m => m.id === pinIds[pinIds.length - 1]);
+          const idx = pinScrollIdx % pinIds.length;
+          const targetId = pinIds[pinIds.length - 1 - idx];
+          const targetMsg = channelMessages.find(m => m.id === targetId);
           return (
-            <div className="flex items-center gap-3 border-b border-amber-200 bg-amber-50 px-5 py-2 text-sm">
-              <Pin size={13} className="shrink-0 text-amber-600" />
-              <span className="font-black text-amber-700">{pinIds.length} pinned</span>
-              {lastPinned && (
-                <span className="min-w-0 flex-1 truncate font-semibold text-amber-700 opacity-80">
-                  {lastPinned.text.slice(0, 80)}
+            <button
+              type="button"
+              onClick={() => {
+                document.getElementById(`msg-${targetId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setPinScrollIdx(s => s + 1);
+              }}
+              className="flex w-full items-center gap-3 border-y border-amber-200 bg-amber-50/80 px-5 py-3 text-left shadow-sm transition-colors hover:bg-amber-100/80"
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-400 text-white shadow-sm">
+                <Pin size={13} strokeWidth={2.5} />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">
+                  {pinIds.length > 1 ? `Pinned  ${idx + 1} of ${pinIds.length}` : 'Pinned message'}
                 </span>
-              )}
-            </div>
+                {targetMsg && (
+                  <span className="min-w-0 truncate text-xs font-semibold text-amber-900/75">
+                    <span className="text-amber-700 font-black">{targetMsg.sender}:&nbsp;</span>
+                    {targetMsg.text.replace(/\n/g, ' ').slice(0, 80)}
+                  </span>
+                )}
+              </span>
+              <ChevronDown size={14} className="shrink-0 text-amber-500 -rotate-90" />
+            </button>
           );
         })()}
 
         <section className="chat-scroll">
-          <div className="date-divider">
+          <div className="mt-auto w-full">
+          <div className="date-divider my-4 px-3">
             <span />
             <strong>{firstMessageDate}</strong>
             <span />
           </div>
 
-          <div className="message-stream">
+          <div className="pb-6 px-3">
             {visibleMessages.map((message, index) => {
-              const compactWithPrevious =
-                index > 0 && visibleMessages[index - 1].sender === message.sender;
+              const prev = visibleMessages[index - 1];
+              const next = visibleMessages[index + 1];
+              const isOwn = message.sender === currentUser?.name;
+              const gap5m = (a: string, b: string) => new Date(b).getTime() - new Date(a).getTime() > 5 * 60 * 1000;
+              const isFirst = !prev || prev.sender !== message.sender || gap5m(prev.timestamp, message.timestamp);
+              const isLast = !next || next.sender !== message.sender || gap5m(message.timestamp, next.timestamp);
               const scheduledMeet = parseScheduledMeet(message.text);
+              const isPinned = (pinnedMessageIds[channel?.id ?? ''] ?? []).includes(message.id);
+              const isBookmarked = bookmarkedMessageIds.includes(message.id);
+
               return (
-                <article
-                  key={message.id}
-                  className={`chat-message ${compactWithPrevious ? 'chat-message-compact' : ''}`}
-                >
-                  {!compactWithPrevious ? (
-                    <div
-                      className="message-avatar shadow-lg"
-                      style={{ backgroundColor: message.color }}
-                    >
-                      {message.initials}
+                <div key={message.id} id={`msg-${message.id}`} className={`flex items-end gap-2 ${isFirst ? 'mt-4' : 'mt-0.5'} ${isOwn ? 'flex-row-reverse' : ''}`}>
+
+                  {/* Avatar — receiver only, first in group */}
+                  {!isOwn && (
+                    <div className="shrink-0">
+                      {isFirst ? (
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-sm" style={{ backgroundColor: message.color }}>
+                          {message.initials}
+                        </div>
+                      ) : <div className="h-8 w-8" />}
                     </div>
-                  ) : (
-                    <div className="w-12 shrink-0" />
                   )}
-                  <div className="min-w-0 flex-1">
-                    {!compactWithPrevious && (
-                      <div className="mb-1 flex flex-wrap items-center gap-2">
-                        <p className="font-black text-slate-950">{message.sender}</p>
-                        {message.sender === 'Aditya Cherikuri' && (
-                          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-indigo-600">
-                            Admin
-                          </span>
-                        )}
-                        <span className="text-xs font-black uppercase text-slate-400">
-                          {formatTime(message.timestamp)}
-                        </span>
-                      </div>
+
+                  {/* Bubble column */}
+                  <div className={`flex flex-col max-w-[70%] ${isOwn ? 'items-end' : 'items-start'}`}>
+
+                    {/* Sender name — receiver, first in group only */}
+                    {isFirst && !isOwn && (
+                      <span className="mb-0.5 ml-1 text-xs font-bold" style={{ color: message.color }}>
+                        {message.sender}
+                      </span>
                     )}
-                    {scheduledMeet ? (
-                      <div className="mt-2 max-w-2xl rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
-                        <div className="mb-3 flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-700">
-                              Scheduled meet
-                            </p>
-                            <h3 className="mt-1 text-lg font-black text-slate-950">
-                              {scheduledMeet.title}
-                            </h3>
+
+                    {/* Main bubble */}
+                    {!message.poll && (
+                      <div className={`relative group/bubble rounded-2xl px-3.5 py-2.5 shadow-sm
+                        ${isOwn
+                          ? `bg-indigo-600 text-white ${isLast ? 'bubble-own rounded-br-sm' : ''}`
+                          : `bg-white border border-slate-100 text-slate-900 ${isLast ? 'bubble-other rounded-bl-sm' : ''}`
+                        }
+                        ${isPinned ? 'ring-2 ring-amber-400' : ''}
+                      `}>
+
+                        {/* Content */}
+                        {scheduledMeet ? (
+                          <div className="w-56 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600">📅 Meeting</p>
+                            <p className="mt-1 font-black text-slate-900 text-sm">{scheduledMeet.title}</p>
+                            {scheduledMeet.time && <p className="mt-0.5 text-xs text-slate-500">🕐 {scheduledMeet.time}</p>}
+                            <a href={scheduledMeet.link} target="_blank" rel="noreferrer"
+                              className="mt-2 inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition-colors">
+                              Join →
+                            </a>
                           </div>
-                          <CalendarPlus size={20} className="text-emerald-600" />
-                        </div>
-                        <div className="space-y-2 text-sm font-semibold text-slate-700">
-                          <p>{scheduledMeet.time}</p>
-                          <p className="text-xs uppercase tracking-[0.08em] text-slate-500">
-                            {scheduledMeet.people}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => window.open(scheduledMeet.link, '_blank')}
-                          className="mt-4 inline-flex h-9 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-black uppercase tracking-[0.08em] text-white hover:bg-emerald-700"
-                        >
-                          <Video size={15} />
-                          Join meet
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="prose prose-slate max-w-4xl text-[17px] leading-7 text-slate-700">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            code: ({ children, className }) => {
-                              const isBlock = String(className ?? '').includes('language-');
-                              return isBlock ? (
-                                <pre className="my-2 overflow-x-auto rounded-lg bg-slate-900 px-4 py-3 text-sm text-green-400">
-                                  <code>{children}</code>
-                                </pre>
-                              ) : (
-                                <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-sm text-indigo-700">
-                                  {children}
-                                </code>
-                              );
-                            },
-                            a: ({ href, children }) => (
-                              <a href={href} target="_blank" rel="noreferrer" className="text-indigo-600 underline hover:text-indigo-800">
-                                {children}
+                        ) : (
+                          <div className={`text-sm leading-relaxed ${isOwn ? 'text-white' : 'text-slate-900'}`}>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}
+                              components={{
+                                p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+                                strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+                                em: ({ children }) => <em className="italic">{children}</em>,
+                                code: ({ children, className }) => {
+                                  const isBlock = String(className ?? '').includes('language-');
+                                  return isBlock
+                                    ? <pre className="my-1 overflow-x-auto rounded-lg bg-black/20 p-2 text-xs text-green-300"><code>{children}</code></pre>
+                                    : <code className={`rounded px-1 py-0.5 font-mono text-xs ${isOwn ? 'bg-white/20 text-white' : 'bg-slate-100 text-indigo-700'}`}>{children}</code>;
+                                },
+                                blockquote: ({ children }) => <blockquote className={`border-l-4 pl-3 italic text-xs ${isOwn ? 'border-white/40 text-white/80' : 'border-indigo-300 text-slate-500'}`}>{children}</blockquote>,
+                                a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className={`underline ${isOwn ? 'text-white/90' : 'text-indigo-600'}`}>{children}</a>,
+                              }}>
+                              {message.text}
+                            </ReactMarkdown>
+                          </div>
+                        )}
+
+                        {/* Audio */}
+                        {message.audioUrl && (
+                          <div className={`mt-2 rounded-xl p-2 ${isOwn ? 'bg-white/10' : 'bg-slate-50'}`}>
+                            <audio className="w-48 h-8" controls src={message.audioUrl}><track kind="captions" /></audio>
+                            <p className={`mt-0.5 text-[10px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>Voice note</p>
+                          </div>
+                        )}
+
+                        {/* Video */}
+                        {message.videoUrl && (
+                          <div className="mt-2 w-56">
+                            <video className="w-full rounded-xl bg-black" controls src={message.videoUrl}><track kind="captions" /></video>
+                            <p className={`mt-0.5 text-[10px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>Screen recording</p>
+                          </div>
+                        )}
+
+                        {/* Files */}
+                        {message.files && message.files.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {message.files.map((file, fi) => (
+                              <a key={fi} href={file.url} target="_blank" rel="noreferrer"
+                                className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-bold transition-colors
+                                  ${isOwn ? 'border-white/30 bg-white/10 text-white hover:bg-white/20' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200'}`}>
+                                📎 {file.name}
                               </a>
-                            ),
-                            strong: ({ children }) => <strong className="font-black text-slate-900">{children}</strong>,
-                            blockquote: ({ children }) => (
-                              <blockquote className="border-l-4 border-indigo-300 pl-4 italic text-slate-500">
-                                {children}
-                              </blockquote>
-                            ),
-                          }}
-                        >
-                          {message.text}
-                        </ReactMarkdown>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Timestamp + double-tick */}
+                        <div className={`mt-1.5 flex items-center justify-end gap-1 text-[10px] ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>
+                          <span>{formatTime(message.timestamp)}</span>
+                          {isOwn && (
+                            <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor" className="opacity-80">
+                              <path d="M11.071.653a.75.75 0 0 1 .001 1.06l-5.78 5.79a.75.75 0 0 1-1.063 0L1.928 5.2a.75.75 0 1 1 1.062-1.059l1.769 1.77L10.01.653a.75.75 0 0 1 1.061 0z"/>
+                              <path d="M15.071.653a.75.75 0 0 1 .001 1.06l-5.78 5.79a.75.75 0 0 1-.532.22.75.75 0 0 1-.532-1.28L13.01.653a.75.75 0 0 1 1.061 0z" opacity="0.6"/>
+                            </svg>
+                          )}
+                        </div>
+
+                        {/* Hover action bar — floats beside the bubble */}
+                        <div className={`absolute ${isOwn ? 'left-0 -translate-x-full pr-2' : 'right-0 translate-x-full pl-2'} top-0 hidden group-hover/bubble:flex items-center`}>
+                          <div className="flex items-center gap-0.5 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+                            <div className="relative">
+                              <button
+                                onClick={() => setHoverEmojiMsgId(hoverEmojiMsgId === message.id ? null : message.id)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-sm hover:bg-slate-100"
+                                title="React">😊</button>
+                              {hoverEmojiMsgId === message.id && (
+                                <div className={`absolute top-full mt-1 z-30 flex gap-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl ${isOwn ? 'right-0' : 'left-0'}`}>
+                                  {['👍','❤️','😂','🔥','👀','✅','🎉','💯'].map((em) => (
+                                    <button key={em}
+                                      onClick={() => { toggleReaction(channel!.id, message.id, em, currentUser?.email ?? ''); setHoverEmojiMsgId(null); }}
+                                      className="flex h-7 w-7 items-center justify-center rounded-lg text-lg hover:scale-110 hover:bg-slate-100 transition-all">
+                                      {em}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => toggleBookmark(message.id)}
+                              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 ${isBookmarked ? 'text-amber-500' : 'text-slate-500 hover:text-amber-500'}`}
+                              title={isBookmarked ? 'Remove bookmark' : 'Save'}>
+                              <Bookmark size={13} fill={isBookmarked ? 'currentColor' : 'none'} />
+                            </button>
+                            <button
+                              onClick={() => { isPinned ? unpinMessage(channel!.id, message.id) : pinMessage(channel!.id, message.id); }}
+                              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 ${isPinned ? 'text-amber-500' : 'text-slate-500 hover:text-amber-500'}`}
+                              title={isPinned ? 'Unpin' : 'Pin'}>
+                              <Pin size={13} />
+                            </button>
+                            {(isOwn || isAdmin) && (
+                              <button
+                                onClick={() => deleteMessage(channel!.id, message.id)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"
+                                title="Delete">
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
 
-                    {/* Poll renderer */}
+                    {/* Poll */}
                     {message.poll && (
-                      <div className="mt-3 max-w-md rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
-                        <p className="mb-3 text-sm font-black text-indigo-900">{message.poll.question}</p>
+                      <div className="mt-1 w-64 rounded-2xl border border-indigo-100 bg-white p-4 shadow-sm">
+                        <p className="mb-3 text-sm font-bold text-slate-900">📊 {message.poll.question}</p>
                         <div className="space-y-2">
                           {message.poll.options.map((opt, i) => {
                             const total = message.poll!.options.reduce((s, o) => s + o.votes.length, 0);
                             const pct = total ? Math.round((opt.votes.length / total) * 100) : 0;
                             return (
                               <div key={i} className="relative overflow-hidden rounded-xl border border-indigo-200 bg-white">
-                                <div className="absolute inset-y-0 left-0 bg-indigo-100" style={{ width: `${pct}%` }} />
+                                <div className="absolute inset-y-0 left-0 rounded-l-xl bg-indigo-100" style={{ width: `${pct}%` }} />
                                 <div className="relative flex items-center justify-between px-3 py-2">
-                                  <span className="text-sm font-bold text-slate-700">{opt.text}</span>
-                                  <span className="text-xs font-black text-indigo-600">{pct}% ({opt.votes.length})</span>
+                                  <span className="text-sm font-semibold text-slate-700">{opt.text}</span>
+                                  <span className="text-xs font-bold text-indigo-600">{pct}%</span>
                                 </div>
                               </div>
                             );
                           })}
                         </div>
+                        <p className="mt-2 text-[11px] text-slate-400">{message.poll.options.reduce((s, o) => s + o.votes.length, 0)} votes</p>
                       </div>
                     )}
-                    {/* Bookmark button */}
-                    <div className="mt-1 flex items-center gap-2">
-                      <button
-                        onClick={() => toggleBookmark(message.id)}
-                        title={bookmarkedMessageIds.includes(message.id) ? 'Remove bookmark' : 'Bookmark message'}
-                        className={`rounded-lg p-1 text-xs transition ${bookmarkedMessageIds.includes(message.id) ? 'text-amber-500' : 'text-slate-300 hover:text-amber-400'}`}
-                      >
-                        <Bookmark size={14} />
-                      </button>
-                    </div>
-                    {message.audioUrl && (
-                      <audio className="mt-3 w-full max-w-md" controls src={message.audioUrl}>
-                        <track kind="captions" />
-                      </audio>
-                    )}
-                    {message.videoUrl && (
-                      <video
-                        className="mt-3 w-full max-w-xl rounded-2xl border border-slate-200 bg-black"
-                        controls
-                        src={message.videoUrl}
-                      >
-                        <track kind="captions" />
-                      </video>
-                    )}
-                    {message.files?.length ? (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {message.files.map((file) => (
-                          <a
-                            key={`${message.id}-${file.url}`}
-                            href={file.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 shadow-sm hover:text-indigo-600"
-                          >
-                            {file.name}
-                          </a>
-                        ))}
+
+                    {/* Reactions */}
+                    {message.reactions && Object.keys(message.reactions).length > 0 && (
+                      <div className={`mt-1 flex flex-wrap gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                        {Object.entries(message.reactions).map(([emoji, users]: [string, any]) =>
+                          users.length > 0 ? (
+                            <button key={emoji}
+                              onClick={() => toggleReaction(channel!.id, message.id, emoji, currentUser?.email ?? '')}
+                              className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-all
+                                ${users.includes(currentUser?.email ?? '')
+                                  ? 'border-indigo-200 bg-indigo-100 font-bold text-indigo-700'
+                                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+                              <span>{emoji}</span><span>{users.length}</span>
+                            </button>
+                          ) : null
+                        )}
                       </div>
-                    ) : null}
+                    )}
                   </div>
-                </article>
+                </div>
               );
             })}
             <div ref={chatBottomRef} className="h-2" />
+          </div>
           </div>
         </section>
 
@@ -1713,193 +1792,141 @@ export default function EduTechExOSDashboard() {
           );
         })()}
 
-        <footer className="composer-wrap">
-          <div className="composer">
-            <div className="composer-toolbar">
-              <button
-                onClick={() => insertComposerText('**', '**')}
-                className="font-black"
-                title="Bold"
-              >
-                B
-              </button>
-              <button
-                onClick={() => insertComposerText('*', '*')}
-                className="italic"
-                title="Italic"
-              >
-                I
-              </button>
-              <button
-                onClick={() => insertComposerText('<u>', '</u>')}
-                className="underline"
-                title="Underline"
-              >
-                U
-              </button>
-              <button onClick={() => insertComposerText('`', '`')} title="Inline code">
-                `
-              </button>
-              <span />{' '}
-              <button
-                onClick={() => {
-                  insertComposerText('@');
-                  setMentionMenuOpen(true);
-                  setEmojiMenuOpen(false);
-                }}
-                title="Mention"
-              >
-                <AtSign size={17} />
-              </button>
-              <button onClick={() => fileInputRef.current?.click()} title="Attach file">
-                <Paperclip size={17} />
-              </button>
-              <button
-                ref={emojiBtnRef}
-                onClick={() => {
-                  setEmojiMenuOpen((value) => !value);
-                  setMentionMenuOpen(false);
-                }}
-                title="Add emoji"
-                className={emojiMenuOpen ? 'text-indigo-600' : ''}
-              >
-                <Smile size={17} />
-              </button>
-              <span />
-              {recordingType ? (
-                <span className="flex items-center gap-1.5 text-xs font-black text-red-500 px-1">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
-                  </span>
-                  {String(Math.floor(recordingDuration / 60)).padStart(2, '0')}:
-                  {String(recordingDuration % 60).padStart(2, '0')}
-                </span>
-              ) : null}
-              <button
-                onClick={() => startRecording('audio')}
-                disabled={recordingBusy || !!recordingType}
-                title="Record voice note"
-                className={recordingType === 'audio' ? 'text-red-500' : ''}
-              >
-                <Mic size={17} />
-              </button>
-              <button
-                onClick={() => startRecording('video')}
-                disabled={recordingBusy || !!recordingType}
-                title="Record screen"
-              >
-                <Video size={17} />
-              </button>
+        <footer className="shrink-0 border-t border-slate-200/50 bg-white/80 backdrop-blur-md px-4 py-3">
+          {/* Mention dropdown */}
+          {mentionMenuOpen && mentionSuggestions.length > 0 && (
+            <div className="mb-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+              {mentionSuggestions.map((member) => (
+                <button key={member.id} onClick={() => insertMention(member.name)}
+                  className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-indigo-50 transition-colors">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold text-white" style={{ backgroundColor: member.color }}>{member.initials}</div>
+                  <div><p className="text-sm font-bold text-slate-900">{member.name}</p><p className="text-xs text-slate-400">{member.role}</p></div>
+                </button>
+              ))}
             </div>
-            {(mentionMenuOpen || emojiMenuOpen) && (
-              <div className="relative">
-                {mentionMenuOpen && mentionSuggestions.length > 0 && (
-                  <div className="absolute bottom-2 left-4 z-50 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-                    {mentionSuggestions.map((member) => (
+          )}
+
+          {/* Emoji picker */}
+          {emojiMenuOpen && (
+            <div ref={emojiPanelRef} className="mb-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+              <div className="grid max-h-48 grid-cols-8 gap-1 overflow-y-auto">
+                {EMOJI_OPTIONS.map((emoji, idx) => (
+                  <button key={idx} type="button"
+                    onClick={() => { insertComposerText(emoji); setEmojiMenuOpen(false); }}
+                    className="flex h-8 items-center justify-center rounded-lg text-lg hover:scale-110 hover:bg-indigo-50 transition-all">
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <input ref={fileInputRef} onChange={handleFileUpload} type="file" className="hidden" />
+
+          <div className="flex items-end gap-2">
+            {/* Toolbar icons */}
+            <div className="flex items-center gap-0.5 shrink-0 mb-0.5">
+              <button ref={emojiBtnRef} onClick={() => { setEmojiMenuOpen((v) => !v); setMentionMenuOpen(false); }}
+                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${emojiMenuOpen ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`} title="Emoji">
+                <Smile size={18} />
+              </button>
+              <button onClick={() => fileInputRef.current?.click()}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" title="Attach file">
+                <Paperclip size={18} />
+              </button>
+              <button onClick={() => startRecording('audio')} disabled={recordingBusy || !!recordingType}
+                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${recordingType === 'audio' ? 'animate-pulse bg-red-100 text-red-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`} title="Voice note">
+                <Mic size={18} />
+              </button>
+              <button onClick={() => startRecording('video')} disabled={recordingBusy || !!recordingType}
+                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${recordingType === 'video' ? 'animate-pulse bg-red-100 text-red-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`} title="Screen record">
+                <Video size={18} />
+              </button>
+              {/* Meet dropdown */}
+              <div className="relative" ref={meetInputMenuRef}>
+                <button
+                  onClick={() => setMeetInputMenuOpen((v) => !v)}
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${meetInputMenuOpen ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:bg-indigo-50 hover:text-indigo-600'}`}
+                  title="Meet options"
+                >
+                  <PhoneCall size={17} />
+                </button>
+                {meetInputMenuOpen && (
+                  <div className="absolute bottom-full left-0 mb-2 z-50 w-52 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div className="px-3 py-2 bg-slate-50 border-b border-slate-100">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Meeting</p>
+                    </div>
+                    <div className="p-1.5 space-y-0.5">
                       <button
-                        key={`mention-${member.id}`}
-                        type="button"
-                        onClick={() => insertMention(member.name)}
-                        className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-slate-50"
+                        onClick={() => { setMeetInputMenuOpen(false); startNewMeeting(); }}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-indigo-50 transition-colors group"
                       >
-                        <span
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black text-white"
-                          style={{ backgroundColor: member.color }}
-                        >
-                          {member.initials}
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200 transition-colors">
+                          <Video size={15} />
                         </span>
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-black text-slate-800">
-                            @{member.name}
-                          </span>
-                          <span className="block truncate text-xs font-semibold text-slate-500">
-                            {member.email}
-                          </span>
-                        </span>
+                        <div>
+                          <p className="text-sm font-bold text-slate-800">Start Meet</p>
+                          <p className="text-[11px] text-slate-400">Instant Jitsi room</p>
+                        </div>
                       </button>
-                    ))}
-                  </div>
-                )}
-                {emojiMenuOpen && (
-                  <div
-                    ref={emojiPanelRef}
-                    className="absolute bottom-full right-0 mb-2 z-50 w-80 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl"
-                  >
-                    <div className="mb-2 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                      Emoji
-                    </div>
-                    <div className="grid max-h-52 grid-cols-8 gap-1 overflow-y-auto">
-                      {EMOJI_OPTIONS.map((emoji, idx) => (
-                        <button
-                          key={`${emoji}-${idx}`}
-                          type="button"
-                          onClick={() => {
-                            insertComposerText(emoji);
-                            setEmojiMenuOpen(false);
-                          }}
-                          className="flex h-8 items-center justify-center rounded-xl text-lg hover:bg-indigo-50 hover:scale-110 transition-all"
-                          title={emoji}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
+                      <button
+                        onClick={() => { setMeetInputMenuOpen(false); openScheduleMeet(); }}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-emerald-50 transition-colors group"
+                      >
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200 transition-colors">
+                          <CalendarPlus size={15} />
+                        </span>
+                        <div>
+                          <p className="text-sm font-bold text-slate-800">Schedule Meet</p>
+                          <p className="text-[11px] text-slate-400">
+                            {composerMessage.includes('@') ? 'Uses your @mentions' : 'Pick who to invite'}
+                          </p>
+                        </div>
+                      </button>
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Recording badge */}
+            {recordingType && (
+              <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 mb-0.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+                </span>
+                {String(Math.floor(recordingDuration / 60)).padStart(2, '0')}:{String(recordingDuration % 60).padStart(2, '0')}
               </div>
             )}
-            <input ref={fileInputRef} onChange={handleFileUpload} type="file" className="hidden" />
-            <div className="flex items-center gap-3 px-5 py-4">
-              <input
-                ref={composerRef}
-                className="min-w-0 flex-1 bg-transparent text-[17px] font-semibold text-slate-700 outline-none placeholder:text-slate-400"
-                value={composerMessage}
-                onChange={(event) => {
-                  const next = event.target.value;
-                  setComposerMessage(next);
-                  setMentionMenuOpen(/@[\w\s.-]*$/.test(next));
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault();
-                    sendMessage();
-                  }
-                }}
-                placeholder={`Message #${channel?.name}... (Drop screenshots, type @ to mention)`}
-              />
-            </div>
-            <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={startNewMeeting}
-                  className="flex h-9 items-center gap-2 rounded-xl bg-indigo-50 px-3 text-xs font-black uppercase text-indigo-700"
-                >
-                  <Video size={15} />
-                  Start
-                </button>
-                <button
-                  onClick={openScheduleMeet}
-                  className="flex h-9 items-center gap-2 rounded-xl bg-emerald-50 px-3 text-xs font-black uppercase text-emerald-700"
-                >
-                  <CalendarPlus size={15} />
-                  Schedule
-                </button>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="hidden items-center gap-1 text-[11px] font-black uppercase tracking-[0.08em] text-slate-300 sm:flex">
-                  <Zap size={13} className="text-amber-400" />
-                  Press Enter to send
-                </span>
-                <button
-                  onClick={sendMessage}
-                  disabled={!composerMessage.trim()}
-                  className="flex h-9 items-center rounded-xl bg-slate-100 px-6 text-xs font-black uppercase text-slate-400 transition enabled:bg-indigo-600 enabled:text-white enabled:hover:bg-indigo-700"
-                >
-                  Send
-                </button>
-              </div>
-            </div>
+
+            {/* Pill textarea */}
+            <textarea
+              ref={composerRef}
+              value={composerMessage}
+              onChange={(event) => {
+                const next = event.target.value;
+                setComposerMessage(next);
+                setMentionMenuOpen(/@[\w\s.-]*$/.test(next));
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }
+                if (event.key === 'Escape') { setEmojiMenuOpen(false); setMentionMenuOpen(false); }
+              }}
+              placeholder={`Message #${channel?.name ?? ''}… (Enter to send · Shift+Enter for new line)`}
+              className="flex-1 resize-none rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+              rows={1}
+              style={{ maxHeight: '120px', overflowY: 'auto' }}
+            />
+
+            {/* Round indigo send button */}
+            <button
+              onClick={sendMessage}
+              disabled={!composerMessage.trim()}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white shadow-md hover:bg-indigo-700 hover:shadow-indigo-300/50 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-200 transition-all"
+            >
+              <Send size={18} />
+            </button>
           </div>
         </footer>
       </main>
@@ -2519,12 +2546,6 @@ export default function EduTechExOSDashboard() {
 
       {/* ─── New Feature Panels ─────────────────────────────────────────────── */}
 
-      {/* Command Palette — Ctrl+K */}
-      <CommandPalette
-        isOpen={commandPaletteOpen}
-        onClose={() => setCommandPaletteOpen(false)}
-      />
-
       {/* Global Search Panel */}
       {globalSearchOpen && (
         <div className="fixed inset-0 z-[200] flex items-start justify-center bg-slate-950/50 pt-20 backdrop-blur-sm" onClick={() => setGlobalSearchOpen(false)}>
@@ -2547,7 +2568,7 @@ export default function EduTechExOSDashboard() {
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
           <div className="h-full w-full max-w-4xl">
             <WikiPanel
-              onClose={() => setWikiOpen(false)}
+              onClose={() => { setWikiOpen(false); scrollToBottom(); }}
               activeChannel={channel?.id ?? activeChannel}
             />
           </div>
@@ -2558,7 +2579,7 @@ export default function EduTechExOSDashboard() {
       {kanbanOpen && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
           <div className="h-full w-full max-w-5xl">
-            <KanbanBoard onClose={() => setKanbanOpen(false)} />
+            <KanbanBoard onClose={() => { setKanbanOpen(false); scrollToBottom(); }} />
           </div>
         </div>
       )}
@@ -2567,7 +2588,7 @@ export default function EduTechExOSDashboard() {
       {analyticsOpen && isAdmin && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-4xl max-h-[90vh] overflow-auto">
-            <AnalyticsPanel onClose={() => setAnalyticsOpen(false)} />
+            <AnalyticsPanel onClose={() => { setAnalyticsOpen(false); scrollToBottom(); }} />
           </div>
         </div>
       )}
@@ -2576,7 +2597,7 @@ export default function EduTechExOSDashboard() {
       {bookmarksPanelOpen && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-xl max-h-[85vh] overflow-auto">
-            <BookmarksPanel onClose={() => setBookmarksPanelOpen(false)} />
+            <BookmarksPanel onClose={() => { setBookmarksPanelOpen(false); scrollToBottom(); }} />
           </div>
         </div>
       )}

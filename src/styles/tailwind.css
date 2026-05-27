@@ -147,6 +147,11 @@
     background-size: 48px 48px;
   }
 
+  /* Form inputs */
+  .input-premium {
+    @apply w-full rounded-xl border border-input bg-white px-4 py-3 text-sm font-medium text-foreground placeholder:text-ink-light/60 outline-none transition-all duration-200 focus:border-primary/50 focus:ring-4 focus:ring-primary/10;
+  }
+
   /* Badges */
   .badge {
     @apply inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-full;

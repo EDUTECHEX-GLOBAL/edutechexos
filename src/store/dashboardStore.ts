@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { MESSAGES_BY_CHANNEL, CHANNELS } from '@/data/mockData';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+console.log('API_BASE =', API_BASE);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,6 +135,7 @@ type DashboardState = {
 
   notifications: Notification[];
   addNotification: (notif: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
+  loadLocalNotifications: (email?: string) => Promise<void>;
   markAllNotificationsRead: () => void;
   markNotificationRead: (id: string) => void;
   dismissNotification: (id: string) => void;
@@ -229,6 +231,7 @@ export const useDashboardStore = create<DashboardState>()(
       loadLocalMessages: async () => {
         try {
           const res = await fetch(`${API_BASE}/api/messages`);
+if (!res.ok) { console.warn('Backend unavailable, using local messages (status', res.status, ')'); return; }
           const data = await res.json();
           if (!data.success || !data.messages) return;
 
@@ -237,8 +240,14 @@ export const useDashboardStore = create<DashboardState>()(
           const merged: Record<string, Message[]> = {};
           const allChs = new Set([...Object.keys(current), ...Object.keys(dbMsgs)]);
           allChs.forEach((chId) => {
-            const local = new Map<string, Message>((current[chId] ?? []).map((m) => [m.id, m] as [string, Message]));
-            const remote = new Map<string, Message>((dbMsgs[chId] ?? []).map((m: Message) => [m.id, m] as [string, Message]));
+            const localMsgs = current[chId] ?? [];
+            const localIds = new Set(localMsgs.map((m) => m.id));
+            // Remote messages whose clientId matches a local id are duplicates — drop them
+            const remoteMsgs: Message[] = (dbMsgs[chId] ?? []).filter(
+              (m: Message & { clientId?: string }) => !m.clientId || !localIds.has(m.clientId)
+            );
+            const local = new Map<string, Message>(localMsgs.map((m) => [m.id, m]));
+            const remote = new Map<string, Message>(remoteMsgs.map((m) => [m.id, m]));
             const allIds = new Set<string>([...local.keys(), ...remote.keys()]);
             merged[chId] = Array.from(allIds)
               .map((id): Message | undefined => local.get(id) ?? remote.get(id))
@@ -407,8 +416,45 @@ export const useDashboardStore = create<DashboardState>()(
       },
 
       notifications: [],
-      addNotification: (notif) =>
-        set((s) => ({ notifications: [{ ...notif, id: `notif-${Date.now()}`, timestamp: new Date().toISOString(), read: false }, ...s.notifications] })),
+      addNotification: (notif) => {
+        const localId = `notif-${Date.now()}`;
+        const newNotif = { ...notif, id: localId, timestamp: new Date().toISOString(), read: false };
+        set((s) => ({ notifications: [newNotif, ...s.notifications] }));
+        // POST to backend so other users can receive it; swap local temp-id for real MongoDB id
+        fetch(`${API_BASE}/api/notifications`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(notif),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.success && data.notification?.id) {
+              set((s) => ({
+                notifications: s.notifications.map((n) =>
+                  n.id === localId ? { ...n, id: data.notification.id } : n
+                ),
+              }));
+            }
+          })
+          .catch(() => {});
+      },
+      loadLocalNotifications: async (email?: string) => {
+        try {
+          const url = email
+            ? `${API_BASE}/api/notifications?email=${encodeURIComponent(email)}`
+            : `${API_BASE}/api/notifications`;
+          const res = await fetch(url);
+          if (!res.ok) return;
+          const data = await res.json();
+          if (!data.success || !data.notifications) return;
+          set((s) => {
+            const localIds = new Set(s.notifications.map((n) => n.id));
+            const incoming = (data.notifications as Notification[]).filter((n) => !localIds.has(n.id)).map((n) => ({ ...n, read: false }));
+            if (!incoming.length) return s;
+            return { notifications: [...incoming, ...s.notifications] };
+          });
+        } catch { /* backend unavailable */ }
+      },
       markAllNotificationsRead: () => set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
       markNotificationRead: (id) =>
         set((s) => ({ notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) })),
