@@ -40,6 +40,7 @@ import {
   Hash,
   CheckSquare,
   Loader2,
+  Mail,
   PhoneCall,
   LogOut,
   Mic,
@@ -371,6 +372,7 @@ export default function EduTechExOSDashboard() {
   const [meetDate, setMeetDate] = useState('');
   const [meetTime, setMeetTime] = useState('');
   const [meetInviteeIds, setMeetInviteeIds] = useState<string[]>([]);
+  const [sendEmailInvite, setSendEmailInvite] = useState(true);
   const [mentionMenuOpen, setMentionMenuOpen] = useState(false);
   const [emojiMenuOpen, setEmojiMenuOpen] = useState(false);
   const emojiBtnRef = useRef<HTMLButtonElement>(null);
@@ -442,7 +444,31 @@ export default function EduTechExOSDashboard() {
   const channel = activeChannelAllowed
     ? activeChannelRecord
     : (workspaceChannels[0] ?? channels[0]);
-  const channelMessages = messages[channel?.id ?? 'general'] ?? [];
+
+  const activeChannelId = useMemo(() => {
+    if (!channel) return 'general';
+    if (channel.id.startsWith('member-') && currentMemberId) {
+      const sorted = [channel.id, currentMemberId].sort();
+      return `dm-${sorted[0]}-${sorted[1]}`;
+    }
+    return channel.id;
+  }, [channel, currentMemberId]);
+
+  const channelMessages = useMemo(() => {
+    const list = messages[activeChannelId];
+    if (list) return list;
+
+    if (channel?.id.startsWith('member-') && currentMemberId) {
+      const targetId = channel.id;
+      const localMock = messages[targetId] ?? [];
+      const userMock = messages[currentMemberId] ?? [];
+      const combined = [...localMock, ...userMock].sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+      return combined;
+    }
+    return [];
+  }, [messages, activeChannelId, channel, currentMemberId]);
   const people = isAdmin ? members : members.slice(0, 7);
   const activeChannelMembers = useMemo(() => {
     if (!channel) return [];
@@ -573,7 +599,7 @@ export default function EduTechExOSDashboard() {
         text.toLowerCase().includes(`@${member.name}`.toLowerCase())
     );
 
-    addMessage(channel.id, {
+    addMessage(activeChannelId, {
       id: `msg-${Date.now()}`,
       sender: currentUser?.name ?? 'You',
       initials: currentUser?.initials ?? 'Y',
@@ -674,7 +700,7 @@ export default function EduTechExOSDashboard() {
         toast.error('File upload failed.');
         return;
       }
-      addMessage(channel.id, {
+      addMessage(activeChannelId, {
         id: `msg-file-${Date.now()}`,
         sender: currentUser?.name ?? 'You',
         initials: currentUser?.initials ?? 'Y',
@@ -897,7 +923,7 @@ export default function EduTechExOSDashboard() {
         mediaUrl = await blobToDataUrl(recordedPreview.blob);
       }
 
-      addMessage(channel.id, {
+      addMessage(activeChannelId, {
         id: `msg-${recordedPreview.kind}-${Date.now()}`,
         sender: currentUser?.name ?? 'You',
         initials: currentUser?.initials ?? 'Y',
@@ -1028,6 +1054,7 @@ export default function EduTechExOSDashboard() {
       : availableInvitees.map((m) => m.id); // select all by default so form can always submit
 
     setMeetInviteeIds(preMentionedIds);
+    setSendEmailInvite(settings.emailNotifications);
     setMeetMenuOpen(false);
     setMeetInputMenuOpen(false);
     setScheduleMeetOpen(true);
@@ -1054,7 +1081,7 @@ export default function EduTechExOSDashboard() {
       `Join Link: ${meetLink}`,
     ].join('\n');
 
-    addMessage(channel.id, {
+    addMessage(activeChannelId, {
       id: `meeting-${Date.now()}`,
       sender: currentUser?.name ?? 'You',
       initials: currentUser?.initials ?? 'Y',
@@ -1073,15 +1100,19 @@ export default function EduTechExOSDashboard() {
       recipientEmails: inviteeEmails,
     });
 
-    const emailResult = await sendMeetingEmailInvitation(title, timeLabel, inviteeEmails, meetLink);
-    if (emailResult.success) {
-      toast.success(
-        emailResult.previewUrl
-          ? 'Meeting scheduled. Email preview created.'
-          : 'Meeting scheduled and email invitations sent.'
-      );
+    if (sendEmailInvite) {
+      const emailResult = await sendMeetingEmailInvitation(title, timeLabel, inviteeEmails, meetLink);
+      if (emailResult.success) {
+        toast.success(
+          emailResult.previewUrl
+            ? `Meeting scheduled. Email preview ready for ${inviteeEmails.length} recipient${inviteeEmails.length === 1 ? '' : 's'}.`
+            : `Meeting scheduled. Email invite sent to ${inviteeEmails.length} recipient${inviteeEmails.length === 1 ? '' : 's'}.`
+        );
+      } else {
+        toast.warning('Meeting scheduled, but email delivery failed. Check SMTP settings.');
+      }
     } else {
-      toast.error('Meeting scheduled, but email delivery failed in this environment.');
+      toast.success('Meeting scheduled. No email invites sent.');
     }
 
     setScheduleMeetOpen(false);
@@ -1097,7 +1128,7 @@ export default function EduTechExOSDashboard() {
     const meetingRoomId = `edutechexos-${Math.random().toString(36).substring(2, 11)}`;
     const newMeetLink = `https://meet.jit.si/${meetingRoomId}`;
 
-    addMessage(channel.id, {
+    addMessage(activeChannelId, {
       id: `meeting-started-${Date.now()}`,
       sender: currentUser?.name ?? 'You',
       initials: currentUser?.initials ?? 'Y',
@@ -1319,7 +1350,7 @@ export default function EduTechExOSDashboard() {
         </div>
       </aside>
 
-      <main className={`workspace-chat${(pinnedMessageIds[channel?.id ?? '']?.length ?? 0) > 0 ? ' workspace-chat-has-pin' : ''}`}>
+      <main className={`workspace-chat${(pinnedMessageIds[activeChannelId]?.length ?? 0) > 0 ? ' workspace-chat-has-pin' : ''}`}>
         <header className="chat-header">
           <div className="min-w-0">
             <h1 className="flex items-center gap-1 truncate text-[22px] font-black text-slate-950">
@@ -1516,8 +1547,8 @@ export default function EduTechExOSDashboard() {
         )}
 
         {/* Pinned messages strip — click to jump to pinned message */}
-        {channel && (pinnedMessageIds[channel.id]?.length ?? 0) > 0 && (() => {
-          const pinIds = pinnedMessageIds[channel.id] ?? [];
+        {channel && (pinnedMessageIds[activeChannelId]?.length ?? 0) > 0 && (() => {
+          const pinIds = pinnedMessageIds[activeChannelId] ?? [];
           const idx = pinScrollIdx % pinIds.length;
           const targetId = pinIds[pinIds.length - 1 - idx];
           const targetMsg = channelMessages.find(m => m.id === targetId);
@@ -1566,7 +1597,7 @@ export default function EduTechExOSDashboard() {
               const isFirst = !prev || prev.sender !== message.sender || gap5m(prev.timestamp, message.timestamp);
               const isLast = !next || next.sender !== message.sender || gap5m(message.timestamp, next.timestamp);
               const scheduledMeet = parseScheduledMeet(message.text);
-              const isPinned = (pinnedMessageIds[channel?.id ?? ''] ?? []).includes(message.id);
+              const isPinned = (pinnedMessageIds[activeChannelId] ?? []).includes(message.id);
               const isBookmarked = bookmarkedMessageIds.includes(message.id);
 
               return (
@@ -1687,7 +1718,7 @@ export default function EduTechExOSDashboard() {
                                 <div className={`absolute top-full mt-1 z-30 flex gap-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl ${isOwn ? 'right-0' : 'left-0'}`}>
                                   {['👍','❤️','😂','🔥','👀','✅','🎉','💯'].map((em) => (
                                     <button key={em}
-                                      onClick={() => { toggleReaction(channel!.id, message.id, em, currentUser?.email ?? ''); setHoverEmojiMsgId(null); }}
+                                      onClick={() => { toggleReaction(activeChannelId, message.id, em, currentUser?.email ?? ''); setHoverEmojiMsgId(null); }}
                                       className="flex h-7 w-7 items-center justify-center rounded-lg text-lg hover:scale-110 hover:bg-slate-100 transition-all">
                                       {em}
                                     </button>
@@ -1702,14 +1733,14 @@ export default function EduTechExOSDashboard() {
                               <Bookmark size={13} fill={isBookmarked ? 'currentColor' : 'none'} />
                             </button>
                             <button
-                              onClick={() => { isPinned ? unpinMessage(channel!.id, message.id) : pinMessage(channel!.id, message.id); }}
+                              onClick={() => { isPinned ? unpinMessage(activeChannelId, message.id) : pinMessage(activeChannelId, message.id); }}
                               className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 ${isPinned ? 'text-amber-500' : 'text-slate-500 hover:text-amber-500'}`}
                               title={isPinned ? 'Unpin' : 'Pin'}>
                               <Pin size={13} />
                             </button>
                             {(isOwn || isAdmin) && (
                               <button
-                                onClick={() => deleteMessage(channel!.id, message.id)}
+                                onClick={() => deleteMessage(activeChannelId, message.id)}
                                 className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"
                                 title="Delete">
                                 <Trash2 size={13} />
@@ -1749,7 +1780,7 @@ export default function EduTechExOSDashboard() {
                         {Object.entries(message.reactions).map(([emoji, users]: [string, any]) =>
                           users.length > 0 ? (
                             <button key={emoji}
-                              onClick={() => toggleReaction(channel!.id, message.id, emoji, currentUser?.email ?? '')}
+                              onClick={() => toggleReaction(activeChannelId, message.id, emoji, currentUser?.email ?? '')}
                               className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-all
                                 ${users.includes(currentUser?.email ?? '')
                                   ? 'border-indigo-200 bg-indigo-100 font-bold text-indigo-700'
@@ -1771,7 +1802,7 @@ export default function EduTechExOSDashboard() {
 
         {/* Typing indicators */}
         {channel && (() => {
-          const typers = (typingUsers[channel.id] ?? []).filter(
+          const typers = (typingUsers[activeChannelId] ?? []).filter(
             name => name !== currentUser?.name
           );
           if (!typers.length) return null;
@@ -2360,10 +2391,46 @@ export default function EduTechExOSDashboard() {
               </div>
             </div>
 
+            {/* Email invite toggle + recipient preview */}
+            <div className="px-5 pb-4">
+              <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all ${sendEmailInvite ? 'border-indigo-200 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-900/20' : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/40'}`}>
+                <div className="mt-0.5 flex-shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={sendEmailInvite}
+                    onChange={(e) => setSendEmailInvite(e.target.checked)}
+                    className="h-4 w-4 accent-indigo-600"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Mail size={14} className={sendEmailInvite ? 'text-indigo-600' : 'text-slate-400'} />
+                    <span className={`text-sm font-black ${sendEmailInvite ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-500 dark:text-slate-400'}`}>
+                      Send email invites to assigned members
+                    </span>
+                  </div>
+                  {sendEmailInvite && selectedInvitees.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {selectedInvitees.map((inv) => (
+                        <span key={inv.id} className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                          <Mail size={10} />
+                          {inv.email}
+                        </span>
+                      ))}
+                    </div>
+                  ) : sendEmailInvite ? (
+                    <p className="mt-1 text-xs text-slate-400">Select at least one person above to send invites.</p>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-400">No email will be sent — in-app notification only.</p>
+                  )}
+                </div>
+              </label>
+            </div>
+
             <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-800/50">
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                {selectedInvitees.length} mentioned person{selectedInvitees.length === 1 ? '' : 's'}{' '}
-                will be notified.
+                {selectedInvitees.length} person{selectedInvitees.length === 1 ? '' : 's'} selected
+                {sendEmailInvite && selectedInvitees.length > 0 && <span className="ml-1 text-indigo-600 dark:text-indigo-400">· email invite will be sent</span>}
               </p>
               <div className="flex gap-3">
                 <button
