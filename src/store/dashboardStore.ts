@@ -231,31 +231,50 @@ export const useDashboardStore = create<DashboardState>()(
       loadLocalMessages: async () => {
         try {
           const res = await fetch(`${API_BASE}/api/messages`);
-if (!res.ok) { console.warn('Backend unavailable, using local messages (status', res.status, ')'); return; }
+          if (!res.ok) {
+            console.warn('Backend unavailable, using local messages (status', res.status, ')');
+            return;
+          }
           const data = await res.json();
           if (!data.success || !data.messages) return;
 
-          const dbMsgs = data.messages;
+          const dbMsgs: Record<string, Message[]> = data.messages;
           const current = get().messages;
           const merged: Record<string, Message[]> = {};
+
+          // Collect all channel ids from both server and local state
           const allChs = new Set([...Object.keys(current), ...Object.keys(dbMsgs)]);
+
           allChs.forEach((chId) => {
-            const localMsgs = current[chId] ?? [];
-            const localIds = new Set(localMsgs.map((m) => m.id));
-            // Remote messages whose clientId matches a local id are duplicates — drop them
-            const remoteMsgs: Message[] = (dbMsgs[chId] ?? []).filter(
-              (m: Message & { clientId?: string }) => !m.clientId || !localIds.has(m.clientId)
+            const serverMsgs: Message[] = dbMsgs[chId] ?? [];
+            const localMsgs: Message[] = current[chId] ?? [];
+
+            // Build a set of all server-side ids (using both _id and clientId)
+            const serverIds = new Set<string>();
+            const serverClientIds = new Set<string>();
+            serverMsgs.forEach((m: Message & { clientId?: string }) => {
+              serverIds.add(m.id);
+              if (m.clientId) serverClientIds.add(m.clientId);
+            });
+
+            // Keep local messages that haven't reached the server yet
+            // (optimistic messages sent by THIS client but not yet persisted)
+            const pendingLocal = localMsgs.filter(
+              (m) => !serverIds.has(m.id) && !serverClientIds.has(m.id)
             );
-            const local = new Map<string, Message>(localMsgs.map((m) => [m.id, m]));
-            const remote = new Map<string, Message>(remoteMsgs.map((m) => [m.id, m]));
-            const allIds = new Set<string>([...local.keys(), ...remote.keys()]);
-            merged[chId] = Array.from(allIds)
-              .map((id): Message | undefined => local.get(id) ?? remote.get(id))
-              .filter((m): m is Message => m != null)
-              .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+            // Server is the source of truth; append pending local-only messages
+            const combined = [...serverMsgs, ...pendingLocal].sort(
+              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
+
+            merged[chId] = combined;
           });
+
           set({ messages: merged });
-        } catch (e) { console.error('load messages error', e); }
+        } catch (e) {
+          console.error('load messages error', e);
+        }
       },
 
       toggleReaction: (channelId, messageId, emoji, userEmail) =>

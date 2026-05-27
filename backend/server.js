@@ -5,8 +5,32 @@ require('dotenv').config();
 
 const app = express();
 
-// Enable CORS so the Vercel frontend can call this backend
-app.use(cors());
+// Allow requests from the Vercel frontend and local dev
+const ALLOWED_ORIGINS = [
+  'https://edutechexos.vercel.app',
+  'https://edutechexos-git-main.vercel.app',
+  /\.vercel\.app$/,           // any Vercel preview deploy
+  'http://localhost:3000',
+  'http://localhost:10006',
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. curl, Render health-check)
+      if (!origin) return callback(null, true);
+      const allowed = ALLOWED_ORIGINS.some((o) =>
+        typeof o === 'string' ? o === origin : o.test(origin)
+      );
+      if (allowed) return callback(null, true);
+      console.warn(`[CORS] Blocked origin: ${origin}`);
+      callback(new Error(`CORS policy: origin ${origin} not allowed`));
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // --- 1. MongoDB Connection ---

@@ -1,4 +1,9 @@
 {
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_API_URL": "https://edutechexos-backend.onrender.com"
+    }
+  },
   "env": {
     "NEXT_PUBLIC_API_URL": "https://edutechexos-backend.onrender.com"
   }
