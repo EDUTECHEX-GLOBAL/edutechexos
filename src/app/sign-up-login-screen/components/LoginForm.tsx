@@ -18,30 +18,17 @@ type AccessRequest = {
 };
 
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
 
+// Hardcoded fallback for when backend is unreachable
 const VALID_ACCOUNTS = [
-  { email: 'admin@edutechex.in', password: 'Admin@2026', name: 'Admin', role: 'Admin' },
-  {
-    email: 'aditya@edutechex.in',
-    password: 'TeamOS@2026',
-    name: 'Aditya Cherikuri',
-    role: 'Manager',
-  },
-  {
-    email: 'dev.rk@edutechex.in',
-    password: 'DevAccess#26',
-    name: 'Developer RK',
-    role: 'Developer',
-  },
-  {
-    email: 'design.sa@edutechex.in',
-    password: 'Design$2026',
-    name: 'Designer SA',
-    role: 'Designer',
-  },
-  { email: 'mohan.kumar@edutechex.in', password: 'MohanK@2026', name: 'Mohan K.', role: 'Member' },
-  { email: 'mohan.reddy@edutechex.in', password: 'MohanR@2026', name: 'Mohan R.', role: 'Member' },
-  { email: 'mohan.sen@edutechex.in', password: 'MohanS@2026', name: 'Mohan S.', role: 'Member' },
+  { email: 'admin@edutechex.in',     password: 'Admin@2026',    name: 'Admin',            role: 'Admin'    },
+  { email: 'aditya@edutechex.in',    password: 'TeamOS@2026',   name: 'Aditya Cherikuri', role: 'Manager'  },
+  { email: 'dev.rk@edutechex.in',    password: 'DevAccess#26',  name: 'Developer RK',     role: 'Developer'},
+  { email: 'design.sa@edutechex.in', password: 'Design$2026',   name: 'Designer SA',      role: 'Designer' },
+  { email: 'mohan.kumar@edutechex.in',  password: 'MohanK@2026', name: 'Mohan K.', role: 'Member' },
+  { email: 'mohan.reddy@edutechex.in',  password: 'MohanR@2026', name: 'Mohan R.', role: 'Member' },
+  { email: 'mohan.sen@edutechex.in',    password: 'MohanS@2026', name: 'Mohan S.', role: 'Member' },
 ];
 
 export default function LoginForm({
@@ -74,57 +61,26 @@ export default function LoginForm({
     return () => window.removeEventListener('demo-autofill', handler);
   }, [setValue]);
 
-  const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 700));
-
-    const emailClean = data.email.trim().toLowerCase();
-    const account = VALID_ACCOUNTS.find(
-      (a) => a.email === emailClean && a.password === data.password
-    );
-    const requests: AccessRequest[] = JSON.parse(localStorage.getItem(ACCESS_REQUESTS_KEY) || '[]');
-    const requestedAccount = requests.find(
-      (r) => r.email.toLowerCase() === emailClean && r.password === data.password
-    );
-    const loginAccount =
-      account ??
-      (requestedAccount?.status === 'approved'
-        ? {
-            email: requestedAccount.email,
-            password: requestedAccount.password,
-            name: requestedAccount.name,
-            role: requestedAccount.role,
-          }
-        : null);
-
-    if (!loginAccount) {
-      setIsLoading(false);
-      setError('password', {
-        message:
-          requestedAccount?.status === 'pending'
-            ? 'Your request is waiting for admin approval.'
-            : 'Invalid credentials. Use an approved user account.',
-      });
-      return;
-    }
-
+  function finishLogin(loginAccount: { name: string; email: string; role: string }) {
+    // Role guard
     if (authMode === 'admin' && loginAccount.role !== 'Admin') {
       setIsLoading(false);
       setError('email', { message: 'Only the admin account can sign in from the Admin button.' });
       return;
     }
-
     if (authMode === 'user' && loginAccount.role === 'Admin') {
       setIsLoading(false);
       setError('email', { message: 'Admin must use the Admin button on the home page.' });
       return;
     }
 
+    // Store token
     localStorage.setItem(
       'edutechex_token',
       JSON.stringify({ user: loginAccount, token: `mock-jwt-${Date.now()}` })
     );
 
+    // Track login date
     const today = new Date().toISOString().split('T')[0];
     const trackKey = `edutechex_logins_${loginAccount.email}`;
     const existing: string[] = JSON.parse(localStorage.getItem(trackKey) || '[]');
@@ -139,6 +95,72 @@ export default function LoginForm({
     if (redirectPath) router.push(redirectPath);
     else if (loginAccount.role === 'Admin') router.push('/admin');
     else router.push('/dashboard');
+  }
+
+  const onSubmit = async (data: LoginFormData) => {
+    setIsLoading(true);
+    await new Promise((r) => setTimeout(r, 700));
+
+    const emailClean = data.email.trim().toLowerCase();
+
+    try {
+      // ── Primary: backend authentication ────────────────────────────────────
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailClean, password: data.password }),
+      });
+
+      const result = await res.json();
+
+      if (!result.success) {
+        setIsLoading(false);
+        if (result.error === 'pending') {
+          setError('password', { message: 'Your request is waiting for admin approval.' });
+        } else if (result.error === 'rejected') {
+          setError('password', { message: 'Your access request was declined. Contact admin.' });
+        } else {
+          setError('password', { message: result.message ?? 'Invalid credentials.' });
+        }
+        return;
+      }
+
+      finishLogin(result.user);
+    } catch {
+      // ── Fallback: backend unreachable — check localStorage ─────────────────
+      const hardcoded = VALID_ACCOUNTS.find(
+        (a) => a.email === emailClean && a.password === data.password
+      );
+      if (hardcoded) {
+        finishLogin(hardcoded);
+        return;
+      }
+
+      const requests: AccessRequest[] = JSON.parse(
+        localStorage.getItem(ACCESS_REQUESTS_KEY) || '[]'
+      );
+      const requestedAccount = requests.find(
+        (r) => r.email.toLowerCase() === emailClean && r.password === data.password
+      );
+
+      if (!requestedAccount) {
+        setIsLoading(false);
+        setError('password', { message: 'Invalid credentials. Use an approved user account.' });
+        return;
+      }
+      if (requestedAccount.status === 'pending') {
+        setIsLoading(false);
+        setError('password', { message: 'Your request is waiting for admin approval.' });
+        return;
+      }
+
+      // Approved in localStorage fallback
+      finishLogin({
+        email: requestedAccount.email,
+        name: requestedAccount.name,
+        role: requestedAccount.role,
+      });
+    }
   };
 
   return (

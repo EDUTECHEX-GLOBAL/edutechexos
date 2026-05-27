@@ -29,9 +29,10 @@ type AccessRequest = {
   email: string;
   password: string;
   role: string;
-  status: 'pending' | 'approved';
+  status: 'pending' | 'approved' | 'rejected';
   requestedAt: string;
 };
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
 
 export default function AdminPage() {
@@ -59,7 +60,23 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    setAccessRequests(JSON.parse(localStorage.getItem(ACCESS_REQUESTS_KEY) || '[]'));
+    // Primary: load from backend
+    fetch(`${API_BASE}/api/access-requests`)
+      .then((r) => r.json())
+      .then((data: { success: boolean; requests?: AccessRequest[] }) => {
+        if (data.success && Array.isArray(data.requests)) {
+          setAccessRequests(data.requests);
+          // Keep localStorage in sync as offline fallback
+          localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify(data.requests));
+        }
+      })
+      .catch(() => {
+        // Fallback: use localStorage if backend unreachable
+        const cached = localStorage.getItem(ACCESS_REQUESTS_KEY);
+        if (cached) {
+          try { setAccessRequests(JSON.parse(cached)); } catch { /* ignore */ }
+        }
+      });
   }, []);
 
   const workspaceChannels = useMemo(
@@ -153,13 +170,31 @@ export default function AdminPage() {
       .slice(0, 5)}${Math.floor(Math.random() * 1000)}`;
   }
 
-  function approveRequest(request: AccessRequest) {
+  async function approveRequest(request: AccessRequest) {
     if (members.some((m) => m.email.toLowerCase() === request.email.toLowerCase())) {
       toast.error('This user already exists in the workspace.');
       return;
     }
+
+    // ── Persist approval to backend (cross-device) ──────────────────────────
+    try {
+      const res = await fetch(`${API_BASE}/api/access-requests/${request.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'approved' }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error ?? 'Failed to approve request on server.');
+        return;
+      }
+    } catch {
+      // Backend unreachable — still approve locally (offline fallback)
+    }
+
+    // ── Add to workspace member list ────────────────────────────────────────
     const colors = ['#2d6a4f', '#52b788', '#7c3aed', '#a78bfa', '#1b4332', '#c4b5fd'];
-      const initials = request.name
+    const initials = request.name
       .split(' ')
       .map((p) => p[0])
       .join('')
@@ -177,6 +212,8 @@ export default function AdminPage() {
     });
     const selectedChannel = requestChannelById[request.id];
     if (selectedChannel) setMemberWorkspaceChannel(memberId, selectedChannel);
+
+    // ── Update local UI state + localStorage fallback ───────────────────────
     const nextRequests = accessRequests.map((item) =>
       item.id === request.id ? { ...item, status: 'approved' as const } : item
     );
@@ -185,7 +222,14 @@ export default function AdminPage() {
     toast.success(`${request.name} approved. They can sign in now.`);
   }
 
-  function rejectRequest(requestId: string) {
+  async function rejectRequest(requestId: string) {
+    // ── Delete from backend ─────────────────────────────────────────────────
+    try {
+      await fetch(`${API_BASE}/api/access-requests/${requestId}`, { method: 'DELETE' });
+    } catch {
+      // Backend unreachable — still remove locally
+    }
+
     const nextRequests = accessRequests.filter((r) => r.id !== requestId);
     setAccessRequests(nextRequests);
     localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify(nextRequests));

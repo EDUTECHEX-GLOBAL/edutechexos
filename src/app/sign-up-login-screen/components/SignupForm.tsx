@@ -8,6 +8,7 @@ type SignupFormData = { name: string; email: string; password: string; role: str
 
 const roles = ['Developer', 'Designer', 'Manager', 'Other'];
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
 
 type AccessRequest = SignupFormData & {
   id: string;
@@ -29,33 +30,83 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
   const onSubmit = async (data: SignupFormData) => {
     setIsLoading(true);
     const emailClean = data.email.trim().toLowerCase();
-    const requests: AccessRequest[] = JSON.parse(localStorage.getItem(ACCESS_REQUESTS_KEY) || '[]');
-    const existing = requests.find((r) => r.email.toLowerCase() === emailClean);
 
-    if (existing) {
-      setIsLoading(false);
-      toast.info(
-        existing.status === 'approved'
-          ? 'Your access is approved. You can sign in now.'
-          : 'Your access request is already waiting for admin approval.'
+    try {
+      // ── Try backend first ──────────────────────────────────────────────────
+      const res = await fetch(`${API_BASE}/api/access-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, email: emailClean }),
+      });
+      const result = await res.json();
+
+      if (result.exists) {
+        // Already submitted before
+        toast.info(result.message);
+        if (result.status === 'approved') onSwitchToLogin();
+        return;
+      }
+
+      if (result.success) {
+        // Also persist to localStorage so the same device works offline / as fallback
+        const localRequests: AccessRequest[] = JSON.parse(
+          localStorage.getItem(ACCESS_REQUESTS_KEY) || '[]'
+        );
+        if (!localRequests.some((r) => r.email.toLowerCase() === emailClean)) {
+          const localEntry: AccessRequest = {
+            ...data,
+            id: result.request?.id ?? `request-${Date.now()}`,
+            email: emailClean,
+            status: 'pending',
+            requestedAt: new Date().toISOString(),
+          };
+          localStorage.setItem(
+            ACCESS_REQUESTS_KEY,
+            JSON.stringify([localEntry, ...localRequests])
+          );
+        }
+        toast.success('Account request submitted. You can sign in after admin approval.');
+        reset();
+        onSwitchToLogin();
+        return;
+      }
+
+      // Backend returned an error (e.g. system account conflict)
+      toast.error(result.error ?? 'Failed to submit request.');
+    } catch {
+      // ── Backend unreachable — fall back to localStorage ────────────────────
+      const requests: AccessRequest[] = JSON.parse(
+        localStorage.getItem(ACCESS_REQUESTS_KEY) || '[]'
       );
+      const existing = requests.find((r) => r.email.toLowerCase() === emailClean);
+
+      if (existing) {
+        toast.info(
+          existing.status === 'approved'
+            ? 'Your access is approved. You can sign in now.'
+            : 'Your access request is already waiting for admin approval.'
+        );
+        if (existing.status === 'approved') onSwitchToLogin();
+        return;
+      }
+
+      const nextRequest: AccessRequest = {
+        ...data,
+        id: `request-${Date.now()}`,
+        email: emailClean,
+        status: 'pending',
+        requestedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(
+        ACCESS_REQUESTS_KEY,
+        JSON.stringify([nextRequest, ...requests])
+      );
+      toast.success('Account request submitted (offline mode). Admin will review it.');
+      reset();
       onSwitchToLogin();
-      return;
+    } finally {
+      setIsLoading(false);
     }
-
-    const nextRequest: AccessRequest = {
-      ...data,
-      id: `request-${Date.now()}`,
-      email: emailClean,
-      status: 'pending',
-      requestedAt: new Date().toISOString(),
-    };
-    localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify([nextRequest, ...requests]));
-
-    setIsLoading(false);
-    toast.success('Account request submitted. You can sign in after admin approval.');
-    reset();
-    onSwitchToLogin();
   };
 
   return (

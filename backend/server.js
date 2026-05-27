@@ -107,6 +107,27 @@ const MessageSchema = new mongoose.Schema(
 );
 const Message = mongoose.model('Message', MessageSchema);
 
+// ── Hardcoded accounts (never touch the DB) ──────────────────────────────────
+const VALID_ACCOUNTS = [
+  { email: 'admin@edutechex.in',     password: 'Admin@2026',    name: 'Admin',            role: 'Admin'    },
+  { email: 'aditya@edutechex.in',    password: 'TeamOS@2026',   name: 'Aditya Cherikuri', role: 'Manager'  },
+  { email: 'dev.rk@edutechex.in',    password: 'DevAccess#26',  name: 'Developer RK',     role: 'Developer'},
+  { email: 'design.sa@edutechex.in', password: 'Design$2026',   name: 'Designer SA',      role: 'Designer' },
+  { email: 'mohan.kumar@edutechex.in',  password: 'MohanK@2026', name: 'Mohan K.', role: 'Member' },
+  { email: 'mohan.reddy@edutechex.in',  password: 'MohanR@2026', name: 'Mohan R.', role: 'Member' },
+  { email: 'mohan.sen@edutechex.in',    password: 'MohanS@2026', name: 'Mohan S.', role: 'Member' },
+];
+
+const AccessRequestSchema = new mongoose.Schema({
+  name:        { type: String, required: true },
+  email:       { type: String, required: true, index: true },
+  password:    { type: String, required: true },
+  role:        { type: String, required: true },
+  status:      { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  requestedAt: { type: Date, default: Date.now },
+});
+const AccessRequest = mongoose.model('AccessRequest', AccessRequestSchema);
+
 const KanbanTaskSchema = new mongoose.Schema(
   {
     text:             { type: String, required: true },
@@ -148,6 +169,144 @@ const Notification = mongoose.model('Notification', NotificationSchema);
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
+
+// ─── Auth Routes ──────────────────────────────────────────────────────────────
+
+// POST /api/access-requests — user submits signup request
+app.post('/api/access-requests', async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+    const emailClean = String(email).trim().toLowerCase();
+
+    // Don't let someone shadow a hardcoded account
+    if (VALID_ACCOUNTS.some((a) => a.email === emailClean)) {
+      return res.status(409).json({ success: false, error: 'This email is already registered as a system account.' });
+    }
+
+    const existing = await AccessRequest.findOne({ email: emailClean }).lean();
+    if (existing) {
+      return res.json({
+        success: true,
+        exists: true,
+        status: existing.status,
+        message:
+          existing.status === 'approved'
+            ? 'Your access is approved. You can sign in now.'
+            : existing.status === 'rejected'
+            ? 'Your previous request was declined. Please contact admin.'
+            : 'Your access request is already waiting for admin approval.',
+      });
+    }
+
+    const request = new AccessRequest({ name, email: emailClean, password, role });
+    const saved = await request.save();
+    const { _id, __v, ...rest } = saved.toObject();
+    res.json({
+      success: true,
+      request: {
+        ...rest,
+        id: _id.toString(),
+        requestedAt: rest.requestedAt instanceof Date ? rest.requestedAt.toISOString() : rest.requestedAt,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// GET /api/access-requests — admin fetches all requests
+app.get('/api/access-requests', async (req, res) => {
+  try {
+    const requests = await AccessRequest.find({}).sort({ requestedAt: -1 }).lean();
+    const formatted = requests.map(({ _id, __v, ...rest }) => ({
+      ...rest,
+      id: _id.toString(),
+      requestedAt: rest.requestedAt instanceof Date ? rest.requestedAt.toISOString() : rest.requestedAt,
+    }));
+    res.json({ success: true, requests: formatted });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// PATCH /api/access-requests/:id — admin approves or rejects
+app.patch('/api/access-requests/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // 'approved' | 'rejected'
+    const updated = await AccessRequest.findByIdAndUpdate(
+      id,
+      { $set: { status } },
+      { new: true }
+    ).lean();
+    if (!updated) return res.status(404).json({ success: false, error: 'Request not found' });
+    const { _id, __v, ...rest } = updated;
+    res.json({
+      success: true,
+      request: {
+        ...rest,
+        id: _id.toString(),
+        requestedAt: rest.requestedAt instanceof Date ? rest.requestedAt.toISOString() : rest.requestedAt,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// DELETE /api/access-requests/:id — admin removes a request
+app.delete('/api/access-requests/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await AccessRequest.findByIdAndDelete(id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// POST /api/auth/login — validate credentials, returns user object
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'invalid', message: 'Email and password are required.' });
+    }
+    const emailClean = String(email).trim().toLowerCase();
+
+    // 1. Check hardcoded accounts first
+    const hardcoded = VALID_ACCOUNTS.find((a) => a.email === emailClean && a.password === password);
+    if (hardcoded) {
+      return res.json({ success: true, user: hardcoded });
+    }
+
+    // 2. Check DB access requests
+    const request = await AccessRequest.findOne({ email: emailClean }).lean();
+
+    if (!request) {
+      return res.status(401).json({ success: false, error: 'invalid', message: 'Invalid credentials. Use an approved user account.' });
+    }
+    if (request.password !== password) {
+      return res.status(401).json({ success: false, error: 'invalid', message: 'Invalid credentials. Use an approved user account.' });
+    }
+    if (request.status === 'pending') {
+      return res.status(401).json({ success: false, error: 'pending', message: 'Your request is waiting for admin approval.' });
+    }
+    if (request.status === 'rejected') {
+      return res.status(401).json({ success: false, error: 'rejected', message: 'Your access request was declined. Contact admin.' });
+    }
+
+    // Approved ✓
+    return res.json({
+      success: true,
+      user: { email: request.email, name: request.name, role: request.role },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// ─── Message Routes ────────────────────────────────────────────────────────────
 
 // GET Messages (grouped by channel)
 app.get('/api/messages', async (req, res) => {
