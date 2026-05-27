@@ -391,6 +391,13 @@ export async function sendMentionEmailNotification(
       subject: `🔔 New Mention in #${channelName} by ${senderName}`,
       html: emailHtml,
     });
+
+    if (host === 'smtp.ethereal.email') {
+      testUrl = nodemailer.getTestMessageUrl(info) || '';
+      console.log(`Mention email sent. Ethereal Preview URL: ${testUrl}`);
+    }
+
+    return { success: true, previewUrl: testUrl };
   } catch (err) {
     console.error('Failed to send mention email:', err);
     return { success: false, error: String(err) };

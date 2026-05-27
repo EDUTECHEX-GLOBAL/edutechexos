@@ -215,19 +215,19 @@ export const useDashboardStore = create<DashboardState>()(
       addMessageFromSocket: (channelId, message) => {
         set((s) => {
           const existing = s.messages[channelId] ?? [];
-          const alreadyPresent = existing.some(
-            (m) =>
-              m.id === message.id ||
-              // clientId is stored on the server payload under the same key
-              (message as Message & { clientId?: string }).clientId
-                ? existing.some(
-                    (e) =>
-                      e.id ===
-                      (message as Message & { clientId?: string }).clientId
-                  )
-                : false
-          );
+          const incomingClientId = (message as Message & { clientId?: string }).clientId;
+
+          const alreadyPresent = existing.some((m) => {
+            // Server already gave this exact MongoDB id to us
+            if (m.id === message.id) return true;
+            // This is the server echo of a message we added optimistically
+            // (our local copy has id = clientId, server copy has id = ObjectId)
+            if (incomingClientId && m.id === incomingClientId) return true;
+            return false;
+          });
+
           if (alreadyPresent) return s;
+
           return {
             messages: {
               ...s.messages,

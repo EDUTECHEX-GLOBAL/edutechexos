@@ -82,15 +82,29 @@ mongoose.connect(MONGODB_URI)
   });
 
 // --- 2. Schemas & Models ---
-const MessageSchema = new mongoose.Schema({
-  clientId: { type: String, required: false },
-  channelId: { type: String, required: true, index: true },
-  sender: { type: String, required: true },
-  initials: { type: String, required: true },
-  color: { type: String, required: true },
-  text: { type: String, required: true },
-  timestamp: { type: Date, default: Date.now },
-});
+const MessageSchema = new mongoose.Schema(
+  {
+    clientId:    { type: String },
+    channelId:   { type: String, required: true, index: true },
+    sender:      { type: String, required: true },
+    initials:    { type: String, required: true },
+    color:       { type: String, required: true },
+    text:        { type: String, required: true },
+    timestamp:   { type: Date, default: Date.now },
+    // ── optional message payload fields ──────────────────────────────
+    audioUrl:    { type: String },
+    videoUrl:    { type: String },
+    files:       [{ name: String, url: String, type: String }],
+    editedAt:    { type: Date },
+    parentId:    { type: String },
+    reactions:   { type: mongoose.Schema.Types.Mixed, default: {} },
+    poll:        { type: mongoose.Schema.Types.Mixed },
+    linkPreview: { type: mongoose.Schema.Types.Mixed },
+  },
+  // strict: false → any extra fields the client sends are stored as-is
+  // so future message types never get silently dropped
+  { strict: false }
+);
 const Message = mongoose.model('Message', MessageSchema);
 
 const WikiPageSchema = new mongoose.Schema({
@@ -131,7 +145,13 @@ app.get('/api/messages', async (req, res) => {
       const channelId = msg.channelId;
       if (!grouped[channelId]) grouped[channelId] = [];
       const { _id, __v, ...rest } = msg;
-      grouped[channelId].push({ ...rest, id: _id.toString() });
+      grouped[channelId].push({
+        ...rest,
+        id: _id.toString(),
+        // always return date fields as ISO strings
+        timestamp: rest.timestamp instanceof Date ? rest.timestamp.toISOString() : rest.timestamp,
+        ...(rest.editedAt ? { editedAt: rest.editedAt instanceof Date ? rest.editedAt.toISOString() : rest.editedAt } : {}),
+      });
     }
     res.json({ success: true, messages: grouped });
   } catch (err) {
@@ -150,9 +170,14 @@ app.post('/api/messages', async (req, res) => {
     });
     const savedMsg = await newMessage.save();
     const { _id, __v, ...rest } = savedMsg.toObject();
-    const payload = { ...rest, id: _id.toString() };
+    const payload = {
+      ...rest,
+      id: _id.toString(),
+      timestamp: rest.timestamp instanceof Date ? rest.timestamp.toISOString() : rest.timestamp,
+      ...(rest.editedAt ? { editedAt: rest.editedAt instanceof Date ? rest.editedAt.toISOString() : rest.editedAt } : {}),
+    };
 
-    // Broadcast to all other clients subscribed to this channel room
+    // Broadcast to all clients subscribed to this channel room (including sender)
     io.to(payload.channelId).emit('new_message', { channelId: payload.channelId, message: payload });
 
     res.json({ success: true, message: payload });
