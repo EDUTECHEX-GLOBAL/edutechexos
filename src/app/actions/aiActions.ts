@@ -1,4 +1,5 @@
 'use server';
+export const runtime = 'nodejs';
 
 import OpenAI from 'openai';
 
