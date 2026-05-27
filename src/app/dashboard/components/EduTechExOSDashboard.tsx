@@ -15,6 +15,7 @@ import {
   uploadLocalFile,
 } from '@/app/actions/dbActions';
 import NotificationPanel from './NotificationPanel';
+import { getSocket } from '@/lib/socket';
 
 import MyActivityCalendar from './MyActivityCalendar';
 import SearchPanel from './SearchPanel';
@@ -329,6 +330,7 @@ export default function EduTechExOSDashboard() {
     members,
     addChannel,
     addMessage,
+    addMessageFromSocket,
     addNotification,
     loadLocalMessages,
     loadLocalWikiPages,
@@ -511,6 +513,26 @@ export default function EduTechExOSDashboard() {
     }, 3000);
     return () => clearInterval(interval);
   }, [loadLocalMessages, loadLocalWikiPages]);
+
+  // ── Socket.IO real-time message delivery ──────────────────────────────────
+  // Join the active channel room so we receive live `new_message` events.
+  // When the channel changes we leave the old room and join the new one.
+  useEffect(() => {
+    const socket = getSocket();
+
+    socket.emit('join_channel', activeChannel);
+
+    const handleNewMessage = ({ channelId, message }: { channelId: string; message: import('@/store/dashboardStore').Message }) => {
+      addMessageFromSocket(channelId, message);
+    };
+
+    socket.on('new_message', handleNewMessage);
+
+    return () => {
+      socket.off('new_message', handleNewMessage);
+      socket.emit('leave_channel', activeChannel);
+    };
+  }, [activeChannel, addMessageFromSocket]);
 
   // Poll backend notifications for the signed-in user every 5 seconds
   useEffect(() => {

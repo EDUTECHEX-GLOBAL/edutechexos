@@ -1,9 +1,12 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
+const httpServer = http.createServer(app);
 
 // Allow requests from the Vercel frontend and local dev
 const ALLOWED_ORIGINS = [
@@ -13,6 +16,38 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:10006',
 ];
+
+// Socket.IO server — same CORS rules as Express
+const io = new Server(httpServer, {
+  cors: {
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const allowed = ALLOWED_ORIGINS.some((o) =>
+        typeof o === 'string' ? o === origin : o.test(origin)
+      );
+      if (allowed) return callback(null, true);
+      callback(new Error(`CORS policy: origin ${origin} not allowed`));
+    },
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+  transports: ['websocket', 'polling'],
+});
+
+io.on('connection', (socket) => {
+  // Client joins a channel room so it only receives messages for that channel
+  socket.on('join_channel', (channelId) => {
+    socket.join(channelId);
+  });
+
+  socket.on('leave_channel', (channelId) => {
+    socket.leave(channelId);
+  });
+
+  socket.on('disconnect', () => {
+    // rooms are automatically cleaned up on disconnect
+  });
+});
 
 app.use(
   cors({
@@ -115,7 +150,12 @@ app.post('/api/messages', async (req, res) => {
     });
     const savedMsg = await newMessage.save();
     const { _id, __v, ...rest } = savedMsg.toObject();
-    res.json({ success: true, message: { ...rest, id: _id.toString() } });
+    const payload = { ...rest, id: _id.toString() };
+
+    // Broadcast to all other clients subscribed to this channel room
+    io.to(payload.channelId).emit('new_message', { channelId: payload.channelId, message: payload });
+
+    res.json({ success: true, message: payload });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
@@ -226,16 +266,16 @@ app.post('/api/notifications', async (req, res) => {
 
 // Start Server
 const PORT = process.env.PORT || 10002;
-const server = app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Backend Server running on port ${PORT}`);
 });
 
-server.on('error', (err) => {
+httpServer.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`Port ${PORT} is already in use. Waiting 3 seconds before retry...`);
     setTimeout(() => {
-      server.close();
-      server.listen(PORT);
+      httpServer.close();
+      httpServer.listen(PORT);
     }, 3000);
   } else {
     throw err;

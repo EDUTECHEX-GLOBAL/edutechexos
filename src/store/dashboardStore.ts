@@ -96,6 +96,7 @@ type DashboardState = {
 
   messages: Record<string, Message[]>;
   addMessage: (channelId: string, message: Message) => void;
+  addMessageFromSocket: (channelId: string, message: Message) => void;
   deleteMessage: (channelId: string, messageId: string) => void;
   editMessage: (channelId: string, messageId: string, newText: string) => void;
   loadLocalMessages: () => Promise<void>;
@@ -206,6 +207,34 @@ export const useDashboardStore = create<DashboardState>()(
         set((s) => ({
           messages: { ...s.messages, [channelId]: [...(s.messages[channelId] ?? []), message] },
         }));
+      },
+
+      // Called by the Socket.IO listener — updates state WITHOUT hitting the API.
+      // Deduplicates using both `id` and `clientId` to avoid double-rendering
+      // the message that the sender already added optimistically.
+      addMessageFromSocket: (channelId, message) => {
+        set((s) => {
+          const existing = s.messages[channelId] ?? [];
+          const alreadyPresent = existing.some(
+            (m) =>
+              m.id === message.id ||
+              // clientId is stored on the server payload under the same key
+              (message as Message & { clientId?: string }).clientId
+                ? existing.some(
+                    (e) =>
+                      e.id ===
+                      (message as Message & { clientId?: string }).clientId
+                  )
+                : false
+          );
+          if (alreadyPresent) return s;
+          return {
+            messages: {
+              ...s.messages,
+              [channelId]: [...existing, message],
+            },
+          };
+        });
       },
 
       deleteMessage: (channelId, messageId) => {
