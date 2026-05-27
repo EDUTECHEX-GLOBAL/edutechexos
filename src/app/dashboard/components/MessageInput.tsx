@@ -315,13 +315,27 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
     if (!files.length) return;
     for (const file of files) {
       try {
-        const fd = new FormData(); fd.append('file', file);
-        const res = await uploadLocalFile(fd);
-        if (!res.success || !res.url) { toast.error(`Failed to upload ${file.name}`); continue; }
+        let fileUrl: string | null = null;
+        // Try server upload; fall back to data URL (Vercel ephemeral FS-safe)
+        try {
+          const fd = new FormData(); fd.append('file', file);
+          const res = await uploadLocalFile(fd);
+          if (res.success && res.url) fileUrl = res.url;
+        } catch { /* server upload failed — fall through */ }
+
+        if (!fileUrl) {
+          fileUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        }
+
         addMessage(channelId, {
           id: `msg-file-${Date.now()}`, sender: currentUser?.name ?? 'You', initials: currentUser?.initials ?? 'Y', color: currentUser?.color ?? '#6366f1',
           timestamp: new Date().toISOString(), text: message.trim() || '',
-          files: [{ name: file.name, url: res.url, type: file.type }],
+          files: [{ name: file.name, url: fileUrl, type: file.type }],
           ...(replyToId ? { parentId: replyToId } : {}),
         });
         toast.success(`${file.name} shared`);

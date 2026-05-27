@@ -723,14 +723,32 @@ export default function EduTechExOSDashboard() {
     const file = event.target.files?.[0];
     if (!file || !channel) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
     try {
-      const result = await uploadLocalFile(formData);
-      if (!result.success || !result.url) {
-        toast.error('File upload failed.');
-        return;
+      let fileUrl: string | null = null;
+      let fileName = file.name;
+      let fileType = file.type;
+
+      // Try server upload first; fall back to data URL (Vercel ephemeral FS-safe)
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const result = await uploadLocalFile(formData);
+        if (result.success && result.url) {
+          fileUrl = result.url;
+          fileName = result.name || file.name;
+          fileType = result.type || file.type;
+        }
+      } catch { /* server upload failed — fall through to data URL */ }
+
+      if (!fileUrl) {
+        fileUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
       }
+
       addMessage(activeChannelId, {
         id: `msg-file-${Date.now()}`,
         sender: currentUser?.name ?? 'You',
@@ -738,9 +756,7 @@ export default function EduTechExOSDashboard() {
         color: currentUserColor,
         timestamp: new Date().toISOString(),
         text: composerMessage.trim(),
-        files: [
-          { name: result.name || file.name, url: result.url, type: result.type || file.type },
-        ],
+        files: [{ name: fileName, url: fileUrl, type: fileType }],
       });
       setComposerMessage('');
       toast.success('File shared to channel');

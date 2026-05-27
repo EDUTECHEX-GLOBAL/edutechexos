@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const app = express();
@@ -127,6 +128,15 @@ const AccessRequestSchema = new mongoose.Schema({
   requestedAt: { type: Date, default: Date.now },
 });
 const AccessRequest = mongoose.model('AccessRequest', AccessRequestSchema);
+
+// ── Password reset codes (TTL: 15 min) ──────────────────────────────────────
+const ResetCodeSchema = new mongoose.Schema({
+  email:     { type: String, required: true, index: true },
+  code:      { type: String, required: true },
+  expiresAt: { type: Date,   required: true },
+  used:      { type: Boolean, default: false },
+});
+const ResetCode = mongoose.model('ResetCode', ResetCodeSchema);
 
 const KanbanTaskSchema = new mongoose.Schema(
   {
@@ -302,6 +312,129 @@ app.post('/api/auth/login', async (req, res) => {
       user: { email: request.email, name: request.name, role: request.role },
     });
   } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// ── Helper: send password-reset email (Ethereal fallback when SMTP not set) ──
+async function sendResetEmail(toEmail, toName, code) {
+  let host = process.env.SMTP_HOST;
+  let port = Number(process.env.SMTP_PORT) || 587;
+  let secure = process.env.SMTP_SECURE === 'true';
+  let user = process.env.SMTP_USER;
+  let pass = process.env.SMTP_PASS;
+  let from = process.env.SMTP_FROM || '"EduTechExOS" <noreply@edutechex.in>';
+  let testUrl = '';
+
+  if (!host || !user || !pass) {
+    const testAccount = await nodemailer.createTestAccount();
+    host = 'smtp.ethereal.email';
+    port = 587;
+    secure = false;
+    user = testAccount.user;
+    pass = testAccount.pass;
+    from = `"EduTechExOS" <${testAccount.user}>`;
+  }
+
+  const transporter = nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
+
+  const info = await transporter.sendMail({
+    from,
+    to: toEmail,
+    subject: `EduTechExOS: Password reset code ${code}`,
+    html: `
+      <div style="font-family:Arial,sans-serif;background:#f8fafc;padding:32px;">
+        <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#4f46e5,#3b82f6);color:#fff;padding:24px 28px;">
+            <h1 style="margin:0;font-size:22px;">EduTechEx<span style="color:#93c5fd;">OS</span></h1>
+            <p style="margin:6px 0 0;color:#e0e7ff;font-size:13px;letter-spacing:1px;text-transform:uppercase;">Password Reset</p>
+          </div>
+          <div style="padding:28px;">
+            <p style="margin:0 0 16px;color:#334155;font-size:15px;">Hello ${toName},</p>
+            <p style="margin:0 0 20px;color:#334155;font-size:15px;">We received a request to reset your EduTechExOS password. Use the code below — it expires in <strong>15 minutes</strong>.</p>
+            <div style="letter-spacing:8px;font-size:32px;font-weight:800;color:#4f46e5;background:#eef2ff;border-radius:14px;padding:18px;text-align:center;margin-bottom:24px;">${code}</div>
+            <p style="margin:0;color:#64748b;font-size:13px;">If you didn't request a password reset, you can safely ignore this email.</p>
+          </div>
+          <div style="background:#f8fafc;padding:16px 28px;border-top:1px solid #f1f5f9;text-align:center;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">&copy; 2026 EduTechExOS &middot; Internal Team OS</div>
+        </div>
+      </div>
+    `,
+  });
+
+  if (host === 'smtp.ethereal.email') {
+    testUrl = nodemailer.getTestMessageUrl(info) || '';
+    console.log(`[reset-email] Ethereal preview: ${testUrl}`);
+  }
+  return { testUrl };
+}
+
+// POST /api/auth/forgot-password — generate + email a 6-digit reset code
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, error: 'Email is required.' });
+    const emailClean = String(email).trim().toLowerCase();
+
+    // Hardcoded system accounts cannot self-reset
+    if (VALID_ACCOUNTS.some((a) => a.email === emailClean)) {
+      return res.status(400).json({
+        success: false,
+        error: 'System accounts cannot reset their password via this form. Contact admin directly.',
+      });
+    }
+
+    // Use same generic message regardless of whether email is registered (prevents enumeration)
+    const GENERIC_OK = 'If this email is registered, a reset code has been sent.';
+    const request = await AccessRequest.findOne({ email: emailClean }).lean();
+    if (!request) return res.json({ success: true, message: GENERIC_OK });
+
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Remove any old unused codes for this email
+    await ResetCode.deleteMany({ email: emailClean });
+    await new ResetCode({ email: emailClean, code, expiresAt }).save();
+
+    const { testUrl } = await sendResetEmail(emailClean, request.name, code);
+
+    res.json({
+      success: true,
+      message: GENERIC_OK,
+      ...(testUrl ? { previewUrl: testUrl } : {}),
+    });
+  } catch (err) {
+    console.error('[forgot-password]', err);
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// POST /api/auth/reset-password — validate code + update password
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ success: false, error: 'Email, code, and new password are required.' });
+    }
+    const emailClean = String(email).trim().toLowerCase();
+
+    const resetCode = await ResetCode.findOne({ email: emailClean, code: String(code), used: false }).lean();
+    if (!resetCode) {
+      return res.status(400).json({ success: false, error: 'Invalid or expired reset code.' });
+    }
+    if (new Date(resetCode.expiresAt) < new Date()) {
+      await ResetCode.findByIdAndDelete(resetCode._id);
+      return res.status(400).json({ success: false, error: 'Reset code has expired. Please request a new one.' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters.' });
+    }
+
+    await AccessRequest.findOneAndUpdate({ email: emailClean }, { $set: { password: newPassword } });
+    await ResetCode.findByIdAndUpdate(resetCode._id, { $set: { used: true } });
+
+    res.json({ success: true, message: 'Password reset successfully. You can now sign in.' });
+  } catch (err) {
+    console.error('[reset-password]', err);
     res.status(500).json({ success: false, error: String(err) });
   }
 });

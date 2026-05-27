@@ -374,7 +374,7 @@ export async function sendMentionEmailNotification(
             
             <!-- Button -->
             <div style="text-align: center; margin-bottom: 24px;">
-              <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:4028'}/dashboard" target="_blank" style="background-color: #4f46e5; color: #ffffff; padding: 14px 32px; border-radius: 12px; font-size: 14px; font-weight: 700; text-decoration: none; display: inline-block; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2); transition: all 0.2s;">Open Dashboard & Reply</a>
+              <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://edutechexos.vercel.app'}/dashboard" target="_blank" style="background-color: #4f46e5; color: #ffffff; padding: 14px 32px; border-radius: 12px; font-size: 14px; font-weight: 700; text-decoration: none; display: inline-block; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2); transition: all 0.2s;">Open Dashboard & Reply</a>
             </div>
           </div>
           <!-- Footer -->
