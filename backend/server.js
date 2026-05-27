@@ -107,6 +107,19 @@ const MessageSchema = new mongoose.Schema(
 );
 const Message = mongoose.model('Message', MessageSchema);
 
+const KanbanTaskSchema = new mongoose.Schema(
+  {
+    text:             { type: String, required: true },
+    assignee:         { type: String, required: true },
+    assigneeInitials: { type: String, required: true },
+    sourceChannel:    { type: String, required: true },
+    status:           { type: String, enum: ['todo', 'inprogress', 'done'], default: 'todo' },
+    createdAt:        { type: Date, default: Date.now },
+  },
+  { strict: false }
+);
+const KanbanTask = mongoose.model('KanbanTask', KanbanTaskSchema);
+
 const WikiPageSchema = new mongoose.Schema({
   _id: { type: String, required: true },
   channelId: { type: String, required: true, index: true },
@@ -197,6 +210,108 @@ app.delete('/api/messages/:id', async (req, res) => {
   }
 });
 
+// PATCH Message — partial update: text edit, reactions, poll votes
+app.patch('/api/messages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body; // { text, editedAt } | { reactions } | { poll }
+
+    const updated = await Message.findByIdAndUpdate(
+      id,
+      { $set: updates },
+      { new: true }
+    ).lean();
+
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Message not found' });
+    }
+
+    const { _id, __v, ...rest } = updated;
+    const payload = {
+      ...rest,
+      id: _id.toString(),
+      timestamp: rest.timestamp instanceof Date ? rest.timestamp.toISOString() : rest.timestamp,
+      ...(rest.editedAt ? { editedAt: rest.editedAt instanceof Date ? rest.editedAt.toISOString() : rest.editedAt } : {}),
+    };
+
+    // Real-time broadcast so other clients see the change immediately
+    io.to(payload.channelId).emit('message_updated', { channelId: payload.channelId, message: payload });
+
+    res.json({ success: true, message: payload });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// GET Kanban Tasks
+app.get('/api/kanban', async (req, res) => {
+  try {
+    const tasks = await KanbanTask.find({}).sort({ createdAt: 1 }).lean();
+    const formatted = tasks.map(({ _id, __v, ...rest }) => ({
+      ...rest,
+      id: _id.toString(),
+      createdAt: rest.createdAt instanceof Date ? rest.createdAt.toISOString() : rest.createdAt,
+    }));
+    res.json({ success: true, tasks: formatted });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// POST Kanban Task
+app.post('/api/kanban', async (req, res) => {
+  try {
+    const task = new KanbanTask(req.body);
+    const saved = await task.save();
+    const { _id, __v, ...rest } = saved.toObject();
+    res.json({
+      success: true,
+      task: {
+        ...rest,
+        id: _id.toString(),
+        createdAt: rest.createdAt instanceof Date ? rest.createdAt.toISOString() : rest.createdAt,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// PATCH Kanban Task (update status or other fields)
+app.patch('/api/kanban/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await KanbanTask.findByIdAndUpdate(
+      id,
+      { $set: req.body },
+      { new: true }
+    ).lean();
+    if (!updated) return res.status(404).json({ success: false, error: 'Task not found' });
+    const { _id, __v, ...rest } = updated;
+    res.json({
+      success: true,
+      task: {
+        ...rest,
+        id: _id.toString(),
+        createdAt: rest.createdAt instanceof Date ? rest.createdAt.toISOString() : rest.createdAt,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// DELETE Kanban Task
+app.delete('/api/kanban/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await KanbanTask.findByIdAndDelete(id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
 // GET Wiki Pages
 app.get('/api/wikipages', async (req, res) => {
   try {
@@ -280,10 +395,22 @@ app.get('/api/notifications', async (req, res) => {
 // POST Notification
 app.post('/api/notifications', async (req, res) => {
   try {
-    const notif = new Notification(req.body);
+    // Normalise recipientEmails to lowercase so the GET query matches correctly
+    const body = {
+      ...req.body,
+      recipientEmails: (req.body.recipientEmails ?? []).map((e) => String(e).toLowerCase()),
+    };
+    const notif = new Notification(body);
     const saved = await notif.save();
     const { _id, __v, ...rest } = saved.toObject();
-    res.json({ success: true, notification: { ...rest, id: _id.toString() } });
+    res.json({
+      success: true,
+      notification: {
+        ...rest,
+        id: _id.toString(),
+        timestamp: rest.timestamp instanceof Date ? rest.timestamp.toISOString() : rest.timestamp,
+      },
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }

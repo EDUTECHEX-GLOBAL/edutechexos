@@ -331,9 +331,11 @@ export default function EduTechExOSDashboard() {
     addChannel,
     addMessage,
     addMessageFromSocket,
+    updateMessageFromSocket,
     addNotification,
     loadLocalMessages,
     loadLocalWikiPages,
+    loadLocalKanbanTasks,
     loadLocalNotifications,
     notifications,
     typingUsers,
@@ -507,12 +509,13 @@ export default function EduTechExOSDashboard() {
   useEffect(() => {
     loadLocalMessages?.();
     loadLocalWikiPages?.();
+    loadLocalKanbanTasks?.();
     const interval = setInterval(() => {
       loadLocalMessages?.();
       loadLocalWikiPages?.();
     }, 3000);
     return () => clearInterval(interval);
-  }, [loadLocalMessages, loadLocalWikiPages]);
+  }, [loadLocalMessages, loadLocalWikiPages, loadLocalKanbanTasks]);
 
   // ── Socket.IO real-time message delivery ──────────────────────────────────
   // Join the active channel room so we receive live `new_message` events.
@@ -526,13 +529,19 @@ export default function EduTechExOSDashboard() {
       addMessageFromSocket(channelId, message);
     };
 
+    const handleUpdatedMessage = ({ channelId, message }: { channelId: string; message: import('@/store/dashboardStore').Message }) => {
+      updateMessageFromSocket(channelId, message);
+    };
+
     socket.on('new_message', handleNewMessage);
+    socket.on('message_updated', handleUpdatedMessage);
 
     return () => {
       socket.off('new_message', handleNewMessage);
+      socket.off('message_updated', handleUpdatedMessage);
       socket.emit('leave_channel', activeChannel);
     };
-  }, [activeChannel, addMessageFromSocket]);
+  }, [activeChannel, addMessageFromSocket, updateMessageFromSocket]);
 
   // Poll backend notifications for the signed-in user every 5 seconds
   useEffect(() => {

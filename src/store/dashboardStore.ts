@@ -97,6 +97,7 @@ type DashboardState = {
   messages: Record<string, Message[]>;
   addMessage: (channelId: string, message: Message) => void;
   addMessageFromSocket: (channelId: string, message: Message) => void;
+  updateMessageFromSocket: (channelId: string, message: Message) => void;
   deleteMessage: (channelId: string, messageId: string) => void;
   editMessage: (channelId: string, messageId: string, newText: string) => void;
   loadLocalMessages: () => Promise<void>;
@@ -124,6 +125,7 @@ type DashboardState = {
   setSearchQuery: (q: string) => void;
 
   kanbanTasks: KanbanTask[];
+  loadLocalKanbanTasks: () => Promise<void>;
   addKanbanTask: (task: Omit<KanbanTask, 'id' | 'createdAt'>) => void;
   updateKanbanTaskStatus: (taskId: string, status: KanbanTask['status']) => void;
   deleteKanbanTask: (taskId: string) => void;
@@ -237,6 +239,18 @@ export const useDashboardStore = create<DashboardState>()(
         });
       },
 
+      // Called by the Socket.IO `message_updated` listener — replaces the message in-place.
+      updateMessageFromSocket: (channelId, message) => {
+        set((s) => ({
+          messages: {
+            ...s.messages,
+            [channelId]: (s.messages[channelId] ?? []).map((m) =>
+              m.id === message.id ? { ...m, ...message } : m
+            ),
+          },
+        }));
+      },
+
       deleteMessage: (channelId, messageId) => {
         fetch(`${API_BASE}/api/messages/${messageId}`, {
           method: 'DELETE',
@@ -247,15 +261,24 @@ export const useDashboardStore = create<DashboardState>()(
         }));
       },
 
-      editMessage: (channelId, messageId, newText) =>
+      editMessage: (channelId, messageId, newText) => {
+        const editedAt = new Date().toISOString();
+        // Persist to backend — server will also broadcast `message_updated` via Socket.IO
+        fetch(`${API_BASE}/api/messages/${messageId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: newText, editedAt }),
+        }).catch((err) => console.error('editMessage API error:', err));
+
         set((s) => ({
           messages: {
             ...s.messages,
             [channelId]: (s.messages[channelId] ?? []).map((m) =>
-              m.id === messageId ? { ...m, text: newText, editedAt: new Date().toISOString() } : m
+              m.id === messageId ? { ...m, text: newText, editedAt } : m
             ),
           },
-        })),
+        }));
+      },
 
       loadLocalMessages: async () => {
         try {
@@ -306,36 +329,63 @@ export const useDashboardStore = create<DashboardState>()(
         }
       },
 
-      toggleReaction: (channelId, messageId, emoji, userEmail) =>
-        set((s) => ({
-          messages: {
-            ...s.messages,
-            [channelId]: (s.messages[channelId] ?? []).map((m) => {
-              if (m.id !== messageId) return m;
-              const reactions = { ...(m.reactions ?? {}) };
-              const users = reactions[emoji] ?? [];
-              reactions[emoji] = users.includes(userEmail) ? users.filter((u) => u !== userEmail) : [...users, userEmail];
-              if (!reactions[emoji].length) delete reactions[emoji];
-              return { ...m, reactions };
-            }),
-          },
-        })),
+      toggleReaction: (channelId, messageId, emoji, userEmail) => {
+        // Compute the new reactions map before calling set() so we can POST it
+        const current = get().messages[channelId]?.find((m) => m.id === messageId);
+        if (!current) return;
 
-      votePoll: (channelId, messageId, optionIdx, userEmail) =>
+        const reactions = { ...(current.reactions ?? {}) };
+        const users = reactions[emoji] ?? [];
+        reactions[emoji] = users.includes(userEmail)
+          ? users.filter((u) => u !== userEmail)
+          : [...users, userEmail];
+        if (!reactions[emoji].length) delete reactions[emoji];
+
+        // Persist to backend — also triggers `message_updated` broadcast
+        fetch(`${API_BASE}/api/messages/${messageId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reactions }),
+        }).catch((err) => console.error('toggleReaction API error:', err));
+
         set((s) => ({
           messages: {
             ...s.messages,
-            [channelId]: (s.messages[channelId] ?? []).map((m) => {
-              if (m.id !== messageId || !m.poll) return m;
-              const options = m.poll.options.map((opt, i) => {
-                const hasVote = opt.votes.includes(userEmail);
-                if (i === optionIdx) return { ...opt, votes: hasVote ? opt.votes.filter((v) => v !== userEmail) : [...opt.votes, userEmail] };
-                return { ...opt, votes: opt.votes.filter((v) => v !== userEmail) };
-              });
-              return { ...m, poll: { ...m.poll, options } };
-            }),
+            [channelId]: (s.messages[channelId] ?? []).map((m) =>
+              m.id === messageId ? { ...m, reactions } : m
+            ),
           },
-        })),
+        }));
+      },
+
+      votePoll: (channelId, messageId, optionIdx, userEmail) => {
+        const current = get().messages[channelId]?.find((m) => m.id === messageId);
+        if (!current || !current.poll) return;
+
+        const options = current.poll.options.map((opt, i) => {
+          const hasVote = opt.votes.includes(userEmail);
+          if (i === optionIdx)
+            return { ...opt, votes: hasVote ? opt.votes.filter((v) => v !== userEmail) : [...opt.votes, userEmail] };
+          return { ...opt, votes: opt.votes.filter((v) => v !== userEmail) };
+        });
+        const poll = { ...current.poll, options };
+
+        // Persist to backend — also triggers `message_updated` broadcast
+        fetch(`${API_BASE}/api/messages/${messageId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ poll }),
+        }).catch((err) => console.error('votePoll API error:', err));
+
+        set((s) => ({
+          messages: {
+            ...s.messages,
+            [channelId]: (s.messages[channelId] ?? []).map((m) =>
+              m.id === messageId && m.poll ? { ...m, poll } : m
+            ),
+          },
+        }));
+      },
 
       pinnedMessageIds: {},
       pinMessage: (channelId, messageId) =>
@@ -382,12 +432,55 @@ export const useDashboardStore = create<DashboardState>()(
       setSearchQuery: (q) => set({ searchQuery: q }),
 
       kanbanTasks: [],
-      addKanbanTask: (task) =>
-        set((s) => ({ kanbanTasks: [...s.kanbanTasks, { ...task, id: `ktask-${Date.now()}`, createdAt: new Date().toISOString() }] })),
-      updateKanbanTaskStatus: (taskId, status) =>
-        set((s) => ({ kanbanTasks: s.kanbanTasks.map((t) => (t.id === taskId ? { ...t, status } : t)) })),
-      deleteKanbanTask: (taskId) =>
-        set((s) => ({ kanbanTasks: s.kanbanTasks.filter((t) => t.id !== taskId) })),
+
+      loadLocalKanbanTasks: async () => {
+        try {
+          const res = await fetch(`${API_BASE}/api/kanban`);
+          if (!res.ok) return;
+          const data = await res.json();
+          if (!data.success || !data.tasks) return;
+          set({ kanbanTasks: data.tasks as KanbanTask[] });
+        } catch (e) {
+          console.error('loadLocalKanbanTasks error', e);
+        }
+      },
+
+      addKanbanTask: (task) => {
+        const tempId = `ktask-${Date.now()}`;
+        const newTask: KanbanTask = { ...task, id: tempId, createdAt: new Date().toISOString() };
+        set((s) => ({ kanbanTasks: [...s.kanbanTasks, newTask] }));
+        // Persist to backend; swap temp id with real MongoDB id
+        fetch(`${API_BASE}/api/kanban`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(task),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.success && data.task?.id) {
+              set((s) => ({
+                kanbanTasks: s.kanbanTasks.map((t) => (t.id === tempId ? data.task : t)),
+              }));
+            }
+          })
+          .catch((err) => console.error('addKanbanTask API error:', err));
+      },
+
+      updateKanbanTaskStatus: (taskId, status) => {
+        set((s) => ({ kanbanTasks: s.kanbanTasks.map((t) => (t.id === taskId ? { ...t, status } : t)) }));
+        fetch(`${API_BASE}/api/kanban/${taskId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        }).catch((err) => console.error('updateKanbanTaskStatus API error:', err));
+      },
+
+      deleteKanbanTask: (taskId) => {
+        set((s) => ({ kanbanTasks: s.kanbanTasks.filter((t) => t.id !== taskId) }));
+        fetch(`${API_BASE}/api/kanban/${taskId}`, {
+          method: 'DELETE',
+        }).catch((err) => console.error('deleteKanbanTask API error:', err));
+      },
 
       wikiPages: {},
       addWikiPage: (channelId, data) => {
@@ -574,7 +667,7 @@ export const useDashboardStore = create<DashboardState>()(
         darkMode: s.darkMode,
         bookmarkedMessageIds: s.bookmarkedMessageIds,
         pinnedMessageIds: s.pinnedMessageIds,
-        kanbanTasks: s.kanbanTasks,
+        // kanbanTasks intentionally excluded — now fetched from backend on load
         wikiPages: s.wikiPages,
       }),
     }
