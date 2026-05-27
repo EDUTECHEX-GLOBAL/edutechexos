@@ -55,6 +55,11 @@
     rgba(248, 250, 248, 0.86);
 }
 
+/* When a pinned strip is visible, the grid gains an extra auto row for it */
+.workspace-chat-has-pin {
+  grid-template-rows: 4rem auto minmax(0, 1fr) auto;
+}
+
 .chat-header {
   display: flex;
   min-width: 0;
@@ -70,7 +75,7 @@
 .chat-scroll {
   min-height: 0;
   overflow-y: auto;
-  padding: 0.5rem 0.5rem 1rem;
+  padding: 1.25rem 0.5rem 1rem;
   scrollbar-color: rgba(45, 106, 79, 0.25) transparent;
   scrollbar-width: thin;
   display: flex;

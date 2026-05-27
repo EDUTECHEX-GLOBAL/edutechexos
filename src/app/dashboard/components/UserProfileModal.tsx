@@ -47,23 +47,23 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
 
   const [copied, setCopied] = useState(false);
 
-  if (!member) return null;
-
-  const statusCfg = STATUS_CONFIG[member.status];
-
-  // Channels this member belongs to
+  // Channels this member belongs to — must be before the early return
   const memberChannels = useMemo(
     () =>
-      channels.filter(
-        (ch) =>
-          !ch.id.startsWith('member-') &&
-          (ch.memberIds?.includes(member.id) ?? false)
-      ),
-    [channels, member.id]
+      member
+        ? channels.filter(
+            (ch) =>
+              !ch.id.startsWith('member-') &&
+              (ch.memberIds?.includes(member.id) ?? false)
+          )
+        : [],
+    [channels, member]
   );
 
-  // Last 3 messages from this member (scan all channels)
+  // Last 3 messages from this member (scan all channels) — must be before the early return
   const recentMessages = useMemo(() => {
+    if (!member) return [];
+
     const found: Array<{
       channelId: string;
       channelName: string;
@@ -93,7 +93,11 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
     return found
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 3);
-  }, [messages, channels, member.name, member.initials]);
+  }, [messages, channels, member]);
+
+  if (!member) return null;
+
+  const statusCfg = STATUS_CONFIG[member.status];
 
   const handleCopyEmail = async () => {
     try {

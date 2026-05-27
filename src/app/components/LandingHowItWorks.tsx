@@ -48,11 +48,25 @@ export default function LandingHowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="relative min-h-screen flex items-center justify-center px-6 lg:px-10 py-24 overflow-hidden bg-gradient-to-b from-background via-green-surface/30 to-lavender-surface/40"
+      className="relative min-h-screen flex items-center justify-center px-6 lg:px-10 py-24 overflow-hidden"
+      style={{ background: 'linear-gradient(160deg, #e8f5ec 0%, #f0f5ff 40%, #e6f4ea 70%, #ede8fc 100%)' }}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/3 via-transparent to-lavender/3 pointer-events-none" />
-      <div className="absolute top-1/4 left-0 w-[450px] h-[450px] bg-gradient-radial from-primary/5 to-transparent rounded-full blur-3xl animate-aurora-1 pointer-events-none" />
-      <div className="absolute bottom-1/4 right-0 w-[380px] h-[380px] bg-gradient-radial from-lavender/4 to-transparent rounded-full blur-3xl animate-aurora-2 pointer-events-none" />
+      {/* Diagonal line pattern */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        backgroundImage: `repeating-linear-gradient(
+          -45deg,
+          rgba(45,106,79,0.04) 0px,
+          rgba(45,106,79,0.04) 1px,
+          transparent 1px,
+          transparent 48px
+        )`,
+      }} />
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse 90% 65% at 50% 50%, transparent 35%, rgba(232,245,236,0.85) 100%)' }}
+      />
+      <div className="absolute top-1/4 left-0 w-[500px] h-[500px] bg-gradient-radial from-primary/16 to-transparent rounded-full blur-3xl animate-aurora-1 pointer-events-none" />
+      <div className="absolute bottom-1/4 right-0 w-[420px] h-[420px] bg-gradient-radial from-lavender/15 to-transparent rounded-full blur-3xl animate-aurora-2 pointer-events-none" />
+      <div className="absolute top-0 right-1/4 w-64 h-64 bg-gradient-radial from-green-light/14 to-transparent rounded-full blur-[80px] pointer-events-none" />
 
       <div className="relative w-full max-w-screen-2xl mx-auto">
         <GlassSection padding="p-10 md:p-14 lg:p-16">

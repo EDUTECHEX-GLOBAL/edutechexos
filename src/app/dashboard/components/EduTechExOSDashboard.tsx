@@ -1319,7 +1319,7 @@ export default function EduTechExOSDashboard() {
         </div>
       </aside>
 
-      <main className="workspace-chat">
+      <main className={`workspace-chat${(pinnedMessageIds[channel?.id ?? '']?.length ?? 0) > 0 ? ' workspace-chat-has-pin' : ''}`}>
         <header className="chat-header">
           <div className="min-w-0">
             <h1 className="flex items-center gap-1 truncate text-[22px] font-black text-slate-950">

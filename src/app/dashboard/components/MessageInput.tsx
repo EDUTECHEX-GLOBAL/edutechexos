@@ -178,7 +178,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleSend(); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
     if (e.key === 'Escape') { setShowMentionDropdown(false); setEmojiOpen(false); }
   };
 
@@ -519,14 +519,14 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
           <textarea ref={textareaRef} value={message}
             onChange={(e) => { setMessage(e.target.value); handleTyping(); }}
             onKeyDown={handleKeyDown}
-            placeholder={replyToId ? `Reply in thread…` : `Message #${channelName}… (supports **markdown**)`}
-            className="w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-            rows={3} />
-          <div className="text-[11px] text-slate-400">Ctrl+Enter to send · Supports **bold**, *italic*, `code`, lists</div>
+            placeholder={replyToId ? `Reply in thread…` : `Message #${channelName}…`}
+            className="w-full resize-none rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+            rows={1} style={{ maxHeight: '120px', overflowY: 'auto' }} />
+          <div className="text-[11px] text-slate-400 pl-2">Enter to send · Shift+Enter for new line</div>
         </div>
 
         <button onClick={handleSend} disabled={!message.trim() || isLoading}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300 transition-colors">
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300 transition-all shadow-md hover:shadow-indigo-300/50 hover:scale-105 active:scale-95">
           {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
         </button>
       </div>

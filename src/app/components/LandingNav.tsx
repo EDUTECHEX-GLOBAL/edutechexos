@@ -27,10 +27,11 @@ export default function LandingNav() {
     <header
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-700"
       style={{
-        backgroundColor: scrolled ? 'rgba(240,245,240,0.75)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(24px)' : 'none',
-        WebkitBackdropFilter: scrolled ? 'blur(24px)' : 'none',
-        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
+        backgroundColor: scrolled ? 'rgba(240,245,240,0.80)' : 'rgba(255,255,255,0.30)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: scrolled ? '1px solid rgba(45,106,79,0.10)' : '1px solid rgba(255,255,255,0.40)',
+        boxShadow: scrolled ? '0 4px 24px rgba(0,0,0,0.06)' : '0 1px 0 rgba(255,255,255,0.5)',
       }}
     >
       <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 h-[72px] flex items-center justify-between">
@@ -62,30 +63,30 @@ export default function LandingNav() {
           ))}
         </nav>
 
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-2.5">
           <Link
             href="/sign-up-login-screen?mode=admin&redirect=/admin"
-            className="px-4 py-2 text-sm font-bold rounded-full transition-all duration-300"
-            style={{ color: colors.muted }}
+            className="px-5 py-2 text-sm font-bold rounded-full transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+            style={{
+              color: '#7c3aed',
+              background: 'rgba(124,58,237,0.10)',
+              border: '1px solid rgba(124,58,237,0.22)',
+              backdropFilter: 'blur(8px)',
+            }}
           >
             Admin
           </Link>
           <Link
             href="/sign-up-login-screen?mode=user"
-            className="px-5 py-2 text-sm font-bold rounded-full transition-all duration-300"
+            className="px-5 py-2 text-sm font-bold rounded-full transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
             style={{
-              color: colors.body,
-              border: '1px solid rgba(0,0,0,0.1)',
+              color: '#2d6a4f',
+              background: 'rgba(45,106,79,0.10)',
+              border: '1px solid rgba(45,106,79,0.22)',
+              backdropFilter: 'blur(8px)',
             }}
           >
             Sign in
-          </Link>
-          <Link
-            href="/sign-up-login-screen?mode=user"
-            className="relative inline-flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-green-light text-white font-bold px-5 py-2 text-sm rounded-full overflow-hidden transition-all duration-500 hover:shadow-lg hover:shadow-primary/25 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full hover:translate-x-full transition-transform duration-700" />
-            <span className="relative z-10">Get access</span>
           </Link>
         </div>
 
@@ -120,9 +121,9 @@ export default function LandingNav() {
           <Link href="/sign-up-login-screen?mode=admin&redirect=/admin" className="px-4 py-3 text-sm font-bold rounded-xl hover:bg-primary/10 transition-all" style={{ color: colors.body }} onClick={() => setMobileOpen(false)}>
             Admin
           </Link>
-          <div className="flex flex-col gap-2 mt-1">
-            <Link href="/sign-up-login-screen?mode=user" className="block text-center px-4 py-3 text-sm font-bold rounded-xl transition-all" style={{ color: colors.body, backgroundColor: 'rgba(45,106,79,0.08)' }} onClick={() => setMobileOpen(false)}>Sign in</Link>
-            <Link href="/sign-up-login-screen?mode=user" className="block text-center px-4 py-3 text-sm font-bold rounded-xl bg-gradient-to-r from-primary to-green-light text-white" onClick={() => setMobileOpen(false)}>Get access</Link>
+          <div className="flex gap-2 mt-1">
+            <Link href="/sign-up-login-screen?mode=admin&redirect=/admin" className="flex-1 text-center px-4 py-3 text-sm font-bold rounded-full transition-all" style={{ color: '#7c3aed', background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.22)' }} onClick={() => setMobileOpen(false)}>Admin</Link>
+            <Link href="/sign-up-login-screen?mode=user" className="flex-1 text-center px-4 py-3 text-sm font-bold rounded-full transition-all" style={{ color: '#2d6a4f', background: 'rgba(45,106,79,0.10)', border: '1px solid rgba(45,106,79,0.22)' }} onClick={() => setMobileOpen(false)}>Sign in</Link>
           </div>
         </div>
       )}

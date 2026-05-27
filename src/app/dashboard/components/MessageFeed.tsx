@@ -20,15 +20,15 @@ function PollCard({ msg, channelId, userEmail }: { msg: any; channelId: string; 
   const poll = msg.poll;
   const totalVotes = poll.options.reduce((sum: number, o: any) => sum + o.votes.length, 0);
   return (
-    <div className="mt-2 max-w-sm rounded-2xl border border-indigo-100 bg-white p-4 shadow-sm">
-      <p className="mb-3 text-sm font-bold text-slate-900">📊 {poll.question}</p>
+    <div className="mt-2 w-64 rounded-2xl border border-indigo-100 bg-white dark:bg-slate-800 dark:border-slate-700 p-4 shadow-sm">
+      <p className="mb-3 text-sm font-bold text-slate-900 dark:text-white">📊 {poll.question}</p>
       <div className="space-y-2">
         {poll.options.map((opt: any, i: number) => {
           const pct = totalVotes > 0 ? Math.round((opt.votes.length / totalVotes) * 100) : 0;
           const voted = opt.votes.includes(userEmail);
           return (
             <button key={i} onClick={() => votePoll(channelId, msg.id, i, userEmail)}
-              className={`relative w-full overflow-hidden rounded-xl border px-3 py-2 text-left text-sm transition-all ${voted ? 'border-indigo-400 bg-indigo-50 font-bold text-indigo-700' : 'border-slate-200 text-slate-700 hover:border-indigo-200 hover:bg-slate-50'}`}>
+              className={`relative w-full overflow-hidden rounded-xl border px-3 py-2 text-left text-sm transition-all ${voted ? 'border-indigo-400 bg-indigo-50 font-bold text-indigo-700' : 'border-slate-200 text-slate-700 hover:border-indigo-200 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300'}`}>
               <div className="absolute inset-y-0 left-0 rounded-l-xl bg-indigo-100/60 transition-all" style={{ width: `${pct}%` }} />
               <span className="relative flex items-center justify-between">
                 <span>{opt.text}</span>
@@ -43,29 +43,33 @@ function PollCard({ msg, channelId, userEmail }: { msg: any; channelId: string; 
   );
 }
 
-function MarkdownContent({ text }: { text: string }) {
+function MarkdownContent({ text, isOwn }: { text: string; isOwn: boolean }) {
   return (
     <ReactMarkdown remarkPlugins={[remarkGfm]}
       components={{
         p: ({ children }) => <p className="mb-1 last:mb-0 text-sm leading-relaxed">{children}</p>,
-        strong: ({ children }) => <strong className="font-bold text-slate-900">{children}</strong>,
+        strong: ({ children }) => <strong className={`font-bold ${isOwn ? 'text-white' : 'text-slate-900 dark:text-white'}`}>{children}</strong>,
         em: ({ children }) => <em className="italic">{children}</em>,
         code: ({ children, className }) => {
           const isBlock = String(className).includes('language-');
           return isBlock ? (
-            <pre className="my-2 overflow-x-auto rounded-xl bg-slate-900 p-3 text-xs text-green-400"><code>{children}</code></pre>
+            <pre className="my-2 overflow-x-auto rounded-xl bg-black/20 p-3 text-xs text-green-300"><code>{children}</code></pre>
           ) : (
-            <code className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-indigo-700">{children}</code>
+            <code className={`rounded-md px-1.5 py-0.5 font-mono text-xs ${isOwn ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-700 text-indigo-700 dark:text-indigo-300'}`}>{children}</code>
           );
         },
         ul: ({ children }) => <ul className="my-1 ml-4 list-disc space-y-0.5 text-sm">{children}</ul>,
         ol: ({ children }) => <ol className="my-1 ml-4 list-decimal space-y-0.5 text-sm">{children}</ol>,
         li: ({ children }) => <li>{children}</li>,
-        h1: ({ children }) => <h1 className="mb-1 text-base font-black text-slate-900">{children}</h1>,
-        h2: ({ children }) => <h2 className="mb-1 text-sm font-black text-slate-900">{children}</h2>,
-        h3: ({ children }) => <h3 className="mb-1 text-sm font-bold text-slate-800">{children}</h3>,
-        blockquote: ({ children }) => <blockquote className="my-1 border-l-4 border-indigo-300 pl-3 italic text-slate-600 text-sm">{children}</blockquote>,
-        a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className="text-indigo-600 underline hover:text-indigo-800">{children}</a>,
+        h1: ({ children }) => <h1 className="mb-1 text-base font-black">{children}</h1>,
+        h2: ({ children }) => <h2 className="mb-1 text-sm font-black">{children}</h2>,
+        h3: ({ children }) => <h3 className="mb-1 text-sm font-bold">{children}</h3>,
+        blockquote: ({ children }) => (
+          <blockquote className={`my-1 border-l-4 pl-3 italic text-sm ${isOwn ? 'border-white/40 text-white/80' : 'border-indigo-300 text-slate-600'}`}>{children}</blockquote>
+        ),
+        a: ({ href, children }) => (
+          <a href={href} target="_blank" rel="noreferrer" className={`underline ${isOwn ? 'text-white/90' : 'text-indigo-600'}`}>{children}</a>
+        ),
       }}>
       {text}
     </ReactMarkdown>
@@ -77,13 +81,13 @@ function MeetingCard({ text }: { text: string }) {
   const time = text.match(/Time:\s*(.+)/)?.[1]?.trim() ?? '';
   const people = text.match(/Mentioned people:\s*(.+)/)?.[1]?.trim() ?? '';
   const link = text.match(/Join Link:\s*(https?:\/\/\S+)/)?.[1]?.trim() ?? '';
-  if (!link) return <MarkdownContent text={text} />;
+  if (!link) return <MarkdownContent text={text} isOwn={false} />;
   return (
-    <div className="mt-2 max-w-sm rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-slate-50 p-4">
+    <div className="w-64 rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-slate-50 dark:from-slate-800 dark:to-slate-900 dark:border-slate-600 p-4">
       <p className="text-[10px] font-black uppercase tracking-wider text-indigo-400">📅 Meeting Scheduled</p>
-      <p className="mt-1 font-black text-slate-900">{title}</p>
-      {time && <p className="mt-1 text-xs text-slate-600">🕐 {time}</p>}
-      {people && <p className="mt-0.5 text-xs text-slate-600">👥 {people}</p>}
+      <p className="mt-1 font-black text-slate-900 dark:text-white">{title}</p>
+      {time && <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">🕐 {time}</p>}
+      {people && <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">👥 {people}</p>}
       <a href={link} target="_blank" rel="noreferrer"
         className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-black text-white hover:bg-indigo-700 transition-colors">
         Join Meeting →
@@ -173,108 +177,234 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
 
   const grouped = messages.map((msg, i) => {
     const prev = messages[i - 1];
+    const next = messages[i + 1];
     const isFirst = i === 0 || prev?.sender !== msg.sender || new Date(msg.timestamp).getTime() - new Date(prev.timestamp).getTime() > 5 * 60 * 1000;
+    const isLast = i === messages.length - 1 || next?.sender !== msg.sender || new Date(next.timestamp).getTime() - new Date(msg.timestamp).getTime() > 5 * 60 * 1000;
     const showDate = i === 0 || new Date(msg.timestamp).toDateString() !== new Date(prev?.timestamp).toDateString();
-    return { ...msg, isFirst, showDate, dateLabel: showDate ? formatDate(msg.timestamp) : undefined };
+    return { ...msg, isFirst, isLast, showDate, dateLabel: showDate ? formatDate(msg.timestamp) : undefined };
   });
 
   const replyCount = (msgId: string) => allMessages.filter((m) => m.parentId === msgId).length;
 
   return (
-    <div className="space-y-0 pb-4">
+    <div className="flex flex-col gap-0 pb-4 px-3">
       {grouped.map((msg) => {
         const isPinned = pinnedIds.includes(msg.id);
         const isBookmarked = bookmarkedIds.includes(msg.id);
-        const isMyMsg = msg.sender === currentUser?.name;
+        const isOwn = msg.sender === currentUser?.name;
         const isMeeting = msg.text?.startsWith('Meeting Scheduled:');
         const replies = !parentId ? replyCount(msg.id) : 0;
 
         return (
           <React.Fragment key={msg.id}>
+            {/* Date divider */}
             {msg.showDate && (
-              <div className="my-6 flex items-center gap-3 px-4">
-                <div className="h-px flex-1 bg-slate-100 dark:bg-slate-700" />
-                <span className="text-xs font-semibold uppercase text-slate-400">{msg.dateLabel}</span>
-                <div className="h-px flex-1 bg-slate-100 dark:bg-slate-700" />
+              <div className="my-4 flex items-center gap-3">
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  {msg.dateLabel}
+                </span>
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
               </div>
             )}
 
+            {/* Pinned indicator */}
             {isPinned && (
-              <div className="mx-4 mb-0.5 flex items-center gap-1 text-[10px] font-bold text-amber-600">
+              <div className={`mb-0.5 flex items-center gap-1 text-[10px] font-bold text-amber-600 ${isOwn ? 'justify-end pr-1' : 'justify-start pl-10'}`}>
                 <Pin size={10} /> Pinned
               </div>
             )}
 
-            <div className={`group relative flex gap-3 px-4 py-1.5 transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/30 ${isPinned ? 'bg-amber-50/40 dark:bg-amber-900/10' : ''}`}>
-              {msg.isFirst ? (
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold text-white shadow-sm" style={{ backgroundColor: msg.color }}>
-                  {msg.initials}
+            {/* Message row */}
+            <div className={`group flex items-end gap-2 ${msg.isFirst ? 'mt-3 mb-0' : 'mt-0.5 mb-0'} ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+
+              {/* Avatar — only show for first in group, on receiver side */}
+              {!isOwn && (
+                <div className="mb-1 shrink-0">
+                  {msg.isFirst ? (
+                    <div
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-sm"
+                      style={{ backgroundColor: msg.color }}
+                    >
+                      {msg.initials}
+                    </div>
+                  ) : (
+                    <div className="h-8 w-8" />
+                  )}
                 </div>
-              ) : (
-                <div className="h-9 w-9 shrink-0" />
               )}
 
-              <div className="min-w-0 flex-1">
-                {msg.isFirst && (
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-bold text-slate-900 dark:text-white">{msg.sender}</span>
-                    <span className="text-xs text-slate-400">{formatTime(msg.timestamp)}</span>
-                    {msg.editedAt && <span className="text-[10px] italic text-slate-400">(edited)</span>}
-                  </div>
+              {/* Bubble column */}
+              <div className={`flex flex-col max-w-[72%] ${isOwn ? 'items-end' : 'items-start'}`}>
+
+                {/* Sender name (only for first in group, receiver side) */}
+                {msg.isFirst && !isOwn && (
+                  <span className="mb-1 ml-1 text-xs font-bold" style={{ color: msg.color }}>
+                    {msg.sender}
+                  </span>
                 )}
 
+                {/* Edit mode */}
                 {editingId === msg.id ? (
-                  <div className="mt-1 flex gap-2">
-                    <textarea value={editText} onChange={(e) => setEditText(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); } if (e.key === 'Escape') { setEditingId(null); setEditText(''); } }}
-                      className="flex-1 resize-none rounded-xl border border-indigo-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/20"
-                      rows={2} autoFocus />
+                  <div className="flex gap-2 w-full">
+                    <textarea
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); }
+                        if (e.key === 'Escape') { setEditingId(null); setEditText(''); }
+                      }}
+                      className="flex-1 resize-none rounded-2xl border border-indigo-300 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/20"
+                      rows={2}
+                      autoFocus
+                    />
                     <div className="flex flex-col gap-1">
-                      <button onClick={saveEdit} className="rounded-lg bg-indigo-600 p-1.5 text-white hover:bg-indigo-700"><Check size={14} /></button>
-                      <button onClick={() => { setEditingId(null); setEditText(''); }} className="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-100"><X size={14} /></button>
+                      <button onClick={saveEdit} className="rounded-xl bg-indigo-600 p-1.5 text-white hover:bg-indigo-700"><Check size={14} /></button>
+                      <button onClick={() => { setEditingId(null); setEditText(''); }} className="rounded-xl border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-100"><X size={14} /></button>
                     </div>
                   </div>
-                ) : isMeeting ? (
-                  <MeetingCard text={msg.text} />
                 ) : (
-                  <div className="mt-0.5 text-sm text-slate-700 dark:text-slate-300">
-                    <MarkdownContent text={msg.text ?? ''} />
-                  </div>
+                  <>
+                    {/* Main bubble */}
+                    {!msg.poll && (
+                    <div className={`relative group/bubble rounded-2xl px-3.5 py-2.5 shadow-sm
+                        ${isOwn
+                          ? `bg-indigo-600 text-white ${msg.isLast ? 'bubble-own rounded-br-sm' : ''}`
+                          : `bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-100 dark:border-slate-700 ${msg.isLast ? 'bubble-other rounded-bl-sm' : ''}`
+                        }
+                        ${isPinned ? 'ring-2 ring-amber-400' : ''}
+                      `}>
+
+                        {isMeeting ? (
+                          <MeetingCard text={msg.text} />
+                        ) : (
+                          <div className={isOwn ? 'text-white' : 'text-slate-900 dark:text-white'}>
+                            <MarkdownContent text={msg.text ?? ''} isOwn={isOwn} />
+                          </div>
+                        )}
+
+                        {/* Audio */}
+                        {msg.audioUrl && (
+                          <div className={`mt-2 rounded-xl p-2 ${isOwn ? 'bg-white/10' : 'bg-slate-50 dark:bg-slate-700'}`}>
+                            <audio className="w-48 h-8" controls src={msg.audioUrl}><track kind="captions" /></audio>
+                            <p className={`mt-1 text-[10px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>Voice note</p>
+                          </div>
+                        )}
+
+                        {/* Video */}
+                        {msg.videoUrl && (
+                          <div className="mt-2 w-64">
+                            <video className="w-full rounded-xl bg-black" controls src={msg.videoUrl}><track kind="captions" /></video>
+                            <p className={`mt-1 text-[10px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>Screen recording</p>
+                          </div>
+                        )}
+
+                        {/* Files */}
+                        {msg.files && msg.files.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {msg.files.map((file: any, fi: number) => (
+                              <a key={fi} href={file.url} target="_blank" rel="noreferrer"
+                                className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-bold transition-colors
+                                  ${isOwn ? 'border-white/30 bg-white/10 text-white hover:bg-white/20' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:border-indigo-200'}`}>
+                                <Paperclip size={11} />{file.name}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Timestamp + edited */}
+                        <div className={`mt-1.5 flex items-center gap-1.5 justify-end text-[10px] ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>
+                          {msg.editedAt && <span className="italic">(edited)</span>}
+                          <span>{formatTime(msg.timestamp)}</span>
+                          {isOwn && (
+                            <svg width="16" height="11" viewBox="0 0 16 11" className="text-white/70" fill="currentColor">
+                              <path d="M11.071.653a.75.75 0 0 1 .001 1.06l-5.78 5.79a.75.75 0 0 1-1.063 0L1.928 5.2a.75.75 0 1 1 1.062-1.059l1.769 1.77L10.01.653a.75.75 0 0 1 1.061 0z"/>
+                              <path d="M15.071.653a.75.75 0 0 1 .001 1.06l-5.78 5.79a.75.75 0 0 1-.532.22.75.75 0 0 1-.532-1.28L13.01.653a.75.75 0 0 1 1.061 0z" opacity="0.6"/>
+                            </svg>
+                          )}
+                        </div>
+
+                        {/* Hover action bar inside bubble */}
+                        <div className={`absolute ${isOwn ? 'left-0 -translate-x-full pl-0 pr-2' : 'right-0 translate-x-full pl-2'} top-0 hidden group-hover/bubble:flex items-center`}>
+                          <div className="flex items-center gap-0.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1 shadow-lg">
+                            {/* Emoji reaction */}
+                            <div className="relative" data-emoji-picker>
+                              <button
+                                onClick={() => setActiveEmojiPicker(activeEmojiPicker === msg.id ? null : msg.id)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
+                                title="React"
+                              >😊</button>
+                              {activeEmojiPicker === msg.id && (
+                                <div className={`absolute top-full mt-1 z-20 flex gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1.5 shadow-xl ${isOwn ? 'right-0' : 'left-0'}`} data-emoji-picker>
+                                  {EMOJI_OPTIONS.map((em) => (
+                                    <button key={em}
+                                      onClick={() => { toggleReaction(channelId, msg.id, em, userEmail); setActiveEmojiPicker(null); }}
+                                      className="flex h-7 w-7 items-center justify-center rounded-lg text-lg transition-all hover:scale-110 hover:bg-slate-100 dark:hover:bg-slate-700">
+                                      {em}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {!parentId && (
+                              <button onClick={() => setActiveThread(msg.id)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-indigo-600"
+                                title="Reply in thread">
+                                <MessageSquare size={13} />
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => { toggleBookmark(msg.id); toast.success(isBookmarked ? 'Removed from saved' : 'Message saved!'); }}
+                              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 ${isBookmarked ? 'text-amber-500' : 'text-slate-500 hover:text-amber-500'}`}
+                              title={isBookmarked ? 'Remove from saved' : 'Save message'}>
+                              <Bookmark size={13} fill={isBookmarked ? 'currentColor' : 'none'} />
+                            </button>
+
+                            <button
+                              onClick={() => { isPinned ? unpinMessage(channelId, msg.id) : pinMessage(channelId, msg.id); toast.success(isPinned ? 'Unpinned' : 'Message pinned!'); }}
+                              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 ${isPinned ? 'text-amber-500' : 'text-slate-500 hover:text-amber-500'}`}
+                              title={isPinned ? 'Unpin' : 'Pin message'}>
+                              <Pin size={13} />
+                            </button>
+
+                            {isOwn && !msg.poll && (
+                              <button onClick={() => { setEditingId(msg.id); setEditText(msg.text ?? ''); }}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700"
+                                title="Edit">
+                                <Pencil size={13} />
+                              </button>
+                            )}
+
+                            {(isOwn || isAdmin) && (
+                              <button onClick={() => handleDelete(msg.id, msg.sender)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600"
+                                title="Delete">
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Poll card (outside bubble) */}
+                    {msg.poll && <PollCard msg={msg} channelId={channelId} userEmail={userEmail} />}
+                  </>
                 )}
 
-                {msg.poll && <PollCard msg={msg} channelId={channelId} userEmail={userEmail} />}
-
-                {msg.audioUrl && (
-                  <div className="mt-2 max-w-xs rounded-2xl border border-slate-100 bg-slate-50 p-3">
-                    <audio className="w-full" controls src={msg.audioUrl}><track kind="captions" /></audio>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Voice note</p>
-                  </div>
-                )}
-
-                {msg.videoUrl && (
-                  <div className="mt-2 max-w-md">
-                    <video className="w-full rounded-2xl border border-slate-200 bg-black shadow-sm" controls src={msg.videoUrl}><track kind="captions" /></video>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Camera recording</p>
-                  </div>
-                )}
-
-                {msg.files && msg.files.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {msg.files.map((file: any, fi: number) => (
-                      <a key={fi} href={file.url} target="_blank" rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm transition-colors hover:border-indigo-200 hover:text-indigo-600">
-                        <Paperclip size={12} />{file.name}
-                      </a>
-                    ))}
-                  </div>
-                )}
-
+                {/* Reactions */}
                 {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
+                  <div className={`mt-1 flex flex-wrap gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                     {Object.entries(msg.reactions).map(([emoji, users]: [string, any]) =>
                       users.length > 0 ? (
-                        <button key={emoji} onClick={() => toggleReaction(channelId, msg.id, emoji, userEmail)}
-                          className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-all ${users.includes(userEmail) ? 'border-indigo-200 bg-indigo-100 font-bold text-indigo-700' : 'border-transparent bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                        <button key={emoji}
+                          onClick={() => toggleReaction(channelId, msg.id, emoji, userEmail)}
+                          className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-all
+                            ${users.includes(userEmail)
+                              ? 'border-indigo-200 bg-indigo-100 dark:bg-indigo-900/40 font-bold text-indigo-700 dark:text-indigo-300'
+                              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'}`}>
                           <span>{emoji}</span><span>{users.length}</span>
                         </button>
                       ) : null
@@ -282,63 +412,13 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
                   </div>
                 )}
 
+                {/* Thread replies */}
                 {replies > 0 && (
-                  <button onClick={() => setActiveThread(msg.id)}
-                    className="mt-1.5 flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                  <button
+                    onClick={() => setActiveThread(msg.id)}
+                    className="mt-1 flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800"
+                  >
                     <MessageSquare size={12} />{replies} {replies === 1 ? 'reply' : 'replies'}<ChevronDown size={12} />
-                  </button>
-                )}
-              </div>
-
-              {/* Action bar */}
-              <div className="absolute right-3 top-1 hidden items-center gap-0.5 rounded-xl border border-slate-200 bg-white p-1 shadow-lg group-hover:flex dark:border-slate-700 dark:bg-slate-800">
-                <div className="relative" data-emoji-picker>
-                  <button onClick={() => setActiveEmojiPicker(activeEmojiPicker === msg.id ? null : msg.id)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-base hover:bg-slate-100 dark:hover:bg-slate-700" title="React">
-                    😊
-                  </button>
-                  {activeEmojiPicker === msg.id && (
-                    <div className="absolute right-0 top-full z-20 mt-1 flex gap-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-800" data-emoji-picker>
-                      {EMOJI_OPTIONS.map((em) => (
-                        <button key={em} onClick={() => { toggleReaction(channelId, msg.id, em, userEmail); setActiveEmojiPicker(null); }}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg text-lg transition-all hover:scale-110 hover:bg-slate-100 dark:hover:bg-slate-700">
-                          {em}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {!parentId && (
-                  <button onClick={() => setActiveThread(msg.id)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-700" title="Reply in thread">
-                    <MessageSquare size={14} />
-                  </button>
-                )}
-
-                <button onClick={() => { toggleBookmark(msg.id); toast.success(isBookmarked ? 'Removed from saved' : 'Message saved!'); }}
-                  className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 ${isBookmarked ? 'text-amber-500' : 'text-slate-500 hover:text-amber-500'}`}
-                  title={isBookmarked ? 'Remove from saved' : 'Save message'}>
-                  <Bookmark size={14} fill={isBookmarked ? 'currentColor' : 'none'} />
-                </button>
-
-                <button onClick={() => { isPinned ? unpinMessage(channelId, msg.id) : pinMessage(channelId, msg.id); toast.success(isPinned ? 'Unpinned' : 'Message pinned!'); }}
-                  className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 ${isPinned ? 'text-amber-500' : 'text-slate-500 hover:text-amber-500'}`}
-                  title={isPinned ? 'Unpin' : 'Pin message'}>
-                  <Pin size={14} />
-                </button>
-
-                {isMyMsg && !msg.poll && (
-                  <button onClick={() => { setEditingId(msg.id); setEditText(msg.text ?? ''); }}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700" title="Edit">
-                    <Pencil size={14} />
-                  </button>
-                )}
-
-                {(isMyMsg || isAdmin) && (
-                  <button onClick={() => handleDelete(msg.id, msg.sender)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20" title="Delete">
-                    <Trash2 size={14} />
                   </button>
                 )}
               </div>
