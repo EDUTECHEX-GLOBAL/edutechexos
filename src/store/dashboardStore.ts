@@ -204,7 +204,7 @@ export const useDashboardStore = create<DashboardState>()(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...message, channelId }),
-        }).catch((err) => console.error('addMessage API error:', err));
+        }).catch(() => { /* backend unavailable — message saved locally */ });
 
         set((s) => ({
           messages: { ...s.messages, [channelId]: [...(s.messages[channelId] ?? []), message] },
@@ -254,7 +254,7 @@ export const useDashboardStore = create<DashboardState>()(
       deleteMessage: (channelId, messageId) => {
         fetch(`${API_BASE}/api/messages/${messageId}`, {
           method: 'DELETE',
-        }).catch((err) => console.error('deleteMessage API error:', err));
+        }).catch(() => { /* backend unavailable */ });
 
         set((s) => ({
           messages: { ...s.messages, [channelId]: (s.messages[channelId] ?? []).filter((m) => m.id !== messageId) },
@@ -268,7 +268,7 @@ export const useDashboardStore = create<DashboardState>()(
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: newText, editedAt }),
-        }).catch((err) => console.error('editMessage API error:', err));
+        }).catch(() => { /* backend unavailable */ });
 
         set((s) => ({
           messages: {
@@ -324,9 +324,7 @@ export const useDashboardStore = create<DashboardState>()(
           });
 
           set({ messages: merged });
-        } catch (e) {
-          console.error('load messages error', e);
-        }
+        } catch { /* backend unavailable — keep current state */ }
       },
 
       toggleReaction: (channelId, messageId, emoji, userEmail) => {
@@ -346,7 +344,7 @@ export const useDashboardStore = create<DashboardState>()(
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reactions }),
-        }).catch((err) => console.error('toggleReaction API error:', err));
+        }).catch(() => { /* backend unavailable */ });
 
         set((s) => ({
           messages: {
@@ -375,7 +373,7 @@ export const useDashboardStore = create<DashboardState>()(
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ poll }),
-        }).catch((err) => console.error('votePoll API error:', err));
+        }).catch(() => { /* backend unavailable */ });
 
         set((s) => ({
           messages: {
@@ -440,9 +438,7 @@ export const useDashboardStore = create<DashboardState>()(
           const data = await res.json();
           if (!data.success || !data.tasks) return;
           set({ kanbanTasks: data.tasks as KanbanTask[] });
-        } catch (e) {
-          console.error('loadLocalKanbanTasks error', e);
-        }
+        } catch { /* backend unavailable */ }
       },
 
       addKanbanTask: (task) => {
@@ -463,7 +459,7 @@ export const useDashboardStore = create<DashboardState>()(
               }));
             }
           })
-          .catch((err) => console.error('addKanbanTask API error:', err));
+          .catch(() => { /* backend unavailable — task is saved locally */ });
       },
 
       updateKanbanTaskStatus: (taskId, status) => {
@@ -472,14 +468,14 @@ export const useDashboardStore = create<DashboardState>()(
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status }),
-        }).catch((err) => console.error('updateKanbanTaskStatus API error:', err));
+        }).catch(() => { /* backend unavailable */ });
       },
 
       deleteKanbanTask: (taskId) => {
         set((s) => ({ kanbanTasks: s.kanbanTasks.filter((t) => t.id !== taskId) }));
         fetch(`${API_BASE}/api/kanban/${taskId}`, {
           method: 'DELETE',
-        }).catch((err) => console.error('deleteKanbanTask API error:', err));
+        }).catch(() => { /* backend unavailable */ });
       },
 
       wikiPages: {},
@@ -504,7 +500,7 @@ export const useDashboardStore = create<DashboardState>()(
               }));
             }
           })
-          .catch((err) => console.error('addWikiPage API error:', err));
+          .catch(() => { /* backend unavailable */ });
       },
       updateWikiPage: (channelId, pageId, data) => {
         set((s) => ({
@@ -527,13 +523,13 @@ export const useDashboardStore = create<DashboardState>()(
               title: currentPage.title,
               content: currentPage.content
             }),
-          }).catch((err) => console.error('updateWikiPage API error:', err));
+          }).catch(() => { /* backend unavailable */ });
         }
       },
       deleteWikiPage: (channelId, pageId) => {
         fetch(`${API_BASE}/api/wikipages/${pageId}`, {
           method: 'DELETE',
-        }).catch((err) => console.error('deleteWikiPage API error:', err));
+        }).catch(() => { /* backend unavailable */ });
 
         set((s) => ({ wikiPages: { ...s.wikiPages, [channelId]: (s.wikiPages[channelId] ?? []).filter((p) => p.id !== pageId) } }));
       },
@@ -551,9 +547,7 @@ export const useDashboardStore = create<DashboardState>()(
             grouped[chId].push(p);
           });
           set({ wikiPages: grouped });
-        } catch (e) {
-          console.error('load wiki pages error', e);
-        }
+        } catch { /* backend unavailable — keep current wiki state */ }
       },
 
       notifications: [],
