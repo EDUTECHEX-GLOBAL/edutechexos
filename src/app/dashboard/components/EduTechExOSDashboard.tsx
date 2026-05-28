@@ -519,11 +519,19 @@ export default function EduTechExOSDashboard() {
 
   // ── Socket.IO real-time message delivery ──────────────────────────────────
   // Join the active channel room so we receive live `new_message` events.
-  // When the channel changes we leave the old room and join the new one.
+  // Uses activeChannelId (not activeChannel) so DM rooms (dm-X-Y) work correctly.
+  // Re-joins on every 'connect' event so Render cold-start wakeups don't silently
+  // break real-time delivery for User 2.
   useEffect(() => {
     const socket = getSocket();
 
-    socket.emit('join_channel', activeChannel);
+    // Join correct room (DMs use 'dm-X-Y', workspace channels use their id)
+    socket.emit('join_channel', activeChannelId);
+
+    // Rejoin whenever socket reconnects (Render wakes from sleep, network blip, etc.)
+    const handleReconnect = () => {
+      socket.emit('join_channel', activeChannelId);
+    };
 
     const handleNewMessage = ({ channelId, message }: { channelId: string; message: import('@/store/dashboardStore').Message }) => {
       addMessageFromSocket(channelId, message);
@@ -533,15 +541,17 @@ export default function EduTechExOSDashboard() {
       updateMessageFromSocket(channelId, message);
     };
 
+    socket.on('connect', handleReconnect);
     socket.on('new_message', handleNewMessage);
     socket.on('message_updated', handleUpdatedMessage);
 
     return () => {
+      socket.off('connect', handleReconnect);
       socket.off('new_message', handleNewMessage);
       socket.off('message_updated', handleUpdatedMessage);
-      socket.emit('leave_channel', activeChannel);
+      socket.emit('leave_channel', activeChannelId);
     };
-  }, [activeChannel, addMessageFromSocket, updateMessageFromSocket]);
+  }, [activeChannelId, addMessageFromSocket, updateMessageFromSocket]);
 
   // Poll backend notifications for the signed-in user every 5 seconds
   useEffect(() => {

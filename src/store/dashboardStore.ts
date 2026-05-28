@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { MESSAGES_BY_CHANNEL, CHANNELS } from '@/data/mockData';
+import { CHANNELS } from '@/data/mockData';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
 console.log('API_BASE =', API_BASE);
@@ -197,7 +197,7 @@ export const useDashboardStore = create<DashboardState>()(
       activeChannel: 'general',
       setActiveChannel: (id) => set({ activeChannel: id }),
 
-      messages: MESSAGES_BY_CHANNEL,
+      messages: {} as Record<string, Message[]>,
 
       addMessage: (channelId, message) => {
         fetch(`${API_BASE}/api/messages`, {
