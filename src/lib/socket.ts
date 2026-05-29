@@ -13,8 +13,13 @@
 
 import { io, Socket } from 'socket.io-client';
 
+// WebSocket must connect directly to the backend (Vercel can't proxy persistent
+// WebSocket connections). Use NEXT_PUBLIC_SOCKET_URL in production Vercel env,
+// falling back to NEXT_PUBLIC_API_URL for local dev.
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+  process.env.NEXT_PUBLIC_SOCKET_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:10000';
 
 let socket: Socket | null = null;
 

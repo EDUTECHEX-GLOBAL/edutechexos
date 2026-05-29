@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { CHANNELS } from '@/data/mockData';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
-console.log('API_BASE =', API_BASE);
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+console.log('API_BASE =', API_BASE || '(relative — proxied via Vercel)');
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

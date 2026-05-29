@@ -18,7 +18,7 @@ type AccessRequest = {
 };
 
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 // Hardcoded fallback for when backend is unreachable
 const VALID_ACCOUNTS = [

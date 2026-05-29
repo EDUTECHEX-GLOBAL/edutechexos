@@ -8,7 +8,7 @@ type SignupFormData = { name: string; email: string; password: string; role: str
 
 const roles = ['Developer', 'Designer', 'Manager', 'Other'];
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 type AccessRequest = SignupFormData & {
   id: string;

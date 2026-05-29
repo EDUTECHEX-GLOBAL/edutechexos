@@ -754,12 +754,12 @@ httpServer.listen(PORT, () => {
   console.log(`Backend Server running on port ${PORT}`);
 
   // Ping /health every 14 min to prevent Render free tier from sleeping.
-  // Render spins down after 15 min of inactivity; a missed preflight during
-  // the ~30s cold-start shows up in the browser as a CORS error.
+  // Uses https.get (Node 16 safe) rather than the global fetch (Node 18+).
   const SELF_URL = process.env.RENDER_EXTERNAL_URL;
   if (SELF_URL) {
+    const pinger = require('https');
     setInterval(() => {
-      fetch(`${SELF_URL}/health`).catch(() => {});
+      pinger.get(`${SELF_URL}/health`, (res) => res.resume()).on('error', () => {});
     }, 14 * 60 * 1000);
   }
 });
