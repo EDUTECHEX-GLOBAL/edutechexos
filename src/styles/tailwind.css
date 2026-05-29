@@ -12,32 +12,40 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-display font-semibold tracking-tight;
   }
-  ::selection { @apply bg-primary/15 text-primary-dark; }
+  ::selection { background: rgba(155,94,40,0.30); color: #ffe4b5; }
   :focus-visible { @apply outline-2 outline-offset-2 outline-primary/50; }
 }
 
 @layer components {
   /* Glass */
   .glass {
-    @apply bg-surface/70 backdrop-blur-xl border border-surface;
+    @apply bg-surface/75 backdrop-blur-xl border border-border/40;
   }
   .glass-card {
-    @apply bg-surface/70 backdrop-blur-xl border border-border/60 shadow-glass;
+    @apply bg-surface/75 backdrop-blur-xl border border-border/50 shadow-glass;
   }
   .glass-nav {
-    @apply bg-background/80 backdrop-blur-2xl border-b border-border/40;
+    @apply bg-background/85 backdrop-blur-2xl border-b border-border/40;
   }
   .glass-dark {
-    @apply bg-dark-surface/70 backdrop-blur-xl border border-dark-border shadow-dark;
+    @apply bg-dark-surface/80 backdrop-blur-xl border border-dark-border shadow-dark;
   }
 
   /* Buttons */
   .btn { @apply inline-flex items-center justify-center gap-2 font-medium transition-all duration-300 ease-smooth cursor-pointer disabled:opacity-50 disabled:pointer-events-none; }
   .btn-primary {
-    @apply btn bg-primary text-white shadow-glow hover:bg-primary-dark hover:shadow-glow-lg active:scale-[0.98];
+    @apply btn text-primary-foreground shadow-glow hover:shadow-glow-lg active:scale-[0.98];
+    background: linear-gradient(135deg, #7a4a20 0%, #9b5e28 50%, #8a5220 100%);
+    border: 1px solid rgba(255,200,140,0.25);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #8a5220 0%, #b06a30 50%, #9a5e28 100%);
   }
   .btn-secondary {
-    @apply btn bg-primary/10 text-primary hover:bg-primary/20 active:scale-[0.98];
+    @apply btn hover:bg-primary/20 active:scale-[0.98];
+    background: rgba(155,94,40,0.12);
+    color: #c4842e;
+    border: 1px solid rgba(155,94,40,0.25);
   }
   .btn-dark {
     @apply btn bg-dark-surface text-dark-foreground border border-dark-border hover:bg-dark-border active:scale-[0.98];

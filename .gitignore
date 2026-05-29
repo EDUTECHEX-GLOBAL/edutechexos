@@ -27,20 +27,25 @@ Thumbs.db
 # Vercel deployment
 .vercel/
 
-# Optional: if using TypeScript
+# TypeScript build info (generated, not needed in repo)
 *.tsbuildinfo
 
-# Optional: if using testing tools
+# Testing
 coverage/
 jest-test-results.json
 
-# Optional: if using IDEs
-# .vscode/settings.json is committed (disables CSS validator warnings for Tailwind)
+# IDEs
 .vscode/*.code-workspace
 .idea/
 
-# Optional: if using TurboRepo or monorepo
+# TurboRepo / monorepo
 turbo/
 
 # User uploaded files
 public/uploads/
+
+# AI assistant internal data (not needed in repo)
+.claude/
+
+# Dev-only scripts
+test_gemini.js

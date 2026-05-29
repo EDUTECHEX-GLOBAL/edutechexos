@@ -651,8 +651,10 @@ export default function EduTechExOSDashboard() {
   }, [aiMessages.length, copilotTab]);
 
   useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'auto' });
-  }, [activeChannel]);
+    // Delay so React finishes rendering the new channel's messages before scrolling
+    const t = setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'auto' }), 80);
+    return () => clearTimeout(t);
+  }, [activeChannel, activeChannelId]);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1288,7 +1290,8 @@ export default function EduTechExOSDashboard() {
     setMeetDate('');
     setMeetTime('');
     setMeetInviteeIds([]);
-    scrollToBottom();
+    // Give the modal time to unmount before scrolling chat into view
+    setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 300);
   }
 
   function startNewMeeting() {
@@ -2094,12 +2097,74 @@ export default function EduTechExOSDashboard() {
 
             {/* Recording badge */}
             {recordingType && (
-              <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 mb-0.5">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+              <div className="flex shrink-0 items-center gap-2 rounded-2xl px-3 py-2 mb-0.5"
+                style={{ background: 'rgba(139,92,246,0.10)', border: '1px solid rgba(139,92,246,0.22)' }}>
+                {recordingType === 'audio' ? (
+                  /* Voice → animated waveform */
+                  <div className="flex items-center gap-[2.5px]" style={{ height: 28 }}>
+                    {[0.4,0.7,1,0.6,0.9,0.5,1,0.75,0.55,0.85,0.45,0.95,0.65,0.8,0.5,0.7,0.4,0.9,0.6,1,0.5,0.75,0.85,0.45,0.65].map((h, i) => (
+                      <span key={i} style={{
+                        display: 'inline-block', width: 3, borderRadius: 9999,
+                        background: 'linear-gradient(to top, #7c3aed, #a78bfa)',
+                        animationName: 'waveBar',
+                        animationDuration: `${0.6 + (i % 5) * 0.12}s`,
+                        animationDelay: `${(i * 0.04) % 0.5}s`,
+                        animationTimingFunction: 'ease-in-out',
+                        animationIterationCount: 'infinite',
+                        animationDirection: 'alternate',
+                        minHeight: 4, maxHeight: 24,
+                        height: `${h * 24}px`,
+                      }} />
+                    ))}
+                  </div>
+                ) : (
+                  /* Screen → pulsing REC dot + monitor icon + label */
+                  <div className="flex items-center gap-2" style={{ height: 28 }}>
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ background: '#ef4444' }} />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full" style={{ background: '#ef4444' }} />
+                    </span>
+                    <Monitor size={17} style={{ color: '#7c3aed' }} strokeWidth={2.2} />
+                    <span className="text-xs font-bold" style={{ color: '#7c3aed' }}>Recording screen</span>
+                  </div>
+                )}
+                {/* Timer */}
+                <span className="text-xs font-bold tabular-nums mx-1" style={{ color: '#7c3aed' }}>
+                  {String(Math.floor(recordingDuration / 60)).padStart(2, '0')}:{String(recordingDuration % 60).padStart(2, '0')}
                 </span>
-                {String(Math.floor(recordingDuration / 60)).padStart(2, '0')}:{String(recordingDuration % 60).padStart(2, '0')}
+                {/* Divider */}
+                <div className="w-px h-5 mx-0.5" style={{ background: 'rgba(139,92,246,0.25)' }} />
+                {/* Stop button */}
+                <button
+                  onClick={() => stopRecording(false)}
+                  className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition-all hover:scale-105"
+                  style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.22)' }}
+                  title="Stop recording"
+                >
+                  <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: '#ef4444' }} />
+                  Stop
+                </button>
+                {/* Preview button */}
+                <button
+                  onClick={() => stopRecording(true)}
+                  className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition-all hover:scale-105"
+                  style={{ background: 'rgba(139,92,246,0.14)', color: '#7c3aed', border: '1px solid rgba(139,92,246,0.25)' }}
+                  title="Stop and preview"
+                >
+                  Preview
+                </button>
+                {/* Send button */}
+                <button
+                  onClick={async () => {
+                    discardRecordingRef.current = false;
+                    stopRecording(true);
+                  }}
+                  className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition-all hover:scale-105"
+                  style={{ background: 'linear-gradient(135deg,#7c3aed,#a78bfa)', color: '#fff', border: 'none' }}
+                  title="Stop and send"
+                >
+                  Send
+                </button>
               </div>
             )}
 
@@ -2862,7 +2927,8 @@ export default function EduTechExOSDashboard() {
         >
           <form
             onSubmit={scheduleMeet}
-            className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+            className="w-full max-w-xl flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+            style={{ maxHeight: '90vh' }}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-950 px-5 py-4 text-white dark:border-slate-700">
@@ -2882,7 +2948,7 @@ export default function EduTechExOSDashboard() {
               </button>
             </div>
 
-            <div className="grid gap-4 p-5">
+            <div className="grid gap-4 p-5 overflow-y-auto flex-1">
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
                   Meeting title
@@ -2989,7 +3055,7 @@ export default function EduTechExOSDashboard() {
             </div>
 
             {/* Email invite toggle + recipient preview */}
-            <div className="px-5 pb-4">
+            <div className="px-5 pb-4 flex-shrink-0">
               <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all ${sendEmailInvite ? 'border-indigo-200 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-900/20' : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/40'}`}>
                 <div className="mt-0.5 flex-shrink-0">
                   <input
@@ -3049,46 +3115,7 @@ export default function EduTechExOSDashboard() {
         </div>
       )}
 
-      {recordingType && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm dark:bg-black/70">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-5 text-center shadow-2xl dark:border-slate-700 dark:bg-slate-900">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400">
-              {recordingType === 'video' ? <Video size={24} /> : <Mic size={24} />}
-            </div>
-            <h2 className="mt-4 text-lg font-black text-slate-950 dark:text-slate-100">
-              Recording {recordingType === 'video' ? 'screen' : 'voice note'}
-            </h2>
-            <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
-              Save it to post directly into #{channel?.name}.
-            </p>
-
-            {recordingType === 'video' && (
-              <video
-                ref={videoPreviewRef}
-                className="mt-5 aspect-video w-full rounded-2xl bg-black object-cover"
-                autoPlay
-                muted
-                playsInline
-              />
-            )}
-
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => stopRecording(false)}
-                className="h-11 flex-1 rounded-xl border border-slate-200 bg-white text-sm font-black text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => stopRecording(true)}
-                className="h-11 flex-1 rounded-xl bg-indigo-600 text-sm font-black text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-              >
-                Stop & share
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Recording overlay removed — controls are inline in the composer waveform bar */}
 
       {recordedPreview && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm dark:bg-black/70">

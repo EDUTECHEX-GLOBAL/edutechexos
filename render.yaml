@@ -12,7 +12,10 @@ services:
       # Required — set these in the Render dashboard (Environment tab)
       - key: MONGODB_URI
         sync: false
-      # Optional — enables AI features (Copilot). Falls back gracefully if missing.
+      # Enables Gemini AI features (Copilot). Must start with AIza…
+      - key: GEMINI_API_KEY
+        sync: false
+      # Optional — OpenAI fallback
       - key: OPENAI_API_KEY
         sync: false
       # Optional — enables real email delivery. Falls back to Ethereal preview if missing.

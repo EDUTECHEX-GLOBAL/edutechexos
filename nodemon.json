@@ -1,6 +1,0 @@
-{
-  "watch": ["backend"],
-  "ext": "js",
-  "ignore": [".env", "*.env", "node_modules"],
-  "delay": 500
-}

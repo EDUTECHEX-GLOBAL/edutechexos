@@ -27,23 +27,23 @@ export default function LandingNav() {
     <header
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-700"
       style={{
-        backgroundColor: scrolled ? 'rgba(240,245,240,0.80)' : 'rgba(255,255,255,0.30)',
+        backgroundColor: scrolled ? 'rgba(10,18,35,0.82)' : 'rgba(10,18,35,0.20)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: scrolled ? '1px solid rgba(45,106,79,0.10)' : '1px solid rgba(255,255,255,0.40)',
-        boxShadow: scrolled ? '0 4px 24px rgba(0,0,0,0.06)' : '0 1px 0 rgba(255,255,255,0.5)',
+        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.06)',
+        boxShadow: scrolled ? '0 4px 24px rgba(0,0,0,0.30)' : 'none',
       }}
     >
       <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 h-[72px] flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 no-underline group">
-          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-green-light flex items-center justify-center shadow-lg group-hover:shadow-primary/40 transition-all duration-500 group-hover:scale-105">
+          <div className="relative w-9 h-9 rounded-xl flex items-center justify-center shadow-lg transition-all duration-500 group-hover:scale-105" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(180,210,255,0.12) 100%)', border: '1px solid rgba(255,255,255,0.20)', boxShadow: '0 4px 14px rgba(0,0,0,0.30)' }}>
             <Sparkles size={18} className="text-white" />
           </div>
           <span
             className="font-display font-bold text-lg tracking-[-0.02em] transition-colors duration-500"
-            style={{ color: colors.h1 }}
+            style={{ color: '#ffffff' }}
           >
-            EduTechEx<span className="text-primary">OS</span>
+            EduTechEx<span style={{ color: 'rgba(180,210,255,0.90)' }}>OS</span>
           </span>
         </Link>
 
@@ -54,8 +54,8 @@ export default function LandingNav() {
               href={item.href}
               className="px-4 py-2 text-sm font-bold rounded-full transition-all duration-300"
               style={{
-                color: activeSection === item.id ? colors.accent : colors.muted,
-                backgroundColor: activeSection === item.id ? `${colors.accent}12` : 'transparent',
+                color: activeSection === item.id ? '#ffffff' : 'rgba(200,220,255,0.75)',
+                backgroundColor: activeSection === item.id ? 'rgba(255,255,255,0.10)' : 'transparent',
               }}
             >
               {item.label}
@@ -68,9 +68,9 @@ export default function LandingNav() {
             href="/sign-up-login-screen?mode=admin&redirect=/admin"
             className="px-5 py-2 text-sm font-bold rounded-full transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
             style={{
-              color: '#7c3aed',
-              background: 'rgba(124,58,237,0.10)',
-              border: '1px solid rgba(124,58,237,0.22)',
+              color: 'rgba(220,235,255,0.90)',
+              background: 'rgba(255,255,255,0.10)',
+              border: '1px solid rgba(255,255,255,0.18)',
               backdropFilter: 'blur(8px)',
             }}
           >
@@ -80,9 +80,9 @@ export default function LandingNav() {
             href="/sign-up-login-screen?mode=user"
             className="px-5 py-2 text-sm font-bold rounded-full transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
             style={{
-              color: '#2d6a4f',
-              background: 'rgba(45,106,79,0.10)',
-              border: '1px solid rgba(45,106,79,0.22)',
+              color: 'rgba(220,235,255,0.90)',
+              background: 'rgba(255,255,255,0.10)',
+              border: '1px solid rgba(255,255,255,0.18)',
               backdropFilter: 'blur(8px)',
             }}
           >

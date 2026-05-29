@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, Loader2, X } from 'lucide-react';
+import { Eye, EyeOff, Loader2, X, User, Lock, ArrowRight } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -34,9 +34,11 @@ const VALID_ACCOUNTS = [
 export default function LoginForm({
   authMode,
   onSwitchToSignup,
+  darkMode = false,
 }: {
   authMode: 'admin' | 'user';
   onSwitchToSignup: () => void;
+  darkMode?: boolean;
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -238,61 +240,68 @@ export default function LoginForm({
     }
   };
 
+  const inputStyle = darkMode ? {
+    background: 'rgba(255,255,255,0.07)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    color: '#ffffff',
+    borderRadius: '10px',
+    padding: '11px 12px 11px 38px',
+    width: '100%',
+    fontSize: '0.875rem',
+    outline: 'none',
+  } : undefined;
+
   return (
     <>
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5" noValidate>
-      <div>
-        <h2 className="font-display font-bold text-xl text-foreground mb-1">
-          {authMode === 'admin' ? 'Admin sign in' : 'User sign in'}
-        </h2>
-        <p className="text-sm text-ink-light">
-          {authMode === 'admin'
-            ? 'Only the admin account can open this path.'
-            : 'Approved users can sign in here after admin access is granted.'}
-        </p>
-      </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
 
+      {/* Email */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="login-email" className="text-sm font-semibold text-foreground">
-          Email address
-        </label>
-        <input
-          id="login-email"
-          type="email"
-          autoComplete="email"
-          placeholder="you@edutechex.in"
-          className={`input-premium ${errors.email ? 'border-red-300 bg-red-50/30' : ''}`}
-          {...register('email', {
-            required: 'Email is required',
-            pattern: {
-              value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-              message: 'Enter a valid email address',
-            },
-          })}
-        />
-        {errors.email && <p className="text-xs text-red-400 font-medium">{errors.email.message}</p>}
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-center justify-between">
-          <label htmlFor="login-password" className="text-sm font-semibold text-foreground">
-            Password
+        {!darkMode && (
+          <label htmlFor="login-email" className="text-sm font-semibold text-foreground">
+            Email address
           </label>
-          <button
-            type="button"
-            onClick={() => { setForgotOpen(true); setForgotStep(1); setForgotError(''); setForgotEmail(''); setForgotCode(''); setForgotNewPass(''); setForgotPreviewUrl(''); }}
-            className="text-xs text-primary hover:underline font-medium"
-          >
-            Forgot password?
-          </button>
-        </div>
+        )}
         <div className="relative">
+          {darkMode && (
+            <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              style={{ color: 'rgba(180,200,255,0.50)' }} />
+          )}
+          <input
+            id="login-email"
+            type="email"
+            autoComplete="email"
+            placeholder={darkMode ? 'Username or Email' : 'you@edutechex.in'}
+            className={darkMode ? '' : `input-premium ${errors.email ? 'border-red-300 bg-red-50/30' : ''}`}
+            style={darkMode ? { ...inputStyle, borderColor: errors.email ? 'rgba(248,113,113,0.6)' : 'rgba(255,255,255,0.12)' } : undefined}
+            {...register('email', {
+              required: 'Email is required',
+              pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email address' },
+            })}
+          />
+        </div>
+        {errors.email && <p className="text-xs font-medium" style={{ color: darkMode ? 'rgba(248,113,113,0.90)' : '' }}>{errors.email.message}</p>}
+      </div>
+
+      {/* Password */}
+      <div className="flex flex-col gap-1.5">
+        {!darkMode && (
+          <div className="flex items-center justify-between">
+            <label htmlFor="login-password" className="text-sm font-semibold text-foreground">Password</label>
+          </div>
+        )}
+        <div className="relative">
+          {darkMode && (
+            <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              style={{ color: 'rgba(180,200,255,0.50)' }} />
+          )}
           <input
             id="login-password"
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
             placeholder="Password"
-            className={`input-premium pr-11 ${errors.password ? 'border-red-300 bg-red-50/30' : ''}`}
+            className={darkMode ? '' : `input-premium pr-11 ${errors.password ? 'border-red-300 bg-red-50/30' : ''}`}
+            style={darkMode ? { ...inputStyle, paddingRight: '40px', borderColor: errors.password ? 'rgba(248,113,113,0.6)' : 'rgba(255,255,255,0.12)' } : undefined}
             {...register('password', {
               required: 'Password is required',
               minLength: { value: 6, message: 'Password must be at least 6 characters' },
@@ -301,22 +310,47 @@ export default function LoginForm({
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-light hover:text-foreground transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+            style={{ color: darkMode ? 'rgba(180,200,255,0.50)' : undefined }}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
-            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
           </button>
         </div>
         {errors.password && (
-          <p className="text-xs text-red-400 font-medium">{errors.password.message}</p>
+          <p className="text-xs font-medium" style={{ color: darkMode ? 'rgba(248,113,113,0.90)' : '' }}>{errors.password.message}</p>
         )}
       </div>
 
+      {/* Forgot password link */}
+      <div className={darkMode ? 'flex justify-end -mt-2' : 'flex justify-end'}>
+        <button
+          type="button"
+          onClick={() => { setForgotOpen(true); setForgotStep(1); setForgotError(''); setForgotEmail(''); setForgotCode(''); setForgotNewPass(''); setForgotPreviewUrl(''); }}
+          className="text-xs font-medium hover:underline"
+          style={{ color: darkMode ? 'rgba(180,210,255,0.65)' : '#2d6a4f' }}
+        >
+          Forgot Password?
+        </button>
+      </div>
+
+      {/* Submit button */}
       <button
         type="submit"
         disabled={isLoading}
-        className="btn-primary w-full justify-center py-3.5 text-sm"
-        style={{ minHeight: '48px' }}
+        className={darkMode
+          ? 'w-full flex items-center justify-center gap-2 font-bold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]'
+          : 'btn-primary w-full justify-center py-3.5 text-sm'}
+        style={darkMode ? {
+          background: 'linear-gradient(135deg, #7a4a20 0%, #9b5e28 50%, #8a5220 100%)',
+          color: '#ffe4b5',
+          border: '1px solid rgba(255,200,140,0.30)',
+          borderRadius: '12px',
+          padding: '12px',
+          fontSize: '0.9rem',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,220,160,0.20)',
+          minHeight: '46px',
+        } : { minHeight: '48px' }}
       >
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">
@@ -324,19 +358,20 @@ export default function LoginForm({
             Signing in...
           </span>
         ) : (
-          'Sign in'
+          <>Sign In {darkMode && <ArrowRight size={15} />}</>
         )}
       </button>
 
       {authMode === 'user' && (
-        <p className="text-center text-sm text-ink-light">
-          Need access?{' '}
+        <p className="text-center text-sm" style={{ color: darkMode ? 'rgba(180,200,255,0.60)' : '' }}>
+          {darkMode ? "Don't have an account? " : 'Need access? '}
           <button
             type="button"
             onClick={onSwitchToSignup}
-            className="text-foreground font-semibold hover:text-primary transition-colors"
+            className="font-semibold hover:underline transition-colors"
+            style={{ color: darkMode ? 'rgba(220,235,255,0.90)' : '' }}
           >
-            Create account
+            {darkMode ? 'Sign Up' : 'Create account'}
           </button>
         </p>
       )}
