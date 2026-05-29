@@ -442,6 +442,25 @@ export async function getAllNotesAction() {
 /**
  * Save or update a note for a channel.
  */
+export async function changePassword(
+  email: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<{ success: boolean; error?: string; message?: string }> {
+  try {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10002';
+    const res = await fetch(`${API_URL}/api/auth/change-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, currentPassword, newPassword }),
+      cache: 'no-store',
+    });
+    return res.json();
+  } catch (err) {
+    return { success: false, error: 'Could not reach the server. Check your connection.' };
+  }
+}
+
 export async function saveNoteAction(channelId: string, content: string) {
   try {
     await ensureDbExists();

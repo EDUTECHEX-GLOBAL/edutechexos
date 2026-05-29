@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import '../dashboard.css';
 import AppLogo from '@/components/ui/AppLogo';
-import { MOCK_AI_RESPONSES, MOCK_TASKS } from '@/data/mockData';
+import { MOCK_AI_RESPONSES } from '@/data/mockData';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { useTheme } from '@/components/ThemeProvider';
 import { askCopilot, extractActionItems } from '@/app/actions/aiActions';
@@ -13,6 +13,7 @@ import {
   sendMeetingEmailInvitation,
   sendMentionEmailNotification,
   uploadLocalFile,
+  changePassword,
 } from '@/app/actions/dbActions';
 import NotificationPanel from './NotificationPanel';
 import { getSocket } from '@/lib/socket';
@@ -42,6 +43,8 @@ import {
   CheckSquare,
   Loader2,
   Mail,
+  Monitor,
+  Palette,
   PhoneCall,
   LogOut,
   Mic,
@@ -58,9 +61,11 @@ import {
   Square,
   Sun,
   Trash2,
+  Type,
   UserCheck,
   Users,
   Video,
+  Volume2,
   X,
   Zap,
   Layout,
@@ -233,10 +238,20 @@ const EMOJI_OPTIONS = [
 ];
 
 type DashboardSettings = {
+  // Profile
   displayName: string;
+  status: 'online' | 'away' | 'busy' | 'offline';
+  // Meeting
   meetLink: string;
+  // Notifications
   emailNotifications: boolean;
+  desktopNotifications: boolean;
+  soundNotifications: boolean;
+  // Appearance
   compactChat: boolean;
+  fontSize: 'normal' | 'large';
+  // Behaviour
+  enterToSend: boolean;
 };
 
 type MeetingButtonState = {
@@ -348,13 +363,15 @@ export default function EduTechExOSDashboard() {
     toggleReaction,
     toggleDarkMode: storeDarkModeToggle,
     darkMode,
+    kanbanTasks,
+    addKanbanTask,
+    updateKanbanTaskStatus,
   } = useDashboardStore();
   const [copilotTab, setCopilotTab] = useState<'chat' | 'tasks'>('chat');
   const [rightPanel, setRightPanel] = useState<'ai' | 'closed'>('ai');
   const [composerMessage, setComposerMessage] = useState('');
   const [aiInput, setAiInput] = useState('');
   const [aiMessages, setAiMessages] = useState<AIMessage[]>(MOCK_AI_RESPONSES);
-  const [tasks, setTasks] = useState(MOCK_TASKS);
   const [isThinking, setIsThinking] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [activityCalendarOpen, setActivityCalendarOpen] = useState(false);
@@ -382,14 +399,29 @@ export default function EduTechExOSDashboard() {
   const emojiBtnRef = useRef<HTMLButtonElement>(null);
   const emojiPanelRef = useRef<HTMLDivElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<'profile' | 'appearance' | 'notifications' | 'meeting' | 'security'>('profile');
+  const [pwCurrent, setPwCurrent]   = useState('');
+  const [pwNew, setPwNew]           = useState('');
+  const [pwConfirm, setPwConfirm]   = useState('');
+  const [pwLoading, setPwLoading]   = useState(false);
   const [settings, setSettings] = useState<DashboardSettings>({
     displayName: '',
+    status: 'online',
     meetLink: DEFAULT_COMPANY_MEET_LINK,
     emailNotifications: true,
+    desktopNotifications: false,
+    soundNotifications: true,
     compactChat: false,
+    fontSize: 'normal',
+    enterToSend: true,
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  // Keep settings + currentUser accessible inside socket handlers without stale-closure issues
+  const settingsRef = useRef(settings);
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
+  const currentUserRef = useRef(currentUser);
+  useEffect(() => { currentUserRef.current = currentUser; }, [currentUser]);
   const [hoverEmojiMsgId, setHoverEmojiMsgId] = useState<string | null>(null);
   const [pinScrollIdx, setPinScrollIdx] = useState(0);
   const aiBottomRef = useRef<HTMLDivElement>(null);
@@ -473,7 +505,8 @@ export default function EduTechExOSDashboard() {
     }
     return [];
   }, [messages, activeChannelId, channel, currentMemberId]);
-  const people = isAdmin ? members : members.slice(0, 7);
+  // All users can see the full team list so they can start personal DMs
+  const people = members;
   const activeChannelMembers = useMemo(() => {
     if (!channel) return [];
     if (channel.id.startsWith('member-')) {
@@ -535,6 +568,16 @@ export default function EduTechExOSDashboard() {
 
     const handleNewMessage = ({ channelId, message }: { channelId: string; message: import('@/store/dashboardStore').Message }) => {
       addMessageFromSocket(channelId, message);
+      // Only notify for messages sent by someone else
+      if (message.sender !== currentUserRef.current?.name) {
+        if (settingsRef.current.soundNotifications) playNotificationSound();
+        if (settingsRef.current.desktopNotifications) {
+          showDesktopNotification(
+            `${message.sender} · #${channelId}`,
+            message.text
+          );
+        }
+      }
     };
 
     const handleUpdatedMessage = ({ channelId, message }: { channelId: string; message: import('@/store/dashboardStore').Message }) => {
@@ -626,6 +669,32 @@ export default function EduTechExOSDashboard() {
     }
   }, [activeChannel, authChecked, channels, currentMemberId, isAdmin, setActiveChannel]);
 
+  // ── Notification helpers ────────────────────────────────────────────────────
+  function playNotificationSound() {
+    try {
+      const AudioCtx = window.AudioContext ?? (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.28);
+    } catch { /* browser may block AudioContext without a user gesture */ }
+  }
+
+  function showDesktopNotification(title: string, body: string) {
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'granted') {
+      new Notification(title, { body: body.slice(0, 120), icon: '/favicon.ico' });
+    }
+  }
+
   const scrollToBottom = () => {
     setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 120);
   };
@@ -670,6 +739,22 @@ export default function EduTechExOSDashboard() {
             text
           );
         });
+      }
+
+      // Auto-create a Kanban task when the message contains an @mention + an action keyword
+      const ACTION_KEYWORDS =
+        /\b(todo|task|please|add|create|fix|update|review|prepare|finish|complete|implement|deploy|build|test|set\s*up|check|write|design|handle|send|assign|make|ensure|submit|upload|schedule|do)\b/i;
+      if (ACTION_KEYWORDS.test(text)) {
+        const firstMentioned = mentionedMembers[0];
+        addKanbanTask({
+          text: text.slice(0, 200),
+          assignee: firstMentioned.name,
+          assigneeInitials: firstMentioned.initials,
+          assigneeEmail: firstMentioned.email,
+          sourceChannel: `#${channel.name}`,
+          status: 'todo',
+        });
+        toast.success(`📋 Task added to Kanban board for @${firstMentioned.name}`);
       }
     }
 
@@ -722,11 +807,34 @@ export default function EduTechExOSDashboard() {
   function saveSettings(event: React.FormEvent) {
     event.preventDefault();
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    // Update display name live
     setCurrentUser((user) =>
       user ? { ...user, name: settings.displayName.trim() || user.name } : user
     );
+    // Request desktop notification permission when first enabling
+    if (settings.desktopNotifications && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
     setSettingsOpen(false);
     toast.success('Settings saved');
+  }
+
+  async function handleChangePassword() {
+    if (!currentUser?.email) return;
+    if (pwNew.length < 8) { toast.error('New password must be at least 8 characters.'); return; }
+    if (pwNew !== pwConfirm) { toast.error('New passwords do not match.'); return; }
+    setPwLoading(true);
+    try {
+      const result = await changePassword(currentUser.email, pwCurrent, pwNew);
+      if (result.success) {
+        toast.success('Password changed successfully!');
+        setPwCurrent(''); setPwNew(''); setPwConfirm('');
+      } else {
+        toast.error(result.error ?? 'Could not change password.');
+      }
+    } finally {
+      setPwLoading(false);
+    }
   }
 
   async function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
@@ -1060,25 +1168,28 @@ export default function EduTechExOSDashboard() {
         toast.success('No new tasks found.');
         return;
       }
-      const newTasks = result.data.map((task: any) => ({
-        id: `task-${Date.now()}-${Math.random()}`,
-        text: task.text,
-        assignee: task.assignee || 'Unassigned',
-        assigneeInitials: task.assigneeInitials || '?',
-        sourceChannel: `#${channel?.name ?? activeChannel}`,
-        done: false,
-      }));
-      setTasks((prev) => [...newTasks, ...prev]);
-      toast.success(`Extracted ${newTasks.length} task${newTasks.length === 1 ? '' : 's'}`);
+      const channelName = `#${channel?.name ?? activeChannel}`;
+      result.data.forEach((task: any) => {
+        const assigneeName: string = task.assignee || 'Unassigned';
+        // Try to match the AI-returned assignee name to a real member to get their email
+        const matchedMember = members.find(
+          (m) => m.name.toLowerCase() === assigneeName.toLowerCase()
+        );
+        addKanbanTask({
+          text: task.text,
+          assignee: assigneeName,
+          assigneeInitials: task.assigneeInitials || '?',
+          assigneeEmail: matchedMember?.email,
+          sourceChannel: channelName,
+          status: 'todo',
+        });
+      });
+      toast.success(
+        `Extracted ${result.data.length} task${result.data.length === 1 ? '' : 's'} → added to shared Kanban board`
+      );
     } catch {
       toast.error('Task extraction failed.');
     }
-  }
-
-  function toggleTask(taskId: string) {
-    setTasks((prev) =>
-      prev.map((task) => (task.id === taskId ? { ...task, done: !task.done } : task))
-    );
   }
 
   const availableInvitees = activeChannelMembers.filter(
@@ -1182,8 +1293,8 @@ export default function EduTechExOSDashboard() {
 
   function startNewMeeting() {
     if (!channel) return;
-    const meetingRoomId = `edutechexos-${Math.random().toString(36).substring(2, 11)}`;
-    const newMeetLink = `https://meet.jit.si/${meetingRoomId}`;
+    // Use only Google Meet — no third-party meeting sites
+    const meetLink = companyMeetLink;
 
     addMessage(activeChannelId, {
       id: `meeting-started-${Date.now()}`,
@@ -1191,7 +1302,7 @@ export default function EduTechExOSDashboard() {
       initials: currentUser?.initials ?? 'Y',
       color: currentUserColor,
       timestamp: new Date().toISOString(),
-      text: `🔴 **Instant Meeting Started**\n\nClick the link below to join the video call:\n${newMeetLink}`,
+      text: `🟢 **Meeting Started**\n\nJoin on Google Meet:\n${meetLink}`,
     });
 
     const notifyMembers = activeChannelMembers.filter(
@@ -1204,13 +1315,13 @@ export default function EduTechExOSDashboard() {
         actorInitials: currentUser?.initials ?? 'OS',
         actorColor: currentUserColor,
         channel: channel.name,
-        message: `started an instant meeting. Join: ${newMeetLink}`,
+        message: `started a meeting. Join on Google Meet: ${meetLink}`,
         recipientEmails: notifyMembers.map((member) => member.email),
       });
     }
 
-    window.open(newMeetLink, '_blank');
-    toast.success('Dynamic meeting room created and posted to chat!');
+    window.open(meetLink, '_blank');
+    toast.success('Google Meet link posted to chat!');
   }
 
 
@@ -1299,29 +1410,39 @@ export default function EduTechExOSDashboard() {
             </p>
             <div className="space-y-3">
               {people.map((member) => (
-                <button
-                  key={member.id}
-                  onClick={() => setProfileMember(member)}
-                  onDoubleClick={() => setActiveChannel(member.id)}
-                  title={`View ${member.name} profile (double-click for DM)`}
-                  className="flex w-full items-center gap-3 rounded-lg py-1.5 text-left transition hover:bg-white/70"
-                >
-                  <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">
-                    {member.initials}
-                    <span
-                      className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-[#f4f7fb] ${
-                        member.status === 'online'
-                          ? 'bg-emerald-500'
-                          : member.status === 'away'
-                            ? 'bg-amber-400'
-                            : 'bg-slate-300'
-                      }`}
-                    />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-slate-600">
-                    {member.name}
-                  </span>
-                </button>
+                <div key={member.id} className="group flex items-center gap-3 rounded-lg py-1.5 transition hover:bg-white/70">
+                  {/* Click avatar/name → open DM */}
+                  <button
+                    onClick={() => setActiveChannel(member.id)}
+                    title={`Chat with ${member.name}`}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  >
+                    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">
+                      {member.initials}
+                      {(() => {
+                        const s = member.id === currentMemberId ? settings.status : member.status;
+                        return (
+                          <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-[#f4f7fb] ${
+                            s === 'online' ? 'bg-emerald-500' :
+                            s === 'away'   ? 'bg-amber-400'  :
+                            s === 'busy'   ? 'bg-red-500'    : 'bg-slate-300'
+                          }`} />
+                        );
+                      })()}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-slate-600">
+                      {member.name}
+                    </span>
+                  </button>
+                  {/* Profile icon visible on hover */}
+                  <button
+                    onClick={() => setProfileMember(member)}
+                    title={`View ${member.name}'s profile`}
+                    className="mr-1 hidden h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-200 hover:text-slate-700 group-hover:flex"
+                  >
+                    <UserCheck size={13} />
+                  </button>
+                </div>
               ))}
             </div>
           </section>
@@ -1350,7 +1471,11 @@ export default function EduTechExOSDashboard() {
           <div className="flex items-center gap-3">
             <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-sm font-black text-white shadow-lg shadow-indigo-200">
               {currentUser?.initials ?? 'G'}
-              <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+              <span className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full ring-2 ring-white ${
+                settings.status === 'online' ? 'bg-emerald-500' :
+                settings.status === 'away'   ? 'bg-amber-400'  :
+                settings.status === 'busy'   ? 'bg-red-500'    : 'bg-slate-300'
+              }`} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-black text-slate-900">
@@ -1498,16 +1623,6 @@ export default function EduTechExOSDashboard() {
                   >
                     <Video size={16} className="text-indigo-600" />
                     Join meet
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMeetMenuOpen(false);
-                      startNewMeeting();
-                    }}
-                    className="flex w-full items-center gap-3 border-t border-slate-100 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50"
-                  >
-                    <Plus size={16} className="text-indigo-600" />
-                    Start new meet
                   </button>
                 </div>
               )}
@@ -1658,7 +1773,7 @@ export default function EduTechExOSDashboard() {
               const isBookmarked = bookmarkedMessageIds.includes(message.id);
 
               return (
-                <div key={message.id} id={`msg-${message.id}`} className={`flex items-end gap-2 ${isFirst ? 'mt-4' : 'mt-0.5'} ${isOwn ? 'flex-row-reverse' : ''}`}>
+                <div key={message.id} id={`msg-${message.id}`} className={`flex items-end gap-2 ${isFirst ? (settings.compactChat ? 'mt-2' : 'mt-4') : 'mt-0.5'} ${isOwn ? 'flex-row-reverse' : ''}`}>
 
                   {/* Avatar — receiver only, first in group */}
                   {!isOwn && (
@@ -1703,7 +1818,7 @@ export default function EduTechExOSDashboard() {
                             </a>
                           </div>
                         ) : (
-                          <div className={`text-sm leading-relaxed ${isOwn ? 'text-white' : 'text-slate-900'}`}>
+                          <div className={`leading-relaxed ${settings.fontSize === 'large' ? 'text-base' : 'text-sm'} ${isOwn ? 'text-white' : 'text-slate-900'}`}>
                             <ReactMarkdown remarkPlugins={[remarkGfm]}
                               components={{
                                 p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
@@ -1998,7 +2113,7 @@ export default function EduTechExOSDashboard() {
                 setMentionMenuOpen(/@[\w\s.-]*$/.test(next));
               }}
               onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }
+                if (event.key === 'Enter' && !event.shiftKey && settings.enterToSend) { event.preventDefault(); sendMessage(); }
                 if (event.key === 'Escape') { setEmojiMenuOpen(false); setMentionMenuOpen(false); }
               }}
               placeholder={`Message #${channel?.name ?? ''}… (Enter to send · Shift+Enter for new line)`}
@@ -2106,36 +2221,60 @@ export default function EduTechExOSDashboard() {
                   >
                     Extract Action Items
                   </button>
-                  {tasks.slice(0, 8).map((task) => (
-                    <article
-                      key={task.id}
-                      className={`rounded-xl border border-slate-200 bg-white p-3 ${task.done ? 'opacity-55' : ''}`}
-                    >
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => toggleTask(task.id)}
-                          className="mt-0.5 text-slate-300 hover:text-indigo-600"
-                        >
-                          {task.done ? (
-                            <CheckSquare size={17} className="text-emerald-500" />
-                          ) : (
-                            <Square size={17} />
-                          )}
-                        </button>
-                        <div className="min-w-0 flex-1">
-                          <p
-                            className={`text-sm font-bold leading-5 text-slate-800 ${task.done ? 'line-through' : ''}`}
+                  {(() => {
+                    const channelName = `#${channel?.name ?? activeChannel}`;
+                    const myEmail = currentUserEmail;
+                    const myName = currentUser?.name?.toLowerCase() ?? '';
+                    const channelTasks = kanbanTasks.filter((t) => {
+                      if (t.sourceChannel !== channelName) return false;
+                      // Show the task only to the assigned person
+                      if (t.assigneeEmail) return t.assigneeEmail.toLowerCase() === myEmail;
+                      return t.assignee.toLowerCase() === myName;
+                    });
+                    if (channelTasks.length === 0) {
+                      return (
+                        <p className="mt-4 text-center text-xs font-semibold text-slate-400 leading-relaxed">
+                          No tasks assigned to you in {channelName}.<br />
+                          Ask a teammate to @mention you with an action word, or use &ldquo;Extract Action Items&rdquo; above.
+                        </p>
+                      );
+                    }
+                    return channelTasks.slice(0, 10).map((task) => (
+                      <article
+                        key={task.id}
+                        className={`rounded-xl border border-slate-200 bg-white p-3 ${task.status === 'done' ? 'opacity-55' : ''}`}
+                      >
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() =>
+                              updateKanbanTaskStatus(
+                                task.id,
+                                task.status === 'done' ? 'todo' : 'done'
+                              )
+                            }
+                            className="mt-0.5 text-slate-300 hover:text-indigo-600"
                           >
-                            {task.text}
-                          </p>
-                          <div className="mt-3 flex items-center justify-between text-xs font-black text-slate-400">
-                            <span>{task.sourceChannel}</span>
-                            <span>{task.assigneeInitials}</span>
+                            {task.status === 'done' ? (
+                              <CheckSquare size={17} className="text-emerald-500" />
+                            ) : (
+                              <Square size={17} />
+                            )}
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className={`text-sm font-bold leading-5 text-slate-800 ${task.status === 'done' ? 'line-through' : ''}`}
+                            >
+                              {task.text}
+                            </p>
+                            <div className="mt-3 flex items-center justify-between text-xs font-black text-slate-400">
+                              <span>{task.sourceChannel}</span>
+                              <span>{task.assigneeInitials}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </article>
-                  ))}
+                      </article>
+                    ));
+                  })()}
                 </div>
               )}
             </div>
@@ -2198,120 +2337,521 @@ export default function EduTechExOSDashboard() {
 
       {settingsOpen && (
         <div
-          className="fixed inset-0 z-[115] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm dark:bg-black/70"
+          className="fixed inset-0 z-[115] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm dark:bg-black/70"
           onClick={() => setSettingsOpen(false)}
         >
-          <form
-            onSubmit={saveSettings}
-            className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
-            onClick={(event) => event.stopPropagation()}
+          <div
+            className="flex w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+            style={{ maxHeight: '90vh' }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-950 px-5 py-4 text-white dark:border-slate-700">
-              <div>
-                <h2 className="text-lg font-black tracking-tight">Settings</h2>
-                <p className="mt-1 text-sm font-semibold text-slate-300 dark:text-slate-400">
-                  Profile, meeting link, and notification controls.
+            {/* ── Left nav ──────────────────────────────────────── */}
+            <div className="flex w-44 shrink-0 flex-col border-r border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60">
+              <div className="flex h-14 items-center gap-2.5 border-b border-slate-200 px-4 dark:border-slate-700">
+                <Settings size={16} className="shrink-0 text-indigo-600" />
+                <span className="text-sm font-black text-slate-900 dark:text-slate-100">Settings</span>
+              </div>
+              <nav className="flex-1 space-y-0.5 p-2">
+                {([
+                  { id: 'profile',       icon: UserCheck,  label: 'Profile'       },
+                  { id: 'appearance',    icon: Palette,    label: 'Appearance'    },
+                  { id: 'notifications', icon: Bell,       label: 'Notifications' },
+                  { id: 'meeting',       icon: Video,      label: 'Meeting'       },
+                  { id: 'security',      icon: ShieldCheck, label: 'Security'     },
+                ] as const).map(({ id, icon: Icon, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setSettingsTab(id)}
+                    className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-bold transition-all ${
+                      settingsTab === id
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/60'
+                    }`}
+                  >
+                    <Icon size={15} />
+                    {label}
+                  </button>
+                ))}
+              </nav>
+              {/* Sign out shortcut */}
+              <div className="border-t border-slate-200 p-2 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem('edutechex_token');
+                    toast.success('Signed out');
+                    router.push('/sign-up-login-screen');
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                  <LogOut size={15} />
+                  Sign out
+                </button>
+              </div>
+            </div>
+
+            {/* ── Right content ──────────────────────────────────── */}
+            <form onSubmit={saveSettings} className="flex min-h-0 flex-1 flex-col">
+              {/* Tab header */}
+              <div className="flex h-14 items-center justify-between border-b border-slate-200 px-5 dark:border-slate-700">
+                <h2 className="text-base font-black text-slate-900 dark:text-slate-100">
+                  {settingsTab === 'profile'       && 'Profile'}
+                  {settingsTab === 'appearance'    && 'Appearance'}
+                  {settingsTab === 'notifications' && 'Notifications'}
+                  {settingsTab === 'meeting'       && 'Meeting'}
+                  {settingsTab === 'security'      && 'Security'}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setSettingsOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+                  title="Close settings"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Scrollable body */}
+              <div className="flex-1 space-y-4 overflow-y-auto p-5">
+
+                {/* ── PROFILE ─────────────────────────────────────── */}
+                {settingsTab === 'profile' && (
+                  <>
+                    {/* Avatar card */}
+                    <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-lg font-black text-white shadow-lg shadow-indigo-200">
+                        {currentUser?.initials ?? 'G'}
+                      </div>
+                      <div>
+                        <p className="font-black text-slate-900 dark:text-slate-100">{settings.displayName || currentUser?.name}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{currentUser?.email}</p>
+                        <span className="mt-1 inline-flex rounded-md bg-indigo-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                          {currentUser?.role}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Display name */}
+                    <div>
+                      <label className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+                        Display name
+                      </label>
+                      <input
+                        value={settings.displayName}
+                        onChange={(e) => setSettings((v) => ({ ...v, displayName: e.target.value }))}
+                        placeholder={currentUser?.name ?? 'Your name'}
+                        className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500"
+                      />
+                      <p className="mt-1.5 text-xs text-slate-400">This name appears in chat messages and the team list.</p>
+                    </div>
+
+                    {/* Status */}
+                    <div>
+                      <label className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+                        Status
+                      </label>
+                      <div className="mt-2 grid grid-cols-4 gap-2">
+                        {([
+                          { id: 'online',  label: 'Online',  dot: 'bg-emerald-500' },
+                          { id: 'away',    label: 'Away',    dot: 'bg-amber-400'  },
+                          { id: 'busy',    label: 'Busy',    dot: 'bg-red-500'    },
+                          { id: 'offline', label: 'Offline', dot: 'bg-slate-300'  },
+                        ] as const).map(({ id, label, dot }) => (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => setSettings((v) => ({ ...v, status: id }))}
+                            className={`flex flex-col items-center gap-1.5 rounded-xl border py-3 text-xs font-bold transition-all ${
+                              settings.status === id
+                                ? 'border-indigo-300 bg-indigo-50 text-indigo-700 shadow-sm dark:border-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300'
+                                : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                            }`}
+                          >
+                            <span className={`h-3 w-3 rounded-full ${dot}`} />
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-1.5 text-xs text-slate-400">Your status dot is visible to everyone in the People list.</p>
+                    </div>
+                  </>
+                )}
+
+                {/* ── APPEARANCE ──────────────────────────────────── */}
+                {settingsTab === 'appearance' && (
+                  <>
+                    {/* Dark mode */}
+                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                          {darkMode ? <Moon size={16} /> : <Sun size={16} />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-slate-800 dark:text-slate-200">Dark mode</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Currently {darkMode ? 'on' : 'off'} — affects the whole app</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { toggleTheme(); storeDarkModeToggle(); }}
+                        className={`relative h-6 w-11 rounded-full transition-colors ${darkMode ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                      >
+                        <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${darkMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </div>
+
+                    {/* Compact chat */}
+                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                          <Layout size={16} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-slate-800 dark:text-slate-200">Compact chat</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Reduce spacing between messages</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSettings((v) => ({ ...v, compactChat: !v.compactChat }))}
+                        className={`relative h-6 w-11 rounded-full transition-colors ${settings.compactChat ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                      >
+                        <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.compactChat ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </div>
+
+                    {/* Font size */}
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                          <Type size={16} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-slate-800 dark:text-slate-200">Message font size</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Controls the size of text in chat bubbles</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pl-12">
+                        {([
+                          { id: 'normal', label: 'Normal (14px)' },
+                          { id: 'large',  label: 'Large (16px)'  },
+                        ] as const).map(({ id, label }) => (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => setSettings((v) => ({ ...v, fontSize: id }))}
+                            className={`flex-1 rounded-xl border py-2.5 text-xs font-bold transition-all ${
+                              settings.fontSize === id
+                                ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300'
+                                : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Enter to send */}
+                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                          <Send size={15} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-slate-800 dark:text-slate-200">Enter to send</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {settings.enterToSend
+                              ? 'Enter sends · Shift+Enter for new line'
+                              : 'Click the send button to post'}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSettings((v) => ({ ...v, enterToSend: !v.enterToSend }))}
+                        className={`relative h-6 w-11 rounded-full transition-colors ${settings.enterToSend ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                      >
+                        <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.enterToSend ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* ── NOTIFICATIONS ───────────────────────────────── */}
+                {settingsTab === 'notifications' && (
+                  <>
+                    {/* Email */}
+                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400">
+                          <Mail size={16} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-slate-800 dark:text-slate-200">Email on @mention</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Send an email when someone @mentions you</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSettings((v) => ({ ...v, emailNotifications: !v.emailNotifications }))}
+                        className={`relative h-6 w-11 rounded-full transition-colors ${settings.emailNotifications ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                      >
+                        <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.emailNotifications ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </div>
+
+                    {/* Desktop notifications */}
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400">
+                            <Monitor size={16} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-black text-slate-800 dark:text-slate-200">Desktop notifications</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Browser pop-up for incoming messages</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = !settings.desktopNotifications;
+                            setSettings((v) => ({ ...v, desktopNotifications: next }));
+                            if (next && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+                              Notification.requestPermission();
+                            }
+                          }}
+                          className={`relative h-6 w-11 rounded-full transition-colors ${settings.desktopNotifications ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                        >
+                          <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.desktopNotifications ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+                      {settings.desktopNotifications && typeof Notification !== 'undefined' && Notification.permission === 'denied' && (
+                        <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                          ⚠ Notifications are blocked in your browser. Go to browser Site Settings to allow them.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Sound */}
+                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">
+                          <Volume2 size={16} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-slate-800 dark:text-slate-200">Sound alerts</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Play a soft chime when new messages arrive</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={playNotificationSound}
+                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800"
+                          title="Preview sound"
+                        >
+                          Preview
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSettings((v) => ({ ...v, soundNotifications: !v.soundNotifications }))}
+                          className={`relative h-6 w-11 rounded-full transition-colors ${settings.soundNotifications ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                        >
+                          <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.soundNotifications ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* ── MEETING ─────────────────────────────────────── */}
+                {settingsTab === 'meeting' && (
+                  <>
+                    {/* Current schedule */}
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                      <p className="mb-3 text-xs font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                        Scheduled meeting links
+                      </p>
+                      <div className="space-y-2.5">
+                        {[
+                          { days: 'Mon – Thu (before 2 PM)', label: 'Main meet',      link: DEFAULT_COMPANY_MEET_LINK,     dot: 'bg-indigo-500' },
+                          { days: 'Thursday from 2 PM',      label: 'Thursday PM',    link: THURSDAY_AFTERNOON_MEET_LINK,  dot: 'bg-amber-500'  },
+                          { days: 'Friday (all day)',         label: 'Friday meet',    link: FRIDAY_MEET_LINK,              dot: 'bg-emerald-500'},
+                          { days: 'Saturday & Sunday',        label: 'No meeting',     link: null,                          dot: 'bg-slate-300'  },
+                        ].map(({ days, label, link, dot }) => (
+                          <div key={label} className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-2.5 dark:border-slate-700 dark:bg-slate-800/50">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} />
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{label}</p>
+                                <p className="text-[11px] text-slate-400">{days}</p>
+                              </div>
+                            </div>
+                            {link ? (
+                              <a
+                                href={link}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="shrink-0 rounded-lg bg-indigo-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400"
+                              >
+                                Open ↗
+                              </a>
+                            ) : (
+                              <span className="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:bg-slate-700 dark:text-slate-500">
+                                Off
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Override main link */}
+                    <div>
+                      <label className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+                        Override main meet link
+                      </label>
+                      <input
+                        value={settings.meetLink}
+                        onChange={(e) => setSettings((v) => ({ ...v, meetLink: e.target.value }))}
+                        placeholder={DEFAULT_COMPANY_MEET_LINK}
+                        className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500"
+                      />
+                      <p className="mt-1.5 text-xs text-slate-400">Replaces the Mon–Thu default link. Leave blank to use the built-in link.</p>
+                    </div>
+                  </>
+                )}
+                {/* ── SECURITY ────────────────────────────────────── */}
+                {settingsTab === 'security' && (
+                  <>
+                    {/* Info banner */}
+                    <div className="flex items-start gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/20">
+                      <ShieldCheck size={18} className="mt-0.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                      <div>
+                        <p className="text-sm font-black text-indigo-800 dark:text-indigo-300">Change your password</p>
+                        <p className="mt-0.5 text-xs text-indigo-600 dark:text-indigo-400">
+                          You must enter your current password to set a new one. Minimum 8 characters.
+                          System accounts (admin, core team) must contact admin to change passwords.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Change password — uses a div + button, NOT a nested form (HTML forbids form-in-form) */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+                          Current password
+                        </label>
+                        <input
+                          type="password"
+                          value={pwCurrent}
+                          onChange={(e) => setPwCurrent(e.target.value)}
+                          placeholder="Enter your current password"
+                          autoComplete="current-password"
+                          required
+                          className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+                          New password
+                        </label>
+                        <input
+                          type="password"
+                          value={pwNew}
+                          onChange={(e) => setPwNew(e.target.value)}
+                          placeholder="Min 8 characters"
+                          autoComplete="new-password"
+                          required
+                          className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500"
+                        />
+                        {/* Strength bar */}
+                        {pwNew.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            <div className="flex gap-1">
+                              {[8, 10, 12].map((threshold, i) => (
+                                <div
+                                  key={i}
+                                  className={`h-1.5 flex-1 rounded-full transition-colors ${
+                                    pwNew.length >= threshold
+                                      ? i === 0 ? 'bg-red-400' : i === 1 ? 'bg-amber-400' : 'bg-emerald-500'
+                                      : 'bg-slate-200 dark:bg-slate-700'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <p className="text-[10px] text-slate-400">
+                              {pwNew.length < 8  ? 'Too short' :
+                               pwNew.length < 10 ? 'Weak — try adding numbers or symbols' :
+                               pwNew.length < 12 ? 'Moderate' : 'Strong ✓'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+                          Confirm new password
+                        </label>
+                        <input
+                          type="password"
+                          value={pwConfirm}
+                          onChange={(e) => setPwConfirm(e.target.value)}
+                          placeholder="Repeat new password"
+                          autoComplete="new-password"
+                          required
+                          className={`mt-2 h-11 w-full rounded-xl border px-3 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-100 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500 ${
+                            pwConfirm && pwNew !== pwConfirm
+                              ? 'border-red-400 focus:border-red-400'
+                              : 'border-slate-200 focus:border-indigo-400 dark:border-slate-600'
+                          }`}
+                        />
+                        {pwConfirm && pwNew !== pwConfirm && (
+                          <p className="mt-1.5 text-xs font-semibold text-red-500">Passwords do not match.</p>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleChangePassword}
+                        disabled={pwLoading || !pwCurrent || !pwNew || pwNew !== pwConfirm}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-black text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                      >
+                        {pwLoading ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
+                        {pwLoading ? 'Changing password…' : 'Change password'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50/80 px-5 py-4 dark:border-slate-700 dark:bg-slate-800/50">
+                <p className="text-xs font-semibold text-slate-400">
+                  {settingsTab === 'security' ? 'Password is saved separately — use the button above.' : 'Changes apply immediately after saving.'}
                 </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSettingsOpen(false)}
+                    className="h-9 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black uppercase tracking-[0.1em] text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="h-9 rounded-xl bg-indigo-600 px-5 text-xs font-black uppercase tracking-[0.1em] text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                  >
+                    Save settings
+                  </button>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(false)}
-                className="rounded-lg p-2 text-slate-300 hover:bg-white/10 hover:text-white dark:text-slate-500"
-                title="Close settings"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="grid gap-4 p-5">
-              <label className="block">
-                <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
-                  Display name
-                </span>
-                <input
-                  value={settings.displayName}
-                  onChange={(event) =>
-                    setSettings((value) => ({ ...value, displayName: event.target.value }))
-                  }
-                  className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500"
-                  placeholder={currentUser?.name ?? 'Your name'}
-                />
-              </label>
-
-              <label className="block">
-                <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
-                  Company meeting link
-                </span>
-                <input
-                  value={settings.meetLink}
-                  onChange={(event) =>
-                    setSettings((value) => ({ ...value, meetLink: event.target.value }))
-                  }
-                  className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500"
-                  placeholder={DEFAULT_COMPANY_MEET_LINK}
-                />
-              </label>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
-                  <span>
-                    <span className="block text-sm font-black text-slate-800 dark:text-slate-200">
-                      Email mentions
-                    </span>
-                    <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400">
-                      Send email when people are mentioned.
-                    </span>
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={settings.emailNotifications}
-                    onChange={(event) =>
-                      setSettings((value) => ({
-                        ...value,
-                        emailNotifications: event.target.checked,
-                      }))
-                    }
-                    className="h-5 w-5 dark:accent-indigo-500"
-                  />
-                </label>
-
-                <label className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
-                  <span>
-                    <span className="block text-sm font-black text-slate-800 dark:text-slate-200">
-                      Compact chat
-                    </span>
-                    <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400">
-                      Use tighter message spacing.
-                    </span>
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={settings.compactChat}
-                    onChange={(event) =>
-                      setSettings((value) => ({ ...value, compactChat: event.target.checked }))
-                    }
-                    className="h-5 w-5 dark:accent-indigo-500"
-                  />
-                </label>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/50">
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(false)}
-                className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black uppercase tracking-[0.1em] text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="h-10 rounded-xl bg-indigo-600 px-4 text-xs font-black uppercase tracking-[0.1em] text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-              >
-                Save settings
-              </button>
-            </div>
-          </form>
+            </form>
+          </div>
         </div>
       )}
 
@@ -2693,7 +3233,7 @@ export default function EduTechExOSDashboard() {
           <div className="h-full w-full max-w-4xl">
             <WikiPanel
               onClose={() => { setWikiOpen(false); scrollToBottom(); }}
-              activeChannel={channel?.id ?? activeChannel}
+              activeChannel={`personal-${currentUser?.email ?? 'guest'}`}
             />
           </div>
         </div>

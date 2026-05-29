@@ -6,7 +6,6 @@ import {
   Book,
   Plus,
   Trash2,
-  Share2,
   Bold,
   Italic,
   Code,
@@ -14,6 +13,7 @@ import {
   List,
   FileText,
   Clock,
+  Lock,
 } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
 
@@ -43,12 +43,12 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
   const addWikiPage = useDashboardStore((s) => s.addWikiPage);
   const updateWikiPage = useDashboardStore((s) => s.updateWikiPage);
   const deleteWikiPage = useDashboardStore((s) => s.deleteWikiPage);
-  const channels = useDashboardStore((s) => s.channels);
   const addMessage = useDashboardStore((s) => s.addMessage);
 
+  // personal-* channels are private notepads — not shared with anyone
+  const isPersonal = activeChannel.startsWith('personal-');
+
   const pages = wikiPages[activeChannel] ?? [];
-  const channelName =
-    channels.find((c) => c.id === activeChannel)?.name ?? activeChannel;
 
   const [selectedPageId, setSelectedPageId] = useState<string | null>(
     pages[0]?.id ?? null
@@ -220,13 +220,18 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
       >
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-500/20">
-            <Book size={16} className="text-indigo-300" strokeWidth={2.5} />
+            {isPersonal
+              ? <Lock size={16} className="text-indigo-300" strokeWidth={2.5} />
+              : <Book size={16} className="text-indigo-300" strokeWidth={2.5} />
+            }
           </div>
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">
-              #{channelName}
+              {isPersonal ? 'Private · only you can see this' : 'Knowledge Base'}
             </p>
-            <p className="text-sm font-black leading-none text-white">Wiki</p>
+            <p className="text-sm font-black leading-none text-white">
+              {isPersonal ? 'My Notes' : 'Wiki'}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -323,15 +328,19 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
             /* Empty state */
             <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
-                <Book size={28} className="text-indigo-300" strokeWidth={1.5} />
+                {isPersonal
+                  ? <Lock size={28} className="text-indigo-300" strokeWidth={1.5} />
+                  : <Book size={28} className="text-indigo-300" strokeWidth={1.5} />
+                }
               </div>
               <div>
                 <p className="text-sm font-bold text-slate-700">
-                  No pages yet
+                  {isPersonal ? 'Your notepad is empty' : 'No pages yet'}
                 </p>
                 <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                  Create your first wiki page to capture knowledge for this
-                  channel.
+                  {isPersonal
+                    ? 'Jot down ideas, tasks, or anything personal. Only you can see these notes.'
+                    : 'Create your first wiki page to capture knowledge for this channel.'}
                 </p>
               </div>
               <button
@@ -340,7 +349,7 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
                 className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-indigo-500 active:scale-95"
               >
                 <Plus size={15} strokeWidth={2.5} />
-                Create your first wiki page
+                {isPersonal ? 'Create your first note' : 'Create your first wiki page'}
               </button>
             </div>
           ) : (
@@ -426,21 +435,29 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
                     <Trash2 size={12} strokeWidth={2.5} />
                     Delete
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleShareToChat}
-                    disabled={!title.trim() && !content.trim()}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-[11px] font-black uppercase tracking-[0.1em] text-white transition-all disabled:cursor-not-allowed disabled:opacity-40"
-                    style={{
-                      background:
-                        title.trim() || content.trim()
-                          ? 'linear-gradient(135deg, #4f46e5, #7c3aed)'
-                          : '#94a3b8',
-                    }}
-                  >
-                    <Share2 size={12} strokeWidth={2.5} />
-                    Share to chat
-                  </button>
+                  {/* Share to chat is only available for channel wikis, not personal notes */}
+                  {!isPersonal && (
+                    <button
+                      type="button"
+                      onClick={handleShareToChat}
+                      disabled={!title.trim() && !content.trim()}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-[11px] font-black uppercase tracking-[0.1em] text-white transition-all disabled:cursor-not-allowed disabled:opacity-40"
+                      style={{
+                        background:
+                          title.trim() || content.trim()
+                            ? 'linear-gradient(135deg, #4f46e5, #7c3aed)'
+                            : '#94a3b8',
+                      }}
+                    >
+                      Share to chat
+                    </button>
+                  )}
+                  {isPersonal && (
+                    <div className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-200 py-2.5 text-[11px] font-semibold text-slate-400">
+                      <Lock size={11} strokeWidth={2.5} />
+                      Private — only visible to you
+                    </div>
+                  )}
                 </div>
               </div>
             </>

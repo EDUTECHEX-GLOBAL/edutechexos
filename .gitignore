@@ -35,8 +35,12 @@ coverage/
 jest-test-results.json
 
 # Optional: if using IDEs
-.vscode/
+# .vscode/settings.json is committed (disables CSS validator warnings for Tailwind)
+.vscode/*.code-workspace
 .idea/
 
 # Optional: if using TurboRepo or monorepo
 turbo/
+
+# User uploaded files
+public/uploads/

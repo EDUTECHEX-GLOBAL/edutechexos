@@ -240,20 +240,45 @@
   display: none;
 }
 
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-primary: #1a1a1a;
-    --bg-glass: var(--bg-glass-dark);
-    --text-primary: #a0d8a7;
-  }
-  .composer {
-    background: var(--bg-glass);
-    border-color: rgba(255, 255, 255, 0.2);
-  }
-  .dashboard-root {
-    background: var(--bg-primary);
-  }
+/* ─── Dark mode ──────────────────────────────────────────────────────────────
+   Driven by the .dark class toggled on <html> by the Zustand store / ThemeProvider.
+   Using class-based dark mode (not prefers-color-scheme) so the toggle button
+   actually works.                                                              */
+html.dark {
+  --bg-primary: #0f172a;
+  --bg-glass: var(--bg-glass-dark);
+  --text-primary: #a0d8a7;
+}
+.dark .dashboard-root {
+  background: var(--bg-primary);
+}
+.dark .workspace-sidebar {
+  background: linear-gradient(180deg, #1e293b, #0f172a);
+  border-right-color: #1e293b;
+}
+.dark .workspace-chat {
+  background: rgba(15, 23, 42, 0.97);
+}
+.dark .chat-header {
+  background: rgba(15, 23, 42, 0.85);
+  border-bottom-color: #1e293b;
+}
+.dark .copilot-panel {
+  background: #0f172a;
+  border-left-color: #1e293b;
+}
+.dark .date-divider {
+  color: #475569;
+}
+.dark .date-divider span {
+  background: #1e293b;
+}
+.dark .chat-scroll {
+  scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
+}
+.dark .composer {
+  background: var(--bg-glass);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 /* Tablet */
@@ -261,8 +286,21 @@
   .dashboard-workspace {
     grid-template-columns: 16.5rem minmax(0, 1fr);
   }
+  /* Hide panel in the grid by default at this width */
   .copilot-panel {
     display: none;
+  }
+  /* When open (.copilot-panel-closed is NOT present), show as a fixed side-drawer
+     so the AI button still works even though the grid only has 2 columns.       */
+  .copilot-panel:not(.copilot-panel-closed) {
+    display: grid;
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: min(27.25rem, 100vw);
+    z-index: 100;
+    box-shadow: -4px 0 32px rgba(0, 0, 0, 0.2);
   }
 }
 

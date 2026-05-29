@@ -51,6 +51,7 @@ export type KanbanTask = {
   text: string;
   assignee: string;
   assigneeInitials: string;
+  assigneeEmail?: string;   // used to show the task only to the assigned person
   sourceChannel: string;
   status: 'todo' | 'inprogress' | 'done';
   createdAt: string;
@@ -663,6 +664,8 @@ export const useDashboardStore = create<DashboardState>()(
         pinnedMessageIds: s.pinnedMessageIds,
         // kanbanTasks intentionally excluded — now fetched from backend on load
         wikiPages: s.wikiPages,
+        // messages persisted so they survive refresh when backend is sleeping (Render free tier)
+        messages: s.messages,
       }),
     }
   )

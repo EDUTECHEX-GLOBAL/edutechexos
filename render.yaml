@@ -2,12 +2,29 @@ services:
   - type: web
     name: edutechexos-backend
     env: node
-    buildCommand: npm install
-    startCommand: node backend/server.js
+    # Build and run from the backend sub-folder so its own package.json
+    # (which lists express, cors, socket.io, etc. as *dependencies*, not devDependencies)
+    # is used — avoids production builds skipping devDeps from the root.
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && node server.js
+    healthCheckPath: /health
     envVars:
+      # Required — set these in the Render dashboard (Environment tab)
       - key: MONGODB_URI
         sync: false
-      - key: PORT
-        value: "10002"
-    healthCheckPath: /health
-    # optional: autoDeploy: true
+      # Optional — enables AI features (Copilot). Falls back gracefully if missing.
+      - key: OPENAI_API_KEY
+        sync: false
+      # Optional — enables real email delivery. Falls back to Ethereal preview if missing.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false

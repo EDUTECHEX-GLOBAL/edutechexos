@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   LayoutGrid,
@@ -184,7 +184,7 @@ function TaskCard({
 }
 
 export default function KanbanBoard({ onClose }: KanbanBoardProps) {
-  const kanbanTasks = useDashboardStore((s) => s.kanbanTasks);
+  const allKanbanTasks = useDashboardStore((s) => s.kanbanTasks);
   const addKanbanTask = useDashboardStore((s) => s.addKanbanTask);
   const updateKanbanTaskStatus = useDashboardStore(
     (s) => s.updateKanbanTaskStatus
@@ -193,23 +193,45 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
   const activeChannel = useDashboardStore((s) => s.activeChannel);
   const channels = useDashboardStore((s) => s.channels);
 
+  // Read current user identity from localStorage (same key the dashboard uses)
+  const [currentUserEmail, setCurrentUserEmail] = useState('');
+  const [currentUserName, setCurrentUserName] = useState('');
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('edutechex_token');
+      if (raw) {
+        const { user } = JSON.parse(raw);
+        setCurrentUserEmail((user?.email ?? '').toLowerCase());
+        setCurrentUserName((user?.name ?? '').toLowerCase());
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   const [newTaskText, setNewTaskText] = useState('');
   const [newTaskAssignee, setNewTaskAssignee] = useState('');
 
   const channelName =
     channels.find((c) => c.id === activeChannel)?.name ?? activeChannel;
 
+  // Only show tasks that belong to the current user
+  const kanbanTasks = allKanbanTasks.filter((t) => {
+    if (t.assigneeEmail) return t.assigneeEmail.toLowerCase() === currentUserEmail;
+    return t.assignee.toLowerCase() === currentUserName;
+  });
+
   const tasksByStatus = (status: Status) =>
     kanbanTasks.filter((t) => t.status === status);
 
   const handleAddTask = () => {
     if (!newTaskText.trim()) return;
-    const assignee = newTaskAssignee.trim() || 'Unassigned';
+    // Default assignee to the current user so self-added tasks are also private
+    const assignee = newTaskAssignee.trim() || currentUserName || 'Unassigned';
     const assigneeInitials = getInitials(assignee);
     addKanbanTask({
       text: newTaskText.trim(),
       assignee,
       assigneeInitials,
+      assigneeEmail: currentUserEmail || undefined,
       sourceChannel: channelName,
       status: 'todo',
     });
@@ -252,7 +274,7 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-indigo-500/20 px-2.5 py-1 text-[11px] font-black text-indigo-300">
-            {kanbanTasks.length} task{kanbanTasks.length !== 1 ? 's' : ''}
+            {kanbanTasks.length} task{kanbanTasks.length !== 1 ? 's' : ''} · yours
           </span>
           <button
             type="button"

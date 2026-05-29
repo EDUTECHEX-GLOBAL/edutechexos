@@ -4,7 +4,7 @@ const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -435,6 +435,43 @@ app.post('/api/auth/reset-password', async (req, res) => {
     res.json({ success: true, message: 'Password reset successfully. You can now sign in.' });
   } catch (err) {
     console.error('[reset-password]', err);
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// POST /api/auth/change-password — verify current password then set a new one
+app.post('/api/auth/change-password', async (req, res) => {
+  try {
+    const { email, currentPassword, newPassword } = req.body;
+    if (!email || !currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, error: 'Email, current password, and new password are required.' });
+    }
+    const emailClean = String(email).trim().toLowerCase();
+
+    // Hardcoded system accounts cannot self-change password
+    if (VALID_ACCOUNTS.some((a) => a.email === emailClean)) {
+      return res.status(400).json({
+        success: false,
+        error: 'System accounts cannot change their password here. Ask the admin to update it directly.',
+      });
+    }
+
+    if (String(newPassword).length < 8) {
+      return res.status(400).json({ success: false, error: 'New password must be at least 8 characters.' });
+    }
+
+    const request = await AccessRequest.findOne({ email: emailClean }).lean();
+    if (!request) {
+      return res.status(404).json({ success: false, error: 'Account not found.' });
+    }
+    if (request.password !== currentPassword) {
+      return res.status(401).json({ success: false, error: 'Current password is incorrect.' });
+    }
+
+    await AccessRequest.findOneAndUpdate({ email: emailClean }, { $set: { password: newPassword } });
+    res.json({ success: true, message: 'Password changed successfully.' });
+  } catch (err) {
+    console.error('[change-password]', err);
     res.status(500).json({ success: false, error: String(err) });
   }
 });

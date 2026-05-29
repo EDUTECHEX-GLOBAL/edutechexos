@@ -24,9 +24,12 @@ export function getSocket(): Socket {
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
+      // Cap retries so a sleeping Render backend doesn't spam hundreds of
+      // connect_error logs per session. 8 attempts × 30 s max delay ≈ 4 min.
+      reconnectionAttempts: 8,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 30000,
+      timeout: 10000,
     });
 
     socket.on('connect', () => {
@@ -37,8 +40,14 @@ export function getSocket(): Socket {
       console.log('[socket] disconnected:', reason);
     });
 
+    let connectErrorCount = 0;
     socket.on('connect_error', (err) => {
-      console.warn('[socket] connect_error:', err.message);
+      connectErrorCount += 1;
+      if (connectErrorCount <= 3) {
+        console.warn('[socket] connect_error:', err.message);
+      } else if (connectErrorCount === 4) {
+        console.warn('[socket] Backend unreachable — suppressing further connect_error logs. Real-time features are offline.');
+      }
     });
   }
   return socket;
