@@ -12,7 +12,7 @@ const httpServer = http.createServer(app);
 // Allow requests from the Vercel frontend and local dev
 const ALLOWED_ORIGINS = [
   'https://edutechexos.vercel.app',
-  'https://edutechexos-git-main.vercel.app',
+
   /\.vercel\.app$/,           // any Vercel preview deploy
   'http://localhost:3000',
   'http://localhost:10006',
@@ -50,23 +50,26 @@ io.on('connection', (socket) => {
   });
 });
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. curl, Render health-check)
-      if (!origin) return callback(null, true);
-      const allowed = ALLOWED_ORIGINS.some((o) =>
-        typeof o === 'string' ? o === origin : o.test(origin)
-      );
-      if (allowed) return callback(null, true);
-      console.warn(`[CORS] Blocked origin: ${origin}`);
-      callback(new Error(`CORS policy: origin ${origin} not allowed`));
-    },
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. curl, Render health-check)
+    if (!origin) return callback(null, true);
+    const allowed = ALLOWED_ORIGINS.some((o) =>
+      typeof o === 'string' ? o === origin : o.test(origin)
+    );
+    if (allowed) return callback(null, true);
+    console.warn(`[CORS] Blocked origin: ${origin}`);
+    callback(new Error(`CORS policy: origin ${origin} not allowed`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
+
+// Handle OPTIONS preflight for all routes (required for requests with
+// Content-Type: application/json or Authorization headers)
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // --- 1. MongoDB Connection ---
@@ -749,6 +752,16 @@ app.post('/api/notifications', async (req, res) => {
 const PORT = process.env.PORT || 10002;
 httpServer.listen(PORT, () => {
   console.log(`Backend Server running on port ${PORT}`);
+
+  // Ping /health every 14 min to prevent Render free tier from sleeping.
+  // Render spins down after 15 min of inactivity; a missed preflight during
+  // the ~30s cold-start shows up in the browser as a CORS error.
+  const SELF_URL = process.env.RENDER_EXTERNAL_URL;
+  if (SELF_URL) {
+    setInterval(() => {
+      fetch(`${SELF_URL}/health`).catch(() => {});
+    }, 14 * 60 * 1000);
+  }
 });
 
 httpServer.on('error', (err) => {
