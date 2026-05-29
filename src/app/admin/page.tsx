@@ -32,7 +32,7 @@ type AccessRequest = {
   status: 'pending' | 'approved' | 'rejected';
   requestedAt: string;
 };
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+const API_BASE = '';
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
 
 export default function AdminPage() {
