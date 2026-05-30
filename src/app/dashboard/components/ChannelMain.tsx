@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Users, Search, Video, Bot, FileText, Activity, Pin, X, MessageSquare, LayoutGrid, BookOpen, BarChart2, Bookmark, Phone, ChevronDown } from 'lucide-react';
 import MessageFeed from './MessageFeed';
 import MessageInput from './MessageInput';
+import TypingIndicator from './TypingIndicator';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { toast } from 'sonner';
 
@@ -197,13 +198,7 @@ export default function ChannelMain({
           </div>
 
           {/* Typing indicator */}
-          <div className="px-5 pb-1 min-h-[18px]">
-            {typing.length > 0 && (
-              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 animate-pulse">
-                {typing.join(', ')} {typing.length === 1 ? 'is' : 'are'} typing…
-              </p>
-            )}
-          </div>
+          <TypingIndicator channelId={channel.id} />
 
           {/* Message input */}
           <div className="shrink-0 border-t border-slate-200/50 dark:border-slate-700/50 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md">

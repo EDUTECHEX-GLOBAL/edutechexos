@@ -20,6 +20,8 @@ import { getSocket } from '@/lib/socket';
 
 import MyActivityCalendar from './MyActivityCalendar';
 import SearchPanel from './SearchPanel';
+import FigmaPanel from './FigmaPanel';
+import CalendarPanel from './CalendarPanel';
 
 import UserProfileModal from './UserProfileModal';
 import WikiPanel from './WikiPanel';
@@ -69,6 +71,7 @@ import {
   X,
   Zap,
   Layout,
+  Layers,
 } from 'lucide-react';
 
 type AIMessage = {
@@ -452,6 +455,8 @@ export default function EduTechExOSDashboard() {
   const [kanbanOpen, setKanbanOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [bookmarksPanelOpen, setBookmarksPanelOpen] = useState(false);
+  const [figmaOpen, setFigmaOpen]       = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [profileMember, setProfileMember] = useState<(typeof members)[0] | null>(null);
   const currentMember = currentUser?.email
     ? members.find((member) => member.email.toLowerCase() === currentUser.email.toLowerCase())
@@ -1296,8 +1301,8 @@ export default function EduTechExOSDashboard() {
 
   function startNewMeeting() {
     if (!channel) return;
-    // Use only Google Meet — no third-party meeting sites
-    const meetLink = companyMeetLink;
+    // Open a brand-new Google Meet room instantly; post the link to chat
+    const meetLink = 'https://meet.google.com/new';
 
     addMessage(activeChannelId, {
       id: `meeting-started-${Date.now()}`,
@@ -1318,13 +1323,13 @@ export default function EduTechExOSDashboard() {
         actorInitials: currentUser?.initials ?? 'OS',
         actorColor: currentUserColor,
         channel: channel.name,
-        message: `started a meeting. Join on Google Meet: ${meetLink}`,
+        message: `started a Google Meet. Join: ${meetLink}`,
         recipientEmails: notifyMembers.map((member) => member.email),
       });
     }
 
     window.open(meetLink, '_blank');
-    toast.success('Google Meet link posted to chat!');
+    toast.success('Google Meet started! Link posted to chat.');
   }
 
 
@@ -1594,6 +1599,22 @@ export default function EduTechExOSDashboard() {
                 <BarChart2 size={18} />
               </button>
             )}
+            {/* ── New Feature Buttons ─────────────────────────── */}
+            <button
+              title="Figma Viewer — embed design files"
+              onClick={() => setFigmaOpen(true)}
+              className="hidden h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 xl:flex transition-colors"
+            >
+              <Layers size={18} />
+            </button>
+            <button
+              title="Team Calendar"
+              onClick={() => setCalendarOpen(true)}
+              className="hidden h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 xl:flex transition-colors"
+            >
+              <CalendarDays size={18} />
+            </button>
+
             <div className="relative">
               <button
                 onClick={() => setMeetMenuOpen((value) => !value)}
@@ -1691,6 +1712,18 @@ export default function EduTechExOSDashboard() {
                       <BarChart2 size={15} /> Analytics
                     </button>
                   )}
+                  <button
+                    onClick={() => { setMoreOpen(false); setFigmaOpen(true); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    <Layers size={15} /> Figma viewer
+                  </button>
+                  <button
+                    onClick={() => { setMoreOpen(false); setCalendarOpen(true); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    <CalendarDays size={15} /> Team calendar
+                  </button>
 
                 </div>
               )}
@@ -2399,6 +2432,10 @@ export default function EduTechExOSDashboard() {
         open={activityCalendarOpen}
         onClose={() => setActivityCalendarOpen(false)}
       />
+
+      {/* ── Feature panels ─────────────────────────────────────────── */}
+      {figmaOpen    && <FigmaPanel    onClose={() => setFigmaOpen(false)} />}
+      {calendarOpen && <CalendarPanel onClose={() => setCalendarOpen(false)} />}
 
       {settingsOpen && (
         <div

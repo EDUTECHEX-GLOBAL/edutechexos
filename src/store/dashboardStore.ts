@@ -172,15 +172,15 @@ const INITIAL_MEMBERS: Member[] = [
   { id: 'member-rk', initials: 'RK', name: 'Ram K Aluru', email: 'dev.rk@edutechex.in', role: 'Developer', status: 'online', color: '#7c3aed' },
   { id: 'member-sa', initials: 'SA', name: 'Sneha Agarwal', email: 'design.sa@edutechex.in', role: 'Designer', status: 'away', color: '#0891b2' },
   { id: 'member-tm', initials: 'TM', name: 'Tarun Mehta', email: 'tarun@edutechex.in', role: 'Lead', status: 'offline', color: '#059669' },
-  { id: 'member-mohan1', initials: 'MK', name: 'Mohan Kumar', email: 'mohan.kumar@edutechex.in', role: 'Developer', status: 'online', color: '#dc2626' },
-  { id: 'member-mohan2', initials: 'MR', name: 'Mohan Reddy', email: 'mohan.reddy@edutechex.in', role: 'Developer', status: 'online', color: '#eab308' },
-  { id: 'member-mohan3', initials: 'MS', name: 'Mohan Sen', email: 'mohan.sen@edutechex.in', role: 'Developer', status: 'online', color: '#0891b2' },
+  { id: 'member-mk', initials: 'MK', name: 'Mohan Kumar', email: 'mohan.kumar@edutechex.in', role: 'Developer', status: 'online', color: '#dc2626' },
+  { id: 'member-mr', initials: 'MR', name: 'Mohan Reddy', email: 'mohan.reddy@edutechex.in', role: 'Developer', status: 'online', color: '#eab308' },
+  { id: 'member-ms', initials: 'MS', name: 'Mohan Sen', email: 'mohan.sen@edutechex.in', role: 'Developer', status: 'online', color: '#0891b2' },
 ];
 
 const EXTRA_CH: Record<string, string> = {
   'member-ac': 'edutechex', 'member-rk': 'skillnaav', 'member-sa': 'skillnaav',
-  'member-tm': 'edutechexassessa', 'member-mohan1': 'skillnaav',
-  'member-mohan2': 'edutechexassessa', 'member-mohan3': 'edutechex',
+  'member-tm': 'edutechexassessa', 'member-mk': 'skillnaav',
+  'member-mr': 'edutechexassessa', 'member-ms': 'edutechex',
 };
 
 const INITIAL_CHANNELS: Channel[] = CHANNELS.map((ch) => {
@@ -653,7 +653,7 @@ export const useDashboardStore = create<DashboardState>()(
         })),
     }),
     {
-      name: 'edutechex-dashboard-v2',
+      name: 'edutechex-dashboard-v3',
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         channels: s.channels,
