@@ -49,3 +49,6 @@ public/uploads/
 
 # Dev-only scripts
 test_gemini.js
+
+# Backend lives in its own repo (edutechexos-backend)
+backend/
