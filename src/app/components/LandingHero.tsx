@@ -1,50 +1,7 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
-import {
-  Hash, Bell, Sun, CheckSquare, BookOpen,
-  Sparkles, Users, MessageCircle, ChevronDown,
-} from 'lucide-react';
-
-/* ── Floating chips data ─────────────────────────────────────────── */
-const leftChips = [
-  { icon: Hash,        label: '#general',           top: '22%', left: '4%',  delay: '0s'   },
-  { icon: Bell,        label: 'You were mentioned',  top: '36%', left: '1%',  delay: '0.5s' },
-  { icon: Sun,         label: 'Daily digest',        top: '52%', left: '5%',  delay: '1s'   },
-  { icon: CheckSquare, label: 'Task extracted',      top: '66%', left: '2%',  delay: '1.4s' },
-  { icon: BookOpen,    label: 'Wiki updated',        top: '79%', left: '6%',  delay: '0.8s' },
-];
-
-const rightChips = [
-  { icon: Sparkles,     label: 'AI Copilot',  top: '28%', right: '3%', delay: '0.3s' },
-  { icon: Users,        label: 'Team Hub',    top: '48%', right: '2%', delay: '0.9s' },
-  { icon: MessageCircle,label: 'New message', top: '66%', right: '4%', delay: '0.6s' },
-];
-
-function Chip({
-  icon: Icon, label, style,
-}: {
-  icon: React.ElementType;
-  label: string;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <div
-      className="absolute flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-semibold select-none pointer-events-none"
-      style={{
-        background: '#ffffff',
-        border: '1px solid rgba(0,0,0,0.09)',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-        color: '#1a2e1a',
-        whiteSpace: 'nowrap',
-        ...style,
-      }}
-    >
-      <Icon size={13} strokeWidth={2} style={{ flexShrink: 0 }} />
-      <span>{label}</span>
-    </div>
-  );
-}
+import { ChevronDown } from 'lucide-react';
 
 export default function LandingHero() {
   return (
@@ -53,7 +10,7 @@ export default function LandingHero() {
       className="relative min-h-screen flex flex-col overflow-hidden"
       style={{ background: '#ede8dd' }}
     >
-      {/* ── Grid background ─────────────────────────────────────────── */}
+      {/* Grid background */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -65,45 +22,12 @@ export default function LandingHero() {
         }}
       />
 
-      {/* ── Floating chips — left ────────────────────────────────────── */}
-      {leftChips.map((chip, i) => (
-        <Chip
-          key={chip.label}
-          icon={chip.icon}
-          label={chip.label}
-          style={{
-            top: chip.top,
-            left: chip.left,
-            animation: `chip-float ${3.5 + i * 0.4}s ease-in-out ${chip.delay} infinite alternate`,
-          }}
-        />
-      ))}
-
-      {/* ── Floating chips — right ───────────────────────────────────── */}
-      {rightChips.map((chip, i) => (
-        <Chip
-          key={chip.label}
-          icon={chip.icon}
-          label={chip.label}
-          style={{
-            top: chip.top,
-            right: chip.right,
-            animation: `chip-float ${3.8 + i * 0.5}s ease-in-out ${chip.delay} infinite alternate`,
-          }}
-        />
-      ))}
-
-      {/* ── Main center content ──────────────────────────────────────── */}
+      {/* Center content */}
       <div className="relative flex-1 flex flex-col items-center justify-center text-center px-6 pt-24 pb-20">
 
-        {/* Heading */}
         <h1
           className="font-black leading-[0.92] mb-8 tracking-[-0.035em]"
-          style={{
-            fontSize: 'clamp(3rem, 7.5vw, 6.5rem)',
-            color: '#1a2e1a',
-            maxWidth: '14ch',
-          }}
+          style={{ fontSize: 'clamp(3rem, 7.5vw, 6.5rem)', color: '#1a2e1a', maxWidth: '14ch' }}
         >
           The team OS
           <br />
@@ -125,7 +49,6 @@ export default function LandingHero() {
           ))}
         </div>
 
-        {/* Subtitle */}
         <p
           className="text-base md:text-lg font-medium max-w-md mx-auto mb-10 leading-relaxed"
           style={{ color: '#4d5d4d' }}
@@ -158,47 +81,28 @@ export default function LandingHero() {
           <a
             href="#features"
             className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full font-bold text-sm transition-all duration-200 hover:bg-black/5 hover:scale-[1.02] active:scale-[0.98]"
-            style={{
-              color: '#1a2e1a',
-              border: '1.5px solid rgba(26,46,26,0.28)',
-              background: 'transparent',
-            }}
+            style={{ color: '#1a2e1a', border: '1.5px solid rgba(26,46,26,0.28)', background: 'transparent' }}
           >
             Request a Demo
           </a>
         </div>
       </div>
 
-      {/* ── Scroll indicator ─────────────────────────────────────────── */}
+      {/* Scroll indicator */}
       <a
         href="#features"
         className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 z-10"
         aria-label="Scroll to features"
         style={{ animation: 'fade-in-up 1s ease 0.4s both' }}
       >
-        <span
-          className="text-[10px] font-bold uppercase tracking-[0.22em]"
-          style={{ color: 'rgba(26,46,26,0.40)' }}
-        >
-          SCROLL
-        </span>
-        <div
-          className="flex items-start justify-center w-6 h-9 rounded-full p-1.5"
-          style={{ border: '1.5px solid rgba(26,46,26,0.22)' }}
-        >
-          <span
-            className="w-1 h-1.5 rounded-full"
-            style={{ background: 'rgba(26,46,26,0.45)', animation: 'scroll-dot 1.6s ease-in-out infinite' }}
-          />
+        <span className="text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(26,46,26,0.40)' }}>SCROLL</span>
+        <div className="flex items-start justify-center w-6 h-9 rounded-full p-1.5" style={{ border: '1.5px solid rgba(26,46,26,0.22)' }}>
+          <span className="w-1 h-1.5 rounded-full" style={{ background: 'rgba(26,46,26,0.45)', animation: 'scroll-dot 1.6s ease-in-out infinite' }} />
         </div>
         <ChevronDown size={14} style={{ color: 'rgba(26,46,26,0.32)', animation: 'scroll-bounce 1.6s ease-in-out infinite' }} />
       </a>
 
       <style>{`
-        @keyframes chip-float {
-          from { transform: translateY(0px);  }
-          to   { transform: translateY(-10px); }
-        }
         @keyframes scroll-dot {
           0%   { transform: translateY(0);    opacity: 0; }
           30%  { opacity: 1; }
