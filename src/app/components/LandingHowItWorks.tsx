@@ -58,15 +58,22 @@ export default function LandingHowItWorks() {
       className="relative py-28 px-6 lg:px-10 overflow-hidden"
       style={{ background: '#e8e3d8' }}
     >
-      {/* Grid */}
+      {/* Grid — darker lines */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px)
+            linear-gradient(rgba(0,0,0,0.13) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,0,0,0.13) 1px, transparent 1px)
           `,
           backgroundSize: '52px 52px',
+        }}
+      />
+      {/* Radial fade — clears grid near centre content */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse 80% 70% at 50% 50%, #e8e3d8 20%, transparent 75%)',
         }}
       />
 

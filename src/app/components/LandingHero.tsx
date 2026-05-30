@@ -10,15 +10,22 @@ export default function LandingHero() {
       className="relative min-h-screen flex flex-col overflow-hidden"
       style={{ background: '#ede8dd' }}
     >
-      {/* Grid background */}
+      {/* Grid — darker lines */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(0,0,0,0.045) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,0,0,0.045) 1px, transparent 1px)
+            linear-gradient(rgba(0,0,0,0.13) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,0,0,0.13) 1px, transparent 1px)
           `,
           backgroundSize: '52px 52px',
+        }}
+      />
+      {/* Radial fade — clears grid near centre text */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse 55% 60% at 50% 50%, #ede8dd 30%, transparent 75%)',
         }}
       />
 
