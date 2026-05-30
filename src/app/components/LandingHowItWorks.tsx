@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { ArrowRight, Users, MessageSquare, Sparkles } from 'lucide-react';
+import { Users, MessageSquare, Sparkles } from 'lucide-react';
 import AnimatedSection from './AnimatedSection';
 
 const steps = [
@@ -9,45 +9,64 @@ const steps = [
     number: '01',
     title: 'Connect your team',
     icon: Users,
-    description: 'Invite team members, assign roles, and set up project channels in under two minutes.',
-    demo: {
-      type: 'avatars' as const,
-      items: [
-        { label: 'VK', color: '#1a3a2a' },
-        { label: 'RA', color: '#4f46e5' },
-        { label: 'TM', color: '#0d7490' },
-        { label: 'SA', color: '#7c3aed' },
-      ],
-    },
+    description: 'Invite team members, assign roles, and set up project channels in under two minutes. Everyone lands in #general automatically.',
+    demo: (
+      <div className="flex flex-col gap-3">
+        <div className="flex -space-x-3 mb-2">
+          {[['VK','#1a3a2a'],['RA','#4f46e5'],['TM','#0d7490'],['SA','#7c3aed']].map(([l,c],i) => (
+            <div key={l} className="w-12 h-12 rounded-2xl flex items-center justify-center border-2 border-white text-white text-xs font-bold shadow" style={{ background: c, zIndex: 4-i }}>
+              {l}
+            </div>
+          ))}
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center border-2 border-white text-xs font-bold shadow" style={{ background: '#f5f1ea', color: '#6b7b6b', zIndex: 0 }}>+3</div>
+        </div>
+        <div className="text-xs font-medium" style={{ color: '#6b7b6b' }}>7 team members · 3 roles · 1 workspace</div>
+      </div>
+    ),
   },
   {
     id: 'step-communicate',
     number: '02',
     title: 'Communicate in channels',
     icon: MessageSquare,
-    description: 'Use dedicated channels for every project. Every message is indexed and fed into the AI context window.',
-    demo: {
-      type: 'channels' as const,
-      items: [
-        { label: '#skillnaav',        sub: 'Project channel' },
-        { label: '#edutechexassessa', sub: 'Project channel' },
-        { label: '#general',          sub: 'Team hub'        },
-      ],
-    },
+    description: 'Use dedicated channels for every project. Every message is indexed and fed into the AI context window so nothing is ever lost.',
+    demo: (
+      <div className="flex flex-col gap-2.5">
+        {[
+          { name: 'skillnaav',        sub: 'Project channel', dot: '#1a3a2a' },
+          { name: 'edutechexassessa', sub: 'Project channel', dot: '#4f46e5' },
+          { name: 'general',          sub: 'Team hub',        dot: '#0d7490' },
+        ].map((c) => (
+          <div key={c.name} className="flex items-center gap-3 px-4 py-2.5 rounded-xl" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.07)' }}>
+            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c.dot }} />
+            <span className="font-mono text-sm font-bold" style={{ color: '#1a2e1a' }}>#{c.name}</span>
+            <span className="ml-auto text-[10px] font-medium" style={{ color: '#6b7b6b' }}>{c.sub}</span>
+          </div>
+        ))}
+      </div>
+    ),
   },
   {
     id: 'step-ai',
     number: '03',
     title: 'AI handles the rest',
     icon: Sparkles,
-    description: 'AI extracts tasks, generates the morning digest, answers questions, and keeps the knowledge base current.',
-    demo: {
-      type: 'ai' as const,
-      items: [
-        { emoji: '🤖', text: 'Extracted 3 tasks from #skillnaav'  },
-        { emoji: '📋', text: 'Morning digest ready — 30 May'       },
-      ],
-    },
+    description: 'AI extracts tasks, generates the morning digest, answers questions, and keeps the knowledge base current — automatically, every day.',
+    demo: (
+      <div className="flex flex-col gap-2.5">
+        {[
+          { emoji: '🤖', text: 'Extracted 3 tasks from #skillnaav',  color: '#1a3a2a' },
+          { emoji: '📋', text: 'Morning digest ready — 30 May 2026', color: '#4f46e5' },
+          { emoji: '🔍', text: 'Wiki updated with 2 new pages',      color: '#0d7490' },
+        ].map((item) => (
+          <div key={item.text} className="flex items-center gap-3 px-4 py-2.5 rounded-xl" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.07)' }}>
+            <span className="text-base leading-none">{item.emoji}</span>
+            <span className="text-xs font-medium flex-1" style={{ color: '#1a2e1a' }}>{item.text}</span>
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: item.color }} />
+          </div>
+        ))}
+      </div>
+    ),
   },
 ];
 
@@ -55,163 +74,111 @@ export default function LandingHowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="relative py-28 px-6 lg:px-10 overflow-hidden"
+      className="relative overflow-hidden"
       style={{ background: '#e8e3d8' }}
     >
-      {/* Grid — darker lines */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(0,0,0,0.13) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,0,0,0.13) 1px, transparent 1px)
-          `,
-          backgroundSize: '52px 52px',
-        }}
-      />
-      {/* Radial fade — clears grid near centre content */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: 'radial-gradient(ellipse 80% 70% at 50% 50%, #e8e3d8 20%, transparent 75%)',
-        }}
-      />
+      {/* Grid */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        backgroundImage: `linear-gradient(rgba(0,0,0,0.13) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.13) 1px, transparent 1px)`,
+        backgroundSize: '52px 52px',
+      }} />
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: 'radial-gradient(ellipse 80% 70% at 50% 50%, #e8e3d8 20%, transparent 75%)',
+      }} />
 
-      <div className="relative max-w-screen-xl mx-auto">
+      <div className="relative max-w-screen-xl mx-auto px-6 lg:px-10">
 
-        {/* Header */}
+        {/* ── Section header ───────────────────────────────────────── */}
         <AnimatedSection direction="up">
-          <div className="mb-16">
-            <span
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[0.18em] mb-6"
-              style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.09)', color: '#4f46e5' }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#4f46e5' }} />
-              How it works
-            </span>
-            <h2
-              className="font-black tracking-[-0.03em] leading-[0.92] mb-5"
-              style={{ fontSize: 'clamp(2.4rem, 5vw, 4.5rem)', color: '#1a2e1a' }}
-            >
-              Three steps to<br />full context.
-            </h2>
-            <p className="text-base font-medium max-w-lg leading-relaxed" style={{ color: '#4d5d4d' }}>
+          <div className="pt-28 pb-20 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
+            <div>
+              <div className="flex items-center gap-4 mb-5">
+                <span className="font-mono text-[10px] font-bold tracking-[0.25em] uppercase" style={{ color: '#6b7b6b' }}>How it works</span>
+                <div className="h-px w-16" style={{ background: 'rgba(0,0,0,0.12)' }} />
+              </div>
+              <h2
+                className="font-black tracking-[-0.035em] leading-[0.90]"
+                style={{ fontSize: 'clamp(2.8rem, 5.5vw, 5rem)', color: '#1a2e1a' }}
+              >
+                Three steps<br />
+                <span style={{ color: '#4f46e5' }}>to full</span><br />
+                context.
+              </h2>
+            </div>
+            <p className="text-base font-medium max-w-sm leading-relaxed" style={{ color: '#4d5d4d' }}>
               From zero to fully operational in minutes — your team will be running on EduTechExOS before lunch.
             </p>
           </div>
         </AnimatedSection>
 
-        {/* Steps */}
-        <div className="relative grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Dashed connector line between cards (desktop only) */}
-          <div className="absolute hidden lg:flex items-center top-14 left-[calc(33.33%+1rem)] right-[calc(33.33%+1rem)] pointer-events-none" style={{ zIndex: 0 }}>
-            <div className="flex-1 border-t-2 border-dashed" style={{ borderColor: 'rgba(26,58,42,0.18)' }} />
-            <div className="mx-4 w-2 h-2 rounded-full flex-shrink-0" style={{ background: 'rgba(26,58,42,0.25)' }} />
-            <div className="flex-1 border-t-2 border-dashed" style={{ borderColor: 'rgba(26,58,42,0.18)' }} />
-          </div>
+        {/* ── Alternating step rows ─────────────────────────────────── */}
+        <div className="flex flex-col" style={{ borderTop: '1px solid rgba(0,0,0,0.08)' }}>
           {steps.map((step, i) => {
             const Icon = step.icon;
+            const isEven = i % 2 === 1;
             return (
-              <AnimatedSection key={step.id} direction="up" delay={i * 0.12}>
+              <AnimatedSection key={step.id} direction="up" delay={i * 0.1}>
                 <div
-                  className="group relative p-8 rounded-2xl cursor-default transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1"
-                  style={{
-                    background: '#ffffff',
-                    border: '1px solid rgba(0,0,0,0.08)',
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-                  }}
+                  className={`grid grid-cols-1 lg:grid-cols-2 gap-0 ${isEven ? 'lg:flex-row-reverse' : ''}`}
+                  style={{ borderBottom: '1px solid rgba(0,0,0,0.08)' }}
                 >
-                  {/* Step number */}
-                  <span
-                    className="absolute top-7 right-8 font-mono text-4xl font-black"
-                    style={{ color: 'rgba(0,0,0,0.06)' }}
-                  >
-                    {step.number}
-                  </span>
+                  {/* Text side */}
+                  <div className={`relative flex flex-col justify-center px-8 lg:px-16 py-16 ${isEven ? 'lg:order-2' : 'lg:order-1'}`}
+                    style={{ borderRight: isEven ? 'none' : '1px solid rgba(0,0,0,0.08)', borderLeft: isEven ? '1px solid rgba(0,0,0,0.08)' : 'none' }}>
+                    {/* Big background number */}
+                    <span
+                      className="absolute right-6 bottom-4 font-mono font-black pointer-events-none select-none leading-none"
+                      style={{ fontSize: '8rem', color: 'rgba(0,0,0,0.04)', letterSpacing: '-0.05em' }}
+                    >
+                      {step.number}
+                    </span>
 
-                  {/* Icon */}
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-transform duration-300 group-hover:scale-110"
-                    style={{ background: 'rgba(26,58,42,0.10)' }}
-                  >
-                    <Icon size={22} style={{ color: '#1a3a2a' }} />
+                    {/* Step badge */}
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#1a3a2a' }}>
+                        <Icon size={18} color="white" />
+                      </div>
+                      <span className="font-mono text-xs font-bold tracking-[0.18em] uppercase" style={{ color: '#6b7b6b' }}>
+                        Step {step.number}
+                      </span>
+                    </div>
+
+                    <h3
+                      className="font-black mb-4 leading-tight tracking-[-0.025em]"
+                      style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', color: '#1a2e1a' }}
+                    >
+                      {step.title}
+                    </h3>
+                    <p className="text-base font-medium leading-relaxed" style={{ color: '#4d5d4d', maxWidth: '38ch' }}>
+                      {step.description}
+                    </p>
                   </div>
 
-                  <h3 className="font-bold text-lg mb-3" style={{ color: '#1a2e1a' }}>
-                    {step.title}
-                  </h3>
-                  <p className="text-sm leading-relaxed mb-7" style={{ color: '#4d5d4d' }}>
-                    {step.description}
-                  </p>
-
-                  {/* Demo preview */}
+                  {/* Demo side */}
                   <div
-                    className="rounded-xl p-4"
-                    style={{ background: '#f5f1ea', border: '1px solid rgba(0,0,0,0.06)' }}
+                    className={`flex flex-col justify-center px-8 lg:px-16 py-16 ${isEven ? 'lg:order-1' : 'lg:order-2'}`}
+                    style={{ background: 'rgba(255,255,255,0.35)' }}
                   >
-                    {step.demo.type === 'avatars' && (
-                      <div className="flex -space-x-2">
-                        {step.demo.items.map((item, idx) => (
-                          <div
-                            key={item.label}
-                            className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-white text-white text-[10px] font-bold shadow-sm"
-                            style={{ background: item.color, zIndex: 4 - idx }}
-                          >
-                            {item.label}
-                          </div>
-                        ))}
-                        <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-white text-[10px] font-bold shadow-sm"
-                          style={{ background: '#f0ede5', color: '#4d5d4d', zIndex: 0 }}
-                        >
-                          +4
-                        </div>
-                      </div>
-                    )}
-                    {step.demo.type === 'channels' && (
-                      <div className="flex flex-col gap-2">
-                        {step.demo.items.map((item) => (
-                          <div
-                            key={item.label}
-                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg"
-                            style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.07)' }}
-                          >
-                            <span className="font-mono text-sm font-bold" style={{ color: '#1a3a2a' }}>#</span>
-                            <div>
-                              <div className="text-xs font-bold" style={{ color: '#1a2e1a' }}>{item.label.replace('#', '')}</div>
-                              <div className="text-[10px]" style={{ color: '#6b7b6b' }}>{item.sub}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {step.demo.type === 'ai' && (
-                      <div className="flex flex-col gap-2">
-                        {step.demo.items.map((item) => (
-                          <div
-                            key={item.text}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
-                            style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.07)' }}
-                          >
-                            <span className="text-base leading-none">{item.emoji}</span>
-                            <span className="text-xs font-medium" style={{ color: '#1a2e1a' }}>{item.text}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div
+                      className="rounded-2xl p-6"
+                      style={{ background: '#f5f1ea', border: '1px solid rgba(0,0,0,0.07)' }}
+                    >
+                      {step.demo}
+                    </div>
                   </div>
                 </div>
               </AnimatedSection>
             );
           })}
-        </div>{/* end steps grid */}
+        </div>
 
-        {/* Bottom label */}
+        {/* ── Bottom label ──────────────────────────────────────────── */}
         <AnimatedSection direction="up" delay={0.4}>
-          <div className="flex items-center justify-center gap-3 mt-14 font-mono text-xs">
-            <span className="font-bold tracking-[0.22em]" style={{ color: '#6b7b6b' }}>FROM SETUP TO LIVE</span>
-            <ArrowRight size={13} style={{ color: '#1a3a2a' }} />
-            <span className="font-bold tracking-[0.22em]" style={{ color: '#1a3a2a' }}>&lt; 2 MINUTES</span>
+          <div className="flex items-center justify-center gap-4 py-14 font-mono text-xs">
+            <div className="h-px flex-1" style={{ background: 'rgba(0,0,0,0.08)' }} />
+            <span className="font-bold tracking-[0.22em] uppercase" style={{ color: '#6b7b6b' }}>From setup to live</span>
+            <span className="font-black tracking-[0.22em]" style={{ color: '#1a3a2a' }}>— &lt; 2 MINUTES</span>
+            <div className="h-px flex-1" style={{ background: 'rgba(0,0,0,0.08)' }} />
           </div>
         </AnimatedSection>
       </div>
