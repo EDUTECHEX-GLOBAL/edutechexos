@@ -1,15 +1,12 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
 import { useActiveSection } from '@/hooks/useScrollProgress';
-import { useScrollColors } from './ScrollColorText';
 
 export default function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const activeSection = useActiveSection(['hero', 'trusted', 'features', 'how-it-works', 'testimonials', 'cta']);
-  const colors = useScrollColors();
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -18,44 +15,51 @@ export default function LandingNav() {
   }, []);
 
   const navLinks = [
-    { label: 'Features', href: '#features', id: 'features' },
-    { label: 'How it works', href: '#how-it-works', id: 'how-it-works' },
-    { label: 'Testimonials', href: '#testimonials', id: 'testimonials' },
+    { label: 'Features',     href: '#features',     id: 'features'     },
+    { label: 'How it works', href: '#how-it-works',  id: 'how-it-works' },
+    { label: 'Testimonials', href: '#testimonials',  id: 'testimonials' },
   ];
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 transition-all duration-700"
+      className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
       style={{
-        backgroundColor: scrolled ? 'rgba(10,18,35,0.82)' : 'rgba(10,18,35,0.20)',
+        backgroundColor: scrolled ? 'rgba(237,232,221,0.97)' : 'rgba(237,232,221,0.85)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.06)',
-        boxShadow: scrolled ? '0 4px 24px rgba(0,0,0,0.30)' : 'none',
+        borderBottom: '1px solid rgba(0,0,0,0.07)',
+        boxShadow: scrolled ? '0 2px 20px rgba(0,0,0,0.06)' : 'none',
       }}
     >
-      <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 h-[72px] flex items-center justify-between">
+      <div className="max-w-screen-xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
+
+        {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 no-underline group">
-          <div className="relative w-9 h-9 rounded-xl flex items-center justify-center shadow-lg transition-all duration-500 group-hover:scale-105" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(180,210,255,0.12) 100%)', border: '1px solid rgba(255,255,255,0.20)', boxShadow: '0 4px 14px rgba(0,0,0,0.30)' }}>
-            <Sparkles size={18} className="text-white" />
-          </div>
-          <span
-            className="font-display font-bold text-lg tracking-[-0.02em] transition-colors duration-500"
-            style={{ color: '#ffffff' }}
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-105"
+            style={{ background: '#1a3a2a' }}
           >
-            EduTechEx<span style={{ color: 'rgba(180,210,255,0.90)' }}>OS</span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="5" cy="8" r="2.5" fill="white" />
+              <circle cx="11" cy="5" r="1.8" fill="white" opacity="0.7" />
+              <circle cx="11" cy="11" r="1.8" fill="white" opacity="0.7" />
+            </svg>
+          </div>
+          <span className="font-bold text-base tracking-[-0.01em]" style={{ color: '#1a2e1a' }}>
+            EduTechEx<span style={{ color: '#2d6a4f' }}>OS</span>
           </span>
         </Link>
 
+        {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-1">
           {navLinks.map((item) => (
             <a
               key={item.label}
               href={item.href}
-              className="px-4 py-2 text-sm font-bold rounded-full transition-all duration-300"
+              className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200"
               style={{
-                color: activeSection === item.id ? '#ffffff' : 'rgba(200,220,255,0.75)',
-                backgroundColor: activeSection === item.id ? 'rgba(255,255,255,0.10)' : 'transparent',
+                color: activeSection === item.id ? '#1a2e1a' : '#5a6a5a',
+                backgroundColor: activeSection === item.id ? 'rgba(26,58,42,0.08)' : 'transparent',
               }}
             >
               {item.label}
@@ -63,67 +67,81 @@ export default function LandingNav() {
           ))}
         </nav>
 
-        <div className="hidden md:flex items-center gap-2.5">
+        {/* Right buttons */}
+        <div className="hidden md:flex items-center gap-2">
           <Link
             href="/sign-up-login-screen?mode=admin&redirect=/admin"
-            className="px-5 py-2 text-sm font-bold rounded-full transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+            className="px-5 py-2 text-sm font-semibold rounded-full transition-all duration-200 hover:bg-black/5"
             style={{
-              color: 'rgba(220,235,255,0.90)',
-              background: 'rgba(255,255,255,0.10)',
-              border: '1px solid rgba(255,255,255,0.18)',
-              backdropFilter: 'blur(8px)',
+              color: '#1a2e1a',
+              border: '1.5px solid rgba(26,46,26,0.22)',
+              background: 'transparent',
             }}
           >
             Admin
           </Link>
           <Link
             href="/sign-up-login-screen?mode=user"
-            className="px-5 py-2 text-sm font-bold rounded-full transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+            className="px-5 py-2 text-sm font-semibold rounded-full transition-all duration-200 hover:bg-black/5"
             style={{
-              color: 'rgba(220,235,255,0.90)',
-              background: 'rgba(255,255,255,0.10)',
-              border: '1px solid rgba(255,255,255,0.18)',
-              backdropFilter: 'blur(8px)',
+              color: '#1a2e1a',
+              border: '1.5px solid rgba(26,46,26,0.22)',
+              background: 'transparent',
             }}
           >
             Sign in
           </Link>
         </div>
 
+        {/* Mobile hamburger */}
         <button
-          className="md:hidden relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-primary/10 transition-colors"
+          className="md:hidden w-10 h-10 flex items-center justify-center rounded-xl transition-colors hover:bg-black/5"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Toggle menu"
         >
           <div className="flex flex-col gap-[5px]">
-            <span className={`block w-5 h-[2px] rounded-full transition-all duration-300 ${mobileOpen ? 'rotate-45 translate-y-[3.5px]' : ''}`} style={{ backgroundColor: colors.h1 }} />
-            <span className={`block w-5 h-[2px] rounded-full transition-all duration-300 ${mobileOpen ? 'opacity-0 scale-x-0' : ''}`} style={{ backgroundColor: colors.h1 }} />
-            <span className={`block w-5 h-[2px] rounded-full transition-all duration-300 ${mobileOpen ? '-rotate-45 -translate-y-[3.5px]' : ''}`} style={{ backgroundColor: colors.h1 }} />
+            <span className={`block w-5 h-[2px] rounded-full transition-all duration-300 ${mobileOpen ? 'rotate-45 translate-y-[3.5px]' : ''}`} style={{ backgroundColor: '#1a2e1a' }} />
+            <span className={`block w-5 h-[2px] rounded-full transition-all duration-300 ${mobileOpen ? 'opacity-0 scale-x-0' : ''}`} style={{ backgroundColor: '#1a2e1a' }} />
+            <span className={`block w-5 h-[2px] rounded-full transition-all duration-300 ${mobileOpen ? '-rotate-45 -translate-y-[3.5px]' : ''}`} style={{ backgroundColor: '#1a2e1a' }} />
           </div>
         </button>
       </div>
 
+      {/* Mobile menu */}
       {mobileOpen && (
         <div
-          className="md:hidden px-6 pb-8 pt-4 flex flex-col gap-2 animate-fade-down"
-          style={{
-            backgroundColor: 'rgba(240,245,240,0.95)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-          }}
+          className="md:hidden px-6 pb-6 pt-3 flex flex-col gap-1"
+          style={{ backgroundColor: 'rgba(237,232,221,0.98)', borderTop: '1px solid rgba(0,0,0,0.06)' }}
         >
           {navLinks.map((item) => (
-            <a key={item.label} href={item.href} className="px-4 py-3 text-sm font-bold rounded-xl hover:bg-primary/10 transition-all" style={{ color: colors.body }} onClick={() => setMobileOpen(false)}>
+            <a
+              key={item.label}
+              href={item.href}
+              className="px-4 py-3 text-sm font-medium rounded-xl transition-all hover:bg-black/5"
+              style={{ color: '#1a2e1a' }}
+              onClick={() => setMobileOpen(false)}
+            >
               {item.label}
             </a>
           ))}
-          <div style={{ height: '1px', backgroundColor: 'rgba(0,0,0,0.06)' }} />
-          <Link href="/sign-up-login-screen?mode=admin&redirect=/admin" className="px-4 py-3 text-sm font-bold rounded-xl hover:bg-primary/10 transition-all" style={{ color: colors.body }} onClick={() => setMobileOpen(false)}>
-            Admin
-          </Link>
+          <div className="h-px my-2" style={{ backgroundColor: 'rgba(0,0,0,0.06)' }} />
           <div className="flex gap-2 mt-1">
-            <Link href="/sign-up-login-screen?mode=admin&redirect=/admin" className="flex-1 text-center px-4 py-3 text-sm font-bold rounded-full transition-all" style={{ color: '#7c3aed', background: 'rgba(124,58,237,0.10)', border: '1px solid rgba(124,58,237,0.22)' }} onClick={() => setMobileOpen(false)}>Admin</Link>
-            <Link href="/sign-up-login-screen?mode=user" className="flex-1 text-center px-4 py-3 text-sm font-bold rounded-full transition-all" style={{ color: '#2d6a4f', background: 'rgba(45,106,79,0.10)', border: '1px solid rgba(45,106,79,0.22)' }} onClick={() => setMobileOpen(false)}>Sign in</Link>
+            <Link
+              href="/sign-up-login-screen?mode=admin&redirect=/admin"
+              className="flex-1 text-center px-4 py-3 text-sm font-semibold rounded-full border transition-all hover:bg-black/5"
+              style={{ color: '#1a2e1a', borderColor: 'rgba(26,46,26,0.22)' }}
+              onClick={() => setMobileOpen(false)}
+            >
+              Admin
+            </Link>
+            <Link
+              href="/sign-up-login-screen?mode=user"
+              className="flex-1 text-center px-4 py-3 text-sm font-semibold rounded-full text-white transition-all hover:opacity-90"
+              style={{ background: '#1a3a2a' }}
+              onClick={() => setMobileOpen(false)}
+            >
+              Sign in
+            </Link>
           </div>
         </div>
       )}
