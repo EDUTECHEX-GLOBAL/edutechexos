@@ -102,7 +102,13 @@ export default function LandingHowItWorks() {
         </AnimatedSection>
 
         {/* Steps */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="relative grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Dashed connector line between cards (desktop only) */}
+          <div className="absolute hidden lg:flex items-center top-14 left-[calc(33.33%+1rem)] right-[calc(33.33%+1rem)] pointer-events-none" style={{ zIndex: 0 }}>
+            <div className="flex-1 border-t-2 border-dashed" style={{ borderColor: 'rgba(26,58,42,0.18)' }} />
+            <div className="mx-4 w-2 h-2 rounded-full flex-shrink-0" style={{ background: 'rgba(26,58,42,0.25)' }} />
+            <div className="flex-1 border-t-2 border-dashed" style={{ borderColor: 'rgba(26,58,42,0.18)' }} />
+          </div>
           {steps.map((step, i) => {
             const Icon = step.icon;
             return (
@@ -198,7 +204,7 @@ export default function LandingHowItWorks() {
               </AnimatedSection>
             );
           })}
-        </div>
+        </div>{/* end steps grid */}
 
         {/* Bottom label */}
         <AnimatedSection direction="up" delay={0.4}>

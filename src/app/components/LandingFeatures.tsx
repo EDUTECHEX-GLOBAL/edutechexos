@@ -67,6 +67,20 @@ export default function LandingFeatures() {
           background: 'radial-gradient(ellipse 80% 70% at 50% 50%, #ede8dd 20%, transparent 75%)',
         }}
       />
+      {/* Large faded watermark number */}
+      <div
+        className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none select-none hidden xl:block"
+        style={{
+          fontSize: '22rem',
+          fontWeight: 900,
+          lineHeight: 1,
+          color: 'rgba(26,58,42,0.04)',
+          letterSpacing: '-0.05em',
+          fontFamily: 'system-ui, sans-serif',
+        }}
+      >
+        06
+      </div>
 
       <div className="relative max-w-screen-xl mx-auto">
 
