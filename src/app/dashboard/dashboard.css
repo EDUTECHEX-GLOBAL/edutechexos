@@ -1,28 +1,17 @@
-/* Font and theme variables */
+/* ── Dashboard theme variables ───────────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
 :root {
-  --font-family: 'Inter', sans-serif;
-  --bg-primary: #fdf6ee;
-  --bg-glass: rgba(255, 248, 240, 0.80);
-  --bg-glass-dark: rgba(253, 246, 238, 0.92);
-  --accent-color: #9b5e28;
-  --text-primary: #9b5e28;
+  --font-family:    'Inter', sans-serif;
+  --bg-primary:     #ede8dd;
+  --bg-glass:       rgba(245,241,234,0.88);
+  --bg-glass-dark:  rgba(237,232,221,0.95);
+  --accent-color:   #1a3a2a;
+  --text-primary:   #1a3a2a;
+  --border-color:   #ddd8d0;
 }
 
-/* Voice recording pulse animation */
-@keyframes pulseRed {
-  0%   { box-shadow: 0 0 0 0   rgba(255, 0, 0, 0.4); }
-  70%  { box-shadow: 0 0 0 8px rgba(255, 0, 0, 0.0); }
-  100% { box-shadow: 0 0 0 0   rgba(255, 0, 0, 0.0); }
-}
-
-/* Waveform bar animation for voice recording indicator */
-@keyframes waveBar {
-  from { transform: scaleY(0.35); }
-  to   { transform: scaleY(1); }
-}
-
+/* ── Layout ──────────────────────────────────────────────────────────────── */
 .dashboard-root {
   min-height: 100vh;
   background: var(--bg-primary);
@@ -41,15 +30,17 @@
   grid-template-columns: 18.25rem minmax(0, 1fr) 0;
 }
 
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
 .workspace-sidebar {
   display: flex;
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  border-right: 1px solid #e8d0b8;
-  background: linear-gradient(180deg, #fff3e8, #fdf0e4);
+  border-right: 1px solid var(--border-color);
+  background: linear-gradient(180deg, #f5f1ea, #ede8dd);
 }
 
+/* ── Chat area ───────────────────────────────────────────────────────────── */
 .workspace-chat {
   position: relative;
   display: grid;
@@ -57,11 +48,10 @@
   min-height: 0;
   grid-template-rows: 4rem minmax(0, 1fr) auto;
   background:
-    radial-gradient(circle at 18% 86%, rgba(155, 94, 40, 0.05), transparent 21rem),
-    #fffaf5;
+    radial-gradient(circle at 18% 86%, rgba(26,58,42,0.04), transparent 21rem),
+    #ede8dd;
 }
 
-/* When a pinned strip is visible, the grid gains an extra auto row for it */
 .workspace-chat-has-pin {
   grid-template-rows: 4rem auto minmax(0, 1fr) auto;
 }
@@ -72,8 +62,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  border-bottom: 1px solid #e8d0b8;
-  background: rgba(255, 250, 245, 0.88);
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(237,232,221,0.90);
   padding: 0.75rem 1.5rem;
   backdrop-filter: blur(18px);
 }
@@ -82,87 +72,70 @@
   min-height: 0;
   overflow-y: auto;
   padding: 1.25rem 0.5rem 1rem;
-  scrollbar-color: rgba(155, 94, 40, 0.20) transparent;
+  scrollbar-color: rgba(26,58,42,0.15) transparent;
   scrollbar-width: thin;
   display: flex;
   flex-direction: column;
   background-image:
-    radial-gradient(circle at 25% 25%, rgba(155, 94, 40, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(155, 94, 40, 0.02) 0%, transparent 50%);
+    radial-gradient(circle at 25% 25%, rgba(26,58,42,0.02) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(26,58,42,0.015) 0%, transparent 50%);
 }
 
-/* WhatsApp-style chat bubble tails */
-/* Sent bubble (right side) tail */
-.bubble-own {
-  position: relative;
-}
+/* ── Chat bubble tails ───────────────────────────────────────────────────── */
+.bubble-own { position: relative; }
 .bubble-own::after {
   content: '';
   position: absolute;
-  bottom: 6px;
-  right: -7px;
-  width: 0;
-  height: 0;
-  border-left: 8px solid #9b5e28;
+  bottom: 6px; right: -7px;
+  width: 0; height: 0;
+  border-left: 8px solid #1a3a2a;
   border-top: 5px solid transparent;
   border-bottom: 5px solid transparent;
 }
 
-/* Received bubble (left side) tail */
-.bubble-other {
-  position: relative;
-}
+.bubble-other { position: relative; }
 .bubble-other::after {
   content: '';
   position: absolute;
-  bottom: 6px;
-  left: -7px;
-  width: 0;
-  height: 0;
-  border-right: 8px solid #1e2e45;
+  bottom: 6px; left: -7px;
+  width: 0; height: 0;
+  border-right: 8px solid #ffffff;
   border-top: 5px solid transparent;
   border-bottom: 5px solid transparent;
 }
 
-
-.chat-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-.chat-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
+.chat-scroll::-webkit-scrollbar { width: 6px; }
+.chat-scroll::-webkit-scrollbar-track { background: transparent; }
 .chat-scroll::-webkit-scrollbar-thumb {
   border-radius: 99px;
-  background: rgba(155, 94, 40, 0.18);
+  background: rgba(26,58,42,0.15);
 }
 
+/* ── Date divider ────────────────────────────────────────────────────────── */
 .date-divider {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 1.25rem;
-  color: #b08060;
+  color: #6b7b6b;
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.08em;
 }
 .date-divider span {
   height: 1px;
-  background: #e8d0b8;
+  background: var(--border-color);
 }
 
-.message-stream {
-  margin-top: 4.5rem;
-}
+.message-stream { margin-top: 4.5rem; }
 
+/* ── Message layout ──────────────────────────────────────────────────────── */
 .chat-message {
   display: flex;
   gap: 1rem;
   margin-bottom: 2.35rem;
 }
-.chat-message-compact {
-  margin-top: -1rem;
-}
+.chat-message-compact { margin-top: -1rem; }
 
 .message-avatar {
   display: flex;
@@ -177,9 +150,10 @@
   font-weight: 700;
 }
 
+/* ── Composer ────────────────────────────────────────────────────────────── */
 .composer-wrap {
-  border-top: 1px solid #e8d0b8;
-  background: rgba(255, 250, 245, 0.90);
+  border-top: 1px solid var(--border-color);
+  background: rgba(237,232,221,0.92);
   padding: 0.6rem clamp(1rem, 8vw, 9.5rem) 0.75rem;
   backdrop-filter: blur(18px);
 }
@@ -187,17 +161,17 @@
 .composer {
   backdrop-filter: blur(12px);
   background: var(--bg-glass);
-  border: 1px solid #e8d0b8;
+  border: 1px solid var(--border-color);
   border-radius: 1rem;
-  box-shadow: 0 4px 16px rgba(155,94,40,0.06);
+  box-shadow: 0 4px 16px rgba(26,58,42,0.05);
   font-family: var(--font-family);
 }
 
 .composer:focus-within {
-  border-color: rgba(155, 94, 40, 0.35);
+  border-color: rgba(26,58,42,0.35);
   box-shadow:
-    0 0 0 3px rgba(155, 94, 40, 0.08),
-    0 4px 16px rgba(155,94,40,0.06);
+    0 0 0 3px rgba(26,58,42,0.08),
+    0 4px 16px rgba(26,58,42,0.05);
 }
 
 .composer-toolbar {
@@ -205,7 +179,7 @@
   min-height: 3rem;
   align-items: center;
   gap: 1rem;
-  border-bottom: 1px solid #f0dece;
+  border-bottom: 1px solid #e5e0d8;
   padding: 0 1.5rem;
 }
 .composer-toolbar button {
@@ -220,73 +194,65 @@
   transition: all 0.2s ease;
 }
 .composer-toolbar button:hover {
-  color: #fff8f0;
+  color: #ffffff;
   background: var(--accent-color);
   transform: scale(1.08);
 }
-
 .composer-toolbar span {
   height: 1.4rem;
   width: 1px;
-  background: #e8d0b8;
+  background: var(--border-color);
 }
 
+/* ── Copilot panel ───────────────────────────────────────────────────────── */
 .copilot-panel {
   display: grid;
   min-width: 0;
   min-height: 0;
   grid-template-rows: 4rem 3.25rem minmax(0, 1fr) auto;
-  border-left: 1px solid #e8d0b8;
-  background: #fff3e8;
+  border-left: 1px solid var(--border-color);
+  background: #f5f1ea;
 }
-.copilot-panel-closed {
-  display: none;
-}
+.copilot-panel-closed { display: none; }
 
-/* ─── Dark mode ──────────────────────────────────────────────────────────────
-   Driven by the .dark class toggled on <html> by the Zustand store / ThemeProvider.
-   Using class-based dark mode (not prefers-color-scheme) so the toggle button
-   actually works.                                                              */
-/* Dark mode overrides */
+/* ── Dark mode ───────────────────────────────────────────────────────────── */
 html.dark {
-  --bg-primary: #2a1608;
-  --bg-glass: rgba(42, 22, 8, 0.80);
-  --text-primary: #c4842e;
+  --bg-primary:   #1a2e1a;
+  --bg-glass:     rgba(26,46,26,0.85);
+  --text-primary: #52b788;
+  --border-color: rgba(255,255,255,0.08);
+  --accent-color: #52b788;
 }
-.dark .dashboard-root { background: var(--bg-primary); }
-.dark .workspace-sidebar { background: linear-gradient(180deg, #3d1f0a, #2a1608); border-right-color: rgba(255,200,140,0.12); }
-.dark .workspace-chat { background: #2a1608; }
-.dark .chat-header { background: rgba(42,22,8,0.90); border-bottom-color: rgba(255,200,140,0.10); }
-.dark .copilot-panel { background: #2a1608; border-left-color: rgba(255,200,140,0.10); }
-.dark .date-divider { color: #8b5e30; }
-.dark .date-divider span { background: rgba(255,200,140,0.12); }
-.dark .chat-scroll { scrollbar-color: rgba(155,94,40,0.30) transparent; }
-.dark .composer { background: rgba(60,30,10,0.70); border-color: rgba(255,200,140,0.15); }
+.dark .dashboard-root   { background: var(--bg-primary); }
+.dark .workspace-sidebar {
+  background: linear-gradient(180deg, #243424, #1a2e1a);
+  border-right-color: rgba(255,255,255,0.06);
+}
+.dark .workspace-chat   { background: #1a2e1a; }
+.dark .chat-header      { background: rgba(26,46,26,0.92); border-bottom-color: rgba(255,255,255,0.06); }
+.dark .copilot-panel    { background: #1f341f; border-left-color: rgba(255,255,255,0.06); }
+.dark .date-divider     { color: #6b8b6b; }
+.dark .date-divider span{ background: rgba(255,255,255,0.07); }
+.dark .chat-scroll      { scrollbar-color: rgba(82,183,136,0.25) transparent; }
+.dark .composer         { background: rgba(30,50,30,0.75); border-color: rgba(255,255,255,0.08); }
+.dark .bubble-own::after  { border-left-color: #1a3a2a; }
+.dark .bubble-other::after{ border-right-color: #243424; }
+.dark .composer-wrap    { background: rgba(26,46,26,0.92); border-top-color: rgba(255,255,255,0.06); }
 
-/* Tablet */
+/* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 1100px) {
-  .dashboard-workspace {
-    grid-template-columns: 16.5rem minmax(0, 1fr);
-  }
-  /* Hide panel in the grid by default at this width */
-  .copilot-panel {
-    display: none;
-  }
-  /* When open (.copilot-panel-closed is NOT present), show as a fixed side-drawer
-     so the AI button still works even though the grid only has 2 columns.       */
+  .dashboard-workspace { grid-template-columns: 16.5rem minmax(0, 1fr); }
+  .copilot-panel { display: none; }
   .copilot-panel:not(.copilot-panel-closed) {
     display: grid;
     position: fixed;
-    right: 0;
-    top: 0;
-    bottom: 0;
+    right: 0; top: 0; bottom: 0;
     width: min(27.25rem, 100vw);
     z-index: 100;
-    box-shadow: -4px 0 32px rgba(0, 0, 0, 0.2);
+    box-shadow: -4px 0 32px rgba(0,0,0,0.15);
   }
 }
 
-/* Mobile */
 @media (max-width: 760px) {
   .dashboard-workspace {
     height: auto;
@@ -297,19 +263,10 @@ html.dark {
   .workspace-sidebar {
     max-height: none;
     border-right: 0;
-    border-bottom: 1px solid rgba(255,255,255,0.07);
+    border-bottom: 1px solid var(--border-color);
   }
-  .chat-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-  .chat-scroll {
-    padding: 1rem 0.5rem 1rem;
-  }
-  .message-stream {
-    margin-top: 2.25rem;
-  }
-  .composer-wrap {
-    padding: 0.6rem 0.75rem 0.75rem;
-  }
+  .chat-header   { align-items: flex-start; flex-direction: column; }
+  .chat-scroll   { padding: 1rem 0.5rem 1rem; }
+  .message-stream{ margin-top: 2.25rem; }
+  .composer-wrap { padding: 0.6rem 0.75rem 0.75rem; }
 }
