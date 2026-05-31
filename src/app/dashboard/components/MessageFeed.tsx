@@ -47,7 +47,7 @@ function MarkdownContent({ text, isOwn }: { text: string; isOwn: boolean }) {
   return (
     <ReactMarkdown remarkPlugins={[remarkGfm]}
       components={{
-        p: ({ children }) => <p className="mb-1 last:mb-0 text-sm leading-relaxed">{children}</p>,
+        p: ({ children }) => <p className="mb-1 last:mb-0 text-[15px] leading-relaxed">{children}</p>,
         strong: ({ children }) => <strong className={`font-bold ${isOwn ? 'text-white' : 'text-slate-900 dark:text-white'}`}>{children}</strong>,
         em: ({ children }) => <em className="italic">{children}</em>,
         code: ({ children, className }) => {
@@ -58,8 +58,8 @@ function MarkdownContent({ text, isOwn }: { text: string; isOwn: boolean }) {
             <code className={`rounded-md px-1.5 py-0.5 font-mono text-xs ${isOwn ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-700 text-indigo-700 dark:text-indigo-300'}`}>{children}</code>
           );
         },
-        ul: ({ children }) => <ul className="my-1 ml-4 list-disc space-y-0.5 text-sm">{children}</ul>,
-        ol: ({ children }) => <ol className="my-1 ml-4 list-decimal space-y-0.5 text-sm">{children}</ol>,
+        ul: ({ children }) => <ul className="my-1 ml-4 list-disc space-y-0.5 text-[15px]">{children}</ul>,
+        ol: ({ children }) => <ol className="my-1 ml-4 list-decimal space-y-0.5 text-[15px]">{children}</ol>,
         li: ({ children }) => <li>{children}</li>,
         h1: ({ children }) => <h1 className="mb-1 text-base font-black">{children}</h1>,
         h2: ({ children }) => <h2 className="mb-1 text-sm font-black">{children}</h2>,
@@ -239,7 +239,7 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
 
                 {/* Sender name (only for first in group, receiver side) */}
                 {msg.isFirst && !isOwn && (
-                  <span className="mb-1 ml-1 text-xs font-bold" style={{ color: msg.color }}>
+                  <span className="mb-1 ml-1 text-[13px] font-bold" style={{ color: msg.color }}>
                     {msg.sender}
                   </span>
                 )}

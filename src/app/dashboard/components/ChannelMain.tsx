@@ -7,6 +7,7 @@ import MessageInput from './MessageInput';
 import TypingIndicator from './TypingIndicator';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 interface ChannelMainProps {
   onToggleAI: () => void;
@@ -100,10 +101,11 @@ export default function ChannelMain({
             </button>
           )}
 
-          <button onClick={onOpenSearch}
+          <motion.button whileTap={{ scale: 0.88 }} whileHover={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+            onClick={onOpenSearch}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Search messages">
             <Search size={16} />
-          </button>
+          </motion.button>
 
           <div className="relative meet-dropdown">
             <button onClick={() => setMeetDropdownOpen((v) => !v)}
@@ -126,15 +128,17 @@ export default function ChannelMain({
             )}
           </div>
 
-          <button onClick={onToggleAI}
+          <motion.button whileTap={{ scale: 0.88 }} whileHover={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+            onClick={onToggleAI}
             className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${aiPanelOpen ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`} title="AI Copilot">
             <Bot size={16} />
-          </button>
+          </motion.button>
 
-          <button onClick={onToggleNotepad}
+          <motion.button whileTap={{ scale: 0.88 }} whileHover={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+            onClick={onToggleNotepad}
             className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${notepadOpen ? 'bg-indigo-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`} title="Notepad">
             <FileText size={16} />
-          </button>
+          </motion.button>
 
           {onOpenWiki && (
             <button onClick={onOpenWiki}

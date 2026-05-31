@@ -16,6 +16,30 @@ export default function LandingCTA() {
         backgroundSize: '52px 52px',
       }} />
 
+      {/* Animated orbs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div style={{ position:'absolute', width:560, height:560, borderRadius:'50%', background:'radial-gradient(circle, rgba(45,106,79,0.22) 0%, transparent 65%)', filter:'blur(60px)', top:'-20%', left:'-10%', animation:'cta-orb-1 22s ease-in-out infinite', willChange:'transform' }} />
+        <div style={{ position:'absolute', width:480, height:480, borderRadius:'50%', background:'radial-gradient(circle, rgba(79,70,229,0.14) 0%, transparent 65%)', filter:'blur(64px)', bottom:'-15%', right:'-8%', animation:'cta-orb-2 28s ease-in-out infinite 4s', willChange:'transform' }} />
+        <div style={{ position:'absolute', width:360, height:360, borderRadius:'50%', background:'radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 65%)', filter:'blur(40px)', top:'40%', right:'30%', animation:'cta-orb-3 18s ease-in-out infinite 8s', willChange:'transform' }} />
+      </div>
+      <style>{`
+        @keyframes cta-orb-1 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          35%      { transform: translate(110px,90px) scale(1.14); }
+          68%      { transform: translate(-60px,130px) scale(0.90); }
+        }
+        @keyframes cta-orb-2 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          40%      { transform: translate(-120px,-100px) scale(1.18); }
+          75%      { transform: translate(80px,-70px) scale(0.86); }
+        }
+        @keyframes cta-orb-3 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          30%      { transform: translate(70px,-80px) scale(1.09); }
+          65%      { transform: translate(-80px,60px) scale(1.13); }
+        }
+      `}</style>
+
       {/* Corner arcs — top left */}
       <div className="absolute top-0 left-0 pointer-events-none overflow-hidden" style={{ width: 420, height: 420 }}>
         {[340, 240, 140].map((size) => (

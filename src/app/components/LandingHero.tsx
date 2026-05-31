@@ -1,7 +1,6 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
-import { ChevronDown } from 'lucide-react';
 
 export default function LandingHero() {
   return (
@@ -22,6 +21,14 @@ export default function LandingHero() {
       <div className="absolute inset-0 pointer-events-none" style={{
         background: 'radial-gradient(ellipse 55% 60% at 50% 50%, #ede8dd 30%, transparent 75%)',
       }} />
+
+      {/* ── Animated floating orbs ───────────────────────────────────── */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div style={{ position:'absolute', width:640, height:640, borderRadius:'50%', background:'radial-gradient(circle, rgba(26,58,42,0.13) 0%, transparent 68%)', filter:'blur(48px)', top:'-8%', left:'-12%', animation:'hero-orb-1 20s ease-in-out infinite', willChange:'transform' }} />
+        <div style={{ position:'absolute', width:560, height:560, borderRadius:'50%', background:'radial-gradient(circle, rgba(79,70,229,0.08) 0%, transparent 68%)', filter:'blur(60px)', bottom:'0%', right:'-8%', animation:'hero-orb-2 26s ease-in-out infinite', willChange:'transform' }} />
+        <div style={{ position:'absolute', width:420, height:420, borderRadius:'50%', background:'radial-gradient(circle, rgba(180,164,140,0.22) 0%, transparent 68%)', filter:'blur(44px)', top:'35%', right:'18%', animation:'hero-orb-3 32s ease-in-out infinite', willChange:'transform' }} />
+        <div style={{ position:'absolute', width:320, height:320, borderRadius:'50%', background:'radial-gradient(circle, rgba(45,106,79,0.09) 0%, transparent 68%)', filter:'blur(36px)', bottom:'20%', left:'25%', animation:'hero-orb-4 24s ease-in-out infinite 4s', willChange:'transform' }} />
+      </div>
 
       {/* ── Decorative corner arcs — top right ───────────────────────── */}
       <div className="absolute top-0 right-0 pointer-events-none overflow-hidden" style={{ width: 420, height: 420 }}>
@@ -128,48 +135,28 @@ export default function LandingHero() {
           </a>
         </div>
 
-        {/* Social proof */}
-        <div className="flex items-center gap-3 text-xs font-medium" style={{ color: '#6b7b6b' }}>
-          <div className="flex -space-x-2">
-            {['#1a3a2a','#4f46e5','#0891b2','#d97706'].map((c, i) => (
-              <div key={i} className="w-6 h-6 rounded-full border-2 border-[#ede8dd] flex items-center justify-center text-[8px] font-bold text-white" style={{ background: c }}>
-                {['A','R','D','S'][i]}
-              </div>
-            ))}
-          </div>
-          <span>Trusted by the full EduTechEx team</span>
-          <span className="w-1 h-1 rounded-full" style={{ background: 'rgba(26,46,26,0.25)' }} />
-          <span>7 members · 3 channels</span>
-        </div>
       </div>
 
-      {/* ── Scroll indicator ──────────────────────────────────────────── */}
-      <a
-        href="#features"
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 z-10"
-        aria-label="Scroll to features"
-        style={{ animation: 'fade-in-up 1s ease 0.4s both' }}
-      >
-        <span className="text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: 'rgba(26,46,26,0.40)' }}>SCROLL</span>
-        <div className="flex items-start justify-center w-6 h-9 rounded-full p-1.5" style={{ border: '1.5px solid rgba(26,46,26,0.22)' }}>
-          <span className="w-1 h-1.5 rounded-full" style={{ background: 'rgba(26,46,26,0.45)', animation: 'scroll-dot 1.6s ease-in-out infinite' }} />
-        </div>
-        <ChevronDown size={14} style={{ color: 'rgba(26,46,26,0.32)', animation: 'scroll-bounce 1.6s ease-in-out infinite' }} />
-      </a>
-
       <style>{`
-        @keyframes scroll-dot {
-          0%   { transform: translateY(0);    opacity: 0; }
-          30%  { opacity: 1; }
-          100% { transform: translateY(10px); opacity: 0; }
+        @keyframes hero-orb-1 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          30%      { transform: translate(90px,70px) scale(1.12); }
+          65%      { transform: translate(-50px,110px) scale(0.93); }
         }
-        @keyframes scroll-bounce {
-          0%, 100% { transform: translateY(0);  }
-          50%      { transform: translateY(4px); }
+        @keyframes hero-orb-2 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          35%      { transform: translate(-110px,-80px) scale(1.18); }
+          70%      { transform: translate(70px,-50px) scale(0.88); }
         }
-        @keyframes fade-in-up {
-          from { opacity: 0; transform: translate(-50%, 12px); }
-          to   { opacity: 1; transform: translate(-50%, 0);    }
+        @keyframes hero-orb-3 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          25%      { transform: translate(60px,-90px) scale(1.10); }
+          60%      { transform: translate(-90px,50px) scale(1.15); }
+        }
+        @keyframes hero-orb-4 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          40%      { transform: translate(-70px,-60px) scale(1.08); }
+          75%      { transform: translate(80px,40px) scale(0.92); }
         }
       `}</style>
     </section>

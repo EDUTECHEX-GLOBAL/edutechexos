@@ -31,6 +31,22 @@ import BookmarksPanel from './BookmarksPanel';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
+
+/* Shared spring config used for every modal/panel */
+const SPRING = { type: 'spring', damping: 26, stiffness: 360, mass: 0.8 } as const;
+const BACKDROP = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit:    { opacity: 0 },
+  transition: { duration: 0.18 },
+} as const;
+const CARD = {
+  initial: { opacity: 0, y: 48, scale: 0.95 },
+  animate: { opacity: 1, y: 0,  scale: 1    },
+  exit:    { opacity: 0, y: 28, scale: 0.96 },
+  transition: SPRING,
+} as const;
 import {
   AtSign,
   BarChart2,
@@ -1347,194 +1363,293 @@ export default function EduTechExOSDashboard() {
 
     return (
     <div className={`dashboard-root dashboard-workspace text-slate-900 ${rightPanel === 'closed' ? 'dashboard-workspace-panel-closed' : ''}`}>
+      {/* ══════════════════ SIDEBAR ══════════════════ */}
       <aside className="workspace-sidebar">
-        <div className="flex h-20 items-center gap-3 border-b border-slate-200/80 px-3">
-          <AppLogo size={26} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[17px] font-black leading-5 tracking-tight text-slate-900">
-              EDUTECHEX<span className="text-indigo-600">OS</span>
+
+        {/* ── Header ─────────────────────────────────────── */}
+        <div
+          className="flex h-[4.5rem] shrink-0 items-center gap-3 px-4"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <motion.div
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 22, delay: 0.05 }}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: 'linear-gradient(135deg, #2d6a4f 0%, #1a3a2a 100%)', boxShadow: '0 2px 10px rgba(0,0,0,0.35)' }}
+          >
+            <AppLogo size={18} />
+          </motion.div>
+
+          <motion.div
+            initial={{ x: -12, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 28, delay: 0.10 }}
+            className="min-w-0 flex-1"
+          >
+            <p className="truncate text-[15px] font-black leading-tight tracking-tight text-white">
+              EDUTECHEX<span style={{ color: '#52b788' }}>OS</span>
             </p>
-            <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em]" style={{ color: 'rgba(255,255,255,0.30)' }}>
               Workspace
             </p>
-          </div>
-          <button
+          </motion.div>
+
+          <motion.button
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 22, delay: 0.15 }}
+            whileHover={{ scale: 1.10, backgroundColor: 'rgba(255,255,255,0.10)' }}
+            whileTap={{ scale: 0.88 }}
             onClick={() => setNotificationsOpen(true)}
-            className="relative flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-white"
+            className="relative flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+            style={{ color: 'rgba(255,255,255,0.40)', background: 'rgba(255,255,255,0.06)' }}
             title="Notifications"
           >
-            <Bell size={18} />
+            <Bell size={15} />
             {unreadNotifications > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-600 px-1 text-[11px] font-black text-white">
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 600, damping: 20 }}
+                className="badge-pulse absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-black text-white"
+                style={{ background: '#ef4444' }}
+              >
                 {unreadNotifications > 9 ? '9+' : unreadNotifications}
-              </span>
+              </motion.span>
             )}
-          </button>
+          </motion.button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-5">
-          <section>
-            <button
-              onClick={() => setChannelsExpanded((value) => !value)}
-              className="flex w-full items-center justify-between text-left"
+        {/* ── Scrollable body ─────────────────────────────── */}
+        <div
+          className="sidebar-scroll flex-1 overflow-y-auto px-3 py-4"
+          style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.08) transparent' }}
+        >
+          {/* Channels */}
+          <section className="mb-5">
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setChannelsExpanded(v => !v)}
+              className="flex w-full items-center justify-between px-1 py-1.5 text-left"
             >
-              <span className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                <ChevronDown
-                  size={15}
-                  className={`transition ${channelsExpanded ? '' : '-rotate-90'}`}
-                />
+              <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                <motion.span
+                  animate={{ rotate: channelsExpanded ? 0 : -90 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                  className="flex"
+                >
+                  <ChevronDown size={12} />
+                </motion.span>
                 Channels
               </span>
-              <span className="text-xs font-black text-slate-400">{workspaceChannels.length}</span>
-            </button>
-            {channelsExpanded && (
-              <div className="mt-3 space-y-1">
-                {workspaceChannels.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveChannel(item.id)}
-                    className={`flex h-9 w-full items-center gap-2 rounded-lg px-2 text-left text-sm font-bold transition ${
-                      activeChannel === item.id
-                        ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200'
-                        : 'text-slate-500 hover:bg-white/70 hover:text-slate-800'
-                    }`}
-                  >
-                    <Hash size={15} />
-                    <span className="min-w-0 flex-1 truncate">{item.name}</span>
-                    {item.unread > 0 && (
-                      <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[10px] font-black text-teal-700">
-                        {item.unread}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
+              <span className="text-[10px] font-black" style={{ color: 'rgba(255,255,255,0.22)' }}>
+                {workspaceChannels.length}
+              </span>
+            </motion.button>
+
+            <AnimatePresence initial={false}>
+              {channelsExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 360, damping: 34, mass: 0.85 }}
+                  style={{ overflow: 'hidden' }}
+                  className="mt-1.5 space-y-0.5"
+                >
+                  {workspaceChannels.map((item, i) => {
+                    const isActive = activeChannel === item.id;
+                    return (
+                      <motion.button
+                        key={item.id}
+                        initial={{ x: -18, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 500, damping: 30, delay: i * 0.04 }}
+                        whileHover={{ x: isActive ? 0 : 5 }}
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => setActiveChannel(item.id)}
+                        className="relative flex h-9 w-full items-center gap-2.5 overflow-hidden rounded-lg px-3 text-left text-sm font-semibold transition-colors duration-150"
+                        style={{
+                          background: isActive ? 'rgba(82,183,136,0.14)' : 'transparent',
+                          color: isActive ? '#74c69d' : 'rgba(255,255,255,0.50)',
+                        }}
+                      >
+                        {/* Animated active-channel left bar — moves smoothly between channels */}
+                        {isActive && (
+                          <motion.span
+                            layoutId="active-channel-bar"
+                            className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full"
+                            style={{ background: '#52b788' }}
+                            transition={{ type: 'spring', stiffness: 600, damping: 32 }}
+                          />
+                        )}
+                        <Hash size={13} style={{ opacity: isActive ? 1 : 0.55, flexShrink: 0 }} />
+                        <span className="min-w-0 flex-1 truncate">{item.name}</span>
+                        {item.unread > 0 && (
+                          <motion.span
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: 'spring', stiffness: 600, damping: 20 }}
+                            className="rounded-full px-1.5 py-0.5 text-[10px] font-black"
+                            style={{ background: 'rgba(82,183,136,0.22)', color: '#52b788' }}
+                          >
+                            {item.unread}
+                          </motion.span>
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </section>
 
-          <section className="mt-7">
-            <p className="mb-4 text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+          {/* People */}
+          <section>
+            <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.30)' }}>
               People
             </p>
-            <div className="space-y-3">
-              {people.map((member) => (
-                <div key={member.id} className="group flex items-center gap-3 rounded-lg py-1.5 transition hover:bg-white/70">
-                  {/* Click avatar/name → open DM */}
-                  <button
-                    onClick={() => setActiveChannel(member.id)}
-                    title={`Chat with ${member.name}`}
-                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+            <div className="space-y-0.5">
+              {people.map((member, i) => {
+                const avatarColors = ['#1a3a2a','#2d6a4f','#0d7490','#4f46e5','#b45309','#065f46','#1d4ed8'];
+                const avatarBg = avatarColors[i % avatarColors.length];
+                return (
+                  <motion.div
+                    key={member.id}
+                    initial={{ x: -18, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 30, delay: i * 0.045 + 0.12 }}
+                    whileHover={{ x: 4 }}
+                    className="group flex h-10 items-center gap-2 rounded-lg px-2 transition-colors duration-150 hover:bg-white/[0.04]"
                   >
-                    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">
-                      {member.initials}
-                      {(() => {
-                        const s = member.id === currentMemberId ? settings.status : member.status;
-                        return (
-                          <span className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-[#f4f7fb] ${
-                            s === 'online' ? 'bg-emerald-500' :
-                            s === 'away'   ? 'bg-amber-400'  :
-                            s === 'busy'   ? 'bg-red-500'    : 'bg-slate-300'
-                          }`} />
-                        );
-                      })()}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-slate-600">
-                      {member.name}
-                    </span>
-                  </button>
-                  {/* Profile icon visible on hover */}
-                  <button
-                    onClick={() => setProfileMember(member)}
-                    title={`View ${member.name}'s profile`}
-                    className="mr-1 hidden h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-200 hover:text-slate-700 group-hover:flex"
-                  >
-                    <UserCheck size={13} />
-                  </button>
-                </div>
-              ))}
+                    <motion.button
+                      onClick={() => setActiveChannel(member.id)}
+                      whileTap={{ scale: 0.95 }}
+                      title={`Chat with ${member.name}`}
+                      className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+                    >
+                      <div
+                        className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-black text-white"
+                        style={{ background: avatarBg, boxShadow: '0 1px 4px rgba(0,0,0,0.30)' }}
+                      >
+                        {member.initials}
+                        {(() => {
+                          const s = member.id === currentMemberId ? settings.status : member.status;
+                          return (
+                            <span
+                              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ${
+                                s === 'online' ? 'bg-emerald-400' :
+                                s === 'away'   ? 'bg-amber-400'  :
+                                s === 'busy'   ? 'bg-red-400'    : 'bg-slate-500'
+                              }`}
+                              style={{ boxShadow: '0 0 0 2px #111c15' }}
+                            />
+                          );
+                        })()}
+                      </div>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium" style={{ color: 'rgba(255,255,255,0.60)' }}>
+                        {member.name}
+                      </span>
+                    </motion.button>
+
+                    <motion.button
+                      onClick={() => setProfileMember(member)}
+                      whileTap={{ scale: 0.88 }}
+                      title={`View ${member.name}'s profile`}
+                      className="hidden h-6 w-6 shrink-0 items-center justify-center rounded-md group-hover:flex"
+                      style={{ color: 'rgba(255,255,255,0.30)', background: 'rgba(255,255,255,0.07)' }}
+                    >
+                      <UserCheck size={12} />
+                    </motion.button>
+                  </motion.div>
+                );
+              })}
             </div>
           </section>
 
+          {/* Admin controls */}
           {isAdmin && (
-            <>
+            <div className="mt-6 space-y-2">
               <Link
                 href="/admin"
-                className="mt-8 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-indigo-50 px-4 text-xs font-black uppercase tracking-[0.1em] text-indigo-700 transition hover:bg-indigo-100"
+                className="flex h-10 w-full items-center justify-center gap-2 rounded-lg text-xs font-bold uppercase tracking-[0.10em] transition-all duration-200 hover:brightness-110"
+                style={{ background: 'rgba(82,183,136,0.12)', color: '#52b788', border: '1px solid rgba(82,183,136,0.18)' }}
               >
-                <ShieldCheck size={16} strokeWidth={2.5} />
+                <ShieldCheck size={14} strokeWidth={2.5} />
                 Admin dashboard
               </Link>
-              <button
+              <motion.button
+                whileHover={{ borderColor: 'rgba(82,183,136,0.35)' }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => setNewChannelOpen(true)}
-                className="mt-3 flex h-11 w-full items-center gap-3 rounded-lg border border-dashed border-slate-300 px-4 text-sm font-semibold text-slate-500 transition hover:border-indigo-300 hover:bg-white hover:text-indigo-600"
+                className="flex h-10 w-full items-center gap-2.5 rounded-lg px-4 text-sm font-semibold transition-all duration-200"
+                style={{ background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.35)', border: '1px dashed rgba(255,255,255,0.12)' }}
               >
-                <Plus size={17} />
+                <Plus size={14} />
                 New channel
-              </button>
-            </>
+              </motion.button>
+            </div>
           )}
         </div>
 
-        <div className="border-t border-slate-200/80 bg-white p-3">
-          <div className="flex items-center gap-3">
-            <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-sm font-black text-white shadow-lg shadow-indigo-200">
+        {/* ── Footer / User panel ─────────────────────────── */}
+        <div
+          className="shrink-0 px-3 pb-3 pt-3"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(0,0,0,0.22)' }}
+        >
+          {/* User info row */}
+          <div className="mb-2.5 flex items-center gap-3 px-1">
+            <motion.div
+              whileHover={{ scale: 1.06 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-black text-white"
+              style={{ background: 'linear-gradient(135deg, #2d6a4f 0%, #1a3a2a 100%)', boxShadow: '0 3px 10px rgba(0,0,0,0.40)' }}
+            >
               {currentUser?.initials ?? 'G'}
-              <span className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full ring-2 ring-white ${
-                settings.status === 'online' ? 'bg-emerald-500' :
-                settings.status === 'away'   ? 'bg-amber-400'  :
-                settings.status === 'busy'   ? 'bg-red-500'    : 'bg-slate-300'
-              }`} />
-            </div>
+              <span
+                className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ${
+                  settings.status === 'online' ? 'bg-emerald-400' :
+                  settings.status === 'away'   ? 'bg-amber-400'  :
+                  settings.status === 'busy'   ? 'bg-red-400'    : 'bg-slate-500'
+                }`}
+                style={{ boxShadow: '0 0 0 2px #0e1912' }}
+              />
+            </motion.div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-black text-slate-900">
-                {currentUser?.name ?? 'Guest'}
-              </p>
-              <span className="mt-1 inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-slate-500">
+              <p className="truncate text-sm font-black text-white">{currentUser?.name ?? 'Guest'}</p>
+              <span
+                className="mt-0.5 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.08em]"
+                style={{ background: 'rgba(82,183,136,0.15)', color: '#52b788' }}
+              >
                 {currentUser?.role ?? 'Viewer'}
               </span>
             </div>
           </div>
-          <div className="mt-2 grid grid-cols-4 rounded-xl bg-slate-50 p-1 dark:bg-slate-800/50">
+
+          {/* Action buttons */}
+          <div
+            className="grid grid-cols-4 gap-0.5 rounded-xl p-1"
+            style={{ background: 'rgba(255,255,255,0.04)' }}
+          >
             {[
-              {
-                icon: CalendarDays,
-                title: 'Open activity calendar',
-                action: () => setActivityCalendarOpen(true),
-              },
-              {
-                icon: darkMode ? Sun : Moon,
-                title: darkMode ? 'Switch to light mode' : 'Switch to dark mode',
-                action: () => { toggleTheme(); storeDarkModeToggle(); },
-              },
-              {
-                icon: Settings,
-                title: 'Open workspace settings',
-                action: () => {
-                  setSettings((value) => ({
-                    ...value,
-                    displayName: value.displayName || currentUser?.name || '',
-                  }));
-                  setSettingsOpen(true);
-                },
-              },
-              {
-                icon: LogOut,
-                title: 'Sign out',
-                action: () => {
-                  localStorage.removeItem('edutechex_token');
-                  toast.success('Signed out');
-                  router.push('/sign-up-login-screen');
-                },
-              },
-            ].map(({ icon: Icon, title, action }, index) => (
-              <button
-                key={index}
+              { icon: CalendarDays, title: 'Activity calendar',        action: () => setActivityCalendarOpen(true) },
+              { icon: darkMode ? Sun : Moon, title: darkMode ? 'Light mode' : 'Dark mode', action: () => { toggleTheme(); storeDarkModeToggle(); } },
+              { icon: Settings,    title: 'Settings',                  action: () => { setSettings(v => ({ ...v, displayName: v.displayName || currentUser?.name || '' })); setSettingsOpen(true); } },
+              { icon: LogOut,      title: 'Sign out',                  action: () => { localStorage.removeItem('edutechex_token'); toast.success('Signed out'); router.push('/sign-up-login-screen'); } },
+            ].map(({ icon: Icon, title, action }, idx) => (
+              <motion.button
+                key={idx}
                 title={title}
                 onClick={action}
-                className="flex h-9 items-center justify-center rounded-lg text-slate-400 hover:bg-white hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                whileHover={{ scale: 1.10, backgroundColor: 'rgba(255,255,255,0.10)' }}
+                whileTap={{ scale: 0.84 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 22 }}
+                className="flex h-9 items-center justify-center rounded-lg transition-colors"
+                style={{ color: 'rgba(255,255,255,0.38)' }}
               >
-                <Icon size={17} />
-              </button>
+                <Icon size={15} />
+              </motion.button>
             ))}
           </div>
         </div>
@@ -2433,16 +2548,24 @@ export default function EduTechExOSDashboard() {
         onClose={() => setActivityCalendarOpen(false)}
       />
 
-      {/* ── Feature panels ─────────────────────────────────────────── */}
-      {figmaOpen    && <FigmaPanel    onClose={() => setFigmaOpen(false)} />}
-      {calendarOpen && <CalendarPanel onClose={() => setCalendarOpen(false)} />}
+      {/* ── Feature panels (AnimatePresence enables exit animations) ── */}
+      <AnimatePresence>
+        {figmaOpen    && <FigmaPanel    key="figma"    onClose={() => setFigmaOpen(false)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {calendarOpen && <CalendarPanel key="calendar" onClose={() => setCalendarOpen(false)} />}
+      </AnimatePresence>
 
+      <AnimatePresence>
       {settingsOpen && (
-        <div
+        <motion.div
+          key="settings"
+          {...BACKDROP}
           className="fixed inset-0 z-[115] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm dark:bg-black/70"
           onClick={() => setSettingsOpen(false)}
         >
-          <div
+          <motion.div
+            {...CARD}
             className="flex w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
             style={{ maxHeight: '90vh' }}
             onClick={(e) => e.stopPropagation()}
@@ -2953,16 +3076,21 @@ export default function EduTechExOSDashboard() {
                 </div>
               </div>
             </form>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
+      <AnimatePresence>
       {scheduleMeetOpen && (
-        <div
+        <motion.div
+          key="schedule-meet"
+          {...BACKDROP}
           className="fixed inset-0 z-[115] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm dark:bg-black/70"
           onClick={() => setScheduleMeetOpen(false)}
         >
-          <form
+          <motion.form
+            {...CARD}
             onSubmit={scheduleMeet}
             className="w-full max-w-xl flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
             style={{ maxHeight: '90vh' }}
@@ -3148,15 +3276,17 @@ export default function EduTechExOSDashboard() {
                 </button>
               </div>
             </div>
-          </form>
-        </div>
+          </motion.form>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Recording overlay removed — controls are inline in the composer waveform bar */}
 
+      <AnimatePresence>
       {recordedPreview && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm dark:bg-black/70">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+        <motion.div key="preview" {...BACKDROP} className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm dark:bg-black/70">
+          <motion.div {...CARD} className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-black text-slate-950 dark:text-slate-100">
@@ -3206,16 +3336,21 @@ export default function EduTechExOSDashboard() {
                 {recordingSending ? 'Sending...' : 'Send'}
               </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
+      <AnimatePresence>
       {membersOpen && (
-        <div
+        <motion.div
+          key="members"
+          {...BACKDROP}
           className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm"
           onClick={() => setMembersOpen(false)}
         >
-          <div
+          <motion.div
+            {...CARD}
             className="max-h-[80vh] w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
@@ -3268,22 +3403,28 @@ export default function EduTechExOSDashboard() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* ─── New Feature Panels ─────────────────────────────────────────────── */}
 
       {/* Global Search Panel */}
+      <AnimatePresence>
       {globalSearchOpen && (
-        <div className="fixed inset-0 z-[200] flex items-start justify-center bg-slate-950/50 pt-20 backdrop-blur-sm" onClick={() => setGlobalSearchOpen(false)}>
-          <div onClick={e => e.stopPropagation()} className="w-full max-w-2xl">
+        <motion.div key="search" {...BACKDROP} className="fixed inset-0 z-[200] flex items-start justify-center bg-slate-950/50 pt-20 backdrop-blur-sm" onClick={() => setGlobalSearchOpen(false)}>
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12, scale: 0.97 }}
+            transition={SPRING}
+            onClick={e => e.stopPropagation()} className="w-full max-w-2xl">
             <SearchPanel onClose={() => setGlobalSearchOpen(false)} />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
-
-
+      </AnimatePresence>
 
       {/* User Profile Modal */}
       <UserProfileModal
@@ -3292,50 +3433,62 @@ export default function EduTechExOSDashboard() {
       />
 
       {/* Wiki / Knowledge Base Panel */}
+      <AnimatePresence>
       {wikiOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-          <div className="h-full w-full max-w-4xl">
+        <motion.div key="wiki" {...BACKDROP} className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <motion.div {...CARD} className="h-full w-full max-w-4xl">
             <WikiPanel
               onClose={() => { setWikiOpen(false); scrollToBottom(); }}
               activeChannel={`personal-${currentUser?.email ?? 'guest'}`}
             />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Kanban Task Board */}
+      <AnimatePresence>
       {kanbanOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-          <div className="h-full w-full max-w-5xl">
+        <motion.div key="kanban" {...BACKDROP} className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <motion.div {...CARD} className="h-full w-full max-w-5xl">
             <KanbanBoard onClose={() => { setKanbanOpen(false); scrollToBottom(); }} />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Analytics Panel (Admin only) */}
+      <AnimatePresence>
       {analyticsOpen && isAdmin && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-4xl max-h-[90vh] overflow-auto">
+        <motion.div key="analytics" {...BACKDROP} className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <motion.div {...CARD} className="w-full max-w-4xl max-h-[90vh] overflow-auto">
             <AnalyticsPanel onClose={() => { setAnalyticsOpen(false); scrollToBottom(); }} />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Bookmarks Panel */}
+      <AnimatePresence>
       {bookmarksPanelOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl max-h-[85vh] overflow-auto">
+        <motion.div key="bookmarks" {...BACKDROP} className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <motion.div {...CARD} className="w-full max-w-xl max-h-[85vh] overflow-auto">
             <BookmarksPanel onClose={() => { setBookmarksPanelOpen(false); scrollToBottom(); }} />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
+      <AnimatePresence>
       {newChannelOpen && isAdmin && (
-        <div
+        <motion.div
+          key="new-channel"
+          {...BACKDROP}
           className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm"
           onClick={() => setNewChannelOpen(false)}
         >
-          <form
+          <motion.form
+            {...CARD}
             onSubmit={createChannel}
             className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
             onClick={(event) => event.stopPropagation()}
@@ -3381,9 +3534,10 @@ export default function EduTechExOSDashboard() {
             >
               Create channel
             </button>
-          </form>
-        </div>
+          </motion.form>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,7 +1,5 @@
 import LandingNav from './components/LandingNav';
 import LandingHero from './components/LandingHero';
-import LandingMarquee from './components/LandingMarquee';
-import LandingStats from './components/LandingStats';
 import LandingTrustedBy from './components/LandingTrustedBy';
 import LandingFeatures from './components/LandingFeatures';
 import LandingHowItWorks from './components/LandingHowItWorks';
@@ -16,10 +14,7 @@ export default function LandingPage() {
       <LandingNav />
       <main className="relative z-10">
         <LandingHero />
-        <LandingMarquee />
-        <LandingStats />
         <LandingTrustedBy />
-        <LandingMarquee />
         <LandingFeatures />
         <LandingHowItWorks />
         <LandingCTA />

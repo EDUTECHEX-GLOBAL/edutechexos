@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Figma, ExternalLink, Link2, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, ExternalLink, Link2, AlertCircle, RefreshCw } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface FigmaPanelProps {
   onClose: () => void;
@@ -47,9 +48,21 @@ export default function FigmaPanel({ onClose }: FigmaPanelProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-      <div className="flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
-        style={{ height: '90vh' }}>
+    <motion.div
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+    >
+      <motion.div
+        className="flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+        style={{ height: '90vh' }}
+        initial={{ opacity: 0, y: 50, scale: 0.94 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 30, scale: 0.96 }}
+        transition={{ type: 'spring', damping: 26, stiffness: 360, mass: 0.8 }}
+      >
 
         {/* ── Header ─────────────────────────────────────────── */}
         <div className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-[#1a1a2e] to-[#16213e] px-5">
@@ -180,7 +193,7 @@ export default function FigmaPanel({ onClose }: FigmaPanelProps) {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

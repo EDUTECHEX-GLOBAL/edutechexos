@@ -13,7 +13,7 @@ const steps = [
     demo: (
       <div className="flex flex-col gap-3">
         <div className="flex -space-x-3 mb-2">
-          {[['VK','#1a3a2a'],['RA','#4f46e5'],['TM','#0d7490'],['SA','#7c3aed']].map(([l,c],i) => (
+          {[['VK','#1a3a2a'],['RA','#4f46e5'],['TM','#0d7490'],['SA','#065f46']].map(([l,c],i) => (
             <div key={l} className="w-12 h-12 rounded-2xl flex items-center justify-center border-2 border-white text-white text-xs font-bold shadow" style={{ background: c, zIndex: 4-i }}>
               {l}
             </div>
@@ -75,7 +75,7 @@ export default function LandingHowItWorks() {
     <section
       id="how-it-works"
       className="relative overflow-hidden"
-      style={{ background: '#e8e3d8' }}
+      style={{ background: '#ede8dd' }}
     >
       {/* Grid */}
       <div className="absolute inset-0 pointer-events-none" style={{
@@ -83,8 +83,26 @@ export default function LandingHowItWorks() {
         backgroundSize: '52px 52px',
       }} />
       <div className="absolute inset-0 pointer-events-none" style={{
-        background: 'radial-gradient(ellipse 80% 70% at 50% 50%, #e8e3d8 20%, transparent 75%)',
+        background: 'radial-gradient(ellipse 80% 70% at 50% 50%, #ede8dd 20%, transparent 75%)',
       }} />
+
+      {/* Animated orbs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div style={{ position:'absolute', width:520, height:520, borderRadius:'50%', background:'radial-gradient(circle, rgba(26,58,42,0.11) 0%, transparent 65%)', filter:'blur(52px)', top:'10%', right:'-10%', animation:'hiw-orb-1 25s ease-in-out infinite', willChange:'transform' }} />
+        <div style={{ position:'absolute', width:440, height:440, borderRadius:'50%', background:'radial-gradient(circle, rgba(79,70,229,0.07) 0%, transparent 65%)', filter:'blur(56px)', bottom:'10%', left:'-8%', animation:'hiw-orb-2 32s ease-in-out infinite 6s', willChange:'transform' }} />
+      </div>
+      <style>{`
+        @keyframes hiw-orb-1 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          40%      { transform: translate(-100px,80px) scale(1.13); }
+          72%      { transform: translate(60px,-50px) scale(0.89); }
+        }
+        @keyframes hiw-orb-2 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          35%      { transform: translate(110px,-90px) scale(1.17); }
+          68%      { transform: translate(-70px,70px) scale(0.90); }
+        }
+      `}</style>
 
       <div className="relative max-w-screen-xl mx-auto px-6 lg:px-10">
 
@@ -161,7 +179,7 @@ export default function LandingHowItWorks() {
                   >
                     <div
                       className="rounded-2xl p-6"
-                      style={{ background: '#f5f1ea', border: '1px solid rgba(0,0,0,0.07)' }}
+                      style={{ background: '#ede8dd', border: '1px solid rgba(0,0,0,0.07)' }}
                     >
                       {step.demo}
                     </div>

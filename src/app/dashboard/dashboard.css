@@ -36,9 +36,36 @@
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  border-right: 1px solid var(--border-color);
-  background: linear-gradient(180deg, #f5f1ea, #ede8dd);
+  border-right: 1px solid rgba(255,255,255,0.055);
+  background: linear-gradient(180deg, #14201a 0%, #0e1912 100%);
 }
+
+/* Sidebar scrollbar */
+.sidebar-scroll::-webkit-scrollbar { width: 4px; }
+.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+.sidebar-scroll::-webkit-scrollbar-thumb { border-radius: 99px; background: rgba(255,255,255,0.08); }
+
+/* Sidebar item click ripple */
+@keyframes sidebar-ripple {
+  0%   { transform: scale(0); opacity: 0.4; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.sidebar-ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(82,183,136,0.25);
+  animation: sidebar-ripple 0.45s ease-out forwards;
+  pointer-events: none;
+}
+
+/* Notification badge pulse */
+@keyframes badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+  50%       { box-shadow: 0 0 0 5px rgba(239,68,68,0); }
+}
+.badge-pulse { animation: badge-pulse 2s ease-in-out infinite; }
 
 /* ── Chat area ───────────────────────────────────────────────────────────── */
 .workspace-chat {
@@ -225,8 +252,8 @@ html.dark {
 }
 .dark .dashboard-root   { background: var(--bg-primary); }
 .dark .workspace-sidebar {
-  background: linear-gradient(180deg, #243424, #1a2e1a);
-  border-right-color: rgba(255,255,255,0.06);
+  background: linear-gradient(180deg, #0e1710 0%, #0a120d 100%);
+  border-right-color: rgba(255,255,255,0.05);
 }
 .dark .workspace-chat   { background: #1a2e1a; }
 .dark .chat-header      { background: rgba(26,46,26,0.92); border-bottom-color: rgba(255,255,255,0.06); }

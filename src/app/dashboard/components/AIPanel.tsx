@@ -282,9 +282,7 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
               <button
                 key={q}
                 type="button"
-                onClick={() => {
-                  setAiInput(q);
-                }}
+                onClick={() => { setAiInput(q); }}
                 className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-[10px] font-bold text-slate-500 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm"
               >
                 {q}

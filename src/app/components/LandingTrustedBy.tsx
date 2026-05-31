@@ -17,7 +17,7 @@ export default function LandingTrustedBy() {
     <section
       id="trusted"
       className="relative py-24 px-6 lg:px-10 overflow-hidden"
-      style={{ background: '#f5f1ea' }}
+      style={{ background: '#ede8dd' }}
     >
       {/* Grid — darker lines */}
       <div
@@ -34,9 +34,27 @@ export default function LandingTrustedBy() {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse 80% 70% at 50% 50%, #f5f1ea 20%, transparent 75%)',
+          background: 'radial-gradient(ellipse 80% 70% at 50% 50%, #ede8dd 20%, transparent 75%)',
         }}
       />
+
+      {/* Animated orbs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div style={{ position:'absolute', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle, rgba(26,58,42,0.09) 0%, transparent 65%)', filter:'blur(56px)', top:'-15%', right:'5%', animation:'trusted-orb-1 22s ease-in-out infinite', willChange:'transform' }} />
+        <div style={{ position:'absolute', width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle, rgba(79,70,229,0.07) 0%, transparent 65%)', filter:'blur(48px)', bottom:'-10%', left:'10%', animation:'trusted-orb-2 28s ease-in-out infinite 3s', willChange:'transform' }} />
+      </div>
+      <style>{`
+        @keyframes trusted-orb-1 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          40%      { transform: translate(-80px,60px) scale(1.14); }
+          70%      { transform: translate(60px,-40px) scale(0.90); }
+        }
+        @keyframes trusted-orb-2 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          35%      { transform: translate(90px,-70px) scale(1.10); }
+          68%      { transform: translate(-50px,80px) scale(0.94); }
+        }
+      `}</style>
 
       <div className="relative max-w-screen-xl mx-auto flex flex-col items-center">
 
@@ -55,7 +73,7 @@ export default function LandingTrustedBy() {
               style={{ fontSize: 'clamp(2.4rem, 5vw, 4rem)', color: '#1a2e1a' }}
             >
               Everything <span style={{
-                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                background: 'linear-gradient(135deg, #4f46e5, #2563eb)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
