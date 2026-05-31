@@ -1,14 +1,39 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+import connectToDatabase from '@/lib/mongoose';
+import NotificationModel from '@/models/Notification';
 
-let notifications: any[] = [];
-
-export async function GET() {
-  return NextResponse.json({ notifications });
+export async function GET(req: NextRequest) {
+  try {
+    await connectToDatabase();
+    const email = req.nextUrl.searchParams.get('email');
+    const query = email
+      ? { $or: [{ recipientEmails: { $size: 0 } }, { recipientEmails: email }] }
+      : {};
+    const docs = await NotificationModel.find(query).sort({ createdAt: -1 }).limit(100).lean();
+    const notifications = docs.map(({ _id, __v, ...rest }: any) => ({
+      ...rest,
+      id: _id.toString(),
+      timestamp: rest.createdAt,
+    }));
+    return NextResponse.json({ success: true, notifications });
+  } catch (err) {
+    console.error('GET /api/notifications error:', err);
+    return NextResponse.json({ success: false, notifications: [] });
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const n = { ...body, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
-  notifications.push(n);
-  return NextResponse.json(n, { status: 201 });
+  try {
+    await connectToDatabase();
+    const body = await req.json();
+    const doc = await NotificationModel.create(body);
+    const { _id, __v, createdAt, ...rest } = doc.toObject();
+    return NextResponse.json(
+      { success: true, notification: { ...rest, id: _id.toString(), timestamp: createdAt } },
+      { status: 201 }
+    );
+  } catch (err) {
+    console.error('POST /api/notifications error:', err);
+    return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
+  }
 }
