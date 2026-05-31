@@ -455,15 +455,6 @@ export default function EduTechExOSDashboard() {
   const [recordedPreview, setRecordedPreview] = useState<RecordedPreview | null>(null);
   const [recordingSending, setRecordingSending] = useState(false);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Helper to stop recording and immediately send (used for screen recordings)
-  const handleStopAndSend = async () => {
-    stopRecording(true);
-    // Wait briefly for onstop to generate preview
-    await new Promise((res) => setTimeout(res, 600));
-    if (recordedPreview) {
-      await sendRecordedPreview();
-    }
-  };
   // ─── New panel states ────────────────────────────────────────────────────────
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
 

@@ -115,7 +115,7 @@
   position: absolute;
   bottom: 6px; right: -7px;
   width: 0; height: 0;
-  border-left: 8px solid #1a3a2a;
+  border-left: 8px solid #4f46e5;
   border-top: 5px solid transparent;
   border-bottom: 5px solid transparent;
 }
@@ -262,8 +262,8 @@ html.dark {
 .dark .date-divider span{ background: rgba(255,255,255,0.07); }
 .dark .chat-scroll      { scrollbar-color: rgba(82,183,136,0.25) transparent; }
 .dark .composer         { background: rgba(30,50,30,0.75); border-color: rgba(255,255,255,0.08); }
-.dark .bubble-own::after  { border-left-color: #1a3a2a; }
-.dark .bubble-other::after{ border-right-color: #243424; }
+.dark .bubble-own::after  { border-left-color: #4f46e5; }
+.dark .bubble-other::after{ border-right-color: #1e293b; }
 .dark .composer-wrap    { background: rgba(26,46,26,0.92); border-top-color: rgba(255,255,255,0.06); }
 
 /* ── Typing indicator ────────────────────────────────────────────────────── */
