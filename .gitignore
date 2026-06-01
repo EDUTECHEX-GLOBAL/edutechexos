@@ -50,5 +50,5 @@ public/uploads/
 # Dev-only scripts
 test_gemini.js
 
-# Backend lives in its own repo (edutechexos-backend)
-backend/
+# Backend node_modules only — source is tracked so Render can deploy it
+backend/node_modules/

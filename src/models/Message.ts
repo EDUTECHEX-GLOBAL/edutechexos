@@ -8,7 +8,6 @@ export interface IMessage extends Document {
   color: string;
   text: string;
   timestamp: Date;
-  // optional payload fields
   audioUrl?: string;
   videoUrl?: string;
   files?: { name: string; url: string; type: string }[];
@@ -25,6 +24,11 @@ export interface IMessage extends Document {
     description?: string;
     image?: string;
   };
+  // soft-delete fields — message persists in DB, UI shows placeholder
+  deletedAt?: Date;
+  deletedForEveryone?: boolean;
+  deletedBy?: string;
+  deletedForUsers?: string[];
 }
 
 const MessageSchema: Schema = new Schema(
@@ -44,9 +48,13 @@ const MessageSchema: Schema = new Schema(
     parentId:    { type: String },
     reactions:   { type: Schema.Types.Mixed, default: {} },
     poll:        { type: Schema.Types.Mixed },
-    linkPreview: { type: Schema.Types.Mixed },
+    linkPreview:          { type: Schema.Types.Mixed },
+    // soft-delete — never hard-remove; UI renders a placeholder instead
+    deletedAt:            { type: Date },
+    deletedForEveryone:   { type: Boolean, default: false },
+    deletedBy:            { type: String },
+    deletedForUsers:      [{ type: String }],
   },
-  // strict: false → extra fields sent by the client are stored as-is
   { strict: false }
 );
 

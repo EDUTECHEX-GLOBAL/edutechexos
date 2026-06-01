@@ -366,6 +366,7 @@ export default function EduTechExOSDashboard() {
     addMessage,
     addMessageFromSocket,
     updateMessageFromSocket,
+    deleteMessageFromSocket,
     addNotification,
     loadLocalMessages,
     loadLocalWikiPages,
@@ -596,17 +597,23 @@ export default function EduTechExOSDashboard() {
       updateMessageFromSocket(channelId, message);
     };
 
+    const handleDeletedMessage = ({ channelId, messageId }: { channelId: string; messageId: string }) => {
+      deleteMessageFromSocket(channelId, messageId);
+    };
+
     socket.on('connect', handleReconnect);
     socket.on('new_message', handleNewMessage);
     socket.on('message_updated', handleUpdatedMessage);
+    socket.on('message_deleted', handleDeletedMessage);
 
     return () => {
       socket.off('connect', handleReconnect);
       socket.off('new_message', handleNewMessage);
       socket.off('message_updated', handleUpdatedMessage);
+      socket.off('message_deleted', handleDeletedMessage);
       socket.emit('leave_channel', activeChannelId);
     };
-  }, [activeChannelId, addMessageFromSocket, updateMessageFromSocket]);
+  }, [activeChannelId, addMessageFromSocket, updateMessageFromSocket, deleteMessageFromSocket]);
 
   // Poll backend notifications for the signed-in user every 5 seconds
   useEffect(() => {

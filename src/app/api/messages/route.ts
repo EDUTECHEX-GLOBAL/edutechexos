@@ -2,17 +2,43 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongoose';
 import Message from '@/models/Message';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const requestingUser = searchParams.get('userEmail') ?? '';
+
   try {
     await connectToDatabase();
+    // Fetch all messages (including soft-deleted so the UI can show placeholders)
     const messages = await Message.find({}).sort({ timestamp: 1 }).lean();
     const grouped: Record<string, any[]> = {};
+
     for (const msg of messages as any[]) {
       const { _id, __v, ...rest } = msg;
       const channelId = rest.channelId;
       if (!grouped[channelId]) grouped[channelId] = [];
+
+      // If hidden for this specific user, skip entirely
+      if (requestingUser && (rest.deletedForUsers ?? []).includes(requestingUser)) continue;
+
+      // Soft-deleted for everyone → keep in list but scrub content (WhatsApp style)
+      if (rest.deletedForEveryone) {
+        grouped[channelId].push({
+          id: _id.toString(),
+          channelId,
+          sender: rest.sender,
+          initials: rest.initials,
+          color: rest.color,
+          timestamp: rest.timestamp,
+          parentId: rest.parentId,
+          isDeleted: true,
+          text: '',
+        });
+        continue;
+      }
+
       grouped[channelId].push({ ...rest, id: _id.toString() });
     }
+
     return NextResponse.json({ success: true, messages: grouped });
   } catch (err) {
     console.error('GET /api/messages error:', err);

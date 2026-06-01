@@ -244,8 +244,17 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
                   </span>
                 )}
 
-                {/* Edit mode */}
-                {editingId === msg.id ? (
+                {/* Soft-deleted placeholder (WhatsApp style) */}
+                {msg.isDeleted ? (
+                  <div className={`flex items-center gap-1.5 rounded-2xl px-3.5 py-2.5 text-[13px] italic shadow-sm
+                    ${isOwn
+                      ? 'bg-indigo-600/60 text-indigo-100'
+                      : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-400 dark:text-slate-500'
+                    }`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-60"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                    This message was deleted
+                  </div>
+                ) : editingId === msg.id ? (
                   <div className="flex gap-2 w-full">
                     <textarea
                       value={editText}
@@ -395,7 +404,7 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
                 )}
 
                 {/* Reactions */}
-                {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                {!msg.isDeleted && msg.reactions && Object.keys(msg.reactions).length > 0 && (
                   <div className={`mt-1 flex flex-wrap gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                     {Object.entries(msg.reactions).map(([emoji, users]: [string, any]) =>
                       users.length > 0 ? (

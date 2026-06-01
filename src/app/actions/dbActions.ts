@@ -67,12 +67,28 @@ export async function getLocalMessages() {
     }
   }
   try {
-    const messages = await Message.find({}).lean();
+    const messages = await Message.find({}).sort({ timestamp: 1 }).lean();
     const grouped: Record<string, any[]> = {};
     for (const msg of messages as any[]) {
       const channelId = msg.channelId;
       if (!grouped[channelId]) grouped[channelId] = [];
       const { _id, __v, ...rest } = msg;
+
+      if (rest.deletedForEveryone) {
+        grouped[channelId].push({
+          id: _id.toString(),
+          channelId,
+          sender: rest.sender,
+          initials: rest.initials,
+          color: rest.color,
+          timestamp: rest.timestamp,
+          parentId: rest.parentId,
+          isDeleted: true,
+          text: '',
+        });
+        continue;
+      }
+
       grouped[channelId].push({ ...rest, id: _id.toString() });
     }
     return grouped;
@@ -137,13 +153,32 @@ export async function uploadLocalFile(formData: FormData) {
   }
 }
 
-export async function deleteLocalMessage(channelId: string, messageId: string) {
+export async function deleteLocalMessage(
+  channelId: string,
+  messageId: string,
+  options: { hard?: boolean; scope?: 'everyone' | 'me'; userEmail?: string } = {}
+) {
   await ensureDbExists();
   try {
-    await Message.findByIdAndDelete(messageId);
-    return { success: true };
+    if (options.hard) {
+      await Message.findByIdAndDelete(messageId);
+      return { success: true, deleted: 'permanent' };
+    }
+    if (options.scope === 'me' && options.userEmail) {
+      await Message.findByIdAndUpdate(messageId, {
+        $addToSet: { deletedForUsers: options.userEmail },
+      });
+      return { success: true, deleted: 'for-me' };
+    }
+    // Default: soft-delete for everyone
+    await Message.findByIdAndUpdate(messageId, {
+      deletedAt: new Date(),
+      deletedForEveryone: true,
+      deletedBy: options.userEmail ?? 'unknown',
+    });
+    return { success: true, deleted: 'for-everyone' };
   } catch (err) {
-    console.error('Failed to delete message from MongoDB:', err);
+    console.error('Failed to soft-delete message from MongoDB:', err);
     return { success: false, error: String(err) };
   }
 }

@@ -2,8 +2,9 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { CHANNELS } from '@/data/mockData';
 
-const API_BASE = '';
-console.log('API_BASE = (relative — proxied via Vercel rewrites)');
+// Route message API calls through the backend so Socket.IO events are emitted.
+// Falls back to relative Next.js routes if the env var is not set.
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,8 @@ export type Message = {
   reactions?: Record<string, string[]>;
   poll?: Poll;
   linkPreview?: LinkPreview;
+  // soft-delete — set by server when "Delete for everyone" is triggered
+  isDeleted?: boolean;
 };
 
 export type WikiPage = {
@@ -100,6 +103,7 @@ type DashboardState = {
   addMessageFromSocket: (channelId: string, message: Message) => void;
   updateMessageFromSocket: (channelId: string, message: Message) => void;
   deleteMessage: (channelId: string, messageId: string) => void;
+  deleteMessageFromSocket: (channelId: string, messageId: string) => void;
   editMessage: (channelId: string, messageId: string, newText: string) => void;
   loadLocalMessages: () => Promise<void>;
 
@@ -253,12 +257,34 @@ export const useDashboardStore = create<DashboardState>()(
       },
 
       deleteMessage: (channelId, messageId) => {
+        // Soft-delete: message stays in DB, UI shows a placeholder (WhatsApp style)
         fetch(`${API_BASE}/api/messages/${messageId}`, {
           method: 'DELETE',
-        }).catch(() => { /* backend unavailable */ });
+        }).catch(() => { /* backend unavailable — optimistic soft-delete applied */ });
 
         set((s) => ({
-          messages: { ...s.messages, [channelId]: (s.messages[channelId] ?? []).filter((m) => m.id !== messageId) },
+          messages: {
+            ...s.messages,
+            [channelId]: (s.messages[channelId] ?? []).map((m) =>
+              m.id === messageId
+                ? { ...m, isDeleted: true, text: '', audioUrl: undefined, videoUrl: undefined, files: undefined, poll: undefined, reactions: undefined }
+                : m
+            ),
+          },
+        }));
+      },
+
+      // Called by Socket.IO 'message_deleted' — marks as soft-deleted without re-calling the API
+      deleteMessageFromSocket: (channelId, messageId) => {
+        set((s) => ({
+          messages: {
+            ...s.messages,
+            [channelId]: (s.messages[channelId] ?? []).map((m) =>
+              m.id === messageId
+                ? { ...m, isDeleted: true, text: '', audioUrl: undefined, videoUrl: undefined, files: undefined, poll: undefined, reactions: undefined }
+                : m
+            ),
+          },
         }));
       },
 

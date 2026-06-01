@@ -65,22 +65,6 @@ export default function LandingHero() {
       {/* ── Center content ────────────────────────────────────────────── */}
       <div className="relative flex-1 flex flex-col items-center justify-center text-center px-6 pt-24 pb-20">
 
-        {/* Live badge */}
-        <div
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8 text-xs font-bold tracking-[0.12em] uppercase"
-          style={{
-            background: 'rgba(26,58,42,0.07)',
-            border: '1px solid rgba(26,58,42,0.15)',
-            color: '#1a3a2a',
-          }}
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style={{ background: '#1a3a2a' }} />
-            <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: '#1a3a2a' }} />
-          </span>
-          Internal OS · Now live
-        </div>
-
         {/* Heading */}
         <h1
           className="font-black leading-[0.92] mb-8 tracking-[-0.035em]"
