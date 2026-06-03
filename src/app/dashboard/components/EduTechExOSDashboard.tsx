@@ -22,6 +22,7 @@ import MyActivityCalendar from './MyActivityCalendar';
 import SearchPanel from './SearchPanel';
 import FigmaPanel from './FigmaPanel';
 import CalendarPanel from './CalendarPanel';
+import IntegrationsPanel from './IntegrationsPanel';
 
 import UserProfileModal from './UserProfileModal';
 import WikiPanel from './WikiPanel';
@@ -466,6 +467,7 @@ export default function EduTechExOSDashboard() {
   const [bookmarksPanelOpen, setBookmarksPanelOpen] = useState(false);
   const [figmaOpen, setFigmaOpen]       = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [integrationsOpen, setIntegrationsOpen] = useState(false);
   const [profileMember, setProfileMember] = useState<(typeof members)[0] | null>(null);
   const currentMember = currentUser?.email
     ? members.find((member) => member.email.toLowerCase() === currentUser.email.toLowerCase())
@@ -1735,6 +1737,13 @@ export default function EduTechExOSDashboard() {
             >
               <CalendarDays size={18} />
             </button>
+            <button
+              title="Integrations — GitHub, Zapier & more"
+              onClick={() => setIntegrationsOpen(true)}
+              className="hidden h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 xl:flex transition-colors"
+            >
+              <Zap size={18} />
+            </button>
 
             <div className="relative">
               <button
@@ -1844,6 +1853,12 @@ export default function EduTechExOSDashboard() {
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
                   >
                     <CalendarDays size={15} /> Team calendar
+                  </button>
+                  <button
+                    onClick={() => { setMoreOpen(false); setIntegrationsOpen(true); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    <Zap size={15} /> Integrations
                   </button>
 
                 </div>
@@ -2557,6 +2572,13 @@ export default function EduTechExOSDashboard() {
       {/* ── Feature panels (AnimatePresence enables exit animations) ── */}
       <AnimatePresence>
         {figmaOpen    && <FigmaPanel    key="figma"    onClose={() => setFigmaOpen(false)} />}
+        {integrationsOpen && (
+          <IntegrationsPanel
+            key="integrations"
+            onClose={() => setIntegrationsOpen(false)}
+            channels={channels}
+          />
+        )}
       </AnimatePresence>
       <AnimatePresence>
         {calendarOpen && <CalendarPanel key="calendar" onClose={() => setCalendarOpen(false)} />}
