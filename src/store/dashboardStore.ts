@@ -6,6 +6,59 @@ import { CHANNELS } from '@/data/mockData';
 // Falls back to relative Next.js routes if the env var is not set.
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
 
+// ─── Auth helpers ────────────────────────────────────────────────────────────
+function getStoredAuth(): { token?: string; user?: { email?: string } } | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('edutechex_token');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getToken(): string | undefined {
+  return getStoredAuth()?.token;
+}
+
+function getCurrentUserEmail(): string | undefined {
+  return getStoredAuth()?.user?.email;
+}
+
+/** Wraps fetch with Authorization header and userEmail injection. */
+async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = getToken();
+  const email = getCurrentUserEmail();
+
+  const headers = new Headers(options.headers);
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  const method = (options.method || 'GET').toUpperCase();
+
+  // Attach userEmail to query string for GET; merge into body for POST/PATCH/DELETE
+  if (email) {
+    if (method === 'GET') {
+      const sep = url.includes('?') ? '&' : '?';
+      url = `${url}${sep}userEmail=${encodeURIComponent(email)}`;
+    } else if (options.body && typeof options.body === 'string') {
+      try {
+        const parsed = JSON.parse(options.body);
+        if (!parsed.userEmail) {
+          parsed.userEmail = email;
+          options = { ...options, body: JSON.stringify(parsed) };
+        }
+      } catch { /* not JSON — skip */ }
+    }
+  }
+
+  return fetch(url, { ...options, headers });
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type MessageAttachment = { name: string; url: string; type: string };
@@ -115,7 +168,8 @@ type DashboardState = {
   unpinMessage: (channelId: string, messageId: string) => void;
 
   bookmarkedMessageIds: string[];
-  toggleBookmark: (messageId: string) => void;
+  toggleBookmark: (messageId: string, message?: { channelId?: string; text?: string; sender?: string; timestamp?: string }) => void;
+  loadLocalBookmarkedIds: () => Promise<void>;
 
   activeThreadId: string | null;
   setActiveThread: (id: string | null) => void;
@@ -205,7 +259,7 @@ export const useDashboardStore = create<DashboardState>()(
       messages: {} as Record<string, Message[]>,
 
       addMessage: (channelId, message) => {
-        fetch(`${API_BASE}/api/messages`, {
+        apiFetch(`${API_BASE}/api/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...message, channelId }),
@@ -258,7 +312,7 @@ export const useDashboardStore = create<DashboardState>()(
 
       deleteMessage: (channelId, messageId) => {
         // Soft-delete: message stays in DB, UI shows a placeholder (WhatsApp style)
-        fetch(`${API_BASE}/api/messages/${messageId}`, {
+        apiFetch(`${API_BASE}/api/messages/${messageId}`, {
           method: 'DELETE',
         }).catch(() => { /* backend unavailable — optimistic soft-delete applied */ });
 
@@ -291,7 +345,7 @@ export const useDashboardStore = create<DashboardState>()(
       editMessage: (channelId, messageId, newText) => {
         const editedAt = new Date().toISOString();
         // Persist to backend — server will also broadcast `message_updated` via Socket.IO
-        fetch(`${API_BASE}/api/messages/${messageId}`, {
+        apiFetch(`${API_BASE}/api/messages/${messageId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: newText, editedAt }),
@@ -309,7 +363,7 @@ export const useDashboardStore = create<DashboardState>()(
 
       loadLocalMessages: async () => {
         try {
-          const res = await fetch(`${API_BASE}/api/messages`);
+          const res = await apiFetch(`${API_BASE}/api/messages`);
           if (!res.ok) {
             console.warn('Backend unavailable, using local messages (status', res.status, ')');
             return;
@@ -367,7 +421,7 @@ export const useDashboardStore = create<DashboardState>()(
         if (!reactions[emoji].length) delete reactions[emoji];
 
         // Persist to backend — also triggers `message_updated` broadcast
-        fetch(`${API_BASE}/api/messages/${messageId}`, {
+        apiFetch(`${API_BASE}/api/messages/${messageId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reactions }),
@@ -396,7 +450,7 @@ export const useDashboardStore = create<DashboardState>()(
         const poll = { ...current.poll, options };
 
         // Persist to backend — also triggers `message_updated` broadcast
-        fetch(`${API_BASE}/api/messages/${messageId}`, {
+        apiFetch(`${API_BASE}/api/messages/${messageId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ poll }),
@@ -423,12 +477,30 @@ export const useDashboardStore = create<DashboardState>()(
         })),
 
       bookmarkedMessageIds: [],
-      toggleBookmark: (messageId) =>
+      toggleBookmark: (messageId, message?: { channelId?: string; text?: string; sender?: string; timestamp?: string }) => {
+        // Local optimistic toggle
         set((s) => ({
           bookmarkedMessageIds: s.bookmarkedMessageIds.includes(messageId)
             ? s.bookmarkedMessageIds.filter((id) => id !== messageId)
             : [...s.bookmarkedMessageIds, messageId],
-        })),
+        }));
+        // Persist to backend
+        if (message) {
+          apiFetch(`${API_BASE}/api/bookmarks/toggle`, {
+            method: 'POST',
+            body: JSON.stringify({ messageId, ...message }),
+          }).catch(() => {});
+        }
+      },
+      loadLocalBookmarkedIds: async () => {
+        try {
+          const res = await apiFetch(`${API_BASE}/api/bookmarks`);
+          const data = await res.json();
+          if (data.success && data.bookmarks) {
+            set({ bookmarkedMessageIds: data.bookmarks.map((b: any) => b.messageId) });
+          }
+        } catch { /* backend unavailable — keep local state */ }
+      },
 
       activeThreadId: null,
       setActiveThread: (id) => set({ activeThreadId: id }),
@@ -460,7 +532,7 @@ export const useDashboardStore = create<DashboardState>()(
 
       loadLocalKanbanTasks: async () => {
         try {
-          const res = await fetch(`${API_BASE}/api/kanban`);
+          const res = await apiFetch(`${API_BASE}/api/kanban`);
           if (!res.ok) return;
           const data = await res.json();
           if (!data.success || !data.tasks) return;
@@ -473,7 +545,7 @@ export const useDashboardStore = create<DashboardState>()(
         const newTask: KanbanTask = { ...task, id: tempId, createdAt: new Date().toISOString() };
         set((s) => ({ kanbanTasks: [...s.kanbanTasks, newTask] }));
         // Persist to backend; swap temp id with real MongoDB id
-        fetch(`${API_BASE}/api/kanban`, {
+        apiFetch(`${API_BASE}/api/kanban`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(task),
@@ -491,7 +563,7 @@ export const useDashboardStore = create<DashboardState>()(
 
       updateKanbanTaskStatus: (taskId, status) => {
         set((s) => ({ kanbanTasks: s.kanbanTasks.map((t) => (t.id === taskId ? { ...t, status } : t)) }));
-        fetch(`${API_BASE}/api/kanban/${taskId}`, {
+        apiFetch(`${API_BASE}/api/kanban/${taskId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status }),
@@ -500,7 +572,7 @@ export const useDashboardStore = create<DashboardState>()(
 
       deleteKanbanTask: (taskId) => {
         set((s) => ({ kanbanTasks: s.kanbanTasks.filter((t) => t.id !== taskId) }));
-        fetch(`${API_BASE}/api/kanban/${taskId}`, {
+        apiFetch(`${API_BASE}/api/kanban/${taskId}`, {
           method: 'DELETE',
         }).catch(() => { /* backend unavailable */ });
       },
@@ -511,7 +583,7 @@ export const useDashboardStore = create<DashboardState>()(
         const page: WikiPage = { id: tempId, ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
         set((s) => ({ wikiPages: { ...s.wikiPages, [channelId]: [...(s.wikiPages[channelId] ?? []), page] } }));
 
-        fetch(`${API_BASE}/api/wikipages`, {
+        apiFetch(`${API_BASE}/api/wikipages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: tempId, channelId, title: data.title, content: data.content }),
@@ -541,7 +613,7 @@ export const useDashboardStore = create<DashboardState>()(
 
         const currentPage = get().wikiPages[channelId]?.find((p) => p.id === pageId);
         if (currentPage) {
-          fetch(`${API_BASE}/api/wikipages`, {
+          apiFetch(`${API_BASE}/api/wikipages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -554,7 +626,7 @@ export const useDashboardStore = create<DashboardState>()(
         }
       },
       deleteWikiPage: (channelId, pageId) => {
-        fetch(`${API_BASE}/api/wikipages/${pageId}`, {
+        apiFetch(`${API_BASE}/api/wikipages/${pageId}`, {
           method: 'DELETE',
         }).catch(() => { /* backend unavailable */ });
 
@@ -562,7 +634,7 @@ export const useDashboardStore = create<DashboardState>()(
       },
       loadLocalWikiPages: async () => {
         try {
-          const res = await fetch(`${API_BASE}/api/wikipages`);
+          const res = await apiFetch(`${API_BASE}/api/wikipages`);
           const data = await res.json();
           if (!data.success || !data.pages) return;
 
@@ -583,7 +655,7 @@ export const useDashboardStore = create<DashboardState>()(
         const newNotif = { ...notif, id: localId, timestamp: new Date().toISOString(), read: false };
         set((s) => ({ notifications: [newNotif, ...s.notifications] }));
         // POST to backend so other users can receive it; swap local temp-id for real MongoDB id
-        fetch(`${API_BASE}/api/notifications`, {
+        apiFetch(`${API_BASE}/api/notifications`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(notif),
@@ -605,7 +677,7 @@ export const useDashboardStore = create<DashboardState>()(
           const url = email
             ? `${API_BASE}/api/notifications?email=${encodeURIComponent(email)}`
             : `${API_BASE}/api/notifications`;
-          const res = await fetch(url);
+          const res = await apiFetch(url);
           if (!res.ok) return;
           const data = await res.json();
           if (!data.success || !data.notifications) return;

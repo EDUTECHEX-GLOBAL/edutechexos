@@ -108,7 +108,7 @@ type CurrentUser = {
 const DEFAULT_COMPANY_MEET_LINK = 'https://meet.google.com/uie-jxkt-vkx';
 const THURSDAY_AFTERNOON_MEET_LINK = 'https://meet.google.com/dss-wmvy-cuq';
 const FRIDAY_MEET_LINK = 'https://meet.google.com/eeq-maem-ztc';
-const SETTINGS_KEY = 'edutechex_dashboard_settings';
+const settingsKey = (email: string) => `edutechex_dashboard_settings_${email.toLowerCase()}`;
 const EMOJI_OPTIONS = [
   '😀',
   '😁',
@@ -371,6 +371,7 @@ export default function EduTechExOSDashboard() {
     loadLocalMessages,
     loadLocalWikiPages,
     loadLocalKanbanTasks,
+    loadLocalBookmarkedIds,
     loadLocalNotifications,
     notifications,
     typingUsers,
@@ -556,12 +557,13 @@ export default function EduTechExOSDashboard() {
     loadLocalMessages?.();
     loadLocalWikiPages?.();
     loadLocalKanbanTasks?.();
+    loadLocalBookmarkedIds?.();
     const interval = setInterval(() => {
       loadLocalMessages?.();
       loadLocalWikiPages?.();
     }, 3000);
     return () => clearInterval(interval);
-  }, [loadLocalMessages, loadLocalWikiPages, loadLocalKanbanTasks]);
+  }, []); // Zustand actions are stable refs — empty deps is safe
 
   // ── Socket.IO real-time message delivery ──────────────────────────────────
   // Join the active channel room so we receive live `new_message` events.
@@ -632,13 +634,6 @@ export default function EduTechExOSDashboard() {
 
 
   useEffect(() => {
-    const saved = localStorage.getItem(SETTINGS_KEY);
-    if (saved) {
-      setSettings((value) => ({ ...value, ...JSON.parse(saved) }));
-    }
-  }, []);
-
-  useEffect(() => {
     const authData = localStorage.getItem('edutechex_token');
     if (!authData) {
       router.push('/sign-up-login-screen?mode=user&redirect=/dashboard');
@@ -652,18 +647,31 @@ export default function EduTechExOSDashboard() {
         return;
       }
 
+      // Load settings scoped to this user so display names don't bleed across accounts
+      const savedSettings = localStorage.getItem(settingsKey(user.email));
+      if (savedSettings) {
+        try {
+          setSettings((prev) => ({ ...prev, ...JSON.parse(savedSettings) }));
+        } catch { /* corrupt settings — ignore */ }
+      }
+
       const initials = user.name
         .split(' ')
         .map((part: string) => part[0])
         .join('')
         .toUpperCase()
         .slice(0, 2);
-      setCurrentUser({ ...user, name: settings.displayName || user.name, initials });
+
+      // Use saved displayName only if it was saved for THIS user (already applied above via setSettings)
+      const savedDisplayName = (() => {
+        try { return JSON.parse(savedSettings ?? '{}')?.displayName ?? ''; } catch { return ''; }
+      })();
+      setCurrentUser({ ...user, name: savedDisplayName || user.name, initials });
       setAuthChecked(true);
     } catch {
       router.push('/sign-up-login-screen?mode=user&redirect=/dashboard');
     }
-  }, [router, settings.displayName]);
+  }, [router]);
 
   useEffect(() => {
     aiBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -827,7 +835,7 @@ export default function EduTechExOSDashboard() {
 
   function saveSettings(event: React.FormEvent) {
     event.preventDefault();
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    localStorage.setItem(settingsKey(currentUser?.email ?? 'default'), JSON.stringify(settings));
     // Update display name live
     setCurrentUser((user) =>
       user ? { ...user, name: settings.displayName.trim() || user.name } : user
@@ -2048,7 +2056,7 @@ export default function EduTechExOSDashboard() {
                               )}
                             </div>
                             <button
-                              onClick={() => toggleBookmark(message.id)}
+                              onClick={() => toggleBookmark(message.id, { channelId: activeChannelId, text: message.text, sender: message.sender, timestamp: message.timestamp })}
                               className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 ${isBookmarked ? 'text-amber-500' : 'text-slate-500 hover:text-amber-500'}`}
                               title={isBookmarked ? 'Remove bookmark' : 'Save'}>
                               <Bookmark size={13} fill={isBookmarked ? 'currentColor' : 'none'} />

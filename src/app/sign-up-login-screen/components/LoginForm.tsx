@@ -75,7 +75,7 @@ export default function LoginForm({
     return () => window.removeEventListener('demo-autofill', handler);
   }, [setValue]);
 
-  function finishLogin(loginAccount: { name: string; email: string; role: string }) {
+  function finishLogin(loginAccount: { name: string; email: string; role: string }, jwtToken?: string) {
     // Role guard
     if (authMode === 'admin' && loginAccount.role !== 'Admin') {
       setIsLoading(false);
@@ -88,10 +88,25 @@ export default function LoginForm({
       return;
     }
 
-    // Store token
+    // If a different user is logging in, clear persisted store & settings so
+    // the new user never sees the previous user's bookmarks, notifications,
+    // display name, or other personal data.
+    try {
+      const prevRaw = localStorage.getItem('edutechex_token');
+      if (prevRaw) {
+        const prevEmail = JSON.parse(prevRaw)?.user?.email ?? '';
+        if (prevEmail.toLowerCase() !== loginAccount.email.toLowerCase()) {
+          localStorage.removeItem('edutechex-dashboard-v3');
+          localStorage.removeItem('edutechex_dashboard_settings');
+        }
+      }
+    } catch { /* ignore parse errors */ }
+
+    // Store token (real JWT from backend or mock fallback)
+    const token = jwtToken || `mock-jwt-${Date.now()}`;
     localStorage.setItem(
       'edutechex_token',
-      JSON.stringify({ user: loginAccount, token: `mock-jwt-${Date.now()}` })
+      JSON.stringify({ user: loginAccount, token })
     );
 
     // Track login date
@@ -202,7 +217,7 @@ export default function LoginForm({
         return;
       }
 
-      finishLogin(result.user);
+      finishLogin(result.user, result.token);
     } catch {
       // ── Fallback: backend unreachable — check localStorage ─────────────────
       const hardcoded = VALID_ACCOUNTS.find(
