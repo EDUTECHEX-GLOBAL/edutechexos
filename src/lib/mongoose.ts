@@ -13,8 +13,10 @@ if (process.env.NODE_ENV !== 'production') {
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env');
+// During Next.js build-time static analysis the env var may not be present.
+// Throw only at runtime (when an actual request is made), not at build time.
+if (!MONGODB_URI && process.env.NODE_ENV !== 'production') {
+  console.warn('MONGODB_URI is not set — DB calls will fail until it is configured.');
 }
 
 /**
@@ -46,7 +48,8 @@ async function connectToDatabase() {
       }
     }
 
-    cached.promise = mongoose.connect(MONGODB_URI as string, opts).then((mongooseInstance: any) => {
+    if (!MONGODB_URI) throw new Error('MONGODB_URI environment variable is not set.');
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance: any) => {
       console.log('Successfully connected to MongoDB Atlas');
       return mongooseInstance;
     });

@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { X, Plus, Trash2, Copy, Check, Github, Zap, ToggleLeft, ToggleRight, ExternalLink, RefreshCw } from 'lucide-react';
+import { X, Plus, Trash2, Copy, Check, GitBranch, Zap, ToggleLeft, ToggleRight, ExternalLink, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
@@ -200,7 +200,7 @@ export default function IntegrationsPanel({
           {!loading && (
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <Github size={16} className="text-slate-700" />
+                <GitBranch size={16} className="text-slate-700" />
                 <span className="text-sm font-bold text-slate-700">GitHub</span>
                 <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{githubWebhooks.length}</span>
               </div>
