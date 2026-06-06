@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React from 'react';
 
 const items = [
@@ -35,7 +35,7 @@ export default function LandingMarquee() {
   return (
     <div
       className="relative overflow-hidden py-5"
-      style={{ background: '#1a2e1a', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      style={{ background: '#191E2F', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
     >
       <div className="flex flex-col gap-3">
         <Track />
@@ -44,10 +44,10 @@ export default function LandingMarquee() {
 
       {/* Edge fade masks */}
       <div className="absolute inset-y-0 left-0 w-24 pointer-events-none" style={{
-        background: 'linear-gradient(to right, #1a2e1a, transparent)',
+        background: 'linear-gradient(to right, #191E2F, transparent)',
       }} />
       <div className="absolute inset-y-0 right-0 w-24 pointer-events-none" style={{
-        background: 'linear-gradient(to left, #1a2e1a, transparent)',
+        background: 'linear-gradient(to left, #191E2F, transparent)',
       }} />
 
       <style>{`

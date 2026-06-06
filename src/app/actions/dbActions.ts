@@ -148,31 +148,23 @@ export async function saveLocalMessage(channelId: string, message: any) {
 }
 
 export async function uploadLocalFile(formData: FormData) {
-  await ensureDbExists();
   try {
     const file = formData.get('file') as File;
-    if (!file) {
-      return { success: false, error: 'No file uploaded' };
-    }
+    if (!file) return { success: false, error: 'No file uploaded' };
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    // Create unique safe filename
-    const ext = path.extname(file.name) || '.bin';
+
+    // ── Fallback: local filesystem (dev only — ephemeral on Vercel) ───────────
+    // NOTE: Firebase Storage uploads happen client-side in the browser.
+    // This server-side path is only used as a last resort in dev.
+    await fs.mkdir(UPLOADS_DIR, { recursive: true });
+    const ext      = path.extname(file.name) || '.bin';
     const baseName = path.basename(file.name, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
     const fileName = `${Date.now()}-${baseName}${ext}`;
-    const filePath = path.join(UPLOADS_DIR, fileName);
-
-    await fs.writeFile(filePath, buffer);
-    const urlPath = `/uploads/${fileName}`;
-
-    return {
-      success: true,
-      url: urlPath,
-      name: file.name,
-      type: file.type,
-    };
+    await fs.writeFile(path.join(UPLOADS_DIR, fileName), buffer);
+    return { success: true, url: `/uploads/${fileName}`, name: file.name, type: file.type };
   } catch (err) {
-    console.error('Failed to upload file locally:', err);
+    console.error('Failed to upload file:', err);
     return { success: false, error: String(err) };
   }
 }

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Loader2, X, User, Lock, ArrowRight } from 'lucide-react';
@@ -343,7 +343,7 @@ export default function LoginForm({
           type="button"
           onClick={() => { setForgotOpen(true); setForgotStep(1); setForgotError(''); setForgotEmail(''); setForgotCode(''); setForgotNewPass(''); setForgotPreviewUrl(''); }}
           className="text-xs font-medium hover:underline"
-          style={{ color: darkMode ? 'rgba(180,210,255,0.65)' : '#2d6a4f' }}
+          style={{ color: darkMode ? 'rgba(180,210,255,0.65)' : '#3E4A89' }}
         >
           Forgot Password?
         </button>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React from 'react';
 import { Quote } from 'lucide-react';
 import AnimatedSection from './AnimatedSection';
@@ -65,10 +65,10 @@ export default function LandingTestimonials() {
                 >
                   <div
                     className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                    style={{ background: 'linear-gradient(135deg, rgba(45,106,79,0.04), rgba(196,181,253,0.03))' }}
+                    style={{ background: 'linear-gradient(135deg, rgba(62,74,137,0.04), rgba(196,181,253,0.03))' }}
                   />
                   <div className="relative mb-6">
-                    <Quote size={24} className="opacity-30 group-hover:opacity-50 transition-opacity duration-500" style={{ color: '#2d6a4f' }} />
+                    <Quote size={24} className="opacity-30 group-hover:opacity-50 transition-opacity duration-500" style={{ color: '#3E4A89' }} />
                   </div>
                   <p className="text-base font-semibold leading-relaxed mb-8 flex-1 relative" style={{ color: colors.body }}>
                     &ldquo;{t.quote}&rdquo;

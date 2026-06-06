@@ -152,6 +152,8 @@ type DashboardState = {
   setActiveChannel: (id: string) => void;
 
   messages: Record<string, Message[]>;
+  hasMoreMessages: Record<string, boolean>;
+  isLoadingMore: Record<string, boolean>;
   addMessage: (channelId: string, message: Message) => void;
   addMessageFromSocket: (channelId: string, message: Message) => void;
   updateMessageFromSocket: (channelId: string, message: Message) => void;
@@ -159,6 +161,7 @@ type DashboardState = {
   deleteMessageFromSocket: (channelId: string, messageId: string) => void;
   editMessage: (channelId: string, messageId: string, newText: string) => void;
   loadLocalMessages: () => Promise<void>;
+  loadMoreMessages: (channelId: string) => Promise<void>;
 
   toggleReaction: (channelId: string, messageId: string, emoji: string, userEmail: string) => void;
   votePoll: (channelId: string, messageId: string, optionIdx: number, userEmail: string) => void;
@@ -166,6 +169,7 @@ type DashboardState = {
   pinnedMessageIds: Record<string, string[]>;
   pinMessage: (channelId: string, messageId: string) => void;
   unpinMessage: (channelId: string, messageId: string) => void;
+  loadPinnedMessages: () => Promise<void>;
 
   bookmarkedMessageIds: string[];
   toggleBookmark: (messageId: string, message?: { channelId?: string; text?: string; sender?: string; timestamp?: string }) => void;
@@ -207,13 +211,17 @@ type DashboardState = {
 
   channels: Channel[];
   addChannel: (channel: Channel) => void;
+  loadWorkspaceChannels: () => Promise<void>;
 
   members: Member[];
+  loadLocalMembers: () => Promise<void>;
   addMember: (member: Member) => void;
   removeMember: (memberId: string) => void;
   addMemberToChannel: (channelId: string, memberId: string) => void;
   removeMemberFromChannel: (channelId: string, memberId: string) => void;
   setMemberWorkspaceChannel: (memberId: string, channelId: string | null) => void;
+  setMemberWorkspaceChannels: (memberId: string, channelIds: string[]) => void;
+  setMemberRole: (memberId: string, role: string) => void;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -257,6 +265,8 @@ export const useDashboardStore = create<DashboardState>()(
       setActiveChannel: (id) => set({ activeChannel: id }),
 
       messages: {} as Record<string, Message[]>,
+      hasMoreMessages: {} as Record<string, boolean>,
+      isLoadingMore: {} as Record<string, boolean>,
 
       addMessage: (channelId, message) => {
         apiFetch(`${API_BASE}/api/messages`, {
@@ -404,8 +414,38 @@ export const useDashboardStore = create<DashboardState>()(
             merged[chId] = combined;
           });
 
-          set({ messages: merged });
+          set({ messages: merged, hasMoreMessages: data.hasMore ?? {} });
         } catch { /* backend unavailable — keep current state */ }
+      },
+
+      loadMoreMessages: async (channelId) => {
+        const existing = get().messages[channelId] ?? [];
+        if (!existing.length) return;
+        // Use the oldest loaded message as the "before" cursor
+        const oldest = existing[0].timestamp;
+        set((s) => ({ isLoadingMore: { ...s.isLoadingMore, [channelId]: true } }));
+        try {
+          const res = await apiFetch(
+            `${API_BASE}/api/messages?channelId=${encodeURIComponent(channelId)}&before=${encodeURIComponent(oldest)}&limit=50`
+          );
+          if (!res.ok) return;
+          const data = await res.json();
+          if (!data.success) return;
+          const older: Message[] = data.messages ?? [];
+          set((s) => ({
+            messages: {
+              ...s.messages,
+              [channelId]: [
+                ...older,
+                ...(s.messages[channelId] ?? []),
+              ],
+            },
+            hasMoreMessages: { ...s.hasMoreMessages, [channelId]: data.hasMore },
+            isLoadingMore:   { ...s.isLoadingMore,   [channelId]: false },
+          }));
+        } catch {
+          set((s) => ({ isLoadingMore: { ...s.isLoadingMore, [channelId]: false } }));
+        }
       },
 
       toggleReaction: (channelId, messageId, emoji, userEmail) => {
@@ -467,14 +507,44 @@ export const useDashboardStore = create<DashboardState>()(
       },
 
       pinnedMessageIds: {},
-      pinMessage: (channelId, messageId) =>
+      pinMessage: (channelId, messageId) => {
+        // Optimistic update
         set((s) => ({
-          pinnedMessageIds: { ...s.pinnedMessageIds, [channelId]: [...new Set([...(s.pinnedMessageIds[channelId] ?? []), messageId])] },
-        })),
-      unpinMessage: (channelId, messageId) =>
+          pinnedMessageIds: {
+            ...s.pinnedMessageIds,
+            [channelId]: [...new Set([...(s.pinnedMessageIds[channelId] ?? []), messageId])],
+          },
+        }));
+        // Persist to MongoDB
+        apiFetch(`${API_BASE}/api/pinned`, {
+          method: 'POST',
+          body: JSON.stringify({ channelId, messageId }),
+        }).catch(() => {});
+      },
+      unpinMessage: (channelId, messageId) => {
+        // Optimistic update
         set((s) => ({
-          pinnedMessageIds: { ...s.pinnedMessageIds, [channelId]: (s.pinnedMessageIds[channelId] ?? []).filter((id) => id !== messageId) },
-        })),
+          pinnedMessageIds: {
+            ...s.pinnedMessageIds,
+            [channelId]: (s.pinnedMessageIds[channelId] ?? []).filter((id) => id !== messageId),
+          },
+        }));
+        // Remove from MongoDB
+        apiFetch(
+          `${API_BASE}/api/pinned/${encodeURIComponent(channelId)}/${encodeURIComponent(messageId)}`,
+          { method: 'DELETE' }
+        ).catch(() => {});
+      },
+      loadPinnedMessages: async () => {
+        try {
+          const res = await apiFetch(`${API_BASE}/api/pinned`);
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data.success && data.pinnedMessageIds) {
+            set({ pinnedMessageIds: data.pinnedMessageIds });
+          }
+        } catch { /* backend unavailable — keep local state */ }
+      },
 
       bookmarkedMessageIds: [],
       toggleBookmark: (messageId, message?: { channelId?: string; text?: string; sender?: string; timestamp?: string }) => {
@@ -683,7 +753,10 @@ export const useDashboardStore = create<DashboardState>()(
           if (!data.success || !data.notifications) return;
           set((s) => {
             const localIds = new Set(s.notifications.map((n) => n.id));
-            const incoming = (data.notifications as Notification[]).filter((n) => !localIds.has(n.id)).map((n) => ({ ...n, read: false }));
+            const raw: Array<Omit<Notification, 'read'> & { id: string }> = data.notifications;
+            const incoming: Notification[] = raw
+              .filter((n) => !localIds.has(n.id))
+              .map((n) => ({ ...n, read: false } as Notification));
             if (!incoming.length) return s;
             return { notifications: [...incoming, ...s.notifications] };
           });
@@ -707,19 +780,141 @@ export const useDashboardStore = create<DashboardState>()(
           const next = syncCount({ ...channel, memberIds });
           return { channels: [...s.channels, next], messages: { ...s.messages, [channel.id]: s.messages[channel.id] || [] } };
         }),
+      loadWorkspaceChannels: async () => {
+        try {
+          const res = await apiFetch(`${API_BASE}/api/channels`);
+          if (!res.ok) return;
+          const data = await res.json();
+          if (!data.success || !data.channels) return;
+
+          const dbChannels: Channel[] = data.channels;
+          set((s) => {
+            // Keep DM channels (member-*) as-is, replace workspace channels with DB version
+            const dmChannels = s.channels.filter((ch) => isDM(ch.id));
+            const existingMemberIds: Record<string, string[]> = {};
+            s.channels.forEach((ch) => {
+              if (!isDM(ch.id)) existingMemberIds[ch.id] = ch.memberIds ?? [];
+            });
+
+            const updatedWorkspaceChannels = dbChannels.map((ch) =>
+              syncCount({ ...ch, memberIds: existingMemberIds[ch.id] ?? (ch.id === 'general' ? s.members.map((m) => m.id) : []) })
+            );
+
+            // Ensure messages map has an entry for any new channel
+            const newMsgEntries: Record<string, Message[]> = {};
+            dbChannels.forEach((ch) => {
+              if (!s.messages[ch.id]) newMsgEntries[ch.id] = [];
+            });
+
+            return {
+              channels: [...updatedWorkspaceChannels, ...dmChannels],
+              messages: { ...s.messages, ...newMsgEntries },
+            };
+          });
+        } catch { /* backend unavailable — keep hardcoded channels */ }
+      },
 
       members: INITIAL_MEMBERS,
-      addMember: (member) =>
+      loadLocalMembers: async () => {
+        try {
+          const res = await apiFetch(`${API_BASE}/api/members`);
+          if (!res.ok) return;
+          const data = await res.json();
+          if (!data.success || !data.members) return;
+
+          const dbMembers: Member[] = data.members;
+          set((s) => {
+            // Update workspace channels with correct member IDs
+            const newChannels = s.channels.map((ch) => {
+              if (!isWS(ch.id)) return ch;
+              if (ch.id === 'general') {
+                const allMemberIds = dbMembers.map((m) => m.id);
+                return syncCount({ ...ch, memberIds: allMemberIds });
+              }
+              const assignedMemberIds = dbMembers
+                .filter((m: any) =>
+                  (Array.isArray((m as any).channelIds) && (m as any).channelIds.includes(ch.id)) ||
+                  (m as any).channelId === ch.id
+                )
+                .map((m) => m.id);
+
+              const systemMemberIds = ch.memberIds?.filter((id) => !id.startsWith('member-') || INITIAL_MEMBERS.some((m) => m.id === id)) ?? [];
+              const mergedMemberIds = [...new Set([...systemMemberIds, ...assignedMemberIds])];
+              return syncCount({ ...ch, memberIds: mergedMemberIds });
+            });
+
+            // Ensure every member has a DM channel in the channels list
+            const existingChannelIds = new Set(newChannels.map((ch) => ch.id));
+            const dmChannelsToAdd: Channel[] = [];
+            dbMembers.forEach((m) => {
+              if (!existingChannelIds.has(m.id)) {
+                dmChannelsToAdd.push({
+                  id: m.id,
+                  name: m.name,
+                  description: `Direct message with ${m.name}`,
+                  memberCount: 1,
+                  unread: 0,
+                  memberIds: [m.id],
+                });
+              }
+            });
+
+            return {
+              members: dbMembers,
+              channels: [...newChannels, ...dmChannelsToAdd],
+              messages: {
+                ...s.messages,
+                ...Object.fromEntries(dmChannelsToAdd.map((ch) => [ch.id, s.messages[ch.id] ?? []])),
+              },
+            };
+          });
+        } catch { /* backend unavailable */ }
+      },
+      addMember: (member) => {
+        const isSystem = ['admin@edutechex.in', 'aditya@edutechex.in', 'dev.rk@edutechex.in', 'design.sa@edutechex.in', 'tarun@edutechex.in', 'mohan.kumar@edutechex.in', 'mohan.reddy@edutechex.in', 'mohan.sen@edutechex.in'].includes(member.email.toLowerCase());
+        if (!isSystem) {
+          apiFetch(`${API_BASE}/api/members`, {
+            method: 'POST',
+            body: JSON.stringify({
+              name: member.name,
+              email: member.email,
+              role: member.role,
+              channelId: null,
+            }),
+          })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.success && data.member) {
+              get().loadLocalMembers();
+            }
+          })
+          .catch(() => {});
+        }
+
         set((s) => ({
-          members: [...s.members, member],
+          members: s.members.some((m) => m.email.toLowerCase() === member.email.toLowerCase()) ? s.members : [...s.members, member],
           channels: s.channels.map((ch) => ch.id !== 'general' ? ch : syncCount({ ...ch, memberIds: withM(ch.memberIds, member.id) })),
           messages: { ...s.messages, [member.id]: [] },
-        })),
-      removeMember: (memberId) =>
+        }));
+      },
+      removeMember: (memberId) => {
+        const isSystemId = ['member-ac', 'member-rk', 'member-sa', 'member-tm', 'member-mk', 'member-mr', 'member-ms'].includes(memberId);
+        if (!isSystemId) {
+          const dbId = memberId.replace('member-', '');
+          apiFetch(`${API_BASE}/api/access-requests/${dbId}`, {
+            method: 'DELETE',
+          })
+          .then(() => {
+            get().loadLocalMembers();
+          })
+          .catch(() => {});
+        }
+
         set((s) => ({
           members: s.members.filter((m) => m.id !== memberId),
           channels: s.channels.map((ch) => syncCount({ ...ch, memberIds: withoutM(ch.memberIds, memberId) })),
-        })),
+        }));
+      },
       addMemberToChannel: (channelId, memberId) =>
         set((s) => {
           if (channelId === 'general') {
@@ -741,14 +936,66 @@ export const useDashboardStore = create<DashboardState>()(
           if (channelId === 'general') return { channels: s.channels };
           return { channels: s.channels.map((ch) => ch.id === channelId ? syncCount({ ...ch, memberIds: withoutM(ch.memberIds, memberId) }) : ch) };
         }),
-      setMemberWorkspaceChannel: (memberId, channelId) =>
+      setMemberWorkspaceChannel: (memberId, channelId) => {
+        const isSystemId = ['member-ac', 'member-rk', 'member-sa', 'member-tm', 'member-mk', 'member-mr', 'member-ms'].includes(memberId);
+        if (!isSystemId) {
+          const dbId = memberId.replace('member-', '');
+          apiFetch(`${API_BASE}/api/access-requests/${dbId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ channelId: channelId || null }),
+          })
+          .then(() => {
+            get().loadLocalMembers();
+          })
+          .catch(() => {});
+        }
+
         set((s) => ({
           channels: s.channels.map((ch) => {
             if (!isWS(ch.id)) return ch;
             if (ch.id === 'general') return syncCount({ ...ch, memberIds: withM(ch.memberIds, memberId) });
             return syncCount({ ...ch, memberIds: ch.id === channelId ? withM(ch.memberIds, memberId) : withoutM(ch.memberIds, memberId) });
           }),
-        })),
+        }));
+      },
+      setMemberWorkspaceChannels: (memberId, channelIds) => {
+        const isSystemId = ['member-ac', 'member-rk', 'member-sa', 'member-tm', 'member-mk', 'member-mr', 'member-ms'].includes(memberId);
+        if (!isSystemId) {
+          const dbId = memberId.replace('member-', '');
+          apiFetch(`${API_BASE}/api/access-requests/${dbId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ channelIds }),
+          })
+          .then(() => { get().loadLocalMembers(); })
+          .catch(() => {});
+        }
+
+        set((s) => ({
+          channels: s.channels.map((ch) => {
+            if (!isWS(ch.id)) return ch;
+            if (ch.id === 'general') return syncCount({ ...ch, memberIds: withM(ch.memberIds, memberId) });
+            return syncCount({ ...ch, memberIds: channelIds.includes(ch.id) ? withM(ch.memberIds, memberId) : withoutM(ch.memberIds, memberId) });
+          }),
+        }));
+      },
+      setMemberRole: (memberId, role) => {
+        const isSystemId = ['member-ac', 'member-rk', 'member-sa', 'member-tm', 'member-mk', 'member-mr', 'member-ms'].includes(memberId);
+        if (!isSystemId) {
+          const dbId = memberId.replace('member-', '');
+          apiFetch(`${API_BASE}/api/access-requests/${dbId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ role }),
+          })
+          .then(() => {
+            get().loadLocalMembers();
+          })
+          .catch(() => {});
+        }
+
+        set((s) => ({
+          members: s.members.map((m) => m.id === memberId ? { ...m, role } : m),
+        }));
+      },
     }),
     {
       name: 'edutechex-dashboard-v3',

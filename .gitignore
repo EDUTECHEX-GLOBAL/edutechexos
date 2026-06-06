@@ -52,3 +52,4 @@ test_gemini.js
 
 # Backend node_modules only — source is tracked so Render can deploy it
 backend/node_modules/
+.vercel

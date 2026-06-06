@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React from 'react';
 import { Hash, Bot, CheckSquare, Newspaper, Database, Users, Bookmark } from 'lucide-react';
 import AnimatedSection from './AnimatedSection';
@@ -83,19 +83,19 @@ export default function LandingFeatures() {
     <section
       id="features"
       className="relative py-28 px-6 lg:px-10 overflow-hidden"
-      style={{ background: '#ede8dd' }}
+      style={{ background: '#F2F0EC' }}
     >
       {/* Subtle grid overlay */}
       <div className="absolute inset-0 pointer-events-none" style={{
-        backgroundImage: `linear-gradient(rgba(0,0,0,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.08) 1px, transparent 1px)`,
+        backgroundImage: `linear-gradient(rgba(62,74,137,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(62,74,137,0.06) 1px, transparent 1px)`,
         backgroundSize: '52px 52px',
       }} />
 
       {/* Animated orbs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div style={{ position:'absolute', width:580, height:580, borderRadius:'50%', background:'radial-gradient(circle, rgba(26,58,42,0.12) 0%, transparent 65%)', filter:'blur(56px)', top:'-10%', left:'-8%', animation:'feat-orb-1 24s ease-in-out infinite', willChange:'transform' }} />
-        <div style={{ position:'absolute', width:460, height:460, borderRadius:'50%', background:'radial-gradient(circle, rgba(52,211,153,0.12) 0%, transparent 65%)', filter:'blur(52px)', bottom:'5%', right:'-5%', animation:'feat-orb-2 30s ease-in-out infinite 5s', willChange:'transform' }} />
-        <div style={{ position:'absolute', width:340, height:340, borderRadius:'50%', background:'radial-gradient(circle, rgba(45,106,79,0.10) 0%, transparent 65%)', filter:'blur(40px)', top:'55%', left:'40%', animation:'feat-orb-3 20s ease-in-out infinite 2s', willChange:'transform' }} />
+        <div style={{ position:'absolute', width:580, height:580, borderRadius:'50%', background:'radial-gradient(circle, rgba(62,74,137,0.10) 0%, transparent 65%)', filter:'blur(56px)', top:'-10%', left:'-8%', animation:'feat-orb-1 24s ease-in-out infinite', willChange:'transform' }} />
+        <div style={{ position:'absolute', width:460, height:460, borderRadius:'50%', background:'radial-gradient(circle, rgba(155,166,211,0.09) 0%, transparent 65%)', filter:'blur(52px)', bottom:'5%', right:'-5%', animation:'feat-orb-2 30s ease-in-out infinite 5s', willChange:'transform' }} />
+        <div style={{ position:'absolute', width:340, height:340, borderRadius:'50%', background:'radial-gradient(circle, rgba(42,53,104,0.07) 0%, transparent 65%)', filter:'blur(40px)', top:'55%', left:'40%', animation:'feat-orb-3 20s ease-in-out infinite 2s', willChange:'transform' }} />
       </div>
       <style>{`
         @keyframes feat-orb-1 {
@@ -122,23 +122,23 @@ export default function LandingFeatures() {
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-16">
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-5">
-                <span className="font-mono text-[10px] font-bold tracking-[0.25em] uppercase" style={{ color: '#6b7b6b' }}>What lives inside</span>
+                <span className="font-mono text-[10px] font-bold tracking-[0.25em] uppercase" style={{ color: '#4A5578' }}>What lives inside</span>
                 <div className="flex-1 h-px" style={{ background: 'rgba(0,0,0,0.12)', maxWidth: 80 }} />
               </div>
               <h2
                 className="font-black tracking-[-0.035em] leading-[0.90]"
-                style={{ fontSize: 'clamp(2.8rem, 5.5vw, 5rem)', color: '#1a2e1a' }}
+                style={{ fontSize: 'clamp(2.8rem, 5.5vw, 5rem)', color: '#1E2636' }}
               >
                 Everything<br />
-                <span style={{ color: '#2d6a4f' }}>your team</span><br />
+                <span style={{ color: '#3E4A89' }}>your team</span><br />
                 needs.
               </h2>
             </div>
             <div className="lg:max-w-xs">
-              <p className="text-base font-medium leading-relaxed mb-6" style={{ color: '#4d5d4d' }}>
+              <p className="text-base font-medium leading-relaxed mb-6" style={{ color: '#4A5578' }}>
                 Six tightly integrated capabilities that replace five disconnected tools.
               </p>
-              <div className="flex items-center gap-3 text-xs font-mono font-bold tracking-[0.16em] uppercase" style={{ color: '#1a3a2a' }}>
+              <div className="flex items-center gap-3 text-xs font-mono font-bold tracking-[0.16em] uppercase" style={{ color: '#3E4A89' }}>
                 <span>06 capabilities</span>
                 <span>—</span>
                 <span>1 platform</span>
@@ -191,7 +191,7 @@ export default function LandingFeatures() {
                   {/* ── Title ── */}
                   <h3
                     className="font-black mb-3 leading-tight"
-                    style={{ fontSize: 'clamp(1.1rem, 2vw, 1.3rem)', color: '#1a2e1a', letterSpacing: '-0.02em' }}
+                    style={{ fontSize: 'clamp(1.1rem, 2vw, 1.3rem)', color: '#1E2636', letterSpacing: '-0.02em' }}
                   >
                     {feat.title}
                   </h3>
@@ -199,7 +199,7 @@ export default function LandingFeatures() {
                   {/* ── Description ── */}
                   <p
                     className="text-sm leading-relaxed flex-1"
-                    style={{ color: '#4d5d4d', fontWeight: 450 }}
+                    style={{ color: '#4A5578', fontWeight: 450 }}
                   >
                     {feat.description}
                   </p>
@@ -229,7 +229,7 @@ export default function LandingFeatures() {
         <AnimatedSection direction="up" delay={0.3}>
           <div className="flex items-center gap-6 mt-16">
             <div className="flex-1 h-px" style={{ background: 'rgba(0,0,0,0.10)' }} />
-            <span className="font-mono text-[10px] font-bold tracking-[0.22em] uppercase" style={{ color: '#6b7b6b' }}>
+            <span className="font-mono text-[10px] font-bold tracking-[0.22em] uppercase" style={{ color: '#4A5578' }}>
               Designed for EduTechEx · Built to last
             </span>
             <div className="flex-1 h-px" style={{ background: 'rgba(0,0,0,0.10)' }} />

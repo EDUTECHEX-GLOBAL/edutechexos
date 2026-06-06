@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 
 /**
  * ScreenRecorder component
@@ -8,8 +8,8 @@ import React, { useState, useRef, useEffect } from 'react';
  * - Shows preview of the recorded video and provides a Send button.
  *
  * Props:
- *   onSend: (blob: Blob) => void – callback invoked with the recorded video blob.
- *   includeWebcam?: boolean – if true, captures webcam and overlays it on the screen recording.
+ *   onSend: (blob: Blob) => void â€“ callback invoked with the recorded video blob.
+ *   includeWebcam?: boolean â€“ if true, captures webcam and overlays it on the screen recording.
  */
 interface ScreenRecorderProps {
   onSend: (blob: Blob) => void;
@@ -34,7 +34,7 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
 
   const startRecording = async () => {
     try {
-      // 1️⃣ Capture screen (with audio if available)
+      // 1ï¸âƒ£ Capture screen (with audio if available)
       const screenStream = await (navigator.mediaDevices as any).getDisplayMedia({
         video: true,
         audio: true,
@@ -43,7 +43,7 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
       let finalStream: MediaStream;
 
       if (includeWebcam) {
-        // 2️⃣ Capture webcam video (audio not needed, already captured from screen)
+        // 2ï¸âƒ£ Capture webcam video (audio not needed, already captured from screen)
         const webcamStream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: false,
@@ -64,10 +64,10 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
         webcamVideo.srcObject = webcamStream;
         webcamVideo.play();
 
-        // Draw loop – draw screen then overlay webcam picture‑in‑picture
+        // Draw loop â€“ draw screen then overlay webcam pictureâ€‘inâ€‘picture
         const draw = () => {
           ctx.drawImage(
-            // Screen video element – use an off‑screen video element
+            // Screen video element â€“ use an offâ€‘screen video element
             (() => {
               const v = document.createElement('video');
               v.srcObject = screenStream;
@@ -79,7 +79,7 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
             canvas.width,
             canvas.height,
           );
-          // Webcam overlay (bottom‑right corner, 20% of width)
+          // Webcam overlay (bottomâ€‘right corner, 20% of width)
           const overlayW = canvas.width * 0.2;
           const overlayH = (overlayW * (webcamVideo.videoHeight ?? 1)) / (webcamVideo.videoWidth ?? 1);
           ctx.drawImage(
@@ -158,7 +158,7 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
       {previewUrl && (
         <div className="mt-4">
           <video src={previewUrl} controls className="w-full rounded" />
-          <p className="text-sm text-gray-600 mt-1">Preview – send will happen automatically after stop.</p>
+          <p className="text-sm text-gray-600 mt-1">Preview â€“ send will happen automatically after stop.</p>
         </div>
       )}
     </div>
@@ -166,3 +166,6 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
 };
 
 export default ScreenRecorder;
+
+
+

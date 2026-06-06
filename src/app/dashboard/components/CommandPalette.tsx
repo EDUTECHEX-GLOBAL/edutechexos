@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { Command, Hash, User, Moon, Sun, Bell, Search, ChevronRight } from 'lucide-react';
@@ -167,15 +167,15 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-[rgba(25,30,47,0.70)] backdrop-blur-sm" />
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-lg mx-4 rounded-2xl bg-slate-900 shadow-2xl ring-1 ring-slate-700/60 overflow-hidden"
+        className="relative w-full max-w-lg mx-4 rounded-2xl bg-[#191E2F] shadow-2xl ring-1 ring-[rgba(62,74,137,0.15)] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-700/60">
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-[rgba(62,74,137,0.15)]">
           <Command size={18} className="text-indigo-400 flex-shrink-0" strokeWidth={2.5} />
           <input
             ref={inputRef}
@@ -186,7 +186,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
             placeholder="Search channels, members, actions…"
             className="flex-1 bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none"
           />
-          <kbd className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md bg-slate-800 text-[10px] font-mono text-slate-400 border border-slate-700">
+          <kbd className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md bg-slate-800 text-[10px] font-mono text-[#7C859E] border border-[rgba(62,74,137,0.15)]">
             ESC
           </kbd>
         </div>
@@ -194,7 +194,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
         {/* Results */}
         <div ref={listRef} className="max-h-96 overflow-y-auto py-2">
           {flat.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-500">
+            <div className="flex flex-col items-center justify-center py-12 gap-3 text-[#7C859E]">
               <Search size={28} strokeWidth={1.5} />
               <p className="text-sm font-medium">No results for &quot;{query}&quot;</p>
             </div>
@@ -209,7 +209,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
               return (
                 <div key={type}>
                   <div className="px-4 py-1.5">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[#7C859E]">
                       {GROUP_LABELS[type]}
                     </span>
                   </div>
@@ -224,20 +224,20 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                         onMouseEnter={() => setActiveIndex(globalIdx)}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
                           isActive
-                            ? 'bg-indigo-600/20 text-slate-100'
-                            : 'text-slate-300 hover:bg-slate-800/50'
+                            ? 'bg-[#3E4A89]/20 text-slate-100'
+                            : 'text-[#9BA6D3] hover:bg-slate-800/50'
                         }`}
                       >
                         <span
                           className={`flex-shrink-0 ${
-                            isActive ? 'text-indigo-400' : 'text-slate-500'
+                            isActive ? 'text-indigo-400' : 'text-[#7C859E]'
                           }`}
                         >
                           {item.icon}
                         </span>
                         <span className="flex-1 min-w-0">
                           <span className="block text-sm font-semibold truncate">{item.label}</span>
-                          <span className="block text-xs text-slate-500 truncate">
+                          <span className="block text-xs text-[#7C859E] truncate">
                             {item.description}
                           </span>
                         </span>
@@ -254,21 +254,21 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-4 px-4 py-3 border-t border-slate-700/60 bg-slate-900/80">
-          <span className="flex items-center gap-1.5 text-[10px] text-slate-500">
-            <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px]">
+        <div className="flex items-center gap-4 px-4 py-3 border-t border-[rgba(62,74,137,0.15)] bg-[rgba(25,30,47,0.80)]">
+          <span className="flex items-center gap-1.5 text-[10px] text-[#7C859E]">
+            <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-[rgba(62,74,137,0.15)] font-mono text-[10px]">
               ↑↓
             </kbd>
             navigate
           </span>
-          <span className="flex items-center gap-1.5 text-[10px] text-slate-500">
-            <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px]">
+          <span className="flex items-center gap-1.5 text-[10px] text-[#7C859E]">
+            <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-[rgba(62,74,137,0.15)] font-mono text-[10px]">
               ↵
             </kbd>
             select
           </span>
-          <span className="flex items-center gap-1.5 text-[10px] text-slate-500">
-            <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px]">
+          <span className="flex items-center gap-1.5 text-[10px] text-[#7C859E]">
+            <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-[rgba(62,74,137,0.15)] font-mono text-[10px]">
               ESC
             </kbd>
             close
@@ -278,3 +278,6 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
     </div>
   );
 }
+
+
+

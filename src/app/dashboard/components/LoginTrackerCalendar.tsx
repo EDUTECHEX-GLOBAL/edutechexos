@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect } from 'react';
 import { Users, Flame, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
@@ -59,7 +59,7 @@ export default function LoginTrackerCalendar() {
 
   if (!mounted) {
     return (
-      <div className="rounded-3xl border border-slate-100 bg-white p-8 text-center text-slate-400 text-sm font-bold shadow-sm">
+      <div className="rounded-3xl border border-[rgba(62,74,137,0.08)] bg-white p-8 text-center text-[#7C859E] text-sm font-bold shadow-sm">
         Loading Login Tracker...
       </div>
     );
@@ -94,36 +94,36 @@ export default function LoginTrackerCalendar() {
     totalUsers > 0 ? Math.round((loggedInTodayCount / totalUsers) * 100) : 0;
 
   return (
-    <div className="rounded-[2.5rem] border border-slate-100 bg-white shadow-sm overflow-hidden transition-all duration-300">
+    <div className="rounded-[2.5rem] border border-[rgba(62,74,137,0.08)] bg-white shadow-sm overflow-hidden transition-all duration-300">
       {/* Header */}
       <div className="p-7 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
+          <div className="h-10 w-10 rounded-2xl bg-[rgba(62,74,137,0.08)] text-[#3E4A89] flex items-center justify-center shadow-inner">
             <Users size={18} strokeWidth={2.5} />
           </div>
           <div>
-            <h2 className="font-black text-lg text-slate-900 uppercase tracking-tight">
+            <h2 className="font-black text-lg text-[#1E2636] uppercase tracking-tight">
               Login Tracker
             </h2>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+            <p className="text-[10px] font-black text-[#7C859E] uppercase tracking-widest mt-0.5">
               Daily Team Attendance
             </p>
           </div>
         </div>
 
         {/* Attendance Summary Badge */}
-        <div className="flex items-center gap-4 bg-slate-50 border border-slate-100 rounded-2xl p-3 shrink-0">
+        <div className="flex items-center gap-4 bg-[#FAF8F5] border border-[rgba(62,74,137,0.08)] rounded-2xl p-3 shrink-0">
           <div className="flex flex-col">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+            <span className="text-[9px] font-black text-[#7C859E] uppercase tracking-widest">
               Today's Attendance
             </span>
-            <span className="text-sm font-black text-slate-800">
+            <span className="text-sm font-black text-[#1E2636]">
               {loggedInTodayCount} of {totalUsers} Active
             </span>
           </div>
           <div className="h-8 w-px bg-slate-200"></div>
           <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-md shadow-indigo-500/20">
+            <div className="h-9 w-9 rounded-xl bg-[#3E4A89] flex items-center justify-center text-white font-black text-xs shadow-md shadow-indigo-500/20">
               {attendancePercentage}%
             </div>
           </div>
@@ -134,7 +134,7 @@ export default function LoginTrackerCalendar() {
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
-            <tr className="bg-slate-50/30 text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] border-b border-slate-50">
+            <tr className="bg-[rgba(242,240,236,0.30)] text-[#7C859E] text-[10px] font-black uppercase tracking-[0.15em] border-b border-slate-50">
               <th className="px-8 py-4">Team Colleague</th>
               <th className="px-8 py-4">Today's Status</th>
               <th className="px-8 py-4">Current Streak</th>
@@ -150,26 +150,26 @@ export default function LoginTrackerCalendar() {
               const isSelf = member.email.toLowerCase() === currentUser?.email?.toLowerCase();
 
               return (
-                <tr key={member.id} className="hover:bg-slate-50/40 transition-all group">
+                <tr key={member.id} className="hover:bg-[#FAF8F5]/40 transition-all group">
                   {/* Profile */}
                   <td className="px-8 py-4">
                     <div className="flex items-center gap-3.5">
                       <div
-                        className="h-9 w-9 rounded-xl flex items-center justify-center font-black text-xs shadow-sm border border-slate-100"
+                        className="h-9 w-9 rounded-xl flex items-center justify-center font-black text-xs shadow-sm border border-[rgba(62,74,137,0.08)]"
                         style={{ color: member.color, backgroundColor: `${member.color}12` }}
                       >
                         {member.initials}
                       </div>
                       <div>
-                        <div className="font-bold text-sm text-slate-800">
+                        <div className="font-bold text-sm text-[#1E2636]">
                           {member.name}{' '}
                           {isSelf && (
-                            <span className="text-[10px] text-indigo-600 font-extrabold uppercase ml-1">
+                            <span className="text-[10px] text-[#3E4A89] font-extrabold uppercase ml-1">
                               (You)
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <div className="text-[10px] font-bold text-[#7C859E] uppercase tracking-wider">
                           {member.email}
                         </div>
                       </div>
@@ -184,7 +184,7 @@ export default function LoginTrackerCalendar() {
                         Active Today
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-50 border border-slate-150 text-slate-400 text-[10px] font-black uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#FAF8F5] border border-[rgba(62,74,137,0.08)] text-[#7C859E] text-[10px] font-black uppercase tracking-wider">
                         <AlertCircle size={12} className="text-slate-350" strokeWidth={3} />
                         Absent
                       </span>
@@ -201,13 +201,13 @@ export default function LoginTrackerCalendar() {
                         <span className="text-sm font-black text-orange-500">{streak} Days</span>
                       </div>
                     ) : (
-                      <span className="text-xs font-bold text-slate-400">0 Days</span>
+                      <span className="text-xs font-bold text-[#7C859E]">0 Days</span>
                     )}
                   </td>
 
                   {/* Total Logins */}
                   <td className="px-8 py-4">
-                    <span className="text-sm font-black text-slate-700 tabular-nums">
+                    <span className="text-sm font-black text-[#4A5578] tabular-nums">
                       {logins.length} Logins
                     </span>
                   </td>
@@ -220,13 +220,13 @@ export default function LoginTrackerCalendar() {
                         className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm hover:scale-[1.02] ${
                           isLoggedToday
                             ? 'border border-red-200 bg-red-50 text-red-600 hover:bg-red-100/60'
-                            : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                            : 'bg-[#3E4A89] text-white hover:bg-[#2A3568]'
                         }`}
                       >
-                        {isLoggedToday ? '❌ Reset' : '⚡ Check-In'}
+                        {isLoggedToday ? 'âŒ Reset' : 'âš¡ Check-In'}
                       </button>
                     ) : (
-                      <span className="text-[10px] font-black text-slate-350 uppercase tracking-wider bg-slate-50 border border-slate-100 px-2.5 py-1.5 rounded-xl">
+                      <span className="text-[10px] font-black text-slate-350 uppercase tracking-wider bg-[#FAF8F5] border border-[rgba(62,74,137,0.08)] px-2.5 py-1.5 rounded-xl">
                         View Only
                       </span>
                     )}
@@ -240,3 +240,6 @@ export default function LoginTrackerCalendar() {
     </div>
   );
 }
+
+
+

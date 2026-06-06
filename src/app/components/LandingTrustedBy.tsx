@@ -1,15 +1,15 @@
-'use client';
+﻿'use client';
 import React from 'react';
 import { Bot, CheckSquare, Newspaper, Zap, Shield, Users } from 'lucide-react';
 import AnimatedSection from './AnimatedSection';
 
 const capabilities = [
   { name: 'AI Agent',        icon: Bot,         desc: 'Ask anything about your projects',  color: '#4f46e5' },
-  { name: 'Task Extraction', icon: CheckSquare, desc: 'Auto-surfaced action items',         color: '#1a3a2a' },
+  { name: 'Task Extraction', icon: CheckSquare, desc: 'Auto-surfaced action items',         color: '#191E2F' },
   { name: 'Daily Digest',    icon: Newspaper,   desc: 'Morning context in minutes',         color: '#0891b2' },
   { name: 'Fast Search',     icon: Zap,         desc: 'Instant org-wide knowledge lookup', color: '#d97706' },
   { name: 'Access Control',  icon: Shield,      desc: 'Role-based channel permissions',     color: '#dc2626' },
-  { name: 'Team Hub',        icon: Users,       desc: 'All members in one workspace',       color: '#2d6a4f' },
+  { name: 'Team Hub',        icon: Users,       desc: 'All members in one workspace',       color: '#2A3568' },
 ];
 
 export default function LandingTrustedBy() {
@@ -17,31 +17,31 @@ export default function LandingTrustedBy() {
     <section
       id="trusted"
       className="relative py-24 px-6 lg:px-10 overflow-hidden"
-      style={{ background: '#ede8dd' }}
+      style={{ background: '#F2F0EC' }}
     >
-      {/* Grid — darker lines */}
+      {/* Grid — icy blue lines */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(0,0,0,0.13) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,0,0,0.13) 1px, transparent 1px)
+            linear-gradient(rgba(62,74,137,0.06) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(62,74,137,0.06) 1px, transparent 1px)
           `,
           backgroundSize: '52px 52px',
         }}
       />
-      {/* Radial fade — clears grid near centre content */}
+      {/* Radial fade */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse 80% 70% at 50% 50%, #ede8dd 20%, transparent 75%)',
+          background: 'radial-gradient(ellipse 80% 70% at 50% 50%, #F2F0EC 20%, transparent 75%)',
         }}
       />
 
       {/* Animated orbs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div style={{ position:'absolute', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle, rgba(26,58,42,0.09) 0%, transparent 65%)', filter:'blur(56px)', top:'-15%', right:'5%', animation:'trusted-orb-1 22s ease-in-out infinite', willChange:'transform' }} />
-        <div style={{ position:'absolute', width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle, rgba(79,70,229,0.07) 0%, transparent 65%)', filter:'blur(48px)', bottom:'-10%', left:'10%', animation:'trusted-orb-2 28s ease-in-out infinite 3s', willChange:'transform' }} />
+        <div style={{ position:'absolute', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle, rgba(62,74,137,0.10) 0%, transparent 65%)', filter:'blur(56px)', top:'-15%', right:'5%', animation:'trusted-orb-1 22s ease-in-out infinite', willChange:'transform' }} />
+        <div style={{ position:'absolute', width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle, rgba(42,53,104,0.07) 0%, transparent 65%)', filter:'blur(48px)', bottom:'-10%', left:'10%', animation:'trusted-orb-2 28s ease-in-out infinite 3s', willChange:'transform' }} />
       </div>
       <style>{`
         @keyframes trusted-orb-1 {
@@ -63,17 +63,17 @@ export default function LandingTrustedBy() {
           <div className="text-center mb-16">
             <span
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[0.18em] mb-6"
-              style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.09)', color: '#1a3a2a' }}
+              style={{ background: '#ffffff', border: '1px solid rgba(62,74,137,0.20)', color: '#3E4A89' }}
             >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#1a3a2a' }} />
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#3E4A89' }} />
               Capabilities
             </span>
             <h2
               className="font-black tracking-[-0.03em] leading-[0.92]"
-              style={{ fontSize: 'clamp(2.4rem, 5vw, 4rem)', color: '#1a2e1a' }}
+              style={{ fontSize: 'clamp(2.4rem, 5vw, 4rem)', color: '#1E2636' }}
             >
               Everything <span style={{
-                background: 'linear-gradient(135deg, #4f46e5, #2563eb)',
+                background: 'linear-gradient(135deg, #3E4A89, #2A3568)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
@@ -108,10 +108,10 @@ export default function LandingTrustedBy() {
                   >
                     <Icon size={22} style={{ color: cap.color }} />
                   </div>
-                  <span className="font-bold text-sm" style={{ color: '#1a2e1a' }}>
+                  <span className="font-bold text-sm" style={{ color: '#1E2636' }}>
                     {cap.name}
                   </span>
-                  <span className="text-[11px] font-medium leading-snug max-w-[110px]" style={{ color: '#6b7b6b' }}>
+                  <span className="text-[11px] font-medium leading-snug max-w-[110px]" style={{ color: '#4A5578' }}>
                     {cap.desc}
                   </span>
                 </div>
@@ -124,7 +124,7 @@ export default function LandingTrustedBy() {
         <AnimatedSection direction="up" delay={0.35}>
           <p
             className="font-mono text-xs font-bold tracking-[0.3em] text-center uppercase mt-14"
-            style={{ color: '#6b7b6b' }}
+            style={{ color: '#4A5578' }}
           >
             No context lost. Ever.
           </p>

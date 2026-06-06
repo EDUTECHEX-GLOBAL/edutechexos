@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Users,
   CheckCircle2,
@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { toast } from 'sonner';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 const MONTH_NAMES = [
   'January',
@@ -61,49 +63,64 @@ export default function LoginTrackerCalendar() {
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
 
+  const fetchRealLoginHistory = useCallback(async () => {
+    try {
+      const authData = localStorage.getItem('edutechex_token');
+      const token = authData ? JSON.parse(authData).token : null;
+      if (!token) return;
+      const res = await fetch(`${API_BASE}/api/login-history`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && data.history) {
+        setUserLogins(data.history);
+      }
+    } catch { /* backend unavailable — keep synthetic data */ }
+  }, []);
+
   useEffect(() => {
     setMounted(true);
-    const logins: Record<string, string[]> = {};
-    const current = new Date();
-
-    members.forEach((member) => {
-      const key = `edutechex_logins_${member.email}`;
-      let stored = JSON.parse(localStorage.getItem(key) || '[]');
-
-      if (stored.length === 0) {
-        const generated: string[] = [];
-        for (let i = 0; i < 30; i++) {
-          const date = new Date();
-          date.setDate(current.getDate() - i);
-          const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-
-          let prob = 0.85;
-          if (member.role === 'Manager') prob = 0.95;
-          if (member.role === 'Designer') prob = 0.75;
-          if (isWeekend) prob = 0.12;
-
-          if (Math.random() < prob) {
-            generated.push(date.toISOString().split('T')[0]);
-          }
-        }
-
-        const todayStr = current.toISOString().split('T')[0];
-        if (member.status === 'online' && !generated.includes(todayStr)) {
-          generated.push(todayStr);
-        }
-
-        localStorage.setItem(key, JSON.stringify(generated));
-        stored = generated;
-      }
-
-      logins[member.email] = stored;
-    });
-
-    setUserLogins(logins);
     if (members.length > 0) {
       setSelectedMemberId(members[0].id);
     }
-  }, [members]);
+
+    // Fetch real login history first
+    fetchRealLoginHistory().then(() => {
+      // Fill in any missing members with localStorage fallback
+      setUserLogins((prev) => {
+        const merged: Record<string, string[]> = { ...prev };
+        const current = new Date();
+
+        members.forEach((member) => {
+          if (!merged[member.email] || merged[member.email].length === 0) {
+            const key = `edutechex_logins_${member.email}`;
+            let stored: string[] = [];
+            try { stored = JSON.parse(localStorage.getItem(key) || '[]'); } catch { /* */ }
+
+            if (stored.length === 0) {
+              // Generate synthetic data only as fallback
+              const generated: string[] = [];
+              for (let i = 0; i < 30; i++) {
+                const date = new Date();
+                date.setDate(current.getDate() - i);
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                let prob = 0.85;
+                if (member.role === 'Manager') prob = 0.95;
+                if (member.role === 'Designer') prob = 0.75;
+                if (isWeekend) prob = 0.12;
+                if (Math.random() < prob) generated.push(date.toISOString().split('T')[0]);
+              }
+              localStorage.setItem(key, JSON.stringify(generated));
+              stored = generated;
+            }
+            merged[member.email] = stored;
+          }
+        });
+        return merged;
+      });
+    });
+  }, [members, fetchRealLoginHistory]);
 
   const todayStr = toDateStr(today);
   const selectedMember = members.find((member) => member.id === selectedMemberId) || members[0];

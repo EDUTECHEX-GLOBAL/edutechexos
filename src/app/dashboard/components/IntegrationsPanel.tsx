@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useEffect, useState } from 'react';
 import { X, Plus, Trash2, Copy, Check, GitBranch, Zap, ToggleLeft, ToggleRight, ExternalLink, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -104,20 +104,20 @@ export default function IntegrationsPanel({
   const genericWebhooks = webhooks.filter(w => w.type === 'generic');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-[rgba(62,74,137,0.12)] flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(62,74,137,0.08)]">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Integrations</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Connect GitHub, Zapier, Make, and any webhook-compatible tool</p>
+            <h2 className="text-lg font-bold text-[#1E2636]">Integrations</h2>
+            <p className="text-xs text-[#7C859E] mt-0.5">Connect GitHub, Zapier, Make, and any webhook-compatible tool</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={fetchWebhooks} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+            <button onClick={fetchWebhooks} className="p-2 rounded-lg hover:bg-[rgba(62,74,137,0.08)] text-[#7C859E] hover:text-[#4A5578] transition-colors">
               <RefreshCw size={15} />
             </button>
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-[rgba(62,74,137,0.08)] text-[#7C859E] hover:text-[#4A5578] transition-colors">
               <X size={16} />
             </button>
           </div>
@@ -129,7 +129,7 @@ export default function IntegrationsPanel({
           {!showForm && (
             <button
               onClick={() => setShowForm(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all text-sm font-medium"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-[rgba(62,74,137,0.12)] text-[#7C859E] hover:border-[#2A3568] hover:text-[#C4CAE0] hover:bg-blue-50 transition-all text-sm font-medium"
             >
               <Plus size={16} /> New Integration
             </button>
@@ -137,23 +137,23 @@ export default function IntegrationsPanel({
 
           {/* Create form */}
           {showForm && (
-            <form onSubmit={createWebhook} className="bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-3">
-              <h3 className="text-sm font-bold text-slate-700">New Integration</h3>
+            <form onSubmit={createWebhook} className="bg-[#FAF8F5] rounded-xl border border-[rgba(62,74,137,0.12)] p-4 space-y-3">
+              <h3 className="text-sm font-bold text-[#4A5578]">New Integration</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 block mb-1">Name</label>
+                  <label className="text-xs font-semibold text-[#7C859E] block mb-1">Name</label>
                   <input
                     value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                    placeholder="e.g. GitHub — skillnaav"
-                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    placeholder="e.g. GitHub â€” skillnaav"
+                    className="w-full text-sm border border-[rgba(62,74,137,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A3568]"
                     required
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 block mb-1">Channel</label>
+                  <label className="text-xs font-semibold text-[#7C859E] block mb-1">Channel</label>
                   <select
                     value={form.channelId} onChange={e => setForm(p => ({ ...p, channelId: e.target.value }))}
-                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                    className="w-full text-sm border border-[rgba(62,74,137,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A3568] bg-white"
                   >
                     {workspaceChannels.map(c => <option key={c.id} value={c.id}>#{c.name}</option>)}
                   </select>
@@ -161,10 +161,10 @@ export default function IntegrationsPanel({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 block mb-1">Type</label>
+                  <label className="text-xs font-semibold text-[#7C859E] block mb-1">Type</label>
                   <select
                     value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value as 'github' | 'generic' }))}
-                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                    className="w-full text-sm border border-[rgba(62,74,137,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A3568] bg-white"
                   >
                     <option value="github">GitHub</option>
                     <option value="generic">Generic (Zapier / Make / Any)</option>
@@ -172,20 +172,20 @@ export default function IntegrationsPanel({
                 </div>
                 {form.type === 'github' && (
                   <div>
-                    <label className="text-xs font-semibold text-slate-500 block mb-1">Webhook Secret <span className="text-slate-400 font-normal">(optional)</span></label>
+                    <label className="text-xs font-semibold text-[#7C859E] block mb-1">Webhook Secret <span className="text-[#7C859E] font-normal">(optional)</span></label>
                     <input
                       value={form.secret} onChange={e => setForm(p => ({ ...p, secret: e.target.value }))}
                       placeholder="GitHub webhook secret"
-                      className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      className="w-full text-sm border border-[rgba(62,74,137,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A3568]"
                     />
                   </div>
                 )}
               </div>
               <div className="flex gap-2 pt-1">
-                <button type="submit" disabled={creating} className="flex-1 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50">
-                  {creating ? 'Creating…' : 'Create Integration'}
+                <button type="submit" disabled={creating} className="flex-1 py-2 rounded-lg bg-[#3E4A89] text-white text-sm font-semibold hover:bg-[#2A3568] transition-colors disabled:opacity-50">
+                  {creating ? 'Creatingâ€¦' : 'Create Integration'}
                 </button>
-                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-600 hover:bg-slate-100 transition-colors">
+                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg border border-[rgba(62,74,137,0.12)] text-sm text-[#4A5578] hover:bg-[rgba(62,74,137,0.08)] transition-colors">
                   Cancel
                 </button>
               </div>
@@ -193,22 +193,22 @@ export default function IntegrationsPanel({
           )}
 
           {loading && (
-            <div className="text-center py-8 text-slate-400 text-sm">Loading integrations…</div>
+            <div className="text-center py-8 text-[#7C859E] text-sm">Loading integrationsâ€¦</div>
           )}
 
           {/* GitHub section */}
           {!loading && (
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <GitBranch size={16} className="text-slate-700" />
-                <span className="text-sm font-bold text-slate-700">GitHub</span>
-                <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{githubWebhooks.length}</span>
+                <GitBranch size={16} className="text-[#4A5578]" />
+                <span className="text-sm font-bold text-[#4A5578]">GitHub</span>
+                <span className="text-xs bg-[rgba(62,74,137,0.08)] text-[#7C859E] px-2 py-0.5 rounded-full">{githubWebhooks.length}</span>
               </div>
 
               {githubWebhooks.length === 0 && (
-                <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center">
-                  <p className="text-sm text-slate-400 mb-2">No GitHub integrations yet</p>
-                  <p className="text-xs text-slate-400">Create one above, then add the URL to your GitHub repo → Settings → Webhooks</p>
+                <div className="rounded-xl border border-dashed border-[rgba(62,74,137,0.12)] p-4 text-center">
+                  <p className="text-sm text-[#7C859E] mb-2">No GitHub integrations yet</p>
+                  <p className="text-xs text-[#7C859E]">Create one above, then add the URL to your GitHub repo â†’ Settings â†’ Webhooks</p>
                 </div>
               )}
 
@@ -219,14 +219,14 @@ export default function IntegrationsPanel({
               </div>
 
               {githubWebhooks.length > 0 && (
-                <div className="mt-3 bg-slate-50 rounded-lg p-3 border border-slate-100">
-                  <p className="text-xs font-semibold text-slate-600 mb-1">How to set up in GitHub:</p>
-                  <ol className="text-xs text-slate-500 space-y-0.5 list-decimal list-inside">
-                    <li>Go to your repo → <strong>Settings → Webhooks → Add webhook</strong></li>
+                <div className="mt-3 bg-[#FAF8F5] rounded-lg p-3 border border-[rgba(62,74,137,0.08)]">
+                  <p className="text-xs font-semibold text-[#4A5578] mb-1">How to set up in GitHub:</p>
+                  <ol className="text-xs text-[#7C859E] space-y-0.5 list-decimal list-inside">
+                    <li>Go to your repo â†’ <strong>Settings â†’ Webhooks â†’ Add webhook</strong></li>
                     <li>Paste the webhook URL above into <strong>Payload URL</strong></li>
                     <li>Set Content type to <strong>application/json</strong></li>
                     <li>Select events: <strong>Pushes, Pull requests, Issues, Releases</strong></li>
-                    <li>Click <strong>Add webhook</strong> — done!</li>
+                    <li>Click <strong>Add webhook</strong> â€” done!</li>
                   </ol>
                 </div>
               )}
@@ -238,15 +238,15 @@ export default function IntegrationsPanel({
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <Zap size={16} className="text-amber-500" />
-                <span className="text-sm font-bold text-slate-700">Generic Webhooks</span>
-                <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{genericWebhooks.length}</span>
-                <span className="text-xs text-slate-400">— Zapier, Make, IFTTT, any tool</span>
+                <span className="text-sm font-bold text-[#4A5578]">Generic Webhooks</span>
+                <span className="text-xs bg-[rgba(62,74,137,0.08)] text-[#7C859E] px-2 py-0.5 rounded-full">{genericWebhooks.length}</span>
+                <span className="text-xs text-[#7C859E]">â€” Zapier, Make, IFTTT, any tool</span>
               </div>
 
               {genericWebhooks.length === 0 && (
-                <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center">
-                  <p className="text-sm text-slate-400 mb-1">No generic webhooks yet</p>
-                  <p className="text-xs text-slate-400">POST <code className="bg-slate-100 px-1 rounded">{'{"text":"your message"}'}</code> to the webhook URL</p>
+                <div className="rounded-xl border border-dashed border-[rgba(62,74,137,0.12)] p-4 text-center">
+                  <p className="text-sm text-[#7C859E] mb-1">No generic webhooks yet</p>
+                  <p className="text-xs text-[#7C859E]">POST <code className="bg-[rgba(62,74,137,0.08)] px-1 rounded">{'{"text":"your message"}'}</code> to the webhook URL</p>
                 </div>
               )}
 
@@ -265,7 +265,7 @@ Content-Type: application/json
 {
   "text": "Your message here",
   "title": "Optional bold title",
-  "color": "#4f46e5"
+  "color": "#3E4A89"
 }`}</pre>
                 </div>
               )}
@@ -288,36 +288,36 @@ function WebhookCard({ wh, channels, onCopy, onDelete, onToggle, copied }: {
   const url = webhookUrl(wh);
 
   return (
-    <div className={`rounded-xl border p-3 transition-all ${wh.active ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50 opacity-60'}`}>
+    <div className={`rounded-xl border p-3 transition-all ${wh.active ? 'border-[rgba(62,74,137,0.12)] bg-white' : 'border-[rgba(62,74,137,0.08)] bg-[#FAF8F5] opacity-60'}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-semibold text-slate-800">{wh.name}</span>
-            <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">
+            <span className="text-sm font-semibold text-[#1E2636]">{wh.name}</span>
+            <span className="text-xs bg-[rgba(62,74,137,0.08)] text-[#C4CAE0] px-2 py-0.5 rounded-full font-medium">
               #{channel?.name ?? wh.channelId}
             </span>
-            {!wh.active && <span className="text-xs bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full">Paused</span>}
+            {!wh.active && <span className="text-xs bg-slate-200 text-[#7C859E] px-2 py-0.5 rounded-full">Paused</span>}
           </div>
           <div className="flex items-center gap-1.5">
-            <code className="text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded px-2 py-1 flex-1 truncate font-mono">
+            <code className="text-xs text-[#7C859E] bg-[#FAF8F5] border border-[rgba(62,74,137,0.08)] rounded px-2 py-1 flex-1 truncate font-mono">
               {url}
             </code>
-            <button onClick={() => onCopy(wh)} className="flex-shrink-0 p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-indigo-600 transition-colors">
-              {copied === wh.id ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
+            <button onClick={() => onCopy(wh)} className="flex-shrink-0 p-1.5 rounded-lg hover:bg-[rgba(62,74,137,0.08)] text-[#7C859E] hover:text-[#C4CAE0] transition-colors">
+              {copied === wh.id ? <Check size={13} className="text-[#9BA6D3]" /> : <Copy size={13} />}
             </button>
-            <a href={url} target="_blank" rel="noreferrer" className="flex-shrink-0 p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+            <a href={url} target="_blank" rel="noreferrer" className="flex-shrink-0 p-1.5 rounded-lg hover:bg-[rgba(62,74,137,0.08)] text-[#7C859E] hover:text-[#4A5578] transition-colors">
               <ExternalLink size={13} />
             </a>
           </div>
           {wh.lastUsed && (
-            <p className="text-xs text-slate-400 mt-1">Last used: {new Date(wh.lastUsed).toLocaleString()}</p>
+            <p className="text-xs text-[#7C859E] mt-1">Last used: {new Date(wh.lastUsed).toLocaleString()}</p>
           )}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
-          <button onClick={() => onToggle(wh)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-slate-400 hover:text-indigo-600">
+          <button onClick={() => onToggle(wh)} className="p-1.5 rounded-lg hover:bg-[rgba(62,74,137,0.08)] transition-colors text-[#7C859E] hover:text-[#C4CAE0]">
             {wh.active ? <ToggleRight size={18} className="text-indigo-500" /> : <ToggleLeft size={18} />}
           </button>
-          <button onClick={() => onDelete(wh.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
+          <button onClick={() => onDelete(wh.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-[#7C859E] hover:text-red-500 transition-colors">
             <Trash2 size={14} />
           </button>
         </div>
@@ -325,3 +325,8 @@ function WebhookCard({ wh, channels, onCopy, onDelete, onToggle, copied }: {
     </div>
   );
 }
+
+
+
+
+

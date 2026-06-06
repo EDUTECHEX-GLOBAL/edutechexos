@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import LoginForm from './LoginForm';
@@ -53,7 +53,7 @@ export default function AuthCard({ darkMode = false }: { darkMode?: boolean }) {
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
           border: '1px solid rgba(255,255,255,0.3)',
-          boxShadow: '0 8px 48px rgba(0,0,0,0.06), 0 0 40px -8px rgba(45,106,79,0.1)',
+          boxShadow: '0 8px 48px rgba(0,0,0,0.06), 0 0 40px -8px rgba(62,74,137,0.12)',
         }}
       >
         <div className="flex" style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
@@ -66,7 +66,7 @@ export default function AuthCard({ darkMode = false }: { darkMode?: boolean }) {
               }`}
               style={{
                 backgroundColor: activeTab === tab ? 'rgba(255,255,255,0.3)' : 'transparent',
-                borderBottom: activeTab === tab ? '2px solid #2d6a4f' : '2px solid transparent',
+                borderBottom: activeTab === tab ? '2px solid #3E4A89' : '2px solid transparent',
               }}
             >
               {tab === 'login' ? 'Sign in' : 'Create account'}

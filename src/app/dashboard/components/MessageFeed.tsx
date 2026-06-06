@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Trash2, Paperclip, Pencil, Check, X, Pin, Bookmark, MessageSquare, ChevronDown } from 'lucide-react';
@@ -13,34 +13,48 @@ interface MessageFeedProps {
   parentId?: string;
 }
 
-const EMOJI_OPTIONS = ['👍', '❤️', '😂', '🔥', '👀', '✅', '🎉', '💯'];
+const EMOJI_OPTIONS = [
+  '👍', // 👍
+  '❤️', // ❤️
+  '😂', // 😂
+  '🔥', // 🔥
+  '👀', // 👀
+  '✅',    // ✅
+  '🎉', // 🎉
+  '💯', // 💯
+]
 
 function PollCard({ msg, channelId, userEmail }: { msg: any; channelId: string; userEmail: string }) {
   const votePoll = useDashboardStore((s) => s.votePoll);
   const poll = msg.poll;
   const totalVotes = poll.options.reduce((sum: number, o: any) => sum + o.votes.length, 0);
   return (
-    <div className="mt-2 w-64 rounded-2xl border border-indigo-100 bg-white dark:bg-slate-800 dark:border-slate-700 p-4 shadow-sm">
-      <p className="mb-3 text-sm font-bold text-slate-900 dark:text-white">📊 {poll.question}</p>
+    <div className="mt-2 w-64 rounded-2xl border border-[rgba(62,74,137,0.10)] bg-white dark:bg-slate-800  p-4 shadow-sm">
+      <p className="mb-3 text-sm font-bold text-[#1E2636]">📊 {poll.question}</p>
       <div className="space-y-2">
         {poll.options.map((opt: any, i: number) => {
           const pct = totalVotes > 0 ? Math.round((opt.votes.length / totalVotes) * 100) : 0;
           const voted = opt.votes.includes(userEmail);
           return (
             <button key={i} onClick={() => votePoll(channelId, msg.id, i, userEmail)}
-              className={`relative w-full overflow-hidden rounded-xl border px-3 py-2 text-left text-sm transition-all ${voted ? 'border-indigo-400 bg-indigo-50 font-bold text-indigo-700' : 'border-slate-200 text-slate-700 hover:border-indigo-200 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300'}`}>
+              className={`relative w-full overflow-hidden rounded-xl border px-3 py-2 text-left text-sm transition-all ${voted ? 'border-indigo-400 bg-[rgba(62,74,137,0.08)] font-bold text-[#3E4A89]' : 'border-[rgba(62,74,137,0.12)] text-[#4A5578] hover:border-[rgba(62,74,137,0.15)] hover:bg-[rgba(62,74,137,0.06)] dark:border-slate-600 dark:text-[#9BA6D3]'}`}>
               <div className="absolute inset-y-0 left-0 rounded-l-xl bg-indigo-100/60 transition-all" style={{ width: `${pct}%` }} />
               <span className="relative flex items-center justify-between">
                 <span>{opt.text}</span>
-                <span className="text-xs font-bold text-slate-400">{pct}%</span>
+                <span className="text-xs font-bold text-[#7C859E]">{pct}%</span>
               </span>
             </button>
           );
         })}
       </div>
-      <p className="mt-2 text-[11px] text-slate-400">{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</p>
+      <p className="mt-2 text-[11px] text-[#7C859E]">{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</p>
     </div>
   );
+}
+
+// Wrap @Name tokens in markdown bold so ReactMarkdown renders them as <strong>
+function applyMentionBold(text: string): string {
+  return text.replace(/@([A-Za-z][^\s@,!?\n]*)/g, '**@$1**');
 }
 
 function MarkdownContent({ text, isOwn }: { text: string; isOwn: boolean }) {
@@ -48,14 +62,14 @@ function MarkdownContent({ text, isOwn }: { text: string; isOwn: boolean }) {
     <ReactMarkdown remarkPlugins={[remarkGfm]}
       components={{
         p: ({ children }) => <p className="mb-1 last:mb-0 text-[15px] leading-relaxed">{children}</p>,
-        strong: ({ children }) => <strong className={`font-bold ${isOwn ? 'text-white' : 'text-slate-900 dark:text-white'}`}>{children}</strong>,
+        strong: ({ children }) => <strong className={`font-black ${isOwn ? 'text-white' : 'text-[#0a0f1e]'}`}>{children}</strong>,
         em: ({ children }) => <em className="italic">{children}</em>,
         code: ({ children, className }) => {
           const isBlock = String(className).includes('language-');
           return isBlock ? (
-            <pre className="my-2 overflow-x-auto rounded-xl bg-black/20 p-3 text-xs text-green-300"><code>{children}</code></pre>
+            <pre className="my-2 overflow-x-auto rounded-xl bg-black/20 p-3 text-sm text-[#C4CAE0]"><code>{children}</code></pre>
           ) : (
-            <code className={`rounded-md px-1.5 py-0.5 font-mono text-xs ${isOwn ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-700 text-indigo-700 dark:text-indigo-300'}`}>{children}</code>
+            <code className={`rounded-md px-1.5 py-0.5 font-mono text-sm ${isOwn ? 'bg-white/20 text-white' : 'bg-[rgba(62,74,137,0.08)] dark:bg-slate-700 text-[#3E4A89] dark:text-indigo-300'}`}>{children}</code>
           );
         },
         ul: ({ children }) => <ul className="my-1 ml-4 list-disc space-y-0.5 text-[15px]">{children}</ul>,
@@ -65,13 +79,13 @@ function MarkdownContent({ text, isOwn }: { text: string; isOwn: boolean }) {
         h2: ({ children }) => <h2 className="mb-1 text-sm font-black">{children}</h2>,
         h3: ({ children }) => <h3 className="mb-1 text-sm font-bold">{children}</h3>,
         blockquote: ({ children }) => (
-          <blockquote className={`my-1 border-l-4 pl-3 italic text-sm ${isOwn ? 'border-white/40 text-white/80' : 'border-indigo-300 text-slate-600'}`}>{children}</blockquote>
+          <blockquote className={`my-1 border-l-4 pl-3 italic text-sm ${isOwn ? 'border-white/40 text-white/80' : 'border-[rgba(62,74,137,0.25)] text-[#4A5578]'}`}>{children}</blockquote>
         ),
         a: ({ href, children }) => (
-          <a href={href} target="_blank" rel="noreferrer" className={`underline ${isOwn ? 'text-white/90' : 'text-indigo-600'}`}>{children}</a>
+          <a href={href} target="_blank" rel="noreferrer" className={`underline ${isOwn ? 'text-white/90' : 'text-[#3E4A89]'}`}>{children}</a>
         ),
       }}>
-      {text}
+      {applyMentionBold(text)}
     </ReactMarkdown>
   );
 }
@@ -83,13 +97,13 @@ function MeetingCard({ text }: { text: string }) {
   const link = text.match(/Join Link:\s*(https?:\/\/\S+)/)?.[1]?.trim() ?? '';
   if (!link) return <MarkdownContent text={text} isOwn={false} />;
   return (
-    <div className="w-64 rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-slate-50 dark:from-slate-800 dark:to-slate-900 dark:border-slate-600 p-4">
-      <p className="text-[10px] font-black uppercase tracking-wider text-indigo-400">📅 Meeting Scheduled</p>
-      <p className="mt-1 font-black text-slate-900 dark:text-white">{title}</p>
-      {time && <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">🕐 {time}</p>}
-      {people && <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">👥 {people}</p>}
+    <div className="min-w-[220px] max-w-xs rounded-2xl border border-[rgba(62,74,137,0.15)] bg-gradient-to-br from-indigo-50 to-slate-50 dark:from-slate-800 dark:to-slate-900 dark:border-slate-600 p-4">
+      <p className="text-[11px] font-black uppercase tracking-wider text-indigo-400">📅 Meeting Scheduled</p>
+      <p className="mt-1 font-black text-[#1E2636]">{title}</p>
+      {time && <p className="mt-1 text-sm text-[#4A5578] dark:text-[#7C859E]">🕐 {time}</p>}
+      {people && <p className="mt-0.5 text-sm text-[#4A5578] dark:text-[#7C859E]">👥 {people}</p>}
       <a href={link} target="_blank" rel="noreferrer"
-        className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-black text-white hover:bg-indigo-700 transition-colors">
+        className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-[#3E4A89] px-3 py-2 text-sm font-black text-white hover:bg-[#2A3568] transition-colors">
         Join Meeting →
       </a>
     </div>
@@ -168,8 +182,8 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
       <div className="flex h-full items-center justify-center py-16">
         <div className="text-center">
           <div className="mb-3 text-4xl">💬</div>
-          <p className="font-bold text-slate-700 dark:text-slate-200">Start the conversation</p>
-          <p className="mt-1 text-sm text-slate-400">Send a message to begin</p>
+          <p className="font-bold text-[#4A5578]">Start the conversation</p>
+          <p className="mt-1 text-sm text-[#7C859E]">Send a message to begin</p>
         </div>
       </div>
     );
@@ -201,7 +215,7 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
             {msg.showDate && (
               <div className="my-4 flex items-center gap-3">
                 <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
-                <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                <span className="rounded-full bg-[rgba(62,74,137,0.08)] dark:bg-slate-800 px-3 py-1 text-[12px] font-semibold text-[#7C859E] dark:text-[#7C859E]">
                   {msg.dateLabel}
                 </span>
                 <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
@@ -210,20 +224,20 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
 
             {/* Pinned indicator */}
             {isPinned && (
-              <div className={`mb-0.5 flex items-center gap-1 text-[10px] font-bold text-amber-600 ${isOwn ? 'justify-end pr-1' : 'justify-start pl-10'}`}>
+              <div className={`mb-0.5 flex items-center gap-1 text-[11px] font-bold text-amber-600 ${isOwn ? 'justify-start pl-10' : 'justify-end pr-1'}`}>
                 <Pin size={10} /> Pinned
               </div>
             )}
 
             {/* Message row */}
-            <div className={`group flex items-end gap-2 ${msg.isFirst ? 'mt-3 mb-0' : 'mt-0.5 mb-0'} ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+            <div className={`group flex items-end gap-2 ${msg.isFirst ? 'mt-3 mb-0' : 'mt-0.5 mb-0'} ${isOwn ? 'flex-row' : 'flex-row-reverse'}`}>
 
-              {/* Avatar — only show for first in group, on receiver side */}
+              {/* Avatar — only show for first in group, on receiver (right) side */}
               {!isOwn && (
                 <div className="mb-1 shrink-0">
                   {msg.isFirst ? (
                     <div
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-sm"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-[12px] font-bold text-white shadow-sm"
                       style={{ backgroundColor: msg.color }}
                     >
                       {msg.initials}
@@ -235,11 +249,11 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
               )}
 
               {/* Bubble column */}
-              <div className={`flex flex-col max-w-[72%] ${isOwn ? 'items-end' : 'items-start'}`}>
+              <div className={`flex flex-col max-w-[72%] ${isOwn ? 'items-start' : 'items-end'}`}>
 
                 {/* Sender name (only for first in group, receiver side) */}
                 {msg.isFirst && !isOwn && (
-                  <span className="mb-1 ml-1 text-[13px] font-bold" style={{ color: msg.color }}>
+                  <span className="mb-1 mr-1 text-[14px] font-bold" style={{ color: msg.color }}>
                     {msg.sender}
                   </span>
                 )}
@@ -248,8 +262,8 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
                 {msg.isDeleted ? (
                   <div className={`flex items-center gap-1.5 rounded-2xl px-3.5 py-2.5 text-[13px] italic shadow-sm
                     ${isOwn
-                      ? 'bg-indigo-600/60 text-indigo-100'
-                      : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-400 dark:text-slate-500'
+                      ? 'bg-[#3E4A89]/60 text-indigo-100'
+                      : 'bg-white dark:bg-slate-800 border border-[rgba(62,74,137,0.08)]  text-[#7C859E] dark:text-[#7C859E]'
                     }`}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-60"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
                     This message was deleted
@@ -263,48 +277,60 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
                         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); }
                         if (e.key === 'Escape') { setEditingId(null); setEditText(''); }
                       }}
-                      className="flex-1 resize-none rounded-2xl border border-indigo-300 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/20"
+                      className="flex-1 resize-none rounded-2xl border border-[rgba(62,74,137,0.25)] bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/20"
                       rows={2}
                       autoFocus
                     />
                     <div className="flex flex-col gap-1">
-                      <button onClick={saveEdit} className="rounded-xl bg-indigo-600 p-1.5 text-white hover:bg-indigo-700"><Check size={14} /></button>
-                      <button onClick={() => { setEditingId(null); setEditText(''); }} className="rounded-xl border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-100"><X size={14} /></button>
+                      <button onClick={saveEdit} className="rounded-xl bg-[#3E4A89] p-1.5 text-white hover:bg-[#2A3568]"><Check size={14} /></button>
+                      <button onClick={() => { setEditingId(null); setEditText(''); }} className="rounded-xl border border-[rgba(62,74,137,0.12)] p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)]"><X size={14} /></button>
                     </div>
                   </div>
                 ) : (
                   <>
                     {/* Main bubble */}
                     {!msg.poll && (
-                    <div className={`relative group/bubble rounded-2xl px-3.5 py-2.5 shadow-sm
-                        ${isOwn
-                          ? `bg-indigo-600 text-white ${msg.isLast ? 'bubble-own rounded-br-sm' : ''}`
-                          : `bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-100 dark:border-slate-700 ${msg.isLast ? 'bubble-other rounded-bl-sm' : ''}`
+                    <div className={`relative group/bubble rounded-2xl shadow-sm
+                        ${isMeeting
+                          ? `p-0 bg-transparent border-0 overflow-hidden ${isPinned ? 'ring-2 ring-amber-400' : ''}`
+                          : `px-3.5 py-2.5 ${isOwn
+                              ? `bg-[#3E4A89] text-white ${msg.isLast ? 'rounded-bl-sm' : ''}`
+                              : `bg-white dark:bg-slate-800 text-[#1E2636] border border-[rgba(62,74,137,0.08)] ${msg.isLast ? 'rounded-br-sm' : ''}`
+                            } ${isPinned ? 'ring-2 ring-amber-400' : ''}`
                         }
-                        ${isPinned ? 'ring-2 ring-amber-400' : ''}
                       `}>
 
                         {isMeeting ? (
                           <MeetingCard text={msg.text} />
                         ) : (
-                          <div className={isOwn ? 'text-white' : 'text-slate-900 dark:text-white'}>
+                          <div className={isOwn ? 'text-white' : 'text-[#1E2636]'}>
                             <MarkdownContent text={msg.text ?? ''} isOwn={isOwn} />
                           </div>
                         )}
 
-                        {/* Audio */}
-                        {msg.audioUrl && (
-                          <div className={`mt-2 rounded-xl p-2 ${isOwn ? 'bg-white/10' : 'bg-slate-50 dark:bg-slate-700'}`}>
+                        {/* Audio — only sender and admin can play voice recordings */}
+                        {msg.audioUrl && (isOwn || isAdmin) && (
+                          <div className={`mt-2 rounded-xl p-2 ${isOwn ? 'bg-white/10' : 'bg-[#FAF8F5] dark:bg-slate-700'}`}>
                             <audio className="w-48 h-8" controls src={msg.audioUrl}><track kind="captions" /></audio>
-                            <p className={`mt-1 text-[10px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>Voice note</p>
+                            <p className={`mt-1 text-[11px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}>Voice note</p>
+                          </div>
+                        )}
+                        {msg.audioUrl && !isOwn && !isAdmin && (
+                          <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/10 px-3 py-2">
+                            <p className="text-[11px] font-bold text-amber-600">🔒 Voice note (private)</p>
                           </div>
                         )}
 
-                        {/* Video */}
-                        {msg.videoUrl && (
+                        {/* Video — only sender and admin can play screen recordings */}
+                        {msg.videoUrl && (isOwn || isAdmin) && (
                           <div className="mt-2 w-64">
                             <video className="w-full rounded-xl bg-black" controls src={msg.videoUrl}><track kind="captions" /></video>
-                            <p className={`mt-1 text-[10px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>Screen recording</p>
+                            <p className={`mt-1 text-[11px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}>Screen recording</p>
+                          </div>
+                        )}
+                        {msg.videoUrl && !isOwn && !isAdmin && (
+                          <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/10 px-3 py-2">
+                            <p className="text-[11px] font-bold text-amber-600">🔒 Screen recording (private)</p>
                           </div>
                         )}
 
@@ -313,8 +339,8 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
                           <div className="mt-2 flex flex-wrap gap-1.5">
                             {msg.files.map((file: any, fi: number) => (
                               <a key={fi} href={file.url} target="_blank" rel="noreferrer"
-                                className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-bold transition-colors
-                                  ${isOwn ? 'border-white/30 bg-white/10 text-white hover:bg-white/20' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:border-indigo-200'}`}>
+                                className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-sm font-bold transition-colors
+                                  ${isOwn ? 'border-white/30 bg-white/10 text-white hover:bg-white/20' : 'border-[rgba(62,74,137,0.12)] dark:border-slate-600 bg-white dark:bg-slate-700 text-[#4A5578] dark:text-[#9BA6D3] hover:border-[rgba(62,74,137,0.15)]'}`}>
                                 <Paperclip size={11} />{file.name}
                               </a>
                             ))}
@@ -322,7 +348,7 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
                         )}
 
                         {/* Timestamp + edited */}
-                        <div className={`mt-1.5 flex items-center gap-1.5 justify-end text-[10px] ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>
+                        <div className={`mt-1.5 flex items-center gap-1.5 justify-end text-[10px] ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}>
                           {msg.editedAt && <span className="italic">(edited)</span>}
                           <span>{formatTime(msg.timestamp)}</span>
                           {isOwn && (
@@ -334,21 +360,21 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
                         </div>
 
                         {/* Hover action bar inside bubble */}
-                        <div className={`absolute ${isOwn ? 'left-0 -translate-x-full pl-0 pr-2' : 'right-0 translate-x-full pl-2'} top-0 hidden group-hover/bubble:flex items-center`}>
-                          <div className="flex items-center gap-0.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1 shadow-lg">
+                        <div className={`absolute ${isOwn ? 'right-0 translate-x-full pl-2' : 'left-0 -translate-x-full pr-2'} top-0 hidden group-hover/bubble:flex items-center`}>
+                          <div className="flex items-center gap-0.5 rounded-xl border border-[rgba(62,74,137,0.12)]  bg-white dark:bg-slate-800 p-1 shadow-lg">
                             {/* Emoji reaction */}
                             <div className="relative" data-emoji-picker>
                               <button
                                 onClick={() => setActiveEmojiPicker(activeEmojiPicker === msg.id ? null : msg.id)}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-sm hover:bg-[rgba(62,74,137,0.08)]"
                                 title="React"
                               >😊</button>
                               {activeEmojiPicker === msg.id && (
-                                <div className={`absolute top-full mt-1 z-20 flex gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1.5 shadow-xl ${isOwn ? 'right-0' : 'left-0'}`} data-emoji-picker>
+                                <div className={`absolute top-full mt-1 z-[100] flex gap-1 rounded-xl border border-[rgba(62,74,137,0.12)]  bg-white dark:bg-slate-800 p-1.5 shadow-xl ${isOwn ? 'left-0' : 'right-0'}`} data-emoji-picker>
                                   {EMOJI_OPTIONS.map((em) => (
                                     <button key={em}
                                       onClick={() => { toggleReaction(channelId, msg.id, em, userEmail); setActiveEmojiPicker(null); }}
-                                      className="flex h-7 w-7 items-center justify-center rounded-lg text-lg transition-all hover:scale-110 hover:bg-slate-100 dark:hover:bg-slate-700">
+                                      className="flex h-7 w-7 items-center justify-center rounded-lg text-lg transition-all hover:scale-110 hover:bg-[rgba(62,74,137,0.08)]">
                                       {em}
                                     </button>
                                   ))}
@@ -358,29 +384,29 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
 
                             {!parentId && (
                               <button onClick={() => setActiveThread(msg.id)}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-indigo-600"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#3E4A89]"
                                 title="Reply in thread">
                                 <MessageSquare size={13} />
                               </button>
                             )}
 
                             <button
-                              onClick={() => { toggleBookmark(msg.id); toast.success(isBookmarked ? 'Removed from saved' : 'Message saved!'); }}
-                              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 ${isBookmarked ? 'text-amber-500' : 'text-slate-500 hover:text-amber-500'}`}
+                              onClick={() => { toggleBookmark(msg.id, { channelId, text: msg.text, sender: msg.sender, timestamp: msg.timestamp }); toast.success(isBookmarked ? 'Removed from saved' : 'Message saved!'); }}
+                              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[rgba(62,74,137,0.08)] ${isBookmarked ? 'text-amber-500' : 'text-[#7C859E] hover:text-amber-500'}`}
                               title={isBookmarked ? 'Remove from saved' : 'Save message'}>
                               <Bookmark size={13} fill={isBookmarked ? 'currentColor' : 'none'} />
                             </button>
 
                             <button
                               onClick={() => { isPinned ? unpinMessage(channelId, msg.id) : pinMessage(channelId, msg.id); toast.success(isPinned ? 'Unpinned' : 'Message pinned!'); }}
-                              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 ${isPinned ? 'text-amber-500' : 'text-slate-500 hover:text-amber-500'}`}
+                              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[rgba(62,74,137,0.08)] ${isPinned ? 'text-amber-500' : 'text-[#7C859E] hover:text-amber-500'}`}
                               title={isPinned ? 'Unpin' : 'Pin message'}>
                               <Pin size={13} />
                             </button>
 
                             {isOwn && !msg.poll && (
                               <button onClick={() => { setEditingId(msg.id); setEditText(msg.text ?? ''); }}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]"
                                 title="Edit">
                                 <Pencil size={13} />
                               </button>
@@ -388,7 +414,7 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
 
                             {(isOwn || isAdmin) && (
                               <button onClick={() => handleDelete(msg.id, msg.sender)}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-[#7C859E] hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600"
                                 title="Delete">
                                 <Trash2 size={13} />
                               </button>
@@ -405,15 +431,15 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
 
                 {/* Reactions */}
                 {!msg.isDeleted && msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                  <div className={`mt-1 flex flex-wrap gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`mt-1 flex flex-wrap gap-1 ${isOwn ? 'justify-start' : 'justify-end'}`}>
                     {Object.entries(msg.reactions).map(([emoji, users]: [string, any]) =>
                       users.length > 0 ? (
                         <button key={emoji}
                           onClick={() => toggleReaction(channelId, msg.id, emoji, userEmail)}
-                          className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-all
+                          className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-sm transition-all
                             ${users.includes(userEmail)
-                              ? 'border-indigo-200 bg-indigo-100 dark:bg-indigo-900/40 font-bold text-indigo-700 dark:text-indigo-300'
-                              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'}`}>
+                              ? 'border-[rgba(62,74,137,0.15)] bg-indigo-100 dark:bg-indigo-900/40 font-bold text-[#3E4A89] dark:text-indigo-300'
+                              : 'border-[rgba(62,74,137,0.12)]  bg-white dark:bg-slate-800 text-[#4A5578] dark:text-[#7C859E] hover:bg-[rgba(62,74,137,0.06)]'}`}>
                           <span>{emoji}</span><span>{users.length}</span>
                         </button>
                       ) : null
@@ -425,7 +451,7 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
                 {replies > 0 && (
                   <button
                     onClick={() => setActiveThread(msg.id)}
-                    className="mt-1 flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800"
+                    className="mt-1 flex items-center gap-1.5 text-sm font-bold text-[#3E4A89] hover:text-indigo-800"
                   >
                     <MessageSquare size={12} />{replies} {replies === 1 ? 'reply' : 'replies'}<ChevronDown size={12} />
                   </button>
@@ -439,3 +465,6 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
     </div>
   );
 }
+
+
+

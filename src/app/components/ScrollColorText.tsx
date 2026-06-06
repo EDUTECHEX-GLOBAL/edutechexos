@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useMemo } from 'react';
 import { useScrollProgress } from '@/hooks/useScrollProgress';
 
@@ -7,12 +7,12 @@ interface ColorPalette {
 }
 
 const palettes: ColorPalette[] = [
-  { h1: '#1a2e1a', h2: '#2d6a4f', body: '#3d523d', accent: '#2d6a4f', muted: '#6b806b' },
-  { h1: '#1a2e1a', h2: '#7c3aed', body: '#3d523d', accent: '#7c3aed', muted: '#6b806b' },
-  { h1: '#1a2e1a', h2: '#52b788', body: '#3d523d', accent: '#2d6a4f', muted: '#6b806b' },
-  { h1: '#2d2d44', h2: '#7c3aed', body: '#3d523d', accent: '#7c3aed', muted: '#6b806b' },
-  { h1: '#1a2e1a', h2: '#7c3aed', body: '#3d523d', accent: '#c4b5fd', muted: '#6b806b' },
-  { h1: '#1a2e1a', h2: '#2d6a4f', body: '#3d523d', accent: '#2d6a4f', muted: '#6b806b' },
+  { h1: '#1E2636', h2: '#3E4A89', body: '#334155', accent: '#3E4A89', muted: '#4A5578' },
+  { h1: '#1E2636', h2: '#7c3aed', body: '#334155', accent: '#7c3aed', muted: '#4A5578' },
+  { h1: '#1E2636', h2: '#9BA6D3', body: '#334155', accent: '#3E4A89', muted: '#4A5578' },
+  { h1: '#191E2F', h2: '#7c3aed', body: '#334155', accent: '#7c3aed', muted: '#4A5578' },
+  { h1: '#1E2636', h2: '#7c3aed', body: '#334155', accent: '#c4b5fd', muted: '#4A5578' },
+  { h1: '#1E2636', h2: '#3E4A89', body: '#334155', accent: '#2A3568', muted: '#4A5578' },
 ];
 
 function lerpColor(a: string, b: string, t: number): string {

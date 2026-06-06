@@ -1,14 +1,12 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import '../dashboard.css';
 import AppLogo from '@/components/ui/AppLogo';
-import { MOCK_AI_RESPONSES } from '@/data/mockData';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { useTheme } from '@/components/ThemeProvider';
-import { askCopilot, extractActionItems } from '@/app/actions/aiActions';
 import {
   sendMeetingEmailInvitation,
   sendMentionEmailNotification,
@@ -16,6 +14,7 @@ import {
   changePassword,
 } from '@/app/actions/dbActions';
 import NotificationPanel from './NotificationPanel';
+import AIPanel from './AIPanel';
 import { getSocket } from '@/lib/socket';
 
 import MyActivityCalendar from './MyActivityCalendar';
@@ -49,7 +48,6 @@ const CARD = {
   transition: SPRING,
 } as const;
 import {
-  AtSign,
   BarChart2,
   Bell,
   Bookmark,
@@ -81,6 +79,7 @@ import {
   Sun,
   Trash2,
   Type,
+  FileText,
   UserCheck,
   Users,
   Video,
@@ -90,14 +89,6 @@ import {
   Layout,
   Layers,
 } from 'lucide-react';
-
-type AIMessage = {
-  id: string;
-  role: 'user' | 'assistant';
-  text: string;
-  citation?: string;
-  timestamp: string;
-};
 
 type CurrentUser = {
   name: string;
@@ -111,155 +102,23 @@ const THURSDAY_AFTERNOON_MEET_LINK = 'https://meet.google.com/dss-wmvy-cuq';
 const FRIDAY_MEET_LINK = 'https://meet.google.com/eeq-maem-ztc';
 const settingsKey = (email: string) => `edutechex_dashboard_settings_${email.toLowerCase()}`;
 const EMOJI_OPTIONS = [
-  '😀',
-  '😁',
-  '😂',
-  '🤣',
-  '😃',
-  '😄',
-  '😅',
-  '😆',
-  '😉',
-  '😊',
-  '😋',
-  '😎',
-  '😍',
-  '🥰',
-  '😘',
-  '😗',
-  '😙',
-  '😚',
-  '🙂',
-  '🤗',
-  '🤩',
-  '🤔',
-  '🤨',
-  '😐',
-  '😑',
-  '😶',
-  '🙄',
-  '😏',
-  '😣',
-  '😥',
-  '😮',
-  '🤐',
-  '😯',
-  '😪',
-  '😫',
-  '😴',
-  '😌',
-  '😛',
-  '😜',
-  '😝',
-  '🤤',
-  '😒',
-  '😓',
-  '😔',
-  '😕',
-  '🙃',
-  '🤑',
-  '😲',
-  '☹️',
-  '🙁',
-  '😖',
-  '😞',
-  '😟',
-  '😤',
-  '😢',
-  '😭',
-  '😦',
-  '😧',
-  '😨',
-  '😩',
-  '🤯',
-  '😬',
-  '😰',
-  '😱',
-  '🥵',
-  '🥶',
-  '😳',
-  '🤪',
-  '😵',
-  '😡',
-  '😠',
-  '🤬',
-  '👍',
-  '👎',
-  '👊',
-  '✊',
-  '🤛',
-  '🤜',
-  '👏',
-  '🙌',
-  '👐',
-  '🤲',
-  '🤝',
-  '🙏',
-  '✌️',
-  '🤞',
-  '🤟',
-  '🤘',
-  '🤙',
-  '👈',
-  '👉',
-  '👆',
-  '👇',
-  '☝️',
-  '❤️',
-  '🧡',
-  '💛',
-  '💚',
-  '💙',
-  '💜',
-  '🖤',
-  '🤍',
-  '🤎',
-  '💕',
-  '💞',
-  '💓',
-  '💗',
-  '💖',
-  '💘',
-  '💝',
-  '💟',
-  '❣️',
-  '💌',
-  '💔',
-  '🔥',
-  '⭐',
-  '🌟',
-  '✨',
-  '💫',
-  '🎉',
-  '🎊',
-  '🎈',
-  '🎁',
-  '🏆',
-  '✅',
-  '❌',
-  '❓',
-  '❗',
-  '‼️',
-  '⁉️',
-  '💯',
-  '🔴',
-  '🟠',
-  '🟡',
-  '🟢',
-  '🔵',
-  '🟣',
-  '🟤',
-  '⚫',
-  '⚪',
-  '🚀',
-  '👀',
-  '🎯',
-  '💡',
+  '😀','😂','😍','🥰','😎','🤔','😭','😡','🤯','😴',
+  '👍','👎','👏','🙏','✌️','🤝','👀','💪','🙌','🤞',
+  '❤️','💛','💚','💙','💜','🔥','⭐','✨','🎉','🏆',
+  '✅','❌','❓','❗','💯','🚀','💡','🎯','📌','🔔',
+];
+
+const AVATAR_OPTIONS = [
+  '😊','😎','🤩','🥳','😍','🤖','👾','🧑‍💻',
+  '🦊','🐱','🐯','🦁','🐼','🐨','🦄','🐸',
+  '🚀','⚡','🌟','🔥','💎','🏆','🎯','🎭',
+  '🧑‍🚀','🦸','🧩','🎨','🌈','👑',
 ];
 
 type DashboardSettings = {
   // Profile
   displayName: string;
+  avatarEmoji: string;
   status: 'online' | 'away' | 'busy' | 'offline';
   // Meeting
   meetLink: string;
@@ -342,6 +201,40 @@ function formatDate(value: string) {
     .toUpperCase();
 }
 
+function renderWithMentions(text: string, isOwn: boolean, memberNames: string[] = []): React.ReactNode {
+  if (!text) return text;
+
+  // Build pattern from known member names (longest first to avoid partial matches)
+  // Fall back to generic word+ pattern if no members
+  const escaped = memberNames
+    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .sort((a, b) => b.length - a.length);
+
+  const pattern = escaped.length > 0
+    ? new RegExp(`(@(?:${escaped.join('|')}))`, 'gi')
+    : /(@[A-Za-z][A-Za-z0-9 ._-]*[A-Za-z0-9]|@[A-Za-z])/g;
+
+  const parts = text.split(pattern);
+  return parts.map((part, i) => {
+    if (/^@/i.test(part) && memberNames.some((n) => part.slice(1).toLowerCase() === n.toLowerCase())) {
+      return (
+        <strong key={i} className="font-black" style={{ color: isOwn ? '#EAE8F4' : '#C4CAE0' }}>
+          {part}
+        </strong>
+      );
+    }
+    // fallback: any @word token when no members list
+    if (memberNames.length === 0 && /^@[A-Za-z]/.test(part)) {
+      return (
+        <strong key={i} className="font-black" style={{ color: isOwn ? '#EAE8F4' : '#C4CAE0' }}>
+          {part}
+        </strong>
+      );
+    }
+    return part;
+  });
+}
+
 function parseScheduledMeet(text: string) {
   if (!text.startsWith('Meeting Scheduled:')) return null;
 
@@ -374,6 +267,8 @@ export default function EduTechExOSDashboard() {
     loadLocalKanbanTasks,
     loadLocalBookmarkedIds,
     loadLocalNotifications,
+    loadPinnedMessages,
+    loadWorkspaceChannels,
     notifications,
     typingUsers,
     pinnedMessageIds,
@@ -389,17 +284,12 @@ export default function EduTechExOSDashboard() {
     addKanbanTask,
     updateKanbanTaskStatus,
   } = useDashboardStore();
-  const [copilotTab, setCopilotTab] = useState<'chat' | 'tasks'>('chat');
-  const [rightPanel, setRightPanel] = useState<'ai' | 'closed'>('ai');
+  const [rightPanel, setRightPanel] = useState<'ai' | 'closed'>('closed');
+  const [rightSidePanel, setRightSidePanel] = useState<'pinned' | 'bookmarked' | null>(null);
   const [composerMessage, setComposerMessage] = useState('');
-  const [aiInput, setAiInput] = useState('');
-  const [aiMessages, setAiMessages] = useState<AIMessage[]>(MOCK_AI_RESPONSES);
-  const [isThinking, setIsThinking] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [activityCalendarOpen, setActivityCalendarOpen] = useState(false);
   const [channelsExpanded, setChannelsExpanded] = useState(true);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [chatSearch, setChatSearch] = useState('');
   const [membersOpen, setMembersOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [newChannelOpen, setNewChannelOpen] = useState(false);
@@ -428,6 +318,7 @@ export default function EduTechExOSDashboard() {
   const [pwLoading, setPwLoading]   = useState(false);
   const [settings, setSettings] = useState<DashboardSettings>({
     displayName: '',
+    avatarEmoji: '',
     status: 'online',
     meetLink: DEFAULT_COMPANY_MEET_LINK,
     emailNotifications: true,
@@ -439,14 +330,68 @@ export default function EduTechExOSDashboard() {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
-  // Keep settings + currentUser accessible inside socket handlers without stale-closure issues
   const settingsRef = useRef(settings);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
+
+  // ── Settings: load from MongoDB on mount, auto-save on change ───────────────
+  const settingsLoadedFromDB = useRef(false);
+  const settingsSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // Load saved settings from MongoDB on first mount
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('edutechex_token') : null;
+    if (!raw) return;
+    try {
+      const { token } = JSON.parse(raw);
+      fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/settings`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.success && data.settings) {
+            const s = data.settings;
+            setSettings((prev) => ({
+              ...prev,
+              ...(s.displayName          !== undefined && { displayName: s.displayName }),
+              ...(s.avatarEmoji          !== undefined && { avatarEmoji: s.avatarEmoji }),
+              ...(s.status               !== undefined && { status: s.status }),
+              ...(s.meetLink             !== undefined && { meetLink: s.meetLink }),
+              ...(s.emailNotifications   !== undefined && { emailNotifications: s.emailNotifications }),
+              ...(s.desktopNotifications !== undefined && { desktopNotifications: s.desktopNotifications }),
+              ...(s.soundNotifications   !== undefined && { soundNotifications: s.soundNotifications }),
+              ...(s.compactChat          !== undefined && { compactChat: s.compactChat }),
+              ...(s.fontSize             !== undefined && { fontSize: s.fontSize }),
+              ...(s.enterToSend          !== undefined && { enterToSend: s.enterToSend }),
+            }));
+          }
+        })
+        .catch(() => {})
+        .finally(() => { settingsLoadedFromDB.current = true; });
+    } catch { settingsLoadedFromDB.current = true; }
+  }, []); // run once on mount
+
+  useEffect(() => {
+    // Don't save before we've loaded (prevents overwriting DB with defaults)
+    if (!settingsLoadedFromDB.current) return;
+    if (settingsSaveTimer.current) clearTimeout(settingsSaveTimer.current);
+    settingsSaveTimer.current = setTimeout(() => {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('edutechex_token') : null;
+      if (!raw) return;
+      try {
+        const { token } = JSON.parse(raw);
+        fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/settings`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(settings),
+        }).catch(() => {});
+      } catch { /* ignore */ }
+    }, 1500); // debounce 1.5s
+    return () => { if (settingsSaveTimer.current) clearTimeout(settingsSaveTimer.current); };
+  }, [settings]);
   const currentUserRef = useRef(currentUser);
   useEffect(() => { currentUserRef.current = currentUser; }, [currentUser]);
   const [hoverEmojiMsgId, setHoverEmojiMsgId] = useState<string | null>(null);
   const [pinScrollIdx, setPinScrollIdx] = useState(0);
-  const aiBottomRef = useRef<HTMLDivElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -474,7 +419,7 @@ export default function EduTechExOSDashboard() {
     : null;
   const currentMemberId = currentMember?.id ?? '';
   const isAdmin = currentUser?.role === 'Admin';
-  const currentUserColor = currentMember?.color ?? (isAdmin ? '#4f46e5' : '#64748b');
+  const currentUserColor = currentMember?.color ?? (isAdmin ? '#3E4A89' : '#64748b');
   const workspaceChannels = useMemo(
     () =>
       channels.filter((item) => {
@@ -560,12 +505,15 @@ export default function EduTechExOSDashboard() {
     loadLocalWikiPages?.();
     loadLocalKanbanTasks?.();
     loadLocalBookmarkedIds?.();
+    loadPinnedMessages?.();
+    loadWorkspaceChannels?.();
+    useDashboardStore.getState().loadLocalMembers?.();
     const interval = setInterval(() => {
       loadLocalMessages?.();
       loadLocalWikiPages?.();
     }, 3000);
     return () => clearInterval(interval);
-  }, []); // Zustand actions are stable refs — empty deps is safe
+  }, []); // Zustand actions are stable refs � empty deps is safe
 
   // ── Socket.IO real-time message delivery ──────────────────────────────────
   // Join the active channel room so we receive live `new_message` events.
@@ -605,16 +553,37 @@ export default function EduTechExOSDashboard() {
       deleteMessageFromSocket(channelId, messageId);
     };
 
+    // When admin changes a member's role/channel, reload the member list
+    // and if it's the current user, refresh their role in state + localStorage
+    const handleMemberUpdated = ({ email, role }: { email?: string; role?: string } = {}) => {
+      useDashboardStore.getState().loadLocalMembers?.();
+      if (email && role && currentUserRef.current?.email?.toLowerCase() === email.toLowerCase()) {
+        try {
+          const raw = localStorage.getItem('edutechex_token');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.user) {
+              parsed.user.role = role;
+              localStorage.setItem('edutechex_token', JSON.stringify(parsed));
+              setCurrentUser((prev) => prev ? { ...prev, role } : prev);
+            }
+          }
+        } catch { /* ignore */ }
+      }
+    };
+
     socket.on('connect', handleReconnect);
     socket.on('new_message', handleNewMessage);
     socket.on('message_updated', handleUpdatedMessage);
     socket.on('message_deleted', handleDeletedMessage);
+    socket.on('member_updated', handleMemberUpdated);
 
     return () => {
       socket.off('connect', handleReconnect);
       socket.off('new_message', handleNewMessage);
       socket.off('message_updated', handleUpdatedMessage);
       socket.off('message_deleted', handleDeletedMessage);
+      socket.off('member_updated', handleMemberUpdated);
       socket.emit('leave_channel', activeChannelId);
     };
   }, [activeChannelId, addMessageFromSocket, updateMessageFromSocket, deleteMessageFromSocket]);
@@ -674,10 +643,6 @@ export default function EduTechExOSDashboard() {
       router.push('/sign-up-login-screen?mode=user&redirect=/dashboard');
     }
   }, [router]);
-
-  useEffect(() => {
-    aiBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [aiMessages.length, copilotTab]);
 
   useEffect(() => {
     // Delay so React finishes rendering the new channel's messages before scrolling
@@ -793,13 +758,7 @@ export default function EduTechExOSDashboard() {
     setMentionMenuOpen(false);
   }
 
-  const visibleMessages = useMemo(() => {
-    const needle = chatSearch.trim().toLowerCase();
-    if (!needle) return channelMessages;
-    return channelMessages.filter((message) =>
-      [message.sender, message.text].join(' ').toLowerCase().includes(needle)
-    );
-  }, [channelMessages, chatSearch]);
+  const visibleMessages = channelMessages;
 
   function insertComposerText(prefix: string, suffix = '') {
     const input = composerRef.current;
@@ -1127,7 +1086,7 @@ export default function EduTechExOSDashboard() {
         timestamp: new Date().toISOString(),
         text:
           composerMessage.trim() ||
-          `${recordedPreview.kind === 'video' ? '📹 Screen recording' : '🎙️ Voice note'}`,
+          `${recordedPreview.kind === 'video' ? '�¹ Screen recording' : '🎙�¸ Voice note'}`,
         ...(recordedPreview.kind === 'video' ? { videoUrl: mediaUrl } : { audioUrl: mediaUrl }),
       });
       setComposerMessage('');
@@ -1138,88 +1097,6 @@ export default function EduTechExOSDashboard() {
       toast.error(`Could not save the ${recordedPreview.kind} recording.`);
     } finally {
       setRecordingSending(false);
-    }
-  }
-
-  async function askAI(nextPrompt?: string) {
-    const question = (nextPrompt ?? aiInput).trim();
-    if (!question || isThinking) return;
-
-    setCopilotTab('chat');
-    setRightPanel('ai');
-    setAiMessages((prev) => [
-      ...prev,
-      {
-        id: `ai-user-${Date.now()}`,
-        role: 'user',
-        text: question,
-        timestamp: new Date().toISOString(),
-      },
-    ]);
-    setAiInput('');
-    setIsThinking(true);
-
-    try {
-      const result = await askCopilot(
-        channelMessages,
-        question,
-        channel?.name ?? activeChannel,
-        workspaceChannels.map((item) => item.name)
-      );
-      setAiMessages((prev) => [
-        ...prev,
-        {
-          id: `ai-reply-${Date.now()}`,
-          role: 'assistant',
-          text: result.success
-            ? result.data || 'No response generated.'
-            : 'Sorry, I encountered an error.',
-          citation: `Scoped to #${channel?.name ?? activeChannel}`,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-    } catch {
-      toast.error('Failed to communicate with Copilot');
-    } finally {
-      setIsThinking(false);
-    }
-  }
-
-  async function extractTasks() {
-    setCopilotTab('tasks');
-    setRightPanel('ai');
-    toast.info('Extracting action items from this channel...');
-    try {
-      const result = await extractActionItems(channelMessages);
-      if (!result.success || !Array.isArray(result.data)) {
-        toast.error('Could not extract tasks from the conversation.');
-        return;
-      }
-      if (result.data.length === 0) {
-        toast.success('No new tasks found.');
-        return;
-      }
-      const channelName = `#${channel?.name ?? activeChannel}`;
-      result.data.forEach((task: any) => {
-        const assigneeName: string = task.assignee || 'Unassigned';
-        // Try to match the AI-returned assignee name to a real member to get their email
-        const matchedMember = members.find(
-          (m) => m.name.toLowerCase() === assigneeName.toLowerCase()
-        );
-        addKanbanTask({
-          text: task.text,
-          assignee: assigneeName,
-          assigneeInitials: task.assigneeInitials || '?',
-          assigneeEmail: matchedMember?.email,
-          sourceChannel: channelName,
-          status: 'todo',
-        });
-      });
-      toast.success(
-        `Extracted ${result.data.length} task${result.data.length === 1 ? '' : 's'} → added to shared Kanban board`
-      );
-    } catch {
-      toast.error('Task extraction failed.');
     }
   }
 
@@ -1299,28 +1176,37 @@ export default function EduTechExOSDashboard() {
       recipientEmails: inviteeEmails,
     });
 
-    if (sendEmailInvite) {
-      const emailResult = await sendMeetingEmailInvitation(title, timeLabel, inviteeEmails, meetLink);
-      if (emailResult.success) {
-        toast.success(
-          emailResult.previewUrl
-            ? `Meeting scheduled. Email preview ready for ${inviteeEmails.length} recipient${inviteeEmails.length === 1 ? '' : 's'}.`
-            : `Meeting scheduled. Email invite sent to ${inviteeEmails.length} recipient${inviteeEmails.length === 1 ? '' : 's'}.`
-        );
-      } else {
-        toast.warning('Meeting scheduled, but email delivery failed. Check SMTP settings.');
-      }
-    } else {
-      toast.success('Meeting scheduled. No email invites sent.');
-    }
-
+    // Always close the modal and return to chat first, then send email in background
     setScheduleMeetOpen(false);
     setMeetTitle('');
     setMeetDate('');
     setMeetTime('');
     setMeetInviteeIds([]);
-    // Give the modal time to unmount before scrolling chat into view
-    setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 300);
+    setComposerMessage('');
+
+    // Scroll chat to the new meeting message and refocus input
+    setTimeout(() => {
+      chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      composerRef.current?.focus();
+    }, 200);
+
+    // Send email invite in the background � doesn't block returning to chat
+    if (sendEmailInvite) {
+      try {
+        const emailResult = await sendMeetingEmailInvitation(title, timeLabel, inviteeEmails, meetLink);
+        if (emailResult.success) {
+          toast.success(
+            `Meeting scheduled. Email invite sent to ${inviteeEmails.length} recipient${inviteeEmails.length === 1 ? '' : 's'}.`
+          );
+        } else {
+          toast.warning('Meeting scheduled, but email delivery failed.');
+        }
+      } catch {
+        toast.warning('Meeting scheduled, but email could not be sent.');
+      }
+    } else {
+      toast.success('Meeting scheduled successfully.');
+    }
   }
 
   function startNewMeeting() {
@@ -1334,7 +1220,7 @@ export default function EduTechExOSDashboard() {
       initials: currentUser?.initials ?? 'Y',
       color: currentUserColor,
       timestamp: new Date().toISOString(),
-      text: `🟢 **Meeting Started**\n\nJoin on Google Meet:\n${meetLink}`,
+      text: `�¢ **Meeting Started**\n\nJoin on Google Meet:\n${meetLink}`,
     });
 
     const notifyMembers = activeChannelMembers.filter(
@@ -1359,9 +1245,9 @@ export default function EduTechExOSDashboard() {
 
   if (!authChecked) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-600 dark:bg-slate-950 dark:text-slate-400">
-        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm font-black shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-          <Loader2 size={18} className="animate-spin text-indigo-600" />
+      <div className="flex min-h-screen items-center justify-center bg-[#FAF8F5] text-[#4A5578] dark:bg-[#191E2F] dark:text-[#7C859E]">
+        <div className="flex items-center gap-3 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] px-5 py-4 text-sm font-black shadow-sm  dark:bg-[#191E2F] dark:text-[#9BA6D3]">
+          <Loader2 size={18} className="animate-spin text-green-700" />
           Checking workspace access
         </div>
       </div>
@@ -1370,70 +1256,123 @@ export default function EduTechExOSDashboard() {
 
 
     return (
-    <div className={`dashboard-root dashboard-workspace text-slate-900 ${rightPanel === 'closed' ? 'dashboard-workspace-panel-closed' : ''}`}>
-      {/* ══════════════════ SIDEBAR ══════════════════ */}
-      <aside className="workspace-sidebar">
+    <div className="dashboard-root dashboard-workspace-no-panel text-[#1E2636]">
 
-        {/* ── Header ─────────────────────────────────────── */}
-        <div
-          className="flex h-[4.5rem] shrink-0 items-center gap-3 px-4"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
-        >
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• LEFT ICON RAIL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      <nav className="workspace-rail">
+        <div className="rail-top">
           <motion.div
-            initial={{ scale: 0.7, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 22, delay: 0.05 }}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-            style={{ background: 'linear-gradient(135deg, #2d6a4f 0%, #1a3a2a 100%)', boxShadow: '0 2px 10px rgba(0,0,0,0.35)' }}
+            whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.94 }}
+            className="rail-logo-wrap"
+            style={{ background: 'linear-gradient(135deg,#3E4A89 0%,#4f52a0 100%)', boxShadow: '0 2px 8px rgba(98,100,167,0.40)' }}
           >
             <AppLogo size={18} />
           </motion.div>
 
-          <motion.div
-            initial={{ x: -12, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 28, delay: 0.10 }}
-            className="min-w-0 flex-1"
-          >
-            <p className="truncate text-[15px] font-black leading-tight tracking-tight text-white">
-              EDUTECHEX<span style={{ color: '#52b788' }}>OS</span>
-            </p>
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em]" style={{ color: 'rgba(255,255,255,0.30)' }}>
-              Workspace
-            </p>
-          </motion.div>
+          <div className="rail-divider" />
 
-          <motion.button
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 22, delay: 0.15 }}
-            whileHover={{ scale: 1.10, backgroundColor: 'rgba(255,255,255,0.10)' }}
-            whileTap={{ scale: 0.88 }}
-            onClick={() => setNotificationsOpen(true)}
-            className="relative flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
-            style={{ color: 'rgba(255,255,255,0.40)', background: 'rgba(255,255,255,0.06)' }}
-            title="Notifications"
-          >
-            <Bell size={15} />
-            {unreadNotifications > 0 && (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 600, damping: 20 }}
-                className="badge-pulse absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-black text-white"
-                style={{ background: '#ef4444' }}
-              >
-                {unreadNotifications > 9 ? '9+' : unreadNotifications}
-              </motion.span>
-            )}
+          <motion.button whileTap={{ scale: 0.90 }} className="rail-btn active">
+            <Hash size={19} strokeWidth={2.2} />
+            <span className="rail-label">Chat</span>
           </motion.button>
+
+          {[
+            { icon: CheckSquare,  label: 'Tasks',        action: () => setKanbanOpen(true) },
+            { icon: BookOpen,     label: 'Wiki',         action: () => setWikiOpen(true) },
+            { icon: CalendarDays, label: 'Calendar',     action: () => setCalendarOpen(true) },
+            { icon: Layers,       label: 'Figma',        action: () => setFigmaOpen(true) },
+            { icon: Zap,          label: 'Integrations', action: () => setIntegrationsOpen(true) },
+            ...(isAdmin ? [{ icon: BarChart2, label: 'Analytics', action: () => setAnalyticsOpen(true) }] : []),
+          ].map(({ icon: Icon, label, action }) => (
+            <motion.button key={label} whileTap={{ scale: 0.90 }} onClick={action} className="rail-btn">
+              <Icon size={19} strokeWidth={1.8} />
+              <span className="rail-label">{label}</span>
+            </motion.button>
+          ))}
+        </div>
+
+        <div className="rail-bottom">
+          <div className="rail-divider" />
+          <motion.button whileTap={{ scale: 0.90 }} onClick={() => { toggleTheme(); storeDarkModeToggle(); }} className="rail-btn">
+            {darkMode ? <Sun size={18} strokeWidth={1.8} /> : <Moon size={18} strokeWidth={1.8} />}
+            <span className="rail-label">{darkMode ? 'Light mode' : 'Dark mode'}</span>
+          </motion.button>
+          <motion.button whileTap={{ scale: 0.90 }} onClick={() => { setSettings(v => ({ ...v, displayName: v.displayName || currentUser?.name || '' })); setSettingsOpen(true); }} className="rail-btn">
+            <Settings size={18} strokeWidth={1.8} />
+            <span className="rail-label">Settings</span>
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onClick={() => { setSettings(v => ({ ...v, displayName: v.displayName || currentUser?.name || '' })); setSettingsOpen(true); }}
+            className="rail-avatar"
+            style={settings.avatarEmoji ? { background: 'transparent', fontSize: '1.35rem', lineHeight: 1 } : { background: currentUserColor }}
+          >
+            {settings.avatarEmoji || (currentUser?.initials ?? 'G')}
+          </motion.button>
+
+          {/* Notifications circle button */}
+          <div style={{ marginTop: '8px' }}>
+            <motion.button
+              whileHover={{ scale: 1.10 }}
+              whileTap={{ scale: 0.90 }}
+              onClick={() => setNotificationsOpen(true)}
+              className="relative flex items-center justify-center"
+              style={{
+                width: 40, height: 40, borderRadius: '50%',
+                background: unreadNotifications > 0
+                  ? 'linear-gradient(135deg,#ef4444,#f97316)'
+                  : 'linear-gradient(135deg,#64748b,#94a3b8)',
+                boxShadow: unreadNotifications > 0
+                  ? '0 0 0 3px rgba(239,68,68,0.30), 0 6px 20px rgba(239,68,68,0.45)'
+                  : '0 4px 14px rgba(0,0,0,0.30)',
+                color: '#fff',
+                border: 'none', cursor: 'pointer',
+              }}
+            >
+              <Bell size={17} strokeWidth={2} />
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[9px] font-black text-white" style={{ background: '#fff', color: '#ef4444', border: '1.5px solid #ef4444' }}>
+                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                </span>
+              )}
+            </motion.button>
+          </div>
+        </div>
+      </nav>
+
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• SIDEBAR â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      <aside className="workspace-sidebar">
+
+        {/* ── Workspace header + search ─────────────────── */}
+        <div className="sidebar-search-bar">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <span className="text-[13px] font-semibold text-white truncate">EduTechExOS</span>
+            {unreadNotifications > 0 && (
+              <motion.button
+                whileTap={{ scale: 0.88 }}
+                onClick={() => setNotificationsOpen(true)}
+                className="relative flex h-6 w-6 items-center justify-center rounded"
+                style={{ color: 'rgba(255,255,255,0.55)' }}
+                title="Notifications"
+              >
+                <Bell size={14} />
+                <span className="badge-pulse absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[8px] font-black text-white" style={{ background: '#ef4444' }}>
+                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                </span>
+              </motion.button>
+            )}
+          </div>
+          <button
+            onClick={() => setGlobalSearchOpen(true)}
+            className="sidebar-search-input w-full"
+          >
+            <Search size={13} />
+            <span className="text-[12.5px]">Search</span>
+          </button>
         </div>
 
         {/* ── Scrollable body ─────────────────────────────── */}
-        <div
-          className="sidebar-scroll flex-1 overflow-y-auto px-3 py-4"
-          style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.08) transparent' }}
-        >
+        <div className="sidebar-scroll">
           {/* Channels */}
           <section className="mb-5">
             <motion.button
@@ -1441,7 +1380,7 @@ export default function EduTechExOSDashboard() {
               onClick={() => setChannelsExpanded(v => !v)}
               className="flex w-full items-center justify-between px-1 py-1.5 text-left"
             >
-              <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              <span className="sidebar-section-label flex items-center gap-1">
                 <motion.span
                   animate={{ rotate: channelsExpanded ? 0 : -90 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 28 }}
@@ -1451,7 +1390,7 @@ export default function EduTechExOSDashboard() {
                 </motion.span>
                 Channels
               </span>
-              <span className="text-[10px] font-black" style={{ color: 'rgba(255,255,255,0.22)' }}>
+              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>
                 {workspaceChannels.length}
               </span>
             </motion.button>
@@ -1477,18 +1416,14 @@ export default function EduTechExOSDashboard() {
                         whileHover={{ x: isActive ? 0 : 5 }}
                         whileTap={{ scale: 0.96 }}
                         onClick={() => setActiveChannel(item.id)}
-                        className="relative flex h-9 w-full items-center gap-2.5 overflow-hidden rounded-lg px-3 text-left text-sm font-semibold transition-colors duration-150"
-                        style={{
-                          background: isActive ? 'rgba(82,183,136,0.14)' : 'transparent',
-                          color: isActive ? '#74c69d' : 'rgba(255,255,255,0.50)',
-                        }}
+                        className={`sidebar-channel-btn${isActive ? ' active' : ''}`}
                       >
                         {/* Animated active-channel left bar — moves smoothly between channels */}
                         {isActive && (
                           <motion.span
                             layoutId="active-channel-bar"
                             className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full"
-                            style={{ background: '#52b788' }}
+                            style={{ background: '#3E4A89' }}
                             transition={{ type: 'spring', stiffness: 600, damping: 32 }}
                           />
                         )}
@@ -1500,7 +1435,7 @@ export default function EduTechExOSDashboard() {
                             animate={{ scale: 1 }}
                             transition={{ type: 'spring', stiffness: 600, damping: 20 }}
                             className="rounded-full px-1.5 py-0.5 text-[10px] font-black"
-                            style={{ background: 'rgba(82,183,136,0.22)', color: '#52b788' }}
+                            style={{ background: '#3E4A89', color: '#ffffff' }}
                           >
                             {item.unread}
                           </motion.span>
@@ -1515,12 +1450,12 @@ export default function EduTechExOSDashboard() {
 
           {/* People */}
           <section>
-            <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.30)' }}>
+            <p className="sidebar-section-label mt-3">
               People
             </p>
             <div className="space-y-0.5">
               {people.map((member, i) => {
-                const avatarColors = ['#1a3a2a','#2d6a4f','#0d7490','#4f46e5','#b45309','#065f46','#1d4ed8'];
+                const avatarColors = ['#191E2F','#3E4A89','#0d7490','#3E4A89','#b45309','#2A3568','#1d4ed8'];
                 const avatarBg = avatarColors[i % avatarColors.length];
                 return (
                   <motion.div
@@ -1529,7 +1464,7 @@ export default function EduTechExOSDashboard() {
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30, delay: i * 0.045 + 0.12 }}
                     whileHover={{ x: 4 }}
-                    className="group flex h-10 items-center gap-2 rounded-lg px-2 transition-colors duration-150 hover:bg-white/[0.04]"
+                    className="group flex h-9 items-center gap-2 rounded px-1.5 transition-colors duration-100 hover:bg-white/[0.06] cursor-pointer"
                   >
                     <motion.button
                       onClick={() => setActiveChannel(member.id)}
@@ -1539,7 +1474,7 @@ export default function EduTechExOSDashboard() {
                     >
                       <div
                         className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-black text-white"
-                        style={{ background: avatarBg, boxShadow: '0 1px 4px rgba(0,0,0,0.30)' }}
+                        style={{ background: avatarBg }}
                       >
                         {member.initials}
                         {(() => {
@@ -1549,14 +1484,14 @@ export default function EduTechExOSDashboard() {
                               className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ${
                                 s === 'online' ? 'bg-emerald-400' :
                                 s === 'away'   ? 'bg-amber-400'  :
-                                s === 'busy'   ? 'bg-red-400'    : 'bg-slate-500'
+                                s === 'busy'   ? 'bg-red-400'    : 'bg-[#7C859E]'
                               }`}
-                              style={{ boxShadow: '0 0 0 2px #111c15' }}
+                              style={{ boxShadow: '0 0 0 2px #292827' }}
                             />
                           );
                         })()}
                       </div>
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium" style={{ color: 'rgba(255,255,255,0.60)' }}>
+                      <span className="min-w-0 flex-1 truncate text-[13px]" style={{ color: 'rgba(255,255,255,0.78)' }}>
                         {member.name}
                       </span>
                     </motion.button>
@@ -1566,7 +1501,7 @@ export default function EduTechExOSDashboard() {
                       whileTap={{ scale: 0.88 }}
                       title={`View ${member.name}'s profile`}
                       className="hidden h-6 w-6 shrink-0 items-center justify-center rounded-md group-hover:flex"
-                      style={{ color: 'rgba(255,255,255,0.30)', background: 'rgba(255,255,255,0.07)' }}
+                      style={{ color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.07)' }}
                     >
                       <UserCheck size={12} />
                     </motion.button>
@@ -1582,17 +1517,17 @@ export default function EduTechExOSDashboard() {
               <Link
                 href="/admin"
                 className="flex h-10 w-full items-center justify-center gap-2 rounded-lg text-xs font-bold uppercase tracking-[0.10em] transition-all duration-200 hover:brightness-110"
-                style={{ background: 'rgba(82,183,136,0.12)', color: '#52b788', border: '1px solid rgba(82,183,136,0.18)' }}
+                style={{ background: 'rgba(98,100,167,0.14)', color: '#a5a6f6', border: '1px solid rgba(98,100,167,0.22)' }}
               >
                 <ShieldCheck size={14} strokeWidth={2.5} />
                 Admin dashboard
               </Link>
               <motion.button
-                whileHover={{ borderColor: 'rgba(82,183,136,0.35)' }}
+                whileHover={{ borderColor: 'rgba(62,74,137,0.30)' }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setNewChannelOpen(true)}
                 className="flex h-10 w-full items-center gap-2.5 rounded-lg px-4 text-sm font-semibold transition-all duration-200"
-                style={{ background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.35)', border: '1px dashed rgba(255,255,255,0.12)' }}
+                style={{ background: 'transparent', color: 'rgba(255,255,255,0.38)', border: '1px dashed rgba(255,255,255,0.15)' }}
               >
                 <Plus size={14} />
                 New channel
@@ -1602,84 +1537,82 @@ export default function EduTechExOSDashboard() {
         </div>
 
         {/* ── Footer / User panel ─────────────────────────── */}
-        <div
-          className="shrink-0 px-3 pb-3 pt-3"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(0,0,0,0.22)' }}
-        >
-          {/* User info row */}
-          <div className="mb-2.5 flex items-center gap-3 px-1">
-            <motion.div
-              whileHover={{ scale: 1.06 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-black text-white"
-              style={{ background: 'linear-gradient(135deg, #2d6a4f 0%, #1a3a2a 100%)', boxShadow: '0 3px 10px rgba(0,0,0,0.40)' }}
-            >
-              {currentUser?.initials ?? 'G'}
-              <span
-                className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ${
-                  settings.status === 'online' ? 'bg-emerald-400' :
-                  settings.status === 'away'   ? 'bg-amber-400'  :
-                  settings.status === 'busy'   ? 'bg-red-400'    : 'bg-slate-500'
-                }`}
-                style={{ boxShadow: '0 0 0 2px #0e1912' }}
-              />
-            </motion.div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-black text-white">{currentUser?.name ?? 'Guest'}</p>
-              <span
-                className="mt-0.5 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.08em]"
-                style={{ background: 'rgba(82,183,136,0.15)', color: '#52b788' }}
-              >
-                {currentUser?.role ?? 'Viewer'}
-              </span>
+        <div className="sidebar-footer">
+          <div className="flex items-center gap-2">
+            <div className="relative shrink-0">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: currentUserColor }}>
+                {currentUser?.initials ?? 'G'}
+              </div>
+              <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 ${settings.status === 'online' ? 'bg-emerald-400' : settings.status === 'away' ? 'bg-amber-400' : settings.status === 'busy' ? 'bg-red-400' : 'bg-[#7C859E]'}`} style={{ borderColor: '#292827' }} />
             </div>
-          </div>
-
-          {/* Action buttons */}
-          <div
-            className="grid grid-cols-4 gap-0.5 rounded-xl p-1"
-            style={{ background: 'rgba(255,255,255,0.04)' }}
-          >
-            {[
-              { icon: CalendarDays, title: 'Activity calendar',        action: () => setActivityCalendarOpen(true) },
-              { icon: darkMode ? Sun : Moon, title: darkMode ? 'Light mode' : 'Dark mode', action: () => { toggleTheme(); storeDarkModeToggle(); } },
-              { icon: Settings,    title: 'Settings',                  action: () => { setSettings(v => ({ ...v, displayName: v.displayName || currentUser?.name || '' })); setSettingsOpen(true); } },
-              { icon: LogOut,      title: 'Sign out',                  action: () => { localStorage.removeItem('edutechex_token'); toast.success('Signed out'); router.push('/sign-up-login-screen'); } },
-            ].map(({ icon: Icon, title, action }, idx) => (
-              <motion.button
-                key={idx}
-                title={title}
-                onClick={action}
-                whileHover={{ scale: 1.10, backgroundColor: 'rgba(255,255,255,0.10)' }}
-                whileTap={{ scale: 0.84 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 22 }}
-                className="flex h-9 items-center justify-center rounded-lg transition-colors"
-                style={{ color: 'rgba(255,255,255,0.38)' }}
-              >
-                <Icon size={15} />
-              </motion.button>
-            ))}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12.5px] font-semibold leading-tight text-white">{currentUser?.name ?? 'Guest'}</p>
+              <p className="text-[10.5px]" style={{ color: 'rgba(255,255,255,0.42)' }}>{currentUser?.role ?? 'Viewer'}</p>
+            </div>
+            <div className="flex items-center gap-0.5 shrink-0">
+              <motion.button whileTap={{ scale: 0.88 }} title="Activity" onClick={() => setActivityCalendarOpen(true)}
+                className="flex h-7 w-7 items-center justify-center rounded" style={{ color: 'rgba(255,255,255,0.42)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              ><CalendarDays size={14} /></motion.button>
+              <motion.button whileTap={{ scale: 0.88 }} title="Sign out"
+                onClick={() => { localStorage.removeItem('edutechex_token'); toast.success('Signed out'); router.push('/sign-up-login-screen'); }}
+                className="flex h-7 w-7 items-center justify-center rounded" style={{ color: 'rgba(255,255,255,0.42)' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.14)'; e.currentTarget.style.color = '#f87171'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.42)'; }}
+              ><LogOut size={14} /></motion.button>
+            </div>
           </div>
         </div>
       </aside>
 
       <main className={`workspace-chat${(pinnedMessageIds[activeChannelId]?.length ?? 0) > 0 ? ' workspace-chat-has-pin' : ''}`}>
         <header className="chat-header">
-          <div className="min-w-0">
-            <h1 className="flex items-center gap-1 truncate text-[22px] font-black text-slate-950">
-              <Hash size={24} className="text-slate-400" />
-              {channel?.id.startsWith('member-') ? channel.name : channel?.name}
-            </h1>
-            <p className="mt-1 truncate text-[15px] font-medium text-slate-500">
-              {channel?.description}
-            </p>
+          {/* Channel name box */}
+          <div className="min-w-0 relative">
+            <div className="inline-flex items-center gap-2.5 rounded-2xl px-4 py-2.5 relative overflow-hidden"
+              style={{
+                background: 'rgba(25,30,47,0.92)',
+                border: '1px solid rgba(155,166,211,0.35)',
+                boxShadow: '0 0 20px rgba(62,74,137,0.14), 0 2px 12px rgba(0,0,0,0.50)',
+              }}
+            >
+              {/* Gold top shimmer */}
+              <span className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #3E4A89, #9BA6D3, #3E4A89, transparent)' }} />
+
+              {/* Gold hash badge */}
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white text-[13px] font-black"
+                style={{ background: 'linear-gradient(135deg, #3E4A89, #2A3568)', boxShadow: '0 0 10px rgba(62,74,137,0.45)' }}>
+                #
+              </span>
+
+              {/* Gold gradient channel name */}
+              <span className="truncate text-[22px] font-black leading-tight max-w-[260px]" style={{
+                background: 'linear-gradient(135deg, #FFFFFF 0%, #EEF2F8 55%, #C4CAE0 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>
+                {channel?.id.startsWith('member-') ? channel.name : channel?.name}
+              </span>
+
+              {/* Gold bottom shimmer */}
+              <span className="absolute bottom-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(155,166,211,0.35), transparent)' }} />
+            </div>
+
+            {channel?.description && (
+              <p className="mt-1 truncate text-[13px] font-medium pl-1" style={{ color: '#7C859E' }}>
+                {channel.description}
+              </p>
+            )}
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
             <button
               title="View channel members"
               onClick={() => setMembersOpen(true)}
-              className="hidden h-9 items-center gap-2 rounded-lg bg-slate-100 px-3 text-sm font-bold text-slate-500 md:flex"
+              className="hidden h-9 items-center gap-2 rounded-lg px-3 text-sm font-bold md:flex transition-all hover:scale-105"
+              style={{ background: 'rgba(62,74,137,0.10)', color: '#7C859E', border: '1px solid rgba(62,74,137,0.20)' }}
             >
               <Users size={16} />
               {channel?.id.startsWith('member-') ? 2 : activeChannelMembers.length}
@@ -1687,80 +1620,30 @@ export default function EduTechExOSDashboard() {
             <button
               title="Search messages"
               onClick={() => setGlobalSearchOpen(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+              className="flex h-9 w-9 items-center justify-center rounded-lg transition-all hover:scale-105"
+              style={{ color: '#7C859E', background: 'rgba(62,74,137,0.08)' }}
             >
-              <Search size={20} />
-            </button>
-
-            <button
-              title="Knowledge base"
-              onClick={() => setWikiOpen(true)}
-              className="hidden h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:flex"
-            >
-              <BookOpen size={18} />
-            </button>
-            <button
-              title="Task board"
-              onClick={() => setKanbanOpen(true)}
-              className="hidden h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:flex"
-            >
-              <Layout size={18} />
-            </button>
-            <button
-              title="Saved messages"
-              onClick={() => setBookmarksPanelOpen(true)}
-              className="hidden h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 xl:flex"
-            >
-              <Bookmark size={18} />
-            </button>
-            {isAdmin && (
-              <button
-                title="Analytics"
-                onClick={() => setAnalyticsOpen(true)}
-                className="hidden h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 xl:flex"
-              >
-                <BarChart2 size={18} />
-              </button>
-            )}
-            {/* ── New Feature Buttons ─────────────────────────── */}
-            <button
-              title="Figma Viewer — embed design files"
-              onClick={() => setFigmaOpen(true)}
-              className="hidden h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 xl:flex transition-colors"
-            >
-              <Layers size={18} />
-            </button>
-            <button
-              title="Team Calendar"
-              onClick={() => setCalendarOpen(true)}
-              className="hidden h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 xl:flex transition-colors"
-            >
-              <CalendarDays size={18} />
-            </button>
-            <button
-              title="Integrations — GitHub, Zapier & more"
-              onClick={() => setIntegrationsOpen(true)}
-              className="hidden h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 xl:flex transition-colors"
-            >
-              <Zap size={18} />
+              <Search size={18} />
             </button>
 
             <div className="relative">
               <button
                 onClick={() => setMeetMenuOpen((value) => !value)}
-                className={`flex h-9 items-center gap-2 rounded-lg px-4 text-xs font-black uppercase text-white shadow-sm ${
-                  meetingButtonState.link
-                    ? 'bg-indigo-600 hover:bg-indigo-700'
-                    : 'bg-slate-500 hover:bg-slate-600'
+                className={`flex h-9 items-center gap-2 rounded-lg px-4 text-xs font-black uppercase text-white shadow-sm transition-all hover:scale-105 ${
+                  meetingButtonState.link ? '' : 'bg-[#7C859E] cursor-default'
                 }`}
+                style={meetingButtonState.link ? {
+                  background: 'linear-gradient(135deg, #3E4A89, #2A3568)',
+                  boxShadow: '0 0 14px rgba(62,74,137,0.35)',
+                } : undefined}
               >
                 <Video size={16} />
                 {meetingButtonState.label}
                 <ChevronDown size={14} />
               </button>
               {meetMenuOpen && (
-                <div className="absolute right-0 top-11 z-50 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
-                  <p className="px-3 py-2 text-xs font-bold text-slate-500">
+                <div className="absolute right-0 top-11 z-[300] w-56 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-2 shadow-xl">
+                  <p className="px-3 py-2 text-xs font-bold text-[#7C859E]">
                     {meetingButtonState.message}
                   </p>
                   <button
@@ -1773,90 +1656,80 @@ export default function EduTechExOSDashboard() {
                       }
                     }}
                     disabled={!meetingButtonState.link}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <Video size={16} className="text-indigo-600" />
+                    <Video size={16} className="text-[#C4CAE0]" />
                     Join meet
                   </button>
                 </div>
               )}
             </div>
-            <button
-              onClick={() => {
-                setRightPanel('ai');
-                setCopilotTab('chat');
-              }}
-              title="Open Copilot"
-              className="flex h-9 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-xs font-black uppercase text-white shadow-sm hover:bg-indigo-700"
-            >
-              <Bot size={16} />
-              AI
-            </button>
+
 
             <div className="relative">
               <button
                 title="More channel actions"
                 onClick={() => setMoreOpen((value) => !value)}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)]"
               >
                 <MoreHorizontal size={20} />
               </button>
               {moreOpen && (
-                <div className="absolute right-0 top-11 z-40 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                <div className="absolute right-0 top-11 z-[300] w-56 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-2 shadow-xl">
                   <button
                     onClick={() => { setMoreOpen(false); setMembersOpen(true); }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
                   >
                     <Users size={15} /> View members
                   </button>
                   <button
                     onClick={() => { setMoreOpen(false); setGlobalSearchOpen(true); }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
                   >
                     <Search size={15} /> Search messages
                   </button>
 
                   <button
                     onClick={() => { setMoreOpen(false); setWikiOpen(true); }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
                   >
                     <BookOpen size={15} /> Knowledge base
                   </button>
                   <button
                     onClick={() => { setMoreOpen(false); setKanbanOpen(true); }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
                   >
                     <Layout size={15} /> Task board
                   </button>
                   <button
                     onClick={() => { setMoreOpen(false); setBookmarksPanelOpen(true); }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
                   >
                     <Bookmark size={15} /> Saved messages
                   </button>
                   {isAdmin && (
                     <button
                       onClick={() => { setMoreOpen(false); setAnalyticsOpen(true); }}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
                     >
                       <BarChart2 size={15} /> Analytics
                     </button>
                   )}
                   <button
                     onClick={() => { setMoreOpen(false); setFigmaOpen(true); }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
                   >
                     <Layers size={15} /> Figma viewer
                   </button>
                   <button
                     onClick={() => { setMoreOpen(false); setCalendarOpen(true); }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
                   >
                     <CalendarDays size={15} /> Team calendar
                   </button>
                   <button
                     onClick={() => { setMoreOpen(false); setIntegrationsOpen(true); }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
                   >
                     <Zap size={15} /> Integrations
                   </button>
@@ -1866,30 +1739,6 @@ export default function EduTechExOSDashboard() {
             </div>
           </div>
         </header>
-        {searchOpen && (
-          <div className="border-b border-slate-200 bg-white/90 px-6 py-3">
-            <label className="mx-auto flex h-11 max-w-3xl items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 text-slate-500">
-              <Search size={18} />
-              <input
-                value={chatSearch}
-                onChange={(event) => setChatSearch(event.target.value)}
-                className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-slate-400"
-                placeholder={`Search #${channel?.name}`}
-                autoFocus
-              />
-              <button
-                onClick={() => {
-                  setChatSearch('');
-                  setSearchOpen(false);
-                }}
-                className="rounded-lg p-1 hover:bg-slate-200"
-              >
-                <X size={16} />
-              </button>
-            </label>
-          </div>
-        )}
-
         {/* Pinned messages strip — click to jump to pinned message */}
         {channel && (pinnedMessageIds[activeChannelId]?.length ?? 0) > 0 && (() => {
           const pinIds = pinnedMessageIds[activeChannelId] ?? [];
@@ -1972,38 +1821,136 @@ export default function EduTechExOSDashboard() {
                     {!message.poll && (
                       <div className={`relative group/bubble rounded-2xl px-3.5 py-2.5 shadow-sm
                         ${isOwn
-                          ? `bg-indigo-600 text-white ${isLast ? 'bubble-own rounded-br-sm' : ''}`
-                          : `bg-white border border-slate-100 text-slate-900 ${isLast ? 'bubble-other rounded-bl-sm' : ''}`
+                          ? `bg-[#1E2538] text-white border border-[rgba(62,74,137,0.15)] ${isLast ? 'bubble-own rounded-br-sm' : ''}`
+                          : `bg-white border border-[rgba(62,74,137,0.08)] text-[#1E2636] ${isLast ? 'bubble-other rounded-bl-sm' : ''}`
                         }
                         ${isPinned ? 'ring-2 ring-amber-400' : ''}
                       `}>
 
                         {/* Content */}
                         {scheduledMeet ? (
-                          <div className="w-56 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                            <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600">📅 Meeting</p>
-                            <p className="mt-1 font-black text-slate-900 text-sm">{scheduledMeet.title}</p>
-                            {scheduledMeet.time && <p className="mt-0.5 text-xs text-slate-500">🕐 {scheduledMeet.time}</p>}
-                            <a href={scheduledMeet.link} target="_blank" rel="noreferrer"
-                              className="mt-2 inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition-colors">
-                              Join →
-                            </a>
+                          /* ── Meeting Scheduled Card ─────────────────── */
+                          <div
+                            className="w-[288px] overflow-hidden rounded-2xl"
+                            style={{
+                              boxShadow: '0 8px 32px rgba(25,30,47,0.18), 0 2px 8px rgba(25,30,47,0.10)',
+                              border: '1px solid rgba(155,166,211,0.22)',
+                            }}
+                          >
+                            {/* ── Top accent line ── */}
+                            <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, #3E4A89, #9BA6D3, #3E4A89, transparent)' }} />
+
+                            {/* ── Dark header ── */}
+                            <div
+                              className="relative px-4 pt-4 pb-4 overflow-hidden"
+                              style={{ background: 'linear-gradient(135deg, #191E2F 0%, #1E2538 60%, #252D4A 100%)' }}
+                            >
+                              {/* bg glow */}
+                              <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 70% 80% at 85% 30%, rgba(62,74,137,0.28), transparent 70%)' }} />
+
+                              <div className="relative flex items-start gap-3">
+                                {/* Icon */}
+                                <div
+                                  className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0 mt-0.5"
+                                  style={{ background: 'linear-gradient(135deg, #3E4A89, #2A3568)', boxShadow: '0 4px 14px rgba(62,74,137,0.50)' }}
+                                >
+                                  <Video size={17} className="text-white" />
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                  {/* Status pill */}
+                                  <div className="flex items-center gap-1.5 mb-1.5">
+                                    <span
+                                      className="inline-block w-1.5 h-1.5 rounded-full"
+                                      style={{ background: '#34D399', boxShadow: '0 0 6px rgba(52,211,153,0.70)', animation: 'badge-pulse 2.5s ease-in-out infinite' }}
+                                    />
+                                    <span className="text-[9px] font-black uppercase tracking-[0.22em]" style={{ color: 'rgba(155,166,211,0.80)' }}>
+                                      Meeting Scheduled
+                                    </span>
+                                  </div>
+                                  {/* Title */}
+                                  <h3 className="text-[15px] font-black text-white leading-snug truncate">
+                                    {scheduledMeet.title}
+                                  </h3>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* ── Light body ── */}
+                            <div className="px-4 pt-3 pb-2" style={{ background: '#FAF8F5' }}>
+                              <div className="space-y-2">
+                                {scheduledMeet.time && (
+                                  <div className="flex items-center gap-2.5">
+                                    <div
+                                      className="flex h-7 w-7 items-center justify-center rounded-lg flex-shrink-0"
+                                      style={{ background: 'rgba(62,74,137,0.08)', border: '1px solid rgba(62,74,137,0.14)' }}
+                                    >
+                                      <CalendarDays size={13} style={{ color: '#3E4A89' }} />
+                                    </div>
+                                    <span className="text-[13px] font-bold" style={{ color: '#1E2636' }}>
+                                      {scheduledMeet.time}
+                                    </span>
+                                  </div>
+                                )}
+                                {scheduledMeet.people && scheduledMeet.people !== 'No mentions' && (
+                                  <div className="flex items-center gap-2.5">
+                                    <div
+                                      className="flex h-7 w-7 items-center justify-center rounded-lg flex-shrink-0"
+                                      style={{ background: 'rgba(62,74,137,0.08)', border: '1px solid rgba(62,74,137,0.14)' }}
+                                    >
+                                      <Users size={13} style={{ color: '#3E4A89' }} />
+                                    </div>
+                                    <span className="text-[13px] font-medium truncate" style={{ color: '#4A5578' }}>
+                                      {scheduledMeet.people}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* ── Divider ── */}
+                            <div style={{ height: '1px', margin: '0 16px', background: 'linear-gradient(90deg, transparent, rgba(62,74,137,0.18), transparent)' }} />
+
+                            {/* ── Join button ── */}
+                            <div className="px-4 pt-3 pb-4" style={{ background: '#FAF8F5' }}>
+                              <a
+                                href={scheduledMeet.link}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="group flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-[13px] font-black text-white transition-all duration-200 hover:scale-[1.02] active:scale-95"
+                                style={{
+                                  background: 'linear-gradient(135deg, #3E4A89 0%, #2A3568 100%)',
+                                  boxShadow: '0 4px 14px rgba(62,74,137,0.38), inset 0 1px 0 rgba(255,255,255,0.12)',
+                                }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 6px 20px rgba(62,74,137,0.55), inset 0 1px 0 rgba(255,255,255,0.15)'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 4px 14px rgba(62,74,137,0.38), inset 0 1px 0 rgba(255,255,255,0.12)'; }}
+                              >
+                                <Video size={14} />
+                                Join Meeting
+                              </a>
+                            </div>
                           </div>
                         ) : (
-                          <div className={`leading-relaxed ${settings.fontSize === 'large' ? 'text-base' : 'text-sm'} ${isOwn ? 'text-white' : 'text-slate-900'}`}>
+                          <div className={`leading-relaxed ${settings.fontSize === 'large' ? 'text-xl' : 'text-[16px]'} ${isOwn ? 'text-white' : 'text-[#1E2636]'}`}>
                             <ReactMarkdown remarkPlugins={[remarkGfm]}
                               components={{
-                                p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+                                p: ({ children }) => (
+                                  <p className="mb-1 last:mb-0">
+                                    {React.Children.map(children, (child) =>
+                                      typeof child === 'string' ? renderWithMentions(child, isOwn, members.map((m) => m.name)) : child
+                                    )}
+                                  </p>
+                                ),
                                 strong: ({ children }) => <strong className="font-bold">{children}</strong>,
                                 em: ({ children }) => <em className="italic">{children}</em>,
                                 code: ({ children, className }) => {
                                   const isBlock = String(className ?? '').includes('language-');
                                   return isBlock
                                     ? <pre className="my-1 overflow-x-auto rounded-lg bg-black/20 p-2 text-xs text-green-300"><code>{children}</code></pre>
-                                    : <code className={`rounded px-1 py-0.5 font-mono text-xs ${isOwn ? 'bg-white/20 text-white' : 'bg-slate-100 text-indigo-700'}`}>{children}</code>;
+                                    : <code className={`rounded px-1 py-0.5 font-mono text-xs ${isOwn ? 'bg-white/20 text-white' : 'bg-[rgba(62,74,137,0.08)] text-[#3E4A89]'}`}>{children}</code>;
                                 },
-                                blockquote: ({ children }) => <blockquote className={`border-l-4 pl-3 italic text-xs ${isOwn ? 'border-white/40 text-white/80' : 'border-indigo-300 text-slate-500'}`}>{children}</blockquote>,
-                                a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className={`underline ${isOwn ? 'text-white/90' : 'text-indigo-600'}`}>{children}</a>,
+                                blockquote: ({ children }) => <blockquote className={`border-l-4 pl-3 italic text-xs ${isOwn ? 'border-white/40 text-white/80' : 'border-[rgba(62,74,137,0.25)] text-[#7C859E]'}`}>{children}</blockquote>,
+                                a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer" className={`underline ${isOwn ? 'text-white/90' : 'text-green-700'}`}>{children}</a>,
                               }}>
                               {message.text}
                             </ReactMarkdown>
@@ -2012,9 +1959,9 @@ export default function EduTechExOSDashboard() {
 
                         {/* Audio */}
                         {message.audioUrl && (
-                          <div className={`mt-2 rounded-xl p-2 ${isOwn ? 'bg-white/10' : 'bg-slate-50'}`}>
+                          <div className={`mt-2 rounded-xl p-2 ${isOwn ? 'bg-white/10' : 'bg-[#FAF8F5]'}`}>
                             <audio className="w-48 h-8" controls src={message.audioUrl}><track kind="captions" /></audio>
-                            <p className={`mt-0.5 text-[10px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>Voice note</p>
+                            <p className={`mt-0.5 text-[11px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}>Voice note</p>
                           </div>
                         )}
 
@@ -2022,7 +1969,7 @@ export default function EduTechExOSDashboard() {
                         {message.videoUrl && (
                           <div className="mt-2 w-56">
                             <video className="w-full rounded-xl bg-black" controls src={message.videoUrl}><track kind="captions" /></video>
-                            <p className={`mt-0.5 text-[10px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>Screen recording</p>
+                            <p className={`mt-0.5 text-[11px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}>Screen recording</p>
                           </div>
                         )}
 
@@ -2032,7 +1979,7 @@ export default function EduTechExOSDashboard() {
                             {message.files.map((file, fi) => (
                               <a key={fi} href={file.url} target="_blank" rel="noreferrer"
                                 className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-bold transition-colors
-                                  ${isOwn ? 'border-white/30 bg-white/10 text-white hover:bg-white/20' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200'}`}>
+                                  ${isOwn ? 'border-white/30 bg-white/10 text-white hover:bg-white/20' : 'border-[rgba(62,74,137,0.12)] bg-white text-[#4A5578] hover:border-[rgba(62,74,137,0.15)]'}`}>
                                 📎 {file.name}
                               </a>
                             ))}
@@ -2040,7 +1987,7 @@ export default function EduTechExOSDashboard() {
                         )}
 
                         {/* Timestamp + double-tick */}
-                        <div className={`mt-1.5 flex items-center justify-end gap-1 text-[10px] ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>
+                        <div className={`mt-1.5 flex items-center justify-end gap-1 text-[10px] ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}>
                           <span>{formatTime(message.timestamp)}</span>
                           {isOwn && (
                             <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor" className="opacity-80">
@@ -2052,18 +1999,18 @@ export default function EduTechExOSDashboard() {
 
                         {/* Hover action bar — floats beside the bubble */}
                         <div className={`absolute ${isOwn ? 'left-0 -translate-x-full pr-2' : 'right-0 translate-x-full pl-2'} top-0 hidden group-hover/bubble:flex items-center`}>
-                          <div className="flex items-center gap-0.5 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+                          <div className="flex items-center gap-0.5 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-1 shadow-lg">
                             <div className="relative">
                               <button
                                 onClick={() => setHoverEmojiMsgId(hoverEmojiMsgId === message.id ? null : message.id)}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg text-sm hover:bg-slate-100"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-sm hover:bg-[rgba(62,74,137,0.08)]"
                                 title="React">😊</button>
                               {hoverEmojiMsgId === message.id && (
-                                <div className={`absolute top-full mt-1 z-30 flex gap-1 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl ${isOwn ? 'right-0' : 'left-0'}`}>
+                                <div className={`absolute top-full mt-1 z-30 flex gap-1 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white p-1.5 shadow-xl ${isOwn ? 'right-0' : 'left-0'}`}>
                                   {['👍','❤️','😂','🔥','👀','✅','🎉','💯'].map((em) => (
                                     <button key={em}
                                       onClick={() => { toggleReaction(activeChannelId, message.id, em, currentUser?.email ?? ''); setHoverEmojiMsgId(null); }}
-                                      className="flex h-7 w-7 items-center justify-center rounded-lg text-lg hover:scale-110 hover:bg-slate-100 transition-all">
+                                      className="flex h-7 w-7 items-center justify-center rounded-lg text-lg hover:scale-110 hover:bg-[rgba(62,74,137,0.08)] transition-all">
                                       {em}
                                     </button>
                                   ))}
@@ -2072,20 +2019,20 @@ export default function EduTechExOSDashboard() {
                             </div>
                             <button
                               onClick={() => toggleBookmark(message.id, { channelId: activeChannelId, text: message.text, sender: message.sender, timestamp: message.timestamp })}
-                              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 ${isBookmarked ? 'text-amber-500' : 'text-slate-500 hover:text-amber-500'}`}
+                              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[rgba(62,74,137,0.08)] ${isBookmarked ? 'text-amber-500' : 'text-[#7C859E] hover:text-amber-500'}`}
                               title={isBookmarked ? 'Remove bookmark' : 'Save'}>
                               <Bookmark size={13} fill={isBookmarked ? 'currentColor' : 'none'} />
                             </button>
                             <button
                               onClick={() => { isPinned ? unpinMessage(activeChannelId, message.id) : pinMessage(activeChannelId, message.id); }}
-                              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-slate-100 ${isPinned ? 'text-amber-500' : 'text-slate-500 hover:text-amber-500'}`}
+                              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[rgba(62,74,137,0.08)] ${isPinned ? 'text-amber-500' : 'text-[#7C859E] hover:text-amber-500'}`}
                               title={isPinned ? 'Unpin' : 'Pin'}>
                               <Pin size={13} />
                             </button>
                             {(isOwn || isAdmin) && (
                               <button
                                 onClick={() => deleteMessage(activeChannelId, message.id)}
-                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-[#7C859E] hover:bg-red-50 hover:text-red-600"
                                 title="Delete">
                                 <Trash2 size={13} />
                               </button>
@@ -2097,24 +2044,24 @@ export default function EduTechExOSDashboard() {
 
                     {/* Poll */}
                     {message.poll && (
-                      <div className="mt-1 w-64 rounded-2xl border border-indigo-100 bg-white p-4 shadow-sm">
-                        <p className="mb-3 text-sm font-bold text-slate-900">📊 {message.poll.question}</p>
+                      <div className="mt-1 w-64 rounded-2xl border border-[rgba(62,74,137,0.10)] bg-white p-4 shadow-sm">
+                        <p className="mb-3 text-sm font-bold text-[#1E2636]">📊 {message.poll.question}</p>
                         <div className="space-y-2">
                           {message.poll.options.map((opt, i) => {
                             const total = message.poll!.options.reduce((s, o) => s + o.votes.length, 0);
                             const pct = total ? Math.round((opt.votes.length / total) * 100) : 0;
                             return (
-                              <div key={i} className="relative overflow-hidden rounded-xl border border-indigo-200 bg-white">
+                              <div key={i} className="relative overflow-hidden rounded-xl border border-[rgba(62,74,137,0.15)] bg-white">
                                 <div className="absolute inset-y-0 left-0 rounded-l-xl bg-indigo-100" style={{ width: `${pct}%` }} />
                                 <div className="relative flex items-center justify-between px-3 py-2">
-                                  <span className="text-sm font-semibold text-slate-700">{opt.text}</span>
-                                  <span className="text-xs font-bold text-indigo-600">{pct}%</span>
+                                  <span className="text-sm font-semibold text-[#4A5578]">{opt.text}</span>
+                                  <span className="text-xs font-bold text-green-700">{pct}%</span>
                                 </div>
                               </div>
                             );
                           })}
                         </div>
-                        <p className="mt-2 text-[11px] text-slate-400">{message.poll.options.reduce((s, o) => s + o.votes.length, 0)} votes</p>
+                        <p className="mt-2 text-[11px] text-[#7C859E]">{message.poll.options.reduce((s, o) => s + o.votes.length, 0)} votes</p>
                       </div>
                     )}
 
@@ -2127,8 +2074,8 @@ export default function EduTechExOSDashboard() {
                               onClick={() => toggleReaction(activeChannelId, message.id, emoji, currentUser?.email ?? '')}
                               className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-all
                                 ${users.includes(currentUser?.email ?? '')
-                                  ? 'border-indigo-200 bg-indigo-100 font-bold text-indigo-700'
-                                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+                                  ? 'border-[rgba(62,74,137,0.15)] bg-indigo-100 font-bold text-[#3E4A89]'
+                                  : 'border-[rgba(62,74,137,0.12)] bg-white text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]'}`}>
                               <span>{emoji}</span><span>{users.length}</span>
                             </button>
                           ) : null
@@ -2151,15 +2098,15 @@ export default function EduTechExOSDashboard() {
           );
           if (!typers.length) return null;
           const label = typers.length === 1
-            ? `${typers[0]} is typing…`
+            ? `${typers[0]} is typing�¦`
             : typers.length === 2
-            ? `${typers[0]} and ${typers[1]} are typing…`
-            : 'Several people are typing…';
+            ? `${typers[0]} and ${typers[1]} are typing�¦`
+            : 'Several people are typing�¦';
           return (
-            <div className="flex items-center gap-2 px-6 py-1.5 text-xs font-semibold text-slate-400">
-              <span className="flex gap-0.5">
+            <div className="flex items-center gap-2 px-5 py-1.5 text-[13px] text-[#616161]">
+              <span className="flex gap-[3px] items-center">
                 {[0,1,2].map(i => (
-                  <span key={i} className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                  <span key={i} className="typing-dot" style={{ animationDelay: `${i * 0.2}s` }} />
                 ))}
               </span>
               {label}
@@ -2167,15 +2114,15 @@ export default function EduTechExOSDashboard() {
           );
         })()}
 
-        <footer className="shrink-0 border-t border-slate-200/50 bg-white/80 backdrop-blur-md px-4 py-3">
+        <footer className="shrink-0 border-t border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/95 backdrop-blur-md px-4 py-3">
           {/* Mention dropdown */}
           {mentionMenuOpen && mentionSuggestions.length > 0 && (
-            <div className="mb-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+            <div className="mb-2 overflow-hidden rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-xl">
               {mentionSuggestions.map((member) => (
                 <button key={member.id} onClick={() => insertMention(member.name)}
-                  className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-indigo-50 transition-colors">
+                  className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-[rgba(62,74,137,0.08)] transition-colors">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold text-white" style={{ backgroundColor: member.color }}>{member.initials}</div>
-                  <div><p className="text-sm font-bold text-slate-900">{member.name}</p><p className="text-xs text-slate-400">{member.role}</p></div>
+                  <div><p className="text-sm font-bold text-[#1E2636]">{member.name}</p><p className="text-xs text-[#7C859E]">{member.role}</p></div>
                 </button>
               ))}
             </div>
@@ -2183,12 +2130,12 @@ export default function EduTechExOSDashboard() {
 
           {/* Emoji picker */}
           {emojiMenuOpen && (
-            <div ref={emojiPanelRef} className="mb-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+            <div ref={emojiPanelRef} className="mb-2 rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-3 shadow-xl">
               <div className="grid max-h-48 grid-cols-8 gap-1 overflow-y-auto">
                 {EMOJI_OPTIONS.map((emoji, idx) => (
                   <button key={idx} type="button"
                     onClick={() => { insertComposerText(emoji); setEmojiMenuOpen(false); }}
-                    className="flex h-8 items-center justify-center rounded-lg text-lg hover:scale-110 hover:bg-indigo-50 transition-all">
+                    className="flex h-8 items-center justify-center rounded-lg text-lg hover:scale-110 hover:bg-[rgba(62,74,137,0.08)] transition-all">
                     {emoji}
                   </button>
                 ))}
@@ -2202,46 +2149,46 @@ export default function EduTechExOSDashboard() {
             {/* Toolbar icons */}
             <div className="flex items-center gap-0.5 shrink-0 mb-0.5">
               <button ref={emojiBtnRef} onClick={() => { setEmojiMenuOpen((v) => !v); setMentionMenuOpen(false); }}
-                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${emojiMenuOpen ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`} title="Emoji">
+                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${emojiMenuOpen ? 'bg-[rgba(62,74,137,0.08)] text-green-700' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]'}`} title="Emoji">
                 <Smile size={18} />
               </button>
               <button onClick={() => fileInputRef.current?.click()}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" title="Attach file">
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] transition-colors" title="Attach file">
                 <Paperclip size={18} />
               </button>
               <button onClick={() => startRecording('audio')} disabled={recordingBusy || !!recordingType}
-                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${recordingType === 'audio' ? 'animate-pulse bg-red-100 text-red-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`} title="Voice note">
+                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${recordingType === 'audio' ? 'animate-pulse bg-red-100 text-red-600' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]'}`} title="Voice note">
                 <Mic size={18} />
               </button>
               <button onClick={() => startRecording('video')} disabled={recordingBusy || !!recordingType}
-                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${recordingType === 'video' ? 'animate-pulse bg-red-100 text-red-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`} title="Screen record">
+                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${recordingType === 'video' ? 'animate-pulse bg-red-100 text-red-600' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]'}`} title="Screen record">
                 <Video size={18} />
               </button>
               {/* Meet dropdown */}
               <div className="relative" ref={meetInputMenuRef}>
                 <button
                   onClick={() => setMeetInputMenuOpen((v) => !v)}
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${meetInputMenuOpen ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:bg-indigo-50 hover:text-indigo-600'}`}
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${meetInputMenuOpen ? 'bg-[rgba(62,74,137,0.08)] text-green-700' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-green-700'}`}
                   title="Meet options"
                 >
                   <PhoneCall size={17} />
                 </button>
                 {meetInputMenuOpen && (
-                  <div className="absolute bottom-full left-0 mb-2 z-50 w-52 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-                    <div className="px-3 py-2 bg-slate-50 border-b border-slate-100">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Meeting</p>
+                  <div className="absolute bottom-full left-0 mb-2 z-50 w-52 overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl">
+                    <div className="px-3 py-2 bg-[#FAF8F5] border-b border-[rgba(62,74,137,0.08)]">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-[#7C859E]">Meeting</p>
                     </div>
                     <div className="p-1.5 space-y-0.5">
                       <button
                         onClick={() => { setMeetInputMenuOpen(false); startNewMeeting(); }}
-                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-indigo-50 transition-colors group"
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-[rgba(62,74,137,0.08)] transition-colors group"
                       >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200 transition-colors">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-green-700 group-hover:bg-[rgba(62,74,137,0.12)] transition-colors">
                           <Video size={15} />
                         </span>
                         <div>
-                          <p className="text-sm font-bold text-slate-800">Start Meet</p>
-                          <p className="text-[11px] text-slate-400">Instant Jitsi room</p>
+                          <p className="text-sm font-bold text-[#1E2636]">Start Meet</p>
+                          <p className="text-[11px] text-[#7C859E]">Instant Jitsi room</p>
                         </div>
                       </button>
                       <button
@@ -2252,8 +2199,8 @@ export default function EduTechExOSDashboard() {
                           <CalendarPlus size={15} />
                         </span>
                         <div>
-                          <p className="text-sm font-bold text-slate-800">Schedule Meet</p>
-                          <p className="text-[11px] text-slate-400">
+                          <p className="text-sm font-bold text-[#1E2636]">Schedule Meet</p>
+                          <p className="text-[11px] text-[#7C859E]">
                             {composerMessage.includes('@') ? 'Uses your @mentions' : 'Pick who to invite'}
                           </p>
                         </div>
@@ -2274,7 +2221,7 @@ export default function EduTechExOSDashboard() {
                     {[0.4,0.7,1,0.6,0.9,0.5,1,0.75,0.55,0.85,0.45,0.95,0.65,0.8,0.5,0.7,0.4,0.9,0.6,1,0.5,0.75,0.85,0.45,0.65].map((h, i) => (
                       <span key={i} style={{
                         display: 'inline-block', width: 3, borderRadius: 9999,
-                        background: 'linear-gradient(to top, #7c3aed, #a78bfa)',
+                        background: 'linear-gradient(to top, #7C859E, #C4CAE0)',
                         animationName: 'waveBar',
                         animationDuration: `${0.6 + (i % 5) * 0.12}s`,
                         animationDelay: `${(i * 0.04) % 0.5}s`,
@@ -2293,12 +2240,12 @@ export default function EduTechExOSDashboard() {
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ background: '#ef4444' }} />
                       <span className="relative inline-flex h-2.5 w-2.5 rounded-full" style={{ background: '#ef4444' }} />
                     </span>
-                    <Monitor size={17} style={{ color: '#7c3aed' }} strokeWidth={2.2} />
-                    <span className="text-xs font-bold" style={{ color: '#7c3aed' }}>Recording screen</span>
+                    <Monitor size={17} style={{ color: '#C4CAE0' }} strokeWidth={2.2} />
+                    <span className="text-xs font-bold" style={{ color: '#C4CAE0' }}>Recording screen</span>
                   </div>
                 )}
                 {/* Timer */}
-                <span className="text-xs font-bold tabular-nums mx-1" style={{ color: '#7c3aed' }}>
+                <span className="text-xs font-bold tabular-nums mx-1" style={{ color: '#C4CAE0' }}>
                   {String(Math.floor(recordingDuration / 60)).padStart(2, '0')}:{String(recordingDuration % 60).padStart(2, '0')}
                 </span>
                 {/* Divider */}
@@ -2317,7 +2264,7 @@ export default function EduTechExOSDashboard() {
                 <button
                   onClick={() => stopRecording(true)}
                   className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition-all hover:scale-105"
-                  style={{ background: 'rgba(139,92,246,0.14)', color: '#7c3aed', border: '1px solid rgba(139,92,246,0.25)' }}
+                  style={{ background: 'rgba(139,92,246,0.14)', color: '#C4CAE0', border: '1px solid rgba(139,92,246,0.25)' }}
                   title="Stop and preview"
                 >
                   Preview
@@ -2347,11 +2294,11 @@ export default function EduTechExOSDashboard() {
                 setMentionMenuOpen(/@[\w\s.-]*$/.test(next));
               }}
               onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey && settings.enterToSend) { event.preventDefault(); sendMessage(); }
+                if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }
                 if (event.key === 'Escape') { setEmojiMenuOpen(false); setMentionMenuOpen(false); }
               }}
-              placeholder={`Message #${channel?.name ?? ''}… (Enter to send · Shift+Enter for new line)`}
-              className="flex-1 resize-none rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+              placeholder={`Message #${channel?.name ?? ''}�¦ (Enter to send · Shift+Enter for new line)`}
+              className="flex-1 resize-none border-0 bg-transparent px-3 py-2 text-[13.5px] text-[#1E2636] placeholder-[#8a8886] focus:outline-none"
               rows={1}
               style={{ maxHeight: '120px', overflowY: 'auto' }}
             />
@@ -2360,7 +2307,7 @@ export default function EduTechExOSDashboard() {
             <button
               onClick={sendMessage}
               disabled={!composerMessage.trim()}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white shadow-md hover:bg-indigo-700 hover:shadow-indigo-300/50 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-200 transition-all"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 transition-all" style={{ background: 'linear-gradient(135deg, #C4CAE0, #7C859E)', color: '#191E2F' }}
             >
               <Send size={18} />
             </button>
@@ -2368,200 +2315,176 @@ export default function EduTechExOSDashboard() {
         </footer>
       </main>
 
-      <aside className={`copilot-panel ${rightPanel === 'closed' ? 'copilot-panel-closed' : ''}`}>
-        {rightPanel !== 'closed' ? (
-          <>
-            <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-xs font-black text-white">
-                AI
-              </div>
-              <div className="min-w-0 flex-1">
-                <h2 className="truncate text-lg font-black text-slate-950">Channel Copilot</h2>
-                <p className="truncate text-xs font-bold text-slate-400">
-                  Only using #{channel?.name ?? activeChannel} context
-                </p>
-              </div>
-              <button
-                title="Close Copilot"
-                onClick={() => setRightPanel('closed')}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
-              >
-                <X size={20} />
-              </button>
-            </div>
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• RIGHT ICON RAIL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      <nav className="workspace-right-rail">
+        {/* Top: Pinned + Bookmarked */}
+        <motion.button
+          whileTap={{ scale: 0.88 }}
+          onClick={() => setRightSidePanel(rightSidePanel === 'pinned' ? null : 'pinned')}
+          className={`rail-btn${rightSidePanel === 'pinned' ? ' active' : ''}`}
+          style={rightSidePanel === 'pinned' ? { background: 'rgba(245,158,11,0.15)', color: '#b45309' } : {}}
+        >
+          <Pin size={18} strokeWidth={2} />
+          <span className="rail-label">Pinned</span>
+        </motion.button>
 
-            <div className="grid grid-cols-2 border-b border-slate-200">
-              <button
-                title="Copilot chat tab"
-                onClick={() => setCopilotTab('chat')}
-                className={`h-13 border-b-2 text-xs font-black uppercase tracking-[0.12em] ${
-                  copilotTab === 'chat'
-                    ? 'border-indigo-600 text-indigo-600'
-                    : 'border-transparent text-slate-400'
-                }`}
-              >
-                Chat
-              </button>
-              <button
-                title="Copilot tasks tab"
-                onClick={() => setCopilotTab('tasks')}
-                className={`h-13 border-b-2 text-xs font-black uppercase tracking-[0.12em] ${
-                  copilotTab === 'tasks'
-                    ? 'border-indigo-600 text-indigo-600'
-                    : 'border-transparent text-slate-400'
-                }`}
-              >
-                Tasks
-              </button>
-            </div>
+        <motion.button
+          whileTap={{ scale: 0.88 }}
+          onClick={() => setRightSidePanel(rightSidePanel === 'bookmarked' ? null : 'bookmarked')}
+          className={`rail-btn${rightSidePanel === 'bookmarked' ? ' active' : ''}`}
+          style={rightSidePanel === 'bookmarked' ? { background: 'rgba(245,158,11,0.15)', color: '#b45309' } : {}}
+        >
+          <Bookmark size={18} strokeWidth={2} />
+          <span className="rail-label">Saved</span>
+        </motion.button>
 
-            <div className="flex-1 overflow-y-auto p-5">
-              {copilotTab === 'chat' ? (
-                <div className="space-y-4">
-                  {aiMessages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={message.role === 'user' ? 'flex justify-end' : ''}
-                    >
-                      <div
-                        className={`max-w-[92%] rounded-[1.35rem] border p-5 text-[15px] font-medium leading-7 shadow-sm ${
-                          message.role === 'user'
-                            ? 'rounded-tr-sm border-indigo-600 bg-indigo-600 text-white'
-                            : 'rounded-tl-sm border-slate-200 bg-white text-slate-800'
-                        }`}
-                      >
-                        {message.text}
-                      </div>
-                      {message.role === 'assistant' && message.citation && (
-                        <p className="mt-3 text-xs font-black uppercase tracking-tight text-slate-400">
-                          {message.citation}
-                        </p>
-                      )}
+        {/* Bottom: Copilot circle button */}
+        <div style={{ marginTop: 'auto', paddingBottom: '10px' }}>
+          <motion.button
+            whileHover={{ scale: 1.10 }}
+            whileTap={{ scale: 0.90 }}
+            onClick={() => setRightPanel(rightPanel === 'ai' ? 'closed' : 'ai')}
+            className="relative flex items-center justify-center"
+            style={{
+              width: 40, height: 40, borderRadius: '50%',
+              background: rightPanel === 'ai'
+                ? 'linear-gradient(135deg,#3E4A89,#7c3aed)'
+                : 'linear-gradient(135deg,#3E4A89,#9BA6D3)',
+              boxShadow: rightPanel === 'ai'
+                ? '0 0 0 3px rgba(62,74,137,0.35), 0 6px 20px rgba(62,74,137,0.5)'
+                : '0 4px 14px rgba(62,74,137,0.40)',
+              color: '#fff',
+              border: 'none', cursor: 'pointer',
+            }}
+          >
+            <Bot size={18} strokeWidth={2} />
+          </motion.button>
+        </div>
+      </nav>
+
+      {/* ── AI Copilot popup (anchored to right rail) ─────────────── */}
+      <AnimatePresence>
+        {rightPanel === 'ai' && (
+          <motion.div
+            key="ai-popup"
+            initial={{ opacity: 0, x: 16, scale: 0.97 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 10, scale: 0.97 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 360, mass: 0.8 }}
+            className="fixed bottom-4 right-16 z-[199] w-[360px] overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl"
+            style={{ maxHeight: '75vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.20), 0 4px 16px rgba(62,74,137,0.14)' }}
+          >
+            <AIPanel
+              activeChannel={activeChannelId}
+              onClose={() => setRightPanel('closed')}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Pinned messages slide-in panel ────────────────────────── */}
+      <AnimatePresence>
+        {rightSidePanel === 'pinned' && (() => {
+          const pinIds = pinnedMessageIds[activeChannelId] ?? [];
+          const pinnedMsgs = pinIds.map(id => channelMessages.find(m => m.id === id)).filter(Boolean);
+          return (
+            <motion.div
+              key="pinned-panel"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+              className="fixed top-0 right-14 z-[150] h-full w-72 border-l border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/95 backdrop-blur-md shadow-2xl flex flex-col"
+            >
+              <div className="flex h-14 shrink-0 items-center justify-between border-b border-[rgba(62,74,137,0.12)] px-4">
+                <div className="flex items-center gap-2">
+                  <Pin size={15} className="text-amber-500" />
+                  <span className="text-sm font-bold text-[#1E2636]">Pinned Messages</span>
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-600">{pinIds.length}</span>
+                </div>
+                <button onClick={() => setRightSidePanel(null)} className="rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {pinnedMsgs.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                    <Pin size={32} className="mb-3 text-slate-200" />
+                    <p className="text-sm font-semibold text-[#7C859E]">No pinned messages</p>
+                    <p className="text-xs text-[#9BA6D3] mt-1">Pin a message to see it here</p>
+                  </div>
+                ) : pinnedMsgs.map((msg) => msg && (
+                  <div key={msg.id} className="rounded-xl border border-amber-100 bg-amber-50/50 p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ backgroundColor: msg.color }}>{msg.initials}</div>
+                      <span className="text-xs font-bold text-[#4A5578]">{msg.sender}</span>
+                      <span className="text-[10px] text-[#7C859E] ml-auto">{formatTime(msg.timestamp)}</span>
                     </div>
-                  ))}
-                  {isThinking && (
-                    <div className="flex w-fit items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-500">
-                      <Loader2 size={15} className="animate-spin text-indigo-600" />
-                      Copilot is thinking...
-                    </div>
-                  )}
-                  <div ref={aiBottomRef} />
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <button
-                    onClick={extractTasks}
-                    className="w-full rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-xs font-black uppercase tracking-[0.1em] text-indigo-700 hover:bg-indigo-100"
-                  >
-                    Extract Action Items
-                  </button>
-                  {(() => {
-                    const channelName = `#${channel?.name ?? activeChannel}`;
-                    const myEmail = currentUserEmail;
-                    const myName = currentUser?.name?.toLowerCase() ?? '';
-                    const channelTasks = kanbanTasks.filter((t) => {
-                      if (t.sourceChannel !== channelName) return false;
-                      // Show the task only to the assigned person
-                      if (t.assigneeEmail) return t.assigneeEmail.toLowerCase() === myEmail;
-                      return t.assignee.toLowerCase() === myName;
-                    });
-                    if (channelTasks.length === 0) {
-                      return (
-                        <p className="mt-4 text-center text-xs font-semibold text-slate-400 leading-relaxed">
-                          No tasks assigned to you in {channelName}.<br />
-                          Ask a teammate to @mention you with an action word, or use &ldquo;Extract Action Items&rdquo; above.
-                        </p>
-                      );
-                    }
-                    return channelTasks.slice(0, 10).map((task) => (
-                      <article
-                        key={task.id}
-                        className={`rounded-xl border border-slate-200 bg-white p-3 ${task.status === 'done' ? 'opacity-55' : ''}`}
-                      >
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() =>
-                              updateKanbanTaskStatus(
-                                task.id,
-                                task.status === 'done' ? 'todo' : 'done'
-                              )
-                            }
-                            className="mt-0.5 text-slate-300 hover:text-indigo-600"
-                          >
-                            {task.status === 'done' ? (
-                              <CheckSquare size={17} className="text-emerald-500" />
-                            ) : (
-                              <Square size={17} />
-                            )}
-                          </button>
-                          <div className="min-w-0 flex-1">
-                            <p
-                              className={`text-sm font-bold leading-5 text-slate-800 ${task.status === 'done' ? 'line-through' : ''}`}
-                            >
-                              {task.text}
-                            </p>
-                            <div className="mt-3 flex items-center justify-between text-xs font-black text-slate-400">
-                              <span>{task.sourceChannel}</span>
-                              <span>{task.assigneeInitials}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </article>
-                    ));
-                  })()}
-                </div>
-              )}
-            </div>
-
-            <div className="border-t border-slate-200 p-5">
-              {copilotTab === 'chat' && (
-                <div className="flex h-14 items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 shadow-sm">
-                  <input
-                    value={aiInput}
-                    onChange={(event) => setAiInput(event.target.value)}
-                    onKeyDown={(event) => event.key === 'Enter' && askAI()}
-                    className="min-w-0 flex-1 bg-transparent text-[17px] font-semibold outline-none placeholder:text-slate-400"
-                    placeholder={`Ask #${channel?.name ?? activeChannel} Copilot...`}
-                  />
-                  <button
-                    onClick={() => askAI()}
-                    disabled={!aiInput.trim() || isThinking}
-                    className="text-slate-300 hover:text-indigo-600 disabled:hover:text-slate-300"
-                  >
-                    {isThinking ? (
-                      <Loader2 size={21} className="animate-spin" />
-                    ) : (
-                      <Send size={21} />
-                    )}
-                  </button>
-                </div>
-              )}
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  onClick={() =>
-                    askAI(`What is the latest status in #${channel?.name ?? activeChannel}?`)
-                  }
-                  className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500 shadow-sm hover:text-indigo-600"
-                >
-                  Channel status
-                </button>
-                <button
-                  onClick={extractTasks}
-                  className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500 shadow-sm hover:text-indigo-600"
-                >
-                  Extract tasks
-                </button>
-                <button
-                  onClick={() => askAI(`Summarize only #${channel?.name ?? activeChannel}.`)}
-                  className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500 shadow-sm hover:text-indigo-600"
-                >
-                  Channel summary
-                </button>
+                    <p className="text-xs text-[#4A5578] leading-relaxed line-clamp-3">{msg.text}</p>
+                    <button
+                      onClick={() => { unpinMessage(activeChannelId, msg.id); document.getElementById(`msg-${msg.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}
+                      className="mt-2 text-[10px] font-bold text-amber-600 hover:text-amber-700"
+                    >Unpin · Jump to message</button>
+                  </div>
+                ))}
               </div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
+
+      {/* ── Bookmarked messages slide-in panel ────────────────────── */}
+      <AnimatePresence>
+        {rightSidePanel === 'bookmarked' && (
+          <motion.div
+            key="bookmarked-panel"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+            className="fixed top-0 right-14 z-[150] h-full w-72 border-l border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/95 backdrop-blur-md shadow-2xl flex flex-col"
+          >
+            <div className="flex h-14 shrink-0 items-center justify-between border-b border-[rgba(62,74,137,0.12)] px-4">
+              <div className="flex items-center gap-2">
+                <Bookmark size={15} className="text-amber-500" />
+                <span className="text-sm font-bold text-[#1E2636]">Saved Messages</span>
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-600">{bookmarkedMessageIds.length}</span>
+              </div>
+              <button onClick={() => setRightSidePanel(null)} className="rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]">
+                <X size={16} />
+              </button>
             </div>
-          </>
-        ) : null}
-      </aside>
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {bookmarkedMessageIds.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                  <Bookmark size={32} className="mb-3 text-slate-200" />
+                  <p className="text-sm font-semibold text-[#7C859E]">No saved messages</p>
+                  <p className="text-xs text-[#9BA6D3] mt-1">Bookmark a message to see it here</p>
+                </div>
+              ) : (() => {
+                const saved = bookmarkedMessageIds.map(id => {
+                  const found = Object.values(messages).flatMap(arr => arr).find(m => m.id === id);
+                  return found;
+                }).filter(Boolean);
+                return saved.map((msg) => msg && (
+                  <div key={msg.id} className="rounded-xl border border-[rgba(62,74,137,0.08)] bg-[#FAF8F5] p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white" style={{ backgroundColor: msg.color }}>{msg.initials}</div>
+                      <span className="text-xs font-bold text-[#4A5578]">{msg.sender}</span>
+                      <span className="text-[10px] text-[#7C859E] ml-auto">{formatTime(msg.timestamp)}</span>
+                    </div>
+                    <p className="text-xs text-[#4A5578] leading-relaxed line-clamp-3">{msg.text}</p>
+                    <button
+                      onClick={() => toggleBookmark(msg.id)}
+                      className="mt-2 text-[10px] font-bold text-amber-600 hover:text-amber-700"
+                    >Remove bookmark</button>
+                  </div>
+                ));
+              })()}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <NotificationPanel open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
       <MyActivityCalendar
@@ -2589,20 +2512,20 @@ export default function EduTechExOSDashboard() {
         <motion.div
           key="settings"
           {...BACKDROP}
-          className="fixed inset-0 z-[115] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm dark:bg-black/70"
+          className="fixed inset-0 z-[115] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm dark:bg-black/70"
           onClick={() => setSettingsOpen(false)}
         >
           <motion.div
             {...CARD}
-            className="flex w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+            className="flex w-full max-w-2xl overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl  dark:bg-[#191E2F]"
             style={{ maxHeight: '90vh' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* ── Left nav ──────────────────────────────────────── */}
-            <div className="flex w-44 shrink-0 flex-col border-r border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60">
-              <div className="flex h-14 items-center gap-2.5 border-b border-slate-200 px-4 dark:border-slate-700">
-                <Settings size={16} className="shrink-0 text-indigo-600" />
-                <span className="text-sm font-black text-slate-900 dark:text-slate-100">Settings</span>
+            <div className="flex w-44 shrink-0 flex-col border-r border-[rgba(62,74,137,0.12)] bg-[#FAF8F5]  dark:bg-slate-800/60">
+              <div className="flex h-14 items-center gap-2.5 border-b border-[rgba(62,74,137,0.12)] px-4 ">
+                <Settings size={16} className="shrink-0 text-green-700" />
+                <span className="text-sm font-black text-[#1E2636]">Settings</span>
               </div>
               <nav className="flex-1 space-y-0.5 p-2">
                 {([
@@ -2618,8 +2541,8 @@ export default function EduTechExOSDashboard() {
                     onClick={() => setSettingsTab(id)}
                     className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-bold transition-all ${
                       settingsTab === id
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/60'
+                        ? 'bg-[#1E2538] text-white border border-[rgba(62,74,137,0.15)] shadow-sm'
+                        : 'text-[#4A5578] hover:bg-[rgba(62,74,137,0.08)] dark:text-[#9BA6D3]/60'
                     }`}
                   >
                     <Icon size={15} />
@@ -2628,7 +2551,7 @@ export default function EduTechExOSDashboard() {
                 ))}
               </nav>
               {/* Sign out shortcut */}
-              <div className="border-t border-slate-200 p-2 dark:border-slate-700">
+              <div className="border-t border-[rgba(62,74,137,0.12)] p-2 ">
                 <button
                   type="button"
                   onClick={() => {
@@ -2647,8 +2570,8 @@ export default function EduTechExOSDashboard() {
             {/* ── Right content ──────────────────────────────────── */}
             <form onSubmit={saveSettings} className="flex min-h-0 flex-1 flex-col">
               {/* Tab header */}
-              <div className="flex h-14 items-center justify-between border-b border-slate-200 px-5 dark:border-slate-700">
-                <h2 className="text-base font-black text-slate-900 dark:text-slate-100">
+              <div className="flex h-14 items-center justify-between border-b border-[rgba(62,74,137,0.12)] px-5 ">
+                <h2 className="text-base font-black text-[#1E2636]">
                   {settingsTab === 'profile'       && 'Profile'}
                   {settingsTab === 'appearance'    && 'Appearance'}
                   {settingsTab === 'notifications' && 'Notifications'}
@@ -2658,7 +2581,7 @@ export default function EduTechExOSDashboard() {
                 <button
                   type="button"
                   onClick={() => setSettingsOpen(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800"
                   title="Close settings"
                 >
                   <X size={18} />
@@ -2672,36 +2595,80 @@ export default function EduTechExOSDashboard() {
                 {settingsTab === 'profile' && (
                   <>
                     {/* Avatar card */}
-                    <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-lg font-black text-white shadow-lg shadow-indigo-200">
-                        {currentUser?.initials ?? 'G'}
+                    <div className="flex items-center gap-4 rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
+                      <div
+                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-lg shadow-indigo-200 text-3xl"
+                        style={settings.avatarEmoji ? { background: 'rgba(62,74,137,0.06)', border: '2px solid rgba(62,74,137,0.15)' } : { background: '#3E4A89' }}
+                      >
+                        {settings.avatarEmoji
+                          ? settings.avatarEmoji
+                          : <span className="text-lg font-black text-white">{currentUser?.initials ?? 'G'}</span>
+                        }
                       </div>
                       <div>
-                        <p className="font-black text-slate-900 dark:text-slate-100">{settings.displayName || currentUser?.name}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">{currentUser?.email}</p>
-                        <span className="mt-1 inline-flex rounded-md bg-indigo-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                        <p className="font-black text-[#1E2636]">{settings.displayName || currentUser?.name}</p>
+                        <p className="text-sm text-[#7C859E] dark:text-[#7C859E]">{currentUser?.email}</p>
+                        <span className="mt-1 inline-flex rounded-md bg-indigo-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#3E4A89] dark:bg-indigo-900/40 dark:text-indigo-300">
                           {currentUser?.role}
                         </span>
                       </div>
                     </div>
 
+                    {/* Avatar picker */}
+                    <div>
+                      <label className="text-xs font-black uppercase tracking-[0.12em] text-[#7C859E]">
+                        Choose avatar
+                      </label>
+                      <p className="mt-0.5 text-[11px] text-[#7C859E]">Pick a character � shows in your profile and sidebar.</p>
+                      <div className="mt-2 grid grid-cols-6 gap-2">
+                        {/* "None" option � reverts to initials */}
+                        <button
+                          type="button"
+                          onClick={() => setSettings((v) => ({ ...v, avatarEmoji: '' }))}
+                          className={`flex h-10 w-10 items-center justify-center rounded-xl border-2 text-[10px] font-black transition-all ${
+                            !settings.avatarEmoji
+                              ? 'border-[#3E4A89] bg-[#3E4A89] text-white shadow-md'
+                              : 'border-[rgba(62,74,137,0.15)] bg-white text-[#4A5578] hover:border-[rgba(62,74,137,0.35)]'
+                          }`}
+                          title="Use initials"
+                        >
+                          {currentUser?.initials ?? 'G'}
+                        </button>
+                        {AVATAR_OPTIONS.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => setSettings((v) => ({ ...v, avatarEmoji: emoji }))}
+                            className={`flex h-10 w-10 items-center justify-center rounded-xl border-2 text-xl transition-all hover:scale-110 ${
+                              settings.avatarEmoji === emoji
+                                ? 'border-[#3E4A89] bg-indigo-50 shadow-md shadow-indigo-100 scale-110'
+                                : 'border-[rgba(62,74,137,0.12)] bg-white hover:border-[rgba(62,74,137,0.30)]'
+                            }`}
+                            title={emoji}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* Display name */}
                     <div>
-                      <label className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+                      <label className="text-xs font-black uppercase tracking-[0.12em] text-[#7C859E] dark:text-[#7C859E]">
                         Display name
                       </label>
                       <input
                         value={settings.displayName}
                         onChange={(e) => setSettings((v) => ({ ...v, displayName: e.target.value }))}
                         placeholder={currentUser?.name ?? 'Your name'}
-                        className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500"
+                        className="mt-2 h-11 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-bold outline-none focus:border-[#3E4A89] focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:placeholder-slate-500"
                       />
-                      <p className="mt-1.5 text-xs text-slate-400">This name appears in chat messages and the team list.</p>
+                      <p className="mt-1.5 text-xs text-[#7C859E]">This name appears in chat messages and the team list.</p>
                     </div>
 
                     {/* Status */}
                     <div>
-                      <label className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+                      <label className="text-xs font-black uppercase tracking-[0.12em] text-[#7C859E] dark:text-[#7C859E]">
                         Status
                       </label>
                       <div className="mt-2 grid grid-cols-4 gap-2">
@@ -2717,8 +2684,8 @@ export default function EduTechExOSDashboard() {
                             onClick={() => setSettings((v) => ({ ...v, status: id }))}
                             className={`flex flex-col items-center gap-1.5 rounded-xl border py-3 text-xs font-bold transition-all ${
                               settings.status === id
-                                ? 'border-indigo-300 bg-indigo-50 text-indigo-700 shadow-sm dark:border-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300'
-                                : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                                ? 'border-[rgba(62,74,137,0.25)] bg-[rgba(62,74,137,0.08)] text-[#3E4A89] shadow-sm dark:border-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300'
+                                : 'border-[rgba(62,74,137,0.12)] bg-white text-[#7C859E] hover:border-slate-300 hover:bg-[rgba(62,74,137,0.06)]  dark:bg-slate-800 dark:text-[#7C859E]'
                             }`}
                           >
                             <span className={`h-3 w-3 rounded-full ${dot}`} />
@@ -2726,7 +2693,7 @@ export default function EduTechExOSDashboard() {
                           </button>
                         ))}
                       </div>
-                      <p className="mt-1.5 text-xs text-slate-400">Your status dot is visible to everyone in the People list.</p>
+                      <p className="mt-1.5 text-xs text-[#7C859E]">Your status dot is visible to everyone in the People list.</p>
                     </div>
                   </>
                 )}
@@ -2735,40 +2702,40 @@ export default function EduTechExOSDashboard() {
                 {settingsTab === 'appearance' && (
                   <>
                     {/* Dark mode */}
-                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                    <div className="flex items-center justify-between rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-[#4A5578] dark:bg-slate-700 dark:text-[#9BA6D3]">
                           {darkMode ? <Moon size={16} /> : <Sun size={16} />}
                         </div>
                         <div>
-                          <p className="text-sm font-black text-slate-800 dark:text-slate-200">Dark mode</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Currently {darkMode ? 'on' : 'off'} — affects the whole app</p>
+                          <p className="text-sm font-black text-[#1E2636]">Dark mode</p>
+                          <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">Currently {darkMode ? 'on' : 'off'} — affects the whole app</p>
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => { toggleTheme(); storeDarkModeToggle(); }}
-                        className={`relative h-6 w-11 rounded-full transition-colors ${darkMode ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                        className={`relative h-6 w-11 rounded-full transition-colors ${darkMode ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}
                       >
                         <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${darkMode ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                     </div>
 
                     {/* Compact chat */}
-                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                    <div className="flex items-center justify-between rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-[#4A5578] dark:bg-slate-700 dark:text-[#9BA6D3]">
                           <Layout size={16} />
                         </div>
                         <div>
-                          <p className="text-sm font-black text-slate-800 dark:text-slate-200">Compact chat</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Reduce spacing between messages</p>
+                          <p className="text-sm font-black text-[#1E2636]">Compact chat</p>
+                          <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">Reduce spacing between messages</p>
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => setSettings((v) => ({ ...v, compactChat: !v.compactChat }))}
-                        className={`relative h-6 w-11 rounded-full transition-colors ${settings.compactChat ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                        className={`relative h-6 w-11 rounded-full transition-colors ${settings.compactChat ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}
                       >
                         <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.compactChat ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
@@ -2777,12 +2744,12 @@ export default function EduTechExOSDashboard() {
                     {/* Font size */}
                     <div>
                       <div className="flex items-center gap-3 mb-2">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-[#4A5578] dark:bg-slate-700 dark:text-[#9BA6D3]">
                           <Type size={16} />
                         </div>
                         <div>
-                          <p className="text-sm font-black text-slate-800 dark:text-slate-200">Message font size</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Controls the size of text in chat bubbles</p>
+                          <p className="text-sm font-black text-[#1E2636]">Message font size</p>
+                          <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">Controls the size of text in chat bubbles</p>
                         </div>
                       </div>
                       <div className="flex gap-2 pl-12">
@@ -2796,8 +2763,8 @@ export default function EduTechExOSDashboard() {
                             onClick={() => setSettings((v) => ({ ...v, fontSize: id }))}
                             className={`flex-1 rounded-xl border py-2.5 text-xs font-bold transition-all ${
                               settings.fontSize === id
-                                ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300'
-                                : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                                ? 'border-[rgba(62,74,137,0.25)] bg-[rgba(62,74,137,0.08)] text-[#3E4A89] dark:border-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300'
+                                : 'border-[rgba(62,74,137,0.12)] bg-white text-[#7C859E] hover:bg-[rgba(62,74,137,0.06)]  dark:bg-slate-800 dark:text-[#7C859E]'
                             }`}
                           >
                             {label}
@@ -2807,14 +2774,14 @@ export default function EduTechExOSDashboard() {
                     </div>
 
                     {/* Enter to send */}
-                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                    <div className="flex items-center justify-between rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-[#4A5578] dark:bg-slate-700 dark:text-[#9BA6D3]">
                           <Send size={15} />
                         </div>
                         <div>
-                          <p className="text-sm font-black text-slate-800 dark:text-slate-200">Enter to send</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                          <p className="text-sm font-black text-[#1E2636]">Enter to send</p>
+                          <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">
                             {settings.enterToSend
                               ? 'Enter sends · Shift+Enter for new line'
                               : 'Click the send button to post'}
@@ -2824,7 +2791,7 @@ export default function EduTechExOSDashboard() {
                       <button
                         type="button"
                         onClick={() => setSettings((v) => ({ ...v, enterToSend: !v.enterToSend }))}
-                        className={`relative h-6 w-11 rounded-full transition-colors ${settings.enterToSend ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                        className={`relative h-6 w-11 rounded-full transition-colors ${settings.enterToSend ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}
                       >
                         <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.enterToSend ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
@@ -2836,35 +2803,35 @@ export default function EduTechExOSDashboard() {
                 {settingsTab === 'notifications' && (
                   <>
                     {/* Email */}
-                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                    <div className="flex items-center justify-between rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-green-700 dark:bg-indigo-900/40 dark:text-indigo-400">
                           <Mail size={16} />
                         </div>
                         <div>
-                          <p className="text-sm font-black text-slate-800 dark:text-slate-200">Email on @mention</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Send an email when someone @mentions you</p>
+                          <p className="text-sm font-black text-[#1E2636]">Email on @mention</p>
+                          <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">Send an email when someone @mentions you</p>
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => setSettings((v) => ({ ...v, emailNotifications: !v.emailNotifications }))}
-                        className={`relative h-6 w-11 rounded-full transition-colors ${settings.emailNotifications ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                        className={`relative h-6 w-11 rounded-full transition-colors ${settings.emailNotifications ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}
                       >
                         <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.emailNotifications ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                     </div>
 
                     {/* Desktop notifications */}
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                    <div className="rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400">
                             <Monitor size={16} />
                           </div>
                           <div>
-                            <p className="text-sm font-black text-slate-800 dark:text-slate-200">Desktop notifications</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Browser pop-up for incoming messages</p>
+                            <p className="text-sm font-black text-[#1E2636]">Desktop notifications</p>
+                            <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">Browser pop-up for incoming messages</p>
                           </div>
                         </div>
                         <button
@@ -2876,34 +2843,34 @@ export default function EduTechExOSDashboard() {
                               Notification.requestPermission();
                             }
                           }}
-                          className={`relative h-6 w-11 rounded-full transition-colors ${settings.desktopNotifications ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                          className={`relative h-6 w-11 rounded-full transition-colors ${settings.desktopNotifications ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}
                         >
                           <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.desktopNotifications ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                       </div>
                       {settings.desktopNotifications && typeof Notification !== 'undefined' && Notification.permission === 'denied' && (
                         <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 dark:bg-red-900/30 dark:text-red-400">
-                          ⚠ Notifications are blocked in your browser. Go to browser Site Settings to allow them.
+                          �  Notifications are blocked in your browser. Go to browser Site Settings to allow them.
                         </p>
                       )}
                     </div>
 
                     {/* Sound */}
-                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                    <div className="flex items-center justify-between rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
                       <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">
                           <Volume2 size={16} />
                         </div>
                         <div>
-                          <p className="text-sm font-black text-slate-800 dark:text-slate-200">Sound alerts</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Play a soft chime when new messages arrive</p>
+                          <p className="text-sm font-black text-[#1E2636]">Sound alerts</p>
+                          <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">Play a soft chime when new messages arrive</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={playNotificationSound}
-                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800"
+                          className="rounded-lg border border-[rgba(62,74,137,0.12)] bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-[#7C859E] hover:bg-[rgba(62,74,137,0.06)] dark:border-slate-600 dark:bg-slate-800"
                           title="Preview sound"
                         >
                           Preview
@@ -2911,7 +2878,7 @@ export default function EduTechExOSDashboard() {
                         <button
                           type="button"
                           onClick={() => setSettings((v) => ({ ...v, soundNotifications: !v.soundNotifications }))}
-                          className={`relative h-6 w-11 rounded-full transition-colors ${settings.soundNotifications ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                          className={`relative h-6 w-11 rounded-full transition-colors ${settings.soundNotifications ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}
                         >
                           <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.soundNotifications ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
@@ -2924,23 +2891,23 @@ export default function EduTechExOSDashboard() {
                 {settingsTab === 'meeting' && (
                   <>
                     {/* Current schedule */}
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
-                      <p className="mb-3 text-xs font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                    <div className="rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
+                      <p className="mb-3 text-xs font-black uppercase tracking-[0.14em] text-[#7C859E] dark:text-[#7C859E]">
                         Scheduled meeting links
                       </p>
                       <div className="space-y-2.5">
                         {[
-                          { days: 'Mon – Thu (before 2 PM)', label: 'Main meet',      link: DEFAULT_COMPANY_MEET_LINK,     dot: 'bg-indigo-500' },
+                          { days: 'Mon – Thu (before 2 PM)', label: 'Main meet',      link: DEFAULT_COMPANY_MEET_LINK,     dot: 'bg-[rgba(62,74,137,0.08)]0' },
                           { days: 'Thursday from 2 PM',      label: 'Thursday PM',    link: THURSDAY_AFTERNOON_MEET_LINK,  dot: 'bg-amber-500'  },
                           { days: 'Friday (all day)',         label: 'Friday meet',    link: FRIDAY_MEET_LINK,              dot: 'bg-emerald-500'},
                           { days: 'Saturday & Sunday',        label: 'No meeting',     link: null,                          dot: 'bg-slate-300'  },
                         ].map(({ days, label, link, dot }) => (
-                          <div key={label} className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-2.5 dark:border-slate-700 dark:bg-slate-800/50">
+                          <div key={label} className="flex items-center justify-between gap-4 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white px-4 py-2.5 ">
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} />
                               <div className="min-w-0">
-                                <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{label}</p>
-                                <p className="text-[11px] text-slate-400">{days}</p>
+                                <p className="text-xs font-bold text-[#4A5578]">{label}</p>
+                                <p className="text-[11px] text-[#7C859E]">{days}</p>
                               </div>
                             </div>
                             {link ? (
@@ -2948,12 +2915,12 @@ export default function EduTechExOSDashboard() {
                                 href={link}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="shrink-0 rounded-lg bg-indigo-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400"
+                                className="shrink-0 rounded-lg bg-[rgba(62,74,137,0.08)] px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-green-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400"
                               >
                                 Open ↗
                               </a>
                             ) : (
-                              <span className="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:bg-slate-700 dark:text-slate-500">
+                              <span className="shrink-0 rounded-lg bg-[rgba(62,74,137,0.08)] px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-[#7C859E] dark:bg-slate-700 dark:text-[#7C859E]">
                                 Off
                               </span>
                             )}
@@ -2964,16 +2931,16 @@ export default function EduTechExOSDashboard() {
 
                     {/* Override main link */}
                     <div>
-                      <label className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+                      <label className="text-xs font-black uppercase tracking-[0.12em] text-[#7C859E] dark:text-[#7C859E]">
                         Override main meet link
                       </label>
                       <input
                         value={settings.meetLink}
                         onChange={(e) => setSettings((v) => ({ ...v, meetLink: e.target.value }))}
                         placeholder={DEFAULT_COMPANY_MEET_LINK}
-                        className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500"
+                        className="mt-2 h-11 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-bold outline-none focus:border-[#3E4A89] focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:placeholder-slate-500"
                       />
-                      <p className="mt-1.5 text-xs text-slate-400">Replaces the Mon–Thu default link. Leave blank to use the built-in link.</p>
+                      <p className="mt-1.5 text-xs text-[#7C859E]">Replaces the Mon–Thu default link. Leave blank to use the built-in link.</p>
                     </div>
                   </>
                 )}
@@ -2981,11 +2948,11 @@ export default function EduTechExOSDashboard() {
                 {settingsTab === 'security' && (
                   <>
                     {/* Info banner */}
-                    <div className="flex items-start gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-900/20">
-                      <ShieldCheck size={18} className="mt-0.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                    <div className="flex items-start gap-3 rounded-2xl border border-[rgba(62,74,137,0.15)] bg-[rgba(62,74,137,0.08)] p-4 dark:border-indigo-800 dark:bg-indigo-900/20">
+                      <ShieldCheck size={18} className="mt-0.5 shrink-0 text-green-700 dark:text-indigo-400" />
                       <div>
                         <p className="text-sm font-black text-indigo-800 dark:text-indigo-300">Change your password</p>
-                        <p className="mt-0.5 text-xs text-indigo-600 dark:text-indigo-400">
+                        <p className="mt-0.5 text-xs text-green-700 dark:text-indigo-400">
                           You must enter your current password to set a new one. Minimum 8 characters.
                           System accounts (admin, core team) must contact admin to change passwords.
                         </p>
@@ -2995,7 +2962,7 @@ export default function EduTechExOSDashboard() {
                     {/* Change password — uses a div + button, NOT a nested form (HTML forbids form-in-form) */}
                     <div className="space-y-4">
                       <div>
-                        <label className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+                        <label className="text-xs font-black uppercase tracking-[0.12em] text-[#7C859E] dark:text-[#7C859E]">
                           Current password
                         </label>
                         <input
@@ -3005,12 +2972,12 @@ export default function EduTechExOSDashboard() {
                           placeholder="Enter your current password"
                           autoComplete="current-password"
                           required
-                          className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500"
+                          className="mt-2 h-11 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-bold outline-none focus:border-[#3E4A89] focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:placeholder-slate-500"
                         />
                       </div>
 
                       <div>
-                        <label className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+                        <label className="text-xs font-black uppercase tracking-[0.12em] text-[#7C859E] dark:text-[#7C859E]">
                           New password
                         </label>
                         <input
@@ -3020,7 +2987,7 @@ export default function EduTechExOSDashboard() {
                           placeholder="Min 8 characters"
                           autoComplete="new-password"
                           required
-                          className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500"
+                          className="mt-2 h-11 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-bold outline-none focus:border-[#3E4A89] focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:placeholder-slate-500"
                         />
                         {/* Strength bar */}
                         {pwNew.length > 0 && (
@@ -3037,7 +3004,7 @@ export default function EduTechExOSDashboard() {
                                 />
                               ))}
                             </div>
-                            <p className="text-[10px] text-slate-400">
+                            <p className="text-[10px] text-[#7C859E]">
                               {pwNew.length < 8  ? 'Too short' :
                                pwNew.length < 10 ? 'Weak — try adding numbers or symbols' :
                                pwNew.length < 12 ? 'Moderate' : 'Strong ✓'}
@@ -3047,7 +3014,7 @@ export default function EduTechExOSDashboard() {
                       </div>
 
                       <div>
-                        <label className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+                        <label className="text-xs font-black uppercase tracking-[0.12em] text-[#7C859E] dark:text-[#7C859E]">
                           Confirm new password
                         </label>
                         <input
@@ -3057,10 +3024,10 @@ export default function EduTechExOSDashboard() {
                           placeholder="Repeat new password"
                           autoComplete="new-password"
                           required
-                          className={`mt-2 h-11 w-full rounded-xl border px-3 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-100 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500 ${
+                          className={`mt-2 h-11 w-full rounded-xl border px-3 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-100 dark:bg-slate-800 dark:placeholder-slate-500 ${
                             pwConfirm && pwNew !== pwConfirm
                               ? 'border-red-400 focus:border-red-400'
-                              : 'border-slate-200 focus:border-indigo-400 dark:border-slate-600'
+                              : 'border-[rgba(62,74,137,0.12)] focus:border-[#3E4A89] dark:border-slate-600'
                           }`}
                         />
                         {pwConfirm && pwNew !== pwConfirm && (
@@ -3072,10 +3039,10 @@ export default function EduTechExOSDashboard() {
                         type="button"
                         onClick={handleChangePassword}
                         disabled={pwLoading || !pwCurrent || !pwNew || pwNew !== pwConfirm}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-black text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#3E4A89] py-3 text-sm font-black text-white hover:bg-[#2A3568] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[rgba(62,74,137,0.08)]0 dark:hover:bg-[#3E4A89]"
                       >
                         {pwLoading ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
-                        {pwLoading ? 'Changing password…' : 'Change password'}
+                        {pwLoading ? 'Changing password�¦' : 'Change password'}
                       </button>
                     </div>
                   </>
@@ -3083,21 +3050,21 @@ export default function EduTechExOSDashboard() {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50/80 px-5 py-4 dark:border-slate-700 dark:bg-slate-800/50">
-                <p className="text-xs font-semibold text-slate-400">
+              <div className="flex items-center justify-between border-t border-[rgba(62,74,137,0.12)] bg-[#FAF8F5]/80 px-5 py-4 ">
+                <p className="text-xs font-semibold text-[#7C859E]">
                   {settingsTab === 'security' ? 'Password is saved separately — use the button above.' : 'Changes apply immediately after saving.'}
                 </p>
                 <div className="flex gap-3">
                   <button
                     type="button"
                     onClick={() => setSettingsOpen(false)}
-                    className="h-9 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black uppercase tracking-[0.1em] text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    className="h-9 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white px-4 text-xs font-black uppercase tracking-[0.1em] text-[#4A5578] hover:bg-[rgba(62,74,137,0.08)] dark:border-slate-600 dark:bg-slate-800 dark:text-[#9BA6D3]"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="h-9 rounded-xl bg-indigo-600 px-5 text-xs font-black uppercase tracking-[0.1em] text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                    className="h-9 rounded-xl bg-[#3E4A89] px-5 text-xs font-black uppercase tracking-[0.1em] text-white hover:bg-[#2A3568] dark:bg-[rgba(62,74,137,0.08)]0 dark:hover:bg-[#3E4A89]"
                   >
                     Save settings
                   </button>
@@ -3114,90 +3081,214 @@ export default function EduTechExOSDashboard() {
         <motion.div
           key="schedule-meet"
           {...BACKDROP}
-          className="fixed inset-0 z-[115] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm dark:bg-black/70"
+          className="fixed inset-0 z-[115] flex items-center justify-center bg-[rgba(15,18,32,0.60)] p-4 backdrop-blur-md"
           onClick={() => setScheduleMeetOpen(false)}
         >
           <motion.form
             {...CARD}
             onSubmit={scheduleMeet}
-            className="w-full max-w-xl flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
-            style={{ maxHeight: '90vh' }}
+            className="w-full max-w-2xl flex flex-col overflow-hidden rounded-3xl shadow-[0_32px_80px_rgba(25,30,47,0.45)]"
+            style={{ maxHeight: '92vh', border: '1px solid rgba(155,166,211,0.18)' }}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-950 px-5 py-4 text-white dark:border-slate-700">
-              <div>
-                <h2 className="text-lg font-black tracking-tight">Schedule meet</h2>
-                <p className="mt-1 text-sm font-semibold text-slate-300 dark:text-slate-400">
-                  Mention people from #{channel?.name}; they receive email and in-app notifications.
-                </p>
+            {/* ── Header ─────────────────────────────────────────────── */}
+            <div
+              className="relative flex items-center justify-between gap-4 px-6 py-5 overflow-hidden flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg, #191E2F 0%, #1E2538 60%, #252D4A 100%)' }}
+            >
+              <div className="absolute inset-0 pointer-events-none" style={{
+                background: 'radial-gradient(ellipse 60% 80% at 10% 50%, rgba(62,74,137,0.22) 0%, transparent 70%)',
+              }} />
+              <div className="absolute top-0 left-0 right-0 h-[2px]" style={{
+                background: 'linear-gradient(90deg, transparent, #3E4A89, #9BA6D3, #3E4A89, transparent)',
+              }} />
+
+              <div className="flex items-center gap-4 relative z-10">
+                <div
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #3E4A89, #2A3568)', boxShadow: '0 4px 16px rgba(62,74,137,0.40)' }}
+                >
+                  <Video size={20} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="text-[18px] font-black tracking-tight text-white leading-tight">Schedule Meeting</h2>
+                  <p className="text-[13px] font-medium mt-0.5" style={{ color: 'rgba(155,166,211,0.75)' }}>
+                    #{channel?.name} &middot; Invitees get email + in-app alerts
+                  </p>
+                </div>
               </div>
+
               <button
                 type="button"
                 onClick={() => setScheduleMeetOpen(false)}
-                className="rounded-lg p-2 text-slate-300 hover:bg-white/10 hover:text-white dark:text-slate-500"
-                title="Close schedule meet"
+                className="relative z-10 flex h-9 w-9 items-center justify-center rounded-xl transition-all hover:scale-110"
+                style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(196,202,224,0.80)' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.15)'; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.color = 'rgba(196,202,224,0.80)'; }}
+                title="Close"
               >
-                <X size={18} />
+                <X size={17} />
               </button>
             </div>
 
-            <div className="grid gap-4 p-5 overflow-y-auto flex-1">
-              <label className="block">
-                <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
-                  Meeting title
-                </span>
-                <input
-                  value={meetTitle}
-                  onChange={(event) => setMeetTitle(event.target.value)}
-                  className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-indigo-500"
-                  placeholder="Product review sync"
-                  autoFocus
-                />
-              </label>
+            {/* ── Body (two-column) ───────────────────────────────────── */}
+            <div className="flex flex-col sm:flex-row overflow-hidden flex-1 min-h-0" style={{ background: '#FAF8F5' }}>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
-                    Date
-                  </span>
-                  <input
-                    type="date"
-                    value={meetDate}
-                    onChange={(event) => setMeetDate(event.target.value)}
-                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:focus:border-indigo-500"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
-                    Time
-                  </span>
-                  <input
-                    type="time"
-                    value={meetTime}
-                    onChange={(event) => setMeetTime(event.target.value)}
-                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:focus:border-indigo-500"
-                  />
-                </label>
+              {/* Left � Details */}
+              <div className="flex flex-col gap-5 p-6 sm:w-[52%] sm:border-r overflow-y-auto" style={{ borderColor: 'rgba(62,74,137,0.10)' }}>
+
+                {/* Title */}
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] mb-2" style={{ color: '#7C859E' }}>Meeting Title</p>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <FileText size={15} style={{ color: '#9BA6D3' }} />
+                    </span>
+                    <input
+                      value={meetTitle}
+                      onChange={(e) => setMeetTitle(e.target.value)}
+                      className="w-full h-11 rounded-xl pl-9 pr-3 text-sm font-bold outline-none transition-all"
+                      style={{ background: '#FFFFFF', border: '1.5px solid rgba(62,74,137,0.14)', color: '#1E2636' }}
+                      onFocus={e => { e.currentTarget.style.borderColor = '#3E4A89'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(62,74,137,0.10)'; }}
+                      onBlur={e => { e.currentTarget.style.borderColor = 'rgba(62,74,137,0.14)'; e.currentTarget.style.boxShadow = 'none'; }}
+                      placeholder="e.g. Product Review Sync"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {/* Date + Time */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] mb-2" style={{ color: '#7C859E' }}>Date</p>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <CalendarDays size={14} style={{ color: '#9BA6D3' }} />
+                      </span>
+                      <input
+                        type="date"
+                        value={meetDate}
+                        onChange={(e) => setMeetDate(e.target.value)}
+                        className="w-full h-11 rounded-xl pl-9 pr-3 text-sm font-bold outline-none transition-all"
+                        style={{ background: '#FFFFFF', border: '1.5px solid rgba(62,74,137,0.14)', color: '#1E2636' }}
+                        onFocus={e => { e.currentTarget.style.borderColor = '#3E4A89'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(62,74,137,0.10)'; }}
+                        onBlur={e => { e.currentTarget.style.borderColor = 'rgba(62,74,137,0.14)'; e.currentTarget.style.boxShadow = 'none'; }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] mb-2" style={{ color: '#7C859E' }}>Time</p>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#9BA6D3' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      </span>
+                      <input
+                        type="time"
+                        value={meetTime}
+                        onChange={(e) => setMeetTime(e.target.value)}
+                        className="w-full h-11 rounded-xl pl-9 pr-3 text-sm font-bold outline-none transition-all"
+                        style={{ background: '#FFFFFF', border: '1.5px solid rgba(62,74,137,0.14)', color: '#1E2636' }}
+                        onFocus={e => { e.currentTarget.style.borderColor = '#3E4A89'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(62,74,137,0.10)'; }}
+                        onBlur={e => { e.currentTarget.style.borderColor = 'rgba(62,74,137,0.14)'; e.currentTarget.style.boxShadow = 'none'; }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live date preview */}
+                {meetDate && (
+                  <div className="rounded-2xl p-4 flex items-center gap-4"
+                    style={{ background: 'linear-gradient(135deg, rgba(62,74,137,0.07), rgba(62,74,137,0.03))', border: '1px solid rgba(62,74,137,0.12)' }}>
+                    <div
+                      className="flex flex-col items-center justify-center w-14 h-14 rounded-xl flex-shrink-0"
+                      style={{ background: 'linear-gradient(135deg, #3E4A89, #2A3568)', boxShadow: '0 4px 12px rgba(62,74,137,0.30)' }}
+                    >
+                      <span className="text-[9px] font-black uppercase tracking-widest leading-none" style={{ color: '#9BA6D3' }}>
+                        {new Date(meetDate).toLocaleDateString('en', { month: 'short' })}
+                      </span>
+                      <span className="text-[22px] font-black text-white leading-none mt-0.5">
+                        {new Date(meetDate).getDate()}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-black" style={{ color: '#1E2636' }}>
+                        {new Date(meetDate).toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })}
+                      </p>
+                      {meetTime && (
+                        <p className="text-[13px] font-semibold mt-0.5" style={{ color: '#4A5578' }}>
+                          {meetTime} &middot; {meetTitle || 'Untitled meeting'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Email toggle */}
+                <div
+                  className="flex items-start gap-3 rounded-2xl p-4 cursor-pointer select-none transition-all"
+                  style={{
+                    background: sendEmailInvite ? 'rgba(62,74,137,0.08)' : '#FFFFFF',
+                    border: sendEmailInvite ? '1.5px solid rgba(62,74,137,0.22)' : '1.5px solid rgba(62,74,137,0.10)',
+                  }}
+                  onClick={() => setSendEmailInvite(!sendEmailInvite)}
+                >
+                  <div className="flex-shrink-0 mt-0.5">
+                    <div className="w-9 h-5 rounded-full flex items-center px-0.5 transition-all duration-200"
+                      style={{ background: sendEmailInvite ? '#3E4A89' : 'rgba(62,74,137,0.15)' }}>
+                      <div className="w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200"
+                        style={{ transform: sendEmailInvite ? 'translateX(16px)' : 'translateX(0)' }} />
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Mail size={13} style={{ color: sendEmailInvite ? '#3E4A89' : '#9BA6D3' }} />
+                      <span className="text-sm font-black" style={{ color: sendEmailInvite ? '#3E4A89' : '#7C859E' }}>
+                        Send email invites
+                      </span>
+                    </div>
+                    <p className="text-[11px] mt-1" style={{ color: '#7C859E' }}>
+                      {sendEmailInvite && selectedInvitees.length > 0
+                        ? `Will email ${selectedInvitees.length} person${selectedInvitees.length > 1 ? 's' : ''}`
+                        : sendEmailInvite ? 'Select people on the right to invite'
+                        : 'In-app notification only'}
+                    </p>
+                    {sendEmailInvite && selectedInvitees.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {selectedInvitees.map((inv) => (
+                          <span key={inv.id} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                            style={{ background: 'rgba(62,74,137,0.12)', color: '#3E4A89' }}>
+                            <Mail size={9} />{inv.email}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
-                    Mention people
+              {/* Right � People selector */}
+              <div className="flex flex-col sm:w-[48%] overflow-hidden" style={{ background: '#F2F0EC' }}>
+                <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
+                  <span className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: '#7C859E' }}>
+                    Invite People &middot; {meetInviteeIds.length} selected
                   </span>
                   {availableInvitees.length > 0 && (
                     <button
                       type="button"
-                      onClick={() =>
-                        setMeetInviteeIds(availableInvitees.map((member) => member.id))
-                      }
-                      className="text-[10px] font-black uppercase tracking-[0.12em] text-indigo-600 hover:underline dark:text-indigo-400"
+                      onClick={() => setMeetInviteeIds(
+                        meetInviteeIds.length === availableInvitees.length
+                          ? [] : availableInvitees.map((m) => m.id)
+                      )}
+                      className="text-[10px] font-black uppercase tracking-[0.10em] transition-colors hover:underline"
+                      style={{ color: '#3E4A89' }}
                     >
-                      Select channel
+                      {meetInviteeIds.length === availableInvitees.length ? 'Deselect all' : 'Select all'}
                     </button>
                   )}
                 </div>
-                <div className="max-h-52 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+
+                <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2"
+                  style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(62,74,137,0.18) transparent' }}>
                   {availableInvitees.length ? (
                     availableInvitees.map((member) => {
                       const checked = meetInviteeIds.includes(member.id);
@@ -3206,128 +3297,158 @@ export default function EduTechExOSDashboard() {
                           key={`invite-${member.id}`}
                           type="button"
                           onClick={() => toggleInvitee(member.id)}
-                          className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${
-                            checked
-                              ? 'border-indigo-200 bg-white text-indigo-700 shadow-sm dark:border-indigo-600 dark:bg-slate-800 dark:text-indigo-300'
-                              : 'border-transparent bg-white/60 text-slate-700 hover:bg-white dark:bg-slate-800/30 dark:text-slate-300 dark:hover:bg-slate-800'
-                          }`}
+                          className="flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-all duration-150"
+                          style={{
+                            background: checked ? '#FFFFFF' : 'rgba(255,255,255,0.55)',
+                            border: checked ? '1.5px solid rgba(62,74,137,0.20)' : '1.5px solid transparent',
+                            boxShadow: checked ? '0 2px 12px rgba(62,74,137,0.10)' : 'none',
+                          }}
+                          onMouseEnter={e => { if (!checked) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.85)'; }}
+                          onMouseLeave={e => { if (!checked) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.55)'; }}
                         >
-                          <span
-                            className="flex h-9 w-9 items-center justify-center rounded-lg text-xs font-black text-white"
-                            style={{ backgroundColor: member.color }}
-                          >
-                            {member.initials}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-black">
-                              @{member.name}
+                          {/* Avatar with checkmark badge */}
+                          <div className="relative flex-shrink-0">
+                            <span
+                              className="flex h-10 w-10 items-center justify-center rounded-xl text-xs font-black text-white shadow-sm"
+                              style={{ backgroundColor: member.color }}
+                            >
+                              {member.initials}
                             </span>
-                            <span className="block truncate text-xs font-semibold text-slate-500 dark:text-slate-400">
-                              {member.email}
-                            </span>
-                          </span>
-                          <span
-                            className={`flex h-6 w-6 items-center justify-center rounded-lg border ${
-                              checked
-                                ? 'border-indigo-600 bg-indigo-600 text-white dark:border-indigo-500 dark:bg-indigo-500'
-                                : 'border-slate-200 bg-white text-transparent dark:border-slate-600 dark:bg-slate-800'
-                            }`}
+                            {checked && (
+                              <span
+                                className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full"
+                                style={{ background: '#3E4A89', border: '2px solid #F2F0EC' }}
+                              >
+                                <svg width="9" height="7" viewBox="0 0 12 10" fill="none">
+                                  <path d="M1 5l3.5 3.5L11 1" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Name + email */}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[14px] font-black leading-tight" style={{ color: checked ? '#1E2636' : '#4A5578' }}>
+                              {member.name}
+                            </p>
+                            <p className="truncate text-[12px] mt-0.5" style={{ color: '#7C859E' }}>
+                              {member.role}
+                            </p>
+                          </div>
+
+                          {/* Checkbox */}
+                          <div
+                            className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-md transition-all"
+                            style={{
+                              background: checked ? '#3E4A89' : 'transparent',
+                              border: checked ? '1.5px solid #3E4A89' : '1.5px solid rgba(62,74,137,0.20)',
+                            }}
                           >
-                            <UserCheck size={14} strokeWidth={2.5} />
-                          </span>
+                            {checked && (
+                              <svg width="10" height="8" viewBox="0 0 12 10" fill="none">
+                                <path d="M1 5l3.5 3.5L11 1" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </div>
                         </button>
                       );
                     })
                   ) : (
-                    <div className="rounded-xl border border-dashed border-slate-200 bg-white p-5 text-center text-sm font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
-                      This channel has no other people to mention yet.
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div
+                        className="flex h-14 w-14 items-center justify-center rounded-2xl mb-4"
+                        style={{ background: 'rgba(62,74,137,0.08)', border: '1px dashed rgba(62,74,137,0.20)' }}
+                      >
+                        <Users size={22} style={{ color: '#9BA6D3' }} />
+                      </div>
+                      <p className="text-sm font-bold" style={{ color: '#4A5578' }}>No teammates yet</p>
+                      <p className="text-xs mt-1" style={{ color: '#7C859E' }}>Add members to this channel first.</p>
                     </div>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Email invite toggle + recipient preview */}
-            <div className="px-5 pb-4 flex-shrink-0">
-              <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all ${sendEmailInvite ? 'border-indigo-200 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-900/20' : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/40'}`}>
-                <div className="mt-0.5 flex-shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={sendEmailInvite}
-                    onChange={(e) => setSendEmailInvite(e.target.checked)}
-                    className="h-4 w-4 accent-indigo-600"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <Mail size={14} className={sendEmailInvite ? 'text-indigo-600' : 'text-slate-400'} />
-                    <span className={`text-sm font-black ${sendEmailInvite ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-500 dark:text-slate-400'}`}>
-                      Send email invites to assigned members
-                    </span>
+            {/* ── Footer ─────────────────────────────────────────────── */}
+            <div
+              className="flex items-center justify-between gap-4 px-6 py-4 flex-shrink-0"
+              style={{ background: '#FAF8F5', borderTop: '1px solid rgba(62,74,137,0.10)' }}
+            >
+              {/* Invited avatars */}
+              <div className="flex items-center gap-2.5">
+                {meetInviteeIds.length > 0 && (
+                  <div className="flex -space-x-2">
+                    {availableInvitees.filter((m) => meetInviteeIds.includes(m.id)).slice(0, 4).map((m) => (
+                      <span
+                        key={m.id}
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black text-white"
+                        style={{ backgroundColor: m.color, border: '2px solid #FAF8F5' }}
+                      >
+                        {m.initials}
+                      </span>
+                    ))}
+                    {meetInviteeIds.length > 4 && (
+                      <span
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black"
+                        style={{ background: 'rgba(62,74,137,0.15)', color: '#3E4A89', border: '2px solid #FAF8F5' }}
+                      >
+                        +{meetInviteeIds.length - 4}
+                      </span>
+                    )}
                   </div>
-                  {sendEmailInvite && selectedInvitees.length > 0 ? (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {selectedInvitees.map((inv) => (
-                        <span key={inv.id} className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
-                          <Mail size={10} />
-                          {inv.email}
-                        </span>
-                      ))}
-                    </div>
-                  ) : sendEmailInvite ? (
-                    <p className="mt-1 text-xs text-slate-400">Select at least one person above to send invites.</p>
-                  ) : (
-                    <p className="mt-1 text-xs text-slate-400">No email will be sent — in-app notification only.</p>
-                  )}
-                </div>
-              </label>
-            </div>
+                )}
+                <span className="text-[13px] font-semibold" style={{ color: '#7C859E' }}>
+                  {meetInviteeIds.length > 0
+                    ? `${meetInviteeIds.length} person${meetInviteeIds.length > 1 ? 's' : ''} invited`
+                    : 'No invitees selected'}
+                </span>
+              </div>
 
-            <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-800/50">
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                {selectedInvitees.length} person{selectedInvitees.length === 1 ? '' : 's'} selected
-                {sendEmailInvite && selectedInvitees.length > 0 && <span className="ml-1 text-indigo-600 dark:text-indigo-400">· email invite will be sent</span>}
-              </p>
               <div className="flex gap-3">
                 <button
                   type="button"
                   onClick={() => setScheduleMeetOpen(false)}
-                  className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black uppercase tracking-[0.1em] text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  className="h-10 rounded-xl px-5 text-xs font-black uppercase tracking-[0.10em] transition-all hover:scale-[1.02]"
+                  style={{ border: '1.5px solid rgba(62,74,137,0.15)', background: 'transparent', color: '#4A5578' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(62,74,137,0.06)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="h-10 rounded-xl bg-indigo-600 px-4 text-xs font-black uppercase tracking-[0.1em] text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                  className="h-10 rounded-xl px-6 text-xs font-black uppercase tracking-[0.10em] text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  style={{ background: 'linear-gradient(135deg, #3E4A89, #2A3568)', boxShadow: '0 4px 16px rgba(62,74,137,0.35)' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(62,74,137,0.50)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(62,74,137,0.35)'; }}
                 >
-                  Schedule meet
+                  ✦ Schedule Meet
                 </button>
               </div>
             </div>
           </motion.form>
         </motion.div>
-      )}
-      </AnimatePresence>
+      )}      </AnimatePresence>
 
       {/* Recording overlay removed — controls are inline in the composer waveform bar */}
 
       <AnimatePresence>
       {recordedPreview && (
-        <motion.div key="preview" {...BACKDROP} className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm dark:bg-black/70">
-          <motion.div {...CARD} className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+        <motion.div key="preview" {...BACKDROP} className="fixed inset-0 z-[120] flex items-center justify-center bg-[rgba(25,30,47,0.45)] p-4 backdrop-blur-sm dark:bg-black/70">
+          <motion.div {...CARD} className="w-full max-w-lg rounded-3xl border border-[rgba(62,74,137,0.12)] bg-white p-5 shadow-2xl  dark:bg-[#191E2F]">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-lg font-black text-slate-950 dark:text-slate-100">
+                <h2 className="text-lg font-black text-[#1E2636]">
                   Preview {recordedPreview.kind === 'video' ? 'screen recording' : 'voice note'}
                 </h2>
-                <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-sm font-semibold text-[#7C859E] dark:text-[#7C859E]">
                   Review it before sending to #{channel?.name}.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={discardRecordedPreview}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                className="rounded-lg p-2 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800 dark:hover:text-slate-200"
                 title="Discard recording"
               >
                 <X size={18} />
@@ -3341,7 +3462,7 @@ export default function EduTechExOSDashboard() {
                 controls
               />
             ) : (
-              <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+              <div className="mt-5 rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
                 <audio src={recordedPreview.url} className="w-full" controls />
               </div>
             )}
@@ -3351,7 +3472,7 @@ export default function EduTechExOSDashboard() {
                 type="button"
                 onClick={discardRecordedPreview}
                 disabled={recordingSending}
-                className="h-11 flex-1 rounded-xl border border-slate-200 bg-white text-sm font-black text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                className="h-11 flex-1 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white text-sm font-black text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)] disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-slate-800 dark:text-[#9BA6D3]"
               >
                 Discard
               </button>
@@ -3359,7 +3480,7 @@ export default function EduTechExOSDashboard() {
                 type="button"
                 onClick={sendRecordedPreview}
                 disabled={recordingSending}
-                className="h-11 flex-1 rounded-xl bg-indigo-600 text-sm font-black text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                className="h-11 flex-1 rounded-xl bg-[#3E4A89] text-sm font-black text-white hover:bg-[#2A3568] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[rgba(62,74,137,0.08)]0 dark:hover:bg-[#3E4A89]"
               >
                 {recordingSending ? 'Sending...' : 'Send'}
               </button>
@@ -3374,23 +3495,23 @@ export default function EduTechExOSDashboard() {
         <motion.div
           key="members"
           {...BACKDROP}
-          className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-[rgba(25,30,47,0.35)] p-4 backdrop-blur-sm"
           onClick={() => setMembersOpen(false)}
         >
           <motion.div
             {...CARD}
-            className="max-h-[80vh] w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            className="max-h-[80vh] w-full max-w-lg overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div className="flex items-center justify-between border-b border-[rgba(62,74,137,0.12)] px-5 py-4">
               <div>
-                <h2 className="text-lg font-black text-slate-950">Channel members</h2>
-                <p className="text-sm font-semibold text-slate-500">#{channel?.name}</p>
+                <h2 className="text-lg font-black text-[#1E2636]">Channel members</h2>
+                <p className="text-sm font-semibold text-[#7C859E]">#{channel?.name}</p>
               </div>
               <button
                 title="Close members"
                 onClick={() => setMembersOpen(false)}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                className="rounded-lg p-2 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]"
               >
                 <X size={18} />
               </button>
@@ -3404,7 +3525,7 @@ export default function EduTechExOSDashboard() {
                       setActiveChannel(member.id);
                       setMembersOpen(false);
                     }}
-                    className="flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-slate-50"
+                    className="flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-[rgba(62,74,137,0.06)]"
                   >
                     <span
                       className="flex h-10 w-10 items-center justify-center rounded-full text-xs font-black text-white"
@@ -3413,20 +3534,20 @@ export default function EduTechExOSDashboard() {
                       {member.initials}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-black text-slate-900">
+                      <span className="block truncate text-sm font-black text-[#1E2636]">
                         {member.name}
                       </span>
-                      <span className="block truncate text-xs font-semibold text-slate-500">
+                      <span className="block truncate text-xs font-semibold text-[#7C859E]">
                         {member.email}
                       </span>
                     </span>
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase text-slate-500">
+                    <span className="rounded-full bg-[rgba(62,74,137,0.08)] px-2 py-1 text-[10px] font-black uppercase text-[#7C859E]">
                       {member.status}
                     </span>
                   </button>
                 ))
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm font-semibold text-slate-500">
+                <div className="rounded-xl border border-dashed border-[rgba(62,74,137,0.12)] p-6 text-center text-sm font-semibold text-[#7C859E]">
                   No users have been granted this channel yet.
                 </div>
               )}
@@ -3441,7 +3562,7 @@ export default function EduTechExOSDashboard() {
       {/* Global Search Panel */}
       <AnimatePresence>
       {globalSearchOpen && (
-        <motion.div key="search" {...BACKDROP} className="fixed inset-0 z-[200] flex items-start justify-center bg-slate-950/50 pt-20 backdrop-blur-sm" onClick={() => setGlobalSearchOpen(false)}>
+        <motion.div key="search" {...BACKDROP} className="fixed inset-0 z-[200] flex items-start justify-center bg-[rgba(25,30,47,0.50)] pt-20 backdrop-blur-sm" onClick={() => setGlobalSearchOpen(false)}>
           <motion.div
             initial={{ opacity: 0, y: -20, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -3463,8 +3584,8 @@ export default function EduTechExOSDashboard() {
       {/* Wiki / Knowledge Base Panel */}
       <AnimatePresence>
       {wikiOpen && (
-        <motion.div key="wiki" {...BACKDROP} className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-          <motion.div {...CARD} className="h-full w-full max-w-4xl">
+        <motion.div key="wiki" {...BACKDROP} className="fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm" onClick={() => setWikiOpen(false)}>
+          <motion.div {...CARD} className="h-full w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
             <WikiPanel
               onClose={() => { setWikiOpen(false); scrollToBottom(); }}
               activeChannel={`personal-${currentUser?.email ?? 'guest'}`}
@@ -3477,8 +3598,8 @@ export default function EduTechExOSDashboard() {
       {/* Kanban Task Board */}
       <AnimatePresence>
       {kanbanOpen && (
-        <motion.div key="kanban" {...BACKDROP} className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-          <motion.div {...CARD} className="h-full w-full max-w-5xl">
+        <motion.div key="kanban" {...BACKDROP} className="fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm" onClick={() => setKanbanOpen(false)}>
+          <motion.div {...CARD} className="h-full w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
             <KanbanBoard onClose={() => { setKanbanOpen(false); scrollToBottom(); }} />
           </motion.div>
         </motion.div>
@@ -3488,8 +3609,8 @@ export default function EduTechExOSDashboard() {
       {/* Analytics Panel (Admin only) */}
       <AnimatePresence>
       {analyticsOpen && isAdmin && (
-        <motion.div key="analytics" {...BACKDROP} className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-          <motion.div {...CARD} className="w-full max-w-4xl max-h-[90vh] overflow-auto">
+        <motion.div key="analytics" {...BACKDROP} className="fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm" onClick={() => setAnalyticsOpen(false)}>
+          <motion.div {...CARD} className="w-full max-w-4xl max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
             <AnalyticsPanel onClose={() => { setAnalyticsOpen(false); scrollToBottom(); }} />
           </motion.div>
         </motion.div>
@@ -3499,8 +3620,8 @@ export default function EduTechExOSDashboard() {
       {/* Bookmarks Panel */}
       <AnimatePresence>
       {bookmarksPanelOpen && (
-        <motion.div key="bookmarks" {...BACKDROP} className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-          <motion.div {...CARD} className="w-full max-w-xl max-h-[85vh] overflow-auto">
+        <motion.div key="bookmarks" {...BACKDROP} className="fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm" onClick={() => setBookmarksPanelOpen(false)}>
+          <motion.div {...CARD} className="w-full max-w-xl max-h-[85vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
             <BookmarksPanel onClose={() => { setBookmarksPanelOpen(false); scrollToBottom(); }} />
           </motion.div>
         </motion.div>
@@ -3512,19 +3633,19 @@ export default function EduTechExOSDashboard() {
         <motion.div
           key="new-channel"
           {...BACKDROP}
-          className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-[rgba(25,30,47,0.35)] p-4 backdrop-blur-sm"
           onClick={() => setNewChannelOpen(false)}
         >
           <motion.form
             {...CARD}
             onSubmit={createChannel}
-            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
+            className="w-full max-w-md rounded-2xl border border-[rgba(62,74,137,0.12)] bg-white p-5 shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-black text-slate-950">New channel</h2>
-                <p className="text-sm font-semibold text-slate-500">
+                <h2 className="text-lg font-black text-[#1E2636]">New channel</h2>
+                <p className="text-sm font-semibold text-[#7C859E]">
                   Create a workspace discussion lane.
                 </p>
               </div>
@@ -3532,33 +3653,33 @@ export default function EduTechExOSDashboard() {
                 title="Close new channel"
                 type="button"
                 onClick={() => setNewChannelOpen(false)}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                className="rounded-lg p-2 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]"
               >
                 <X size={18} />
               </button>
             </div>
-            <label className="block text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+            <label className="block text-xs font-black uppercase tracking-[0.12em] text-[#7C859E]">
               Name
             </label>
             <input
               value={newChannelName}
               onChange={(event) => setNewChannelName(event.target.value)}
-              className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
+              className="mt-2 h-11 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-bold outline-none focus:border-[#3E4A89] focus:ring-4 focus:ring-indigo-100"
               placeholder="for example, school-pilots"
               autoFocus
             />
-            <label className="mt-4 block text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+            <label className="mt-4 block text-xs font-black uppercase tracking-[0.12em] text-[#7C859E]">
               Description
             </label>
             <input
               value={newChannelDescription}
               onChange={(event) => setNewChannelDescription(event.target.value)}
-              className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
+              className="mt-2 h-11 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-bold outline-none focus:border-[#3E4A89] focus:ring-4 focus:ring-indigo-100"
               placeholder="What this channel is for"
             />
             <button
               type="submit"
-              className="mt-5 h-11 w-full rounded-xl bg-indigo-600 text-sm font-black text-white hover:bg-indigo-700"
+              className="mt-5 h-11 w-full rounded-xl bg-[#3E4A89] text-sm font-black text-white hover:bg-[#2A3568]"
             >
               Create channel
             </button>
@@ -3569,3 +3690,7 @@ export default function EduTechExOSDashboard() {
     </div>
   );
 }
+
+
+
+

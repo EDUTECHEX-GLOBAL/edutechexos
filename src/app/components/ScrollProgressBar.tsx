@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React from 'react';
 import { useScrollProgress } from '@/hooks/useScrollProgress';
 
@@ -10,12 +10,12 @@ export default function ScrollProgressBar() {
       <div
         className="h-full w-full transition-transform duration-100 ease-linear"
         style={{
-          background: 'linear-gradient(90deg, #2d6a4f, #52b788, #c4b5fd, #7c3aed, #1b4332)',
+          background: 'linear-gradient(90deg, #3E4A89, #9BA6D3, #c4b5fd, #7c3aed, #2A3568)',
           backgroundSize: '200% 100%',
           animation: 'gradient-shift 3s ease infinite',
           transform: `scaleX(${progress})`,
           transformOrigin: 'left center',
-          boxShadow: '0 0 12px rgba(45,106,79,0.4), 0 0 24px rgba(124,58,237,0.2)',
+          boxShadow: '0 0 12px rgba(62,74,137,0.45), 0 0 24px rgba(124,58,237,0.2)',
         }}
       />
     </div>

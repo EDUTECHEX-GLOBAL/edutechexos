@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useMemo } from 'react';
 import { X, BarChart2, MessageSquare, Hash, Users, TrendingUp } from 'lucide-react';
@@ -48,7 +48,7 @@ function getInitials(name: string): string {
 }
 
 const MEMBER_COLORS = [
-  '#4f46e5',
+  '#3E4A89',
   '#0891b2',
   '#059669',
   '#dc2626',
@@ -76,11 +76,11 @@ interface StatCardProps {
 function StatCard({ value, label, borderColor, icon, sub }: StatCardProps) {
   return (
     <div
-      className={`flex flex-col gap-1 rounded-xl border border-slate-200 bg-white p-4 shadow-sm`}
+      className={`flex flex-col gap-1 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white p-4 shadow-sm`}
       style={{ borderLeftWidth: 4, borderLeftColor: borderColor }}
     >
       <div className="flex items-center justify-between">
-        <span className="text-3xl font-black text-slate-900">{value}</span>
+        <span className="text-3xl font-black text-[#1E2636]">{value}</span>
         <div
           className="flex h-10 w-10 items-center justify-center rounded-xl"
           style={{ backgroundColor: `${borderColor}18` }}
@@ -88,8 +88,8 @@ function StatCard({ value, label, borderColor, icon, sub }: StatCardProps) {
           {icon}
         </div>
       </div>
-      <p className="text-xs font-semibold text-slate-500">{label}</p>
-      {sub && <p className="text-[10px] text-slate-400">{sub}</p>}
+      <p className="text-xs font-semibold text-[#7C859E]">{label}</p>
+      {sub && <p className="text-[10px] text-[#7C859E]">{sub}</p>}
     </div>
   );
 }
@@ -171,24 +171,24 @@ export default function AnalyticsPanel({ onClose }: AnalyticsPanelProps) {
       : `${todayDelta} vs yesterday`;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-none bg-slate-50">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-none bg-[#FAF8F5]">
       {/* Header */}
       <div
         className="flex h-14 shrink-0 items-center justify-between px-4"
         style={{
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+          background: 'linear-gradient(135deg, #191E2F 0%, #1E2538 100%)',
         }}
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-500/20">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-green-500/25 bg-[#1E2538]">
             <BarChart2
               size={16}
-              className="text-indigo-300"
+              className="text-[#C4CAE0]"
               strokeWidth={2.5}
             />
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#7C859E]">
               Team Activity
             </p>
             <p className="text-sm font-black leading-none text-white">
@@ -199,7 +199,7 @@ export default function AnalyticsPanel({ onClose }: AnalyticsPanelProps) {
         <button
           type="button"
           onClick={onClose}
-          className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-xl text-[#7C859E] transition-colors hover:bg-white/10 hover:text-white"
           title="Close"
         >
           <X size={16} strokeWidth={2.5} />
@@ -213,7 +213,7 @@ export default function AnalyticsPanel({ onClose }: AnalyticsPanelProps) {
           <StatCard
             value={totalMessages}
             label="Total Messages"
-            borderColor="#4f46e5"
+            borderColor="#3E4A89"
             icon={
               <MessageSquare
                 size={20}
@@ -254,12 +254,12 @@ export default function AnalyticsPanel({ onClose }: AnalyticsPanelProps) {
         </div>
 
         {/* Messages per channel */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-4 text-xs font-black uppercase tracking-widest text-slate-500">
+        <div className="rounded-2xl border border-[rgba(62,74,137,0.12)] bg-white p-5 shadow-sm">
+          <h3 className="mb-4 text-sm font-black uppercase tracking-widest text-[#7C859E]">
             Messages per Channel
           </h3>
           {channelStats.length === 0 ? (
-            <p className="text-sm text-slate-400">No channel activity yet.</p>
+            <p className="text-sm text-[#7C859E]">No channel activity yet.</p>
           ) : (
             <div className="space-y-3">
               {channelStats.map((ch) => {
@@ -270,25 +270,25 @@ export default function AnalyticsPanel({ onClose }: AnalyticsPanelProps) {
                       <div className="flex items-center gap-1.5 min-w-0">
                         <Hash
                           size={11}
-                          className="shrink-0 text-indigo-400"
+                          className="shrink-0 text-[#7C859E]"
                           strokeWidth={2.5}
                         />
-                        <span className="truncate text-xs font-bold text-slate-800">
+                        <span className="truncate text-sm font-bold text-[#1E2636]">
                           {ch.name}
                         </span>
                         {ch.description && (
-                          <span className="hidden truncate text-[10px] text-slate-400 sm:inline">
+                          <span className="hidden truncate text-[10px] text-[#7C859E] sm:inline">
                             · {ch.description}
                           </span>
                         )}
                       </div>
-                      <span className="shrink-0 text-[11px] font-black text-indigo-600">
+                      <span className="shrink-0 text-[11px] font-black text-[#3E4A89]">
                         {ch.count}
                       </span>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-[rgba(62,74,137,0.08)]">
                       <div
-                        className="h-full rounded-full bg-indigo-500 transition-all"
+                        className="h-full rounded-full bg-[rgba(62,74,137,0.08)]0 transition-all"
                         style={{ width: `${widthPct}%` }}
                       />
                     </div>
@@ -300,12 +300,12 @@ export default function AnalyticsPanel({ onClose }: AnalyticsPanelProps) {
         </div>
 
         {/* Top senders */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-4 text-xs font-black uppercase tracking-widest text-slate-500">
+        <div className="rounded-2xl border border-[rgba(62,74,137,0.12)] bg-white p-5 shadow-sm">
+          <h3 className="mb-4 text-sm font-black uppercase tracking-widest text-[#7C859E]">
             Top 5 Most Active Senders
           </h3>
           {senderStats.length === 0 ? (
-            <p className="text-sm text-slate-400">No messages yet.</p>
+            <p className="text-sm text-[#7C859E]">No messages yet.</p>
           ) : (
             <div className="space-y-3">
               {senderStats.map((s, idx) => {
@@ -321,12 +321,12 @@ export default function AnalyticsPanel({ onClose }: AnalyticsPanelProps) {
                 return (
                   <div key={s.sender} className="flex items-center gap-3">
                     {/* Rank */}
-                    <span className="w-4 shrink-0 text-center text-[10px] font-black text-slate-400">
+                    <span className="w-4 shrink-0 text-center text-[11px] font-black text-[#7C859E]">
                       {idx + 1}
                     </span>
                     {/* Avatar */}
                     <span
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-black text-white"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-black text-white"
                       style={{ backgroundColor: color }}
                     >
                       {initials}
@@ -334,17 +334,17 @@ export default function AnalyticsPanel({ onClose }: AnalyticsPanelProps) {
                     {/* Bar + name */}
                     <div className="flex-1 min-w-0">
                       <div className="mb-1 flex items-center justify-between">
-                        <span className="truncate text-xs font-bold text-slate-800">
+                        <span className="truncate text-sm font-bold text-[#1E2636]">
                           {s.sender}
                         </span>
                         <span className="ml-2 shrink-0 text-[11px] font-black text-emerald-600">
                           {s.count}{' '}
-                          <span className="text-slate-400 font-semibold">
+                          <span className="text-[#7C859E] font-semibold">
                             ({pct}%)
                           </span>
                         </span>
                       </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-[rgba(62,74,137,0.08)]">
                         <div
                           className="h-full rounded-full transition-all"
                           style={{
@@ -362,8 +362,8 @@ export default function AnalyticsPanel({ onClose }: AnalyticsPanelProps) {
         </div>
 
         {/* Today vs Yesterday */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-4 text-xs font-black uppercase tracking-widest text-slate-500">
+        <div className="rounded-2xl border border-[rgba(62,74,137,0.12)] bg-white p-5 shadow-sm">
+          <h3 className="mb-4 text-sm font-black uppercase tracking-widest text-[#7C859E]">
             Today vs Yesterday
           </h3>
           <div className="grid grid-cols-2 gap-4">
@@ -387,7 +387,7 @@ export default function AnalyticsPanel({ onClose }: AnalyticsPanelProps) {
                 >
                   {item.count}
                 </span>
-                <span className="mt-1 text-xs font-semibold text-slate-500">
+                <span className="mt-1 text-sm font-semibold text-[#7C859E]">
                   {item.label}
                 </span>
               </div>
@@ -395,7 +395,7 @@ export default function AnalyticsPanel({ onClose }: AnalyticsPanelProps) {
           </div>
           {todayDelta !== 0 && (
             <p
-              className={`mt-3 text-center text-xs font-semibold ${
+              className={`mt-3 text-center text-sm font-semibold ${
                 todayDelta > 0 ? 'text-emerald-600' : 'text-red-500'
               }`}
             >
@@ -407,3 +407,7 @@ export default function AnalyticsPanel({ onClose }: AnalyticsPanelProps) {
     </div>
   );
 }
+
+
+
+

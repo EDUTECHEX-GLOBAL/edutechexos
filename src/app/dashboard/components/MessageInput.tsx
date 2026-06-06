@@ -1,9 +1,11 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Paperclip, Smile, Mic, Video, X, Loader2, BarChart2, Code2, Zap } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
-import { uploadLocalFile } from '@/app/actions/dbActions';
+import { smartUpload, uploadToFirebase } from '@/lib/uploadToFirebase';
+import { blobToDataUrl } from '@/lib/uploadToR2';
+import { getSocket } from '@/lib/socket';
 import { toast } from 'sonner';
 
 interface MessageInputProps {
@@ -15,16 +17,16 @@ interface MessageInputProps {
 type RecordedPreview = { kind: 'audio' | 'video'; blob: Blob; url: string; mimeType: string };
 
 const EMOJI_LIST = [
-  '😀','😁','😂','🤣','😃','😄','😅','😆','😉','😊','😋','😎','😍','🥰','😘',
-  '😗','😙','😚','🙂','🤗','🤩','🤔','🤨','😐','😑','😶','🙄','😏','😣','😥',
-  '😮','🤐','😯','😪','😫','😴','😌','😛','😜','😝','🤤','😒','😓','😔','😕',
-  '🙃','🤑','😲','☹️','🙁','😖','😞','😟','😤','😢','😭','😦','😧','😨','😩',
+  '😀','😁','😂','🤣','😃','😄','😅','😆','😉','😊','😋','😎','😍','🥰',
+  '😗','😙','😚','🙂','🤗','🤩','🤔','🤨','😐','😑','😶','🙄','😏','😣',
+  '😮','🤐','😯','😪','😫','😴','😌','😛','😜','😝','🤤','😒','😓','😔',
+  '🙃','🤒','😲','☹️','🙏','😖','😞','😟','😤','😢','😭','😦','😧','😨',
   '🤯','😬','😰','😱','🥵','🥶','😳','🤪','😵','😡','😠','🤬',
-  '👍','👎','👊','✊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✌️','🤞',
-  '❤️','🧡','💛','💚','💙','💜','🖤','🤍','💕','💞','💓','💗','💖','💔',
+  '👍','👎','👊','✊','🤛','🤜','👏','🙌','👋','🤲','🤝','🙏','✌️','🤞',
+  '❤️','🧡','💛','💚','💙','💜','🖤','🤍','💕','💞','💓','💗','💖','💘',
   '🔥','⭐','🌟','✨','💫','🎉','🎊','🎈','🎁','🏆','✅','❌','❓','❗','💯',
   '🚀','👀','🎯','💡',
-];
+]
 
 const AI_SUGGESTIONS = [
   'Can you summarize the recent discussion?',
@@ -32,14 +34,6 @@ const AI_SUGGESTIONS = [
   'Give me a status update on this project.',
 ];
 
-function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
 
 export default function MessageInput({ channelId, channelName, replyToId }: MessageInputProps) {
   const [message, setMessage] = useState('');
@@ -86,7 +80,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
         const { user } = JSON.parse(auth);
         if (user) {
           const initials = user.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) ?? 'Y';
-          setCurrentUser({ ...user, initials, color: '#6366f1' });
+          setCurrentUser({ ...user, initials, color: '#3E4A89' });
         }
       }
     } catch { /* */ }
@@ -131,13 +125,15 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
     }
   }, [message]);
 
-  // Typing indicator
+  // Typing indicator â€” updates local state AND broadcasts via socket
   const handleTyping = useCallback(() => {
     if (!currentUser?.name) return;
     setTyping(channelId, currentUser.name, true);
+    getSocket().emit('typing_start', { channelId, userName: currentUser.name });
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     typingTimerRef.current = setTimeout(() => {
       setTyping(channelId, currentUser.name, false);
+      getSocket().emit('typing_stop', { channelId, userName: currentUser.name });
     }, 2000);
   }, [channelId, currentUser?.name, setTyping]);
 
@@ -159,13 +155,16 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
     if (!message.trim()) return;
     setIsLoading(true);
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-    if (currentUser?.name) setTyping(channelId, currentUser.name, false);
+    if (currentUser?.name) {
+      setTyping(channelId, currentUser.name, false);
+      getSocket().emit('typing_stop', { channelId, userName: currentUser.name });
+    }
     try {
       addMessage(channelId, {
         id: `msg-${Date.now()}`,
         sender: currentUser?.name ?? 'You',
         initials: currentUser?.initials ?? 'Y',
-        color: currentUser?.color ?? '#6366f1',
+        color: currentUser?.color ?? '#3E4A89',
         timestamp: new Date().toISOString(),
         text: message,
         ...(replyToId ? { parentId: replyToId } : {}),
@@ -239,7 +238,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
           await sendMedia(kind, blob, mimeType);
         } else {
           setRecordedPreview((e) => { if (e) URL.revokeObjectURL(e.url); return { kind, blob, mimeType, url: URL.createObjectURL(blob) }; });
-          toast.success(`Voice note ready — review before sending`);
+          toast.success(`Voice note ready â€” review before sending`);
         }
       };
       mediaRecorderRef.current = recorder;
@@ -251,7 +250,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
       if (liveVideoRef.current) liveVideoRef.current.srcObject = null;
       mediaStreamRef.current?.getTracks().forEach((t) => t.stop()); mediaStreamRef.current = null;
       const isDenied = err instanceof DOMException && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError');
-      toast.error(isDenied ? `Browser blocked ${kind} access — allow permissions.` : `Could not start ${kind} recording.`);
+      toast.error(isDenied ? `Browser blocked ${kind} access â€” allow permissions.` : `Could not start ${kind} recording.`);
     }
   }
 
@@ -269,20 +268,16 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
   async function sendMedia(kind: 'audio' | 'video', blob: Blob, mimeType: string) {
     setRecordingSending(true);
     try {
-      let mediaUrl: string | null = null;
-      try {
-        const file = new File([blob], `${kind}-${Date.now()}.webm`, { type: mimeType });
-        const fd = new FormData(); fd.append('file', file);
-        const res = await uploadLocalFile(fd);
-        if (res.success && res.url) mediaUrl = res.url;
-      } catch { /* fallback */ }
-      if (!mediaUrl) mediaUrl = await blobToDataUrl(blob);
+      // Upload to Firebase Storage; falls back to base64 if not configured
+      const file = new File([blob], `${kind}-${Date.now()}.webm`, { type: mimeType });
+      const folder = kind === 'video' ? 'video' : 'audio';
+      const mediaUrl = await smartUpload(file, { folder });
       const targetId = (channels.find((c) => c.name.toLowerCase() === 'general')?.id) || channelId;
       addMessage(targetId, {
         id: `msg-${kind}-${Date.now()}`,
         sender: currentUser?.name ?? 'You',
         initials: currentUser?.initials ?? 'Y',
-        color: currentUser?.color ?? '#6366f1',
+        color: currentUser?.color ?? '#3E4A89',
         timestamp: new Date().toISOString(),
         text: kind === 'video' ? 'Screen recording' : 'Voice note',
         ...(kind === 'video' ? { videoUrl: mediaUrl } : { audioUrl: mediaUrl }),
@@ -315,25 +310,11 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
     if (!files.length) return;
     for (const file of files) {
       try {
-        let fileUrl: string | null = null;
-        // Try server upload; fall back to data URL (Vercel ephemeral FS-safe)
-        try {
-          const fd = new FormData(); fd.append('file', file);
-          const res = await uploadLocalFile(fd);
-          if (res.success && res.url) fileUrl = res.url;
-        } catch { /* server upload failed — fall through */ }
-
-        if (!fileUrl) {
-          fileUrl = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-        }
+        // Upload to Firebase Storage; falls back to base64 if not configured
+        const fileUrl = await smartUpload(file, { folder: 'files' });
 
         addMessage(channelId, {
-          id: `msg-file-${Date.now()}`, sender: currentUser?.name ?? 'You', initials: currentUser?.initials ?? 'Y', color: currentUser?.color ?? '#6366f1',
+          id: `msg-file-${Date.now()}`, sender: currentUser?.name ?? 'You', initials: currentUser?.initials ?? 'Y', color: currentUser?.color ?? '#3E4A89',
           timestamp: new Date().toISOString(), text: message.trim() || '',
           files: [{ name: file.name, url: fileUrl, type: file.type }],
           ...(replyToId ? { parentId: replyToId } : {}),
@@ -349,7 +330,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
     const opts = pollOptions.filter((o) => o.trim());
     if (!q || opts.length < 2) { toast.error('Add a question and at least 2 options'); return; }
     addMessage(channelId, {
-      id: `msg-poll-${Date.now()}`, sender: currentUser?.name ?? 'You', initials: currentUser?.initials ?? 'Y', color: currentUser?.color ?? '#6366f1',
+      id: `msg-poll-${Date.now()}`, sender: currentUser?.name ?? 'You', initials: currentUser?.initials ?? 'Y', color: currentUser?.color ?? '#3E4A89',
       timestamp: new Date().toISOString(), text: `📊 Poll: ${q}`,
       poll: { question: q, options: opts.map((text) => ({ text, votes: [] })) },
       ...(replyToId ? { parentId: replyToId } : {}),
@@ -380,12 +361,12 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
 
       {/* @mention dropdown */}
       {showMentionDropdown && mentionSuggestions.length > 0 && (
-        <div className="mx-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800">
+        <div className="mx-1 overflow-hidden rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-xl  dark:bg-slate-800">
           {mentionSuggestions.map((m) => (
             <button key={m.id} onClick={() => insertMention(m.name)}
-              className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold text-white" style={{ backgroundColor: m.color }}>{m.initials}</div>
-              <div><p className="text-sm font-bold text-slate-900 dark:text-white">{m.name}</p><p className="text-xs text-slate-400">{m.role}</p></div>
+              className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-indigo-900/20 transition-colors">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg text-sm font-bold text-white" style={{ backgroundColor: m.color }}>{m.initials}</div>
+              <div><p className="text-sm font-bold text-[#1E2636]">{m.name}</p><p className="text-xs text-[#7C859E]">{m.role}</p></div>
             </button>
           ))}
         </div>
@@ -396,7 +377,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
         <div className="mx-1 flex gap-2 flex-wrap">
           {AI_SUGGESTIONS.map((s) => (
             <button key={s} onClick={() => { setMessage(s); setShowAISuggestions(false); textareaRef.current?.focus(); }}
-              className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors">
+              className="rounded-full border border-[rgba(62,74,137,0.15)] bg-[rgba(62,74,137,0.08)] px-3 py-1 text-sm font-semibold text-[#3E4A89] hover:bg-indigo-100 transition-colors">
               {s}
             </button>
           ))}
@@ -405,35 +386,35 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
 
       {/* Poll creator */}
       {pollOpen && (
-        <div className="mx-1 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
+        <div className="mx-1 rounded-2xl border border-[rgba(62,74,137,0.12)]  bg-white dark:bg-slate-800 p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-black text-slate-900 dark:text-white">📊 Create Poll</p>
-            <button onClick={() => setPollOpen(false)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"><X size={14} /></button>
+            <p className="text-sm font-black text-[#1E2636]">📊 Create Poll</p>
+            <button onClick={() => setPollOpen(false)} className="rounded-lg p-1 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)]"><X size={14} /></button>
           </div>
-          <input value={pollQuestion} onChange={(e) => setPollQuestion(e.target.value)} placeholder="Your question…"
-            className="mb-2 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none" />
+          <input value={pollQuestion} onChange={(e) => setPollQuestion(e.target.value)} placeholder="Your questionâ€¦"
+            className="mb-2 w-full rounded-xl border border-[rgba(62,74,137,0.12)]  bg-[#FAF8F5] dark:bg-[#191E2F] px-3 py-2 text-sm focus:border-[#3E4A89] focus:outline-none" />
           {pollOptions.map((opt, i) => (
             <div key={i} className="mb-1.5 flex gap-2">
               <input value={opt} onChange={(e) => { const next = [...pollOptions]; next[i] = e.target.value; setPollOptions(next); }}
                 placeholder={`Option ${i + 1}`}
-                className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 text-sm focus:border-indigo-400 focus:outline-none" />
+                className="flex-1 rounded-xl border border-[rgba(62,74,137,0.12)]  bg-[#FAF8F5] dark:bg-[#191E2F] px-3 py-1.5 text-sm focus:border-[#3E4A89] focus:outline-none" />
               {pollOptions.length > 2 && (
-                <button onClick={() => setPollOptions(pollOptions.filter((_, j) => j !== i))} className="rounded-lg p-1.5 text-slate-400 hover:text-red-500"><X size={14} /></button>
+                <button onClick={() => setPollOptions(pollOptions.filter((_, j) => j !== i))} className="rounded-lg p-1.5 text-[#7C859E] hover:text-red-500"><X size={14} /></button>
               )}
             </div>
           ))}
           {pollOptions.length < 4 && (
-            <button onClick={() => setPollOptions([...pollOptions, ''])} className="mt-1 text-xs font-bold text-indigo-600 hover:text-indigo-800">+ Add option</button>
+            <button onClick={() => setPollOptions([...pollOptions, ''])} className="mt-1 text-sm font-bold text-[#3E4A89] hover:text-indigo-800">+ Add option</button>
           )}
-          <button onClick={sendPoll} className="mt-3 w-full rounded-xl bg-indigo-600 py-2 text-xs font-black text-white hover:bg-indigo-700 transition-colors">Create Poll</button>
+          <button onClick={sendPoll} className="mt-3 w-full rounded-xl bg-[#3E4A89] py-2 text-sm font-black text-white hover:bg-[#2A3568] transition-colors">Create Poll</button>
         </div>
       )}
 
       {/* Status row */}
       <div className="flex items-center justify-between px-1">
-        <div className="text-[11px] text-slate-400">{message.length > 0 && `${message.length} chars`}</div>
+        <div className="text-[11px] text-[#7C859E]">{message.length > 0 && `${message.length} chars`}</div>
         {recordingType === 'audio' && (
-          <div className="voice-recording-overlay flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-black text-red-600">
+          <div className="voice-recording-overlay flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-sm font-black text-red-600">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
@@ -454,35 +435,35 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
       {/* Toolbar */}
       <div className="flex items-center gap-0.5">
         <button ref={emojiBtnRef} onClick={() => setEmojiOpen((v) => !v)}
-          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${emojiOpen ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800'}`} title="Emoji">
+          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${emojiOpen ? 'bg-[rgba(62,74,137,0.08)] text-[#3E4A89]' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800'}`} title="Emoji">
           <Smile size={16} />
         </button>
         <button onClick={() => recordingType === 'audio' ? stopRecording(true) : startRecording('audio')}
           disabled={recordingBusy || recordingType === 'video'}
-          className={`relative flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${recordingType === 'audio' ? 'animate-pulse bg-red-100 text-red-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800'}`}>
+          className={`relative flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${recordingType === 'audio' ? 'animate-pulse bg-red-100 text-red-600' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800'}`}>
           {recordingType === 'audio' ? (<><span className="absolute inset-0 rounded-full border-2 border-red-600 animate-pulse opacity-30 pointer-events-none"></span><Mic size={16} /></>) : <Mic size={16} />}
         </button>
         <button onClick={() => recordingType === 'video' ? stopRecording(true) : startRecording('video')}
           disabled={recordingBusy || recordingType === 'audio'}
-          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${recordingType === 'video' ? 'animate-pulse bg-red-100 text-red-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800'}`} title="Screen recording">
+          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${recordingType === 'video' ? 'animate-pulse bg-red-100 text-red-600' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800'}`} title="Screen recording">
           <Video size={16} />
         </button>
         <button onClick={() => setPollOpen((v) => !v)}
-          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${pollOpen ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800'}`} title="Create poll">
+          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${pollOpen ? 'bg-[rgba(62,74,137,0.08)] text-[#3E4A89]' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800'}`} title="Create poll">
           <BarChart2 size={16} />
         </button>
         <button onClick={insertCodeBlock}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 transition-colors" title="Insert code block">
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800 transition-colors" title="Insert code block">
           <Code2 size={16} />
         </button>
         <button onClick={() => setShowAISuggestions((v) => !v)}
-          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${showAISuggestions ? 'bg-violet-50 text-violet-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800'}`} title="AI suggestions">
+          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${showAISuggestions ? 'bg-violet-50 text-violet-600' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800'}`} title="AI suggestions">
           <Zap size={16} />
         </button>
         <div className="flex-1" />
         {recordingType && (
           <button onClick={() => stopRecording(true)}
-            className="flex h-7 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+            className="flex h-7 items-center gap-1 rounded-lg border border-[rgba(62,74,137,0.12)] bg-white px-2.5 text-[11px] font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)] transition-colors">
             <X size={12} /> Stop
           </button>
         )}
@@ -491,12 +472,12 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
       {/* Emoji picker */}
       {emojiOpen && (
         <div ref={emojiPanelRef} className="relative z-50">
-          <div className="absolute bottom-0 left-0 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-800">
-            <div className="mb-1 text-[10px] font-black uppercase tracking-wider text-slate-400">Emoji</div>
+          <div className="absolute bottom-0 left-0 w-72 rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-3 shadow-xl  dark:bg-slate-800">
+            <div className="mb-1 text-[11px] font-black uppercase tracking-wider text-[#7C859E]">Emoji</div>
             <div className="grid max-h-48 grid-cols-8 gap-1 overflow-y-auto">
               {EMOJI_LIST.map((emoji, idx) => (
                 <button key={idx} type="button" onClick={() => insertEmoji(emoji)}
-                  className="flex h-8 items-center justify-center rounded-lg text-lg transition-all hover:scale-110 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
+                  className="flex h-8 items-center justify-center rounded-lg text-lg transition-all hover:scale-110 hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-indigo-900/20">
                   {emoji}
                 </button>
               ))}
@@ -525,7 +506,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
       <div className="flex gap-2 items-end">
         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileAttach} />
         <button onClick={() => fileInputRef.current?.click()}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 transition-colors" title="Attach file">
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800 transition-colors" title="Attach file">
           <Paperclip size={18} />
         </button>
 
@@ -534,39 +515,39 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
             onChange={(e) => { setMessage(e.target.value); handleTyping(); }}
             onKeyDown={handleKeyDown}
             placeholder={replyToId ? `Reply in thread…` : `Message #${channelName}…`}
-            className="w-full resize-none rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+            className="w-full resize-none rounded-full border border-[rgba(62,74,137,0.12)]  bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-[#1E2636] placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
             rows={1} style={{ maxHeight: '120px', overflowY: 'auto' }} />
-          <div className="text-[11px] text-slate-400 pl-2">Enter to send · Shift+Enter for new line</div>
+          <div className="text-[11px] text-[#7C859E] pl-2">Enter to send · Shift+Enter for new line</div>
         </div>
 
         <button onClick={handleSend} disabled={!message.trim() || isLoading}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300 transition-all shadow-md hover:shadow-indigo-300/50 hover:scale-105 active:scale-95">
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#3E4A89] text-white hover:bg-[#2A3568] disabled:cursor-not-allowed disabled:bg-slate-300 transition-all shadow-md hover:shadow-indigo-300/50 hover:scale-105 active:scale-95">
           {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
         </button>
       </div>
 
       {/* Recorded preview modal */}
       {recordedPreview && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl  dark:bg-[#191E2F]">
             <div className="flex items-start justify-between gap-4 p-5 pb-4">
               <div>
-                <h2 className="text-lg font-black text-slate-950 dark:text-white">{recordedPreview.kind === 'video' ? '🖥️ Screen recording' : '🎙️ Voice note'}</h2>
-                <p className="mt-0.5 text-sm font-semibold text-slate-500">Review before sending to <span className="font-black text-slate-800 dark:text-white">#{channelName}</span></p>
+                <h2 className="text-lg font-black text-[#1E2636]">{recordedPreview.kind === 'video' ? '🎥 Screen recording' : '🎤 Voice note'}</h2>
+                <p className="mt-0.5 text-sm font-semibold text-[#7C859E]">Review before sending to <span className="font-black text-[#1E2636]">#{channelName}</span></p>
               </div>
-              <button onClick={discardPreview} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700"><X size={18} /></button>
+              <button onClick={discardPreview} className="rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 hover:text-[#4A5578]"><X size={18} /></button>
             </div>
             <div className="px-5">
               {recordedPreview.kind === 'video'
                 ? <video src={recordedPreview.url} className="aspect-video w-full rounded-2xl bg-black object-contain" controls />
-                : <div className="rounded-2xl border border-slate-100 bg-gradient-to-br from-slate-50 to-indigo-50 p-4"><audio src={recordedPreview.url} className="w-full" controls /></div>}
+                : <div className="rounded-2xl border border-[rgba(62,74,137,0.08)] bg-gradient-to-br from-slate-50 to-indigo-50 p-4"><audio src={recordedPreview.url} className="w-full" controls /></div>}
             </div>
             <div className="flex gap-3 p-5 pt-4">
               <button onClick={discardPreview} disabled={recordingSending}
-                className="h-11 flex-1 rounded-xl border border-slate-200 bg-white text-sm font-black text-slate-600 hover:bg-slate-50 disabled:opacity-60">Discard</button>
+                className="h-11 flex-1 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white text-sm font-black text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)] disabled:opacity-60">Discard</button>
               <button onClick={() => sendRecordedPreview()} disabled={recordingSending}
-                className="h-11 flex-1 rounded-xl bg-indigo-600 text-sm font-black text-white hover:bg-indigo-700 disabled:opacity-60">
-                {recordingSending ? <span className="flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" />Sending…</span> : 'Send'}
+                className="h-11 flex-1 rounded-xl bg-[#3E4A89] text-sm font-black text-white hover:bg-[#2A3568] disabled:opacity-60">
+                {recordingSending ? <span className="flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" />Sendingâ€¦</span> : 'Send'}
               </button>
             </div>
           </div>
@@ -575,3 +556,6 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
     </div>
   );
 }
+
+
+

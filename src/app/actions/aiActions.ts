@@ -1,97 +1,85 @@
 'use server';
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const apiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(apiKey);
-
-// Model priority list: try primary first, fall back if overloaded
-const MODEL_PRIORITY = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
+import { generateText, generateObject } from 'ai';
+import { google } from '@ai-sdk/google';
+import { openai } from '@ai-sdk/openai';
+import { z } from 'zod';
 
 type ChatMessage = { sender: string; text: string; timestamp: string };
 
-/**
- * Retries an async function with exponential backoff on 503 errors.
- * Falls back through MODEL_PRIORITY list if the primary model is overloaded.
- */
-async function generateWithRetry(
-  getModelName: (attempt: number) => string,
-  buildRequest: (model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>) => Parameters<ReturnType<GoogleGenerativeAI['getGenerativeModel']>['generateContent']>[0],
-  systemInstruction: string,
-  maxRetries = MODEL_PRIORITY.length
-): Promise<string> {
-  let lastError: unknown;
+function getPrimaryModel() {
+  if (process.env.GEMINI_API_KEY) return google('gemini-2.5-flash');
+  if (process.env.OPENAI_API_KEY) return openai('gpt-4o-mini');
+  return null;
+}
 
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const modelName = getModelName(attempt);
-    const model = genAI.getGenerativeModel({ model: modelName, systemInstruction });
-
-    try {
-      const response = await model.generateContent(buildRequest(model));
-      return response.response.text() ?? '';
-    } catch (err: unknown) {
-      lastError = err;
-      const status = (err as { status?: number })?.status;
-      const isOverloaded = status === 503 || (err instanceof Error && err.message.includes('503'));
-
-      if (!isOverloaded) throw err; // Non-503 errors are not retried
-
-      const delay = Math.pow(2, attempt) * 500; // 500ms, 1s, 2s…
-      console.warn(`[Copilot] Model ${modelName} returned 503. Retrying with next model in ${delay}ms...`);
-      await new Promise((res) => setTimeout(res, delay));
-    }
-  }
-
-  throw lastError;
+function getFallbackModel() {
+  if (process.env.GEMINI_API_KEY) return google('gemini-1.5-flash');
+  if (process.env.OPENAI_API_KEY) return openai('gpt-3.5-turbo');
+  return null;
 }
 
 export async function summarizeChannelChat(messages: ChatMessage[]) {
   try {
-    const activeKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
-    if (!activeKey) throw new Error('Neither GEMINI_API_KEY nor OPENAI_API_KEY is configured.');
+    const model = getPrimaryModel();
+    if (!model) throw new Error('No AI API key configured.');
     if (!messages || messages.length === 0) return { success: false, message: 'No messages to summarize yet.' };
 
     const transcript = messages
       .map((m) => `[${new Date(m.timestamp).toISOString()}] ${m.sender}: ${m.text}`)
       .join('\n');
 
-    const text = await generateWithRetry(
-      (attempt) => MODEL_PRIORITY[attempt] ?? MODEL_PRIORITY[MODEL_PRIORITY.length - 1],
-      () => ({
-        contents: [{ role: 'user', parts: [{ text: `Analyze the following team chat transcript and provide a concise 3-bullet-point executive summary. Focus on decisions made, progress updates, and blockers.\n\nTranscript:\n${transcript}` }] }],
-        generationConfig: { maxOutputTokens: 400 },
-      }),
-      'You are an elite project management assistant for EduTechExOS. Be concise and professional.'
-    );
+    const { text } = await generateText({
+      model,
+      system: 'You are an elite project management assistant for EduTechExOS. Be concise and professional.',
+      prompt: `Analyze the following team chat transcript and provide a concise 3-bullet-point executive summary. Focus on decisions made, progress updates, and blockers.\n\nTranscript:\n${transcript}`,
+      maxOutputTokens: 400,
+    });
 
     return { success: true, data: text };
   } catch (error) {
     console.error('Error summarizing chat:', error);
+    const fallback = getFallbackModel();
+    if (fallback) {
+      try {
+        const transcript = messages.map((m) => `${m.sender}: ${m.text}`).join('\n');
+        const { text } = await generateText({
+          model: fallback,
+          system: 'You are an elite project management assistant for EduTechExOS. Be concise and professional.',
+          prompt: `Summarize this chat in 3 bullet points:\n\n${transcript}`,
+          maxOutputTokens: 400,
+        });
+        return { success: true, data: text };
+      } catch (fallbackError) {
+        console.error('Fallback model also failed:', fallbackError);
+      }
+    }
     return { success: false, error: 'Failed to generate summary. The AI service may be temporarily unavailable — please try again in a moment.' };
   }
 }
 
 export async function extractActionItems(messages: ChatMessage[]) {
   try {
-    const activeKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
-    if (!activeKey) throw new Error('Neither GEMINI_API_KEY nor OPENAI_API_KEY is configured.');
+    const model = getPrimaryModel();
+    if (!model) throw new Error('No AI API key configured.');
     if (!messages || messages.length === 0) return { success: true, data: [] };
 
     const transcript = messages.map((m) => `${m.sender}: ${m.text}`).join('\n');
 
-    const text = await generateWithRetry(
-      (attempt) => MODEL_PRIORITY[attempt] ?? MODEL_PRIORITY[MODEL_PRIORITY.length - 1],
-      () => ({
-        contents: [{ role: 'user', parts: [{ text: `Read the following team conversation and identify actionable tasks. For each task output an object with "text", "assignee", and "assigneeInitials". If none found, return [].\n\nTranscript:\n${transcript}` }] }],
-        generationConfig: { maxOutputTokens: 600, responseMimeType: 'application/json' },
+    const { object } = await generateObject({
+      model,
+      schema: z.object({
+        tasks: z.array(z.object({
+          text: z.string(),
+          assignee: z.string(),
+          assigneeInitials: z.string().max(2),
+        })),
       }),
-      'You are an AI task extraction agent. Output ONLY a raw JSON array — no markdown fences, no extra text.'
-    );
+      system: 'You are an AI task extraction agent. Extract only concrete actionable tasks.',
+      prompt: `Read the following team conversation and identify actionable tasks. If none found, return empty array.\n\nTranscript:\n${transcript}`,
+    });
 
-    const jsonMatch = text.trim().match(/\[[\s\S]*\]/);
-    if (!jsonMatch) return { success: true, data: [] };
-
-    return { success: true, data: JSON.parse(jsonMatch[0]) };
+    return { success: true, data: object.tasks };
   } catch (error) {
     console.error('Error extracting tasks:', error);
     return { success: false, error: 'Failed to extract tasks. The AI service may be temporarily unavailable — please try again in a moment.' };
@@ -105,44 +93,40 @@ export async function askCopilot(
   accessibleChannels: string[] = []
 ) {
   try {
-    const activeKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
-    if (!activeKey) {
+    const model = getPrimaryModel();
+    if (!model) {
       const recent = (messages || []).slice(-5).reverse();
       const context = recent.length
         ? recent.map((m) => `${m.sender}: ${m.text}`).join('\n')
         : 'No recent messages yet.';
       return {
         success: true,
-        data: `Channel Copilot is scoped to #${channelName}.\n\nRecent activity:\n${context}\n\nAdd a GEMINI_API_KEY to .env to enable full AI responses.`,
+        data: `Channel Copilot is scoped to #${channelName}.\n\nRecent activity:\n${context}\n\nAdd a GEMINI_API_KEY or OPENAI_API_KEY to .env to enable full AI responses.`,
       };
     }
 
     const transcript =
       messages && messages.length > 0
-        ? messages
-            .map((m) => `[${new Date(m.timestamp).toISOString()}] ${m.sender}: ${m.text}`)
-            .join('\n')
+        ? messages.map((m) => `[${new Date(m.timestamp).toISOString()}] ${m.sender}: ${m.text}`).join('\n')
         : 'No previous messages in this channel.';
 
     const channelList = accessibleChannels.length
       ? accessibleChannels.map((c) => `#${c}`).join(', ')
       : `#${channelName}`;
 
-    const text = await generateWithRetry(
-      (attempt) => MODEL_PRIORITY[attempt] ?? MODEL_PRIORITY[MODEL_PRIORITY.length - 1],
-      () => ({
-        contents: [{ role: 'user', parts: [{ text: `Channel transcript:\n${transcript}\n\nQuestion: ${question}` }] }],
-        generationConfig: { maxOutputTokens: 800 },
-      }),
-      `You are the EduTechExOS Copilot. You are scoped to #${channelName}. The user can access: ${channelList}. Be helpful, direct, and professional.`
-    );
+    const { text } = await generateText({
+      model,
+      system: `You are the EduTechExOS Copilot. You are scoped to #${channelName}. The user can access: ${channelList}. Be helpful, direct, and professional.`,
+      prompt: `Channel transcript:\n${transcript}\n\nQuestion: ${question}`,
+      maxOutputTokens: 800,
+    });
 
     return { success: true, data: text };
   } catch (error) {
     console.error('Error asking copilot:', error);
     return {
       success: false,
-      error: 'The AI service is temporarily unavailable due to high demand. Please try again in a moment.',
+      error: 'The AI service is temporarily unavailable. Please try again in a moment.',
     };
   }
 }

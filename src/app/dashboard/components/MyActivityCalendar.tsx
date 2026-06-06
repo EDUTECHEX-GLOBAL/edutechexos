@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, X, CalendarDays, Flame, TrendingUp } from 'lucide-react';
 
@@ -81,7 +81,7 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
   const [loginDates, setLoginDates] = useState<string[]>([]);
   const [userName, setUserName] = useState('You');
   const [userInitials, setUserInitials] = useState('ME');
-  const [userColor, setUserColor] = useState('#6366f1');
+  const [userColor, setUserColor] = useState('#3E4A89');
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -91,59 +91,64 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
     setMounted(true);
   }, []);
 
-  // Load current user's login dates
+  // Load current user's login dates (real from backend, fallback to localStorage)
   useEffect(() => {
     if (!open || !mounted) return;
     try {
       const authData = localStorage.getItem('edutechex_token');
-      if (authData) {
-        const { user } = JSON.parse(authData);
-        if (user) {
-          const key = `edutechex_logins_${user.email}`;
-          let stored: string[] = JSON.parse(localStorage.getItem(key) || '[]');
+      if (!authData) return;
+      const { user, token } = JSON.parse(authData);
+      if (!user) return;
 
-          // Populate realistic mock log dates if empty
-          if (stored.length === 0) {
-            const generated: string[] = [];
-            const today = new Date();
-            for (let i = 0; i < 30; i++) {
-              const date = new Date();
-              date.setDate(today.getDate() - i);
-              const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-              const prob = isWeekend ? 0.12 : 0.88; // high attendance on weekdays
-              if (Math.random() < prob) {
-                generated.push(date.toISOString().split('T')[0]);
+      setUserName(user.name?.split(' ')[0] || 'You');
+      setUserInitials(
+        user.name
+          ?.split(' ')
+          .map((n: string) => n[0])
+          .join('')
+          .slice(0, 2)
+          .toUpperCase() || 'ME'
+      );
+      const colors: Record<string, string> = {
+        Admin: '#0ea5e9', Manager: '#3E4A89', Developer: '#10b981', Designer: '#f59e0b',
+      };
+      setUserColor(colors[user.role] || '#3E4A89');
+
+      // Fetch real login history from backend
+      const apiBase = process.env.NEXT_PUBLIC_API_URL ?? '';
+      fetch(`${apiBase}/api/login-history`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (data?.success && data.history?.[user.email]) {
+            setLoginDates(data.history[user.email]);
+          } else {
+            // Fallback to localStorage
+            const key = `edutechex_logins_${user.email}`;
+            let stored: string[] = JSON.parse(localStorage.getItem(key) || '[]');
+            if (stored.length === 0) {
+              const generated: string[] = [];
+              const today = new Date();
+              for (let i = 0; i < 30; i++) {
+                const date = new Date();
+                date.setDate(today.getDate() - i);
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                if (Math.random() < (isWeekend ? 0.12 : 0.88)) generated.push(date.toISOString().split('T')[0]);
               }
+              const todayStr = today.toISOString().split('T')[0];
+              if (!generated.includes(todayStr)) generated.push(todayStr);
+              localStorage.setItem(key, JSON.stringify(generated));
+              stored = generated;
             }
-            // Always ensure today is logged
-            const todayStr = today.toISOString().split('T')[0];
-            if (!generated.includes(todayStr)) {
-              generated.push(todayStr);
-            }
-            localStorage.setItem(key, JSON.stringify(generated));
-            stored = generated;
+            setLoginDates(stored);
           }
-
+        })
+        .catch(() => {
+          const key = `edutechex_logins_${user.email}`;
+          const stored: string[] = JSON.parse(localStorage.getItem(key) || '[]');
           setLoginDates(stored);
-          setUserName(user.name?.split(' ')[0] || 'You');
-          setUserInitials(
-            user.name
-              ?.split(' ')
-              .map((n: string) => n[0])
-              .join('')
-              .slice(0, 2)
-              .toUpperCase() || 'ME'
-          );
-
-          const colors: Record<string, string> = {
-            Admin: '#0ea5e9',
-            Manager: '#6366f1',
-            Developer: '#10b981',
-            Designer: '#f59e0b',
-          };
-          setUserColor(colors[user.role] || '#6366f1');
-        }
-      }
+        });
     } catch (e) {
       console.error('Error fetching user activity details:', e);
     }
@@ -194,10 +199,10 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-md p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(25,30,47,0.40)] backdrop-blur-md p-4 animate-in fade-in duration-200"
     >
       {/* High-End Dark-Glassmorphism Modal Card */}
-      <div className="w-full max-w-sm bg-slate-900/95 border border-white/10 text-white rounded-3xl shadow-2xl shadow-indigo-950/20 overflow-hidden animate-in slide-in-from-bottom-4 duration-300 backdrop-blur-xl">
+      <div className="w-full max-w-sm bg-[rgba(25,30,47,0.95)] border border-white/10 text-white rounded-3xl shadow-2xl shadow-[rgba(25,30,47,0.20)] overflow-hidden animate-in slide-in-from-bottom-4 duration-300 backdrop-blur-xl">
         {/* Premium Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5 bg-gradient-to-r from-indigo-700/60 to-purple-700/40">
           <div className="flex items-center gap-3.5">
@@ -230,7 +235,7 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
               <CalendarDays size={14} strokeWidth={2.5} />
               <span className="text-lg font-black">{thisMonthLogins}</span>
             </div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+            <p className="text-[9px] font-black text-[#7C859E] uppercase tracking-widest">
               This Month
             </p>
           </div>
@@ -239,7 +244,7 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
               <Flame size={14} className="animate-pulse" strokeWidth={2.5} />
               <span className="text-lg font-black">{streak}</span>
             </div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+            <p className="text-[9px] font-black text-[#7C859E] uppercase tracking-widest">
               Active Streak
             </p>
           </div>
@@ -247,7 +252,7 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
             <div className="flex items-center gap-2">
               <RadialProgress percentage={loginRate} color={userColor} />
             </div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
+            <p className="text-[9px] font-black text-[#7C859E] uppercase tracking-widest mt-1">
               Login Rate
             </p>
           </div>
@@ -258,7 +263,7 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
           <button
             type="button"
             onClick={prevMonth}
-            className="h-9 w-9 rounded-xl border border-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-all active:scale-95 shadow-sm"
+            className="h-9 w-9 rounded-xl border border-white/5 flex items-center justify-center text-[#7C859E] hover:text-white hover:bg-white/5 transition-all active:scale-95 shadow-sm"
           >
             <ChevronLeft size={16} strokeWidth={2.5} />
           </button>
@@ -267,7 +272,7 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
             type="button"
             onClick={nextMonth}
             disabled={viewYear === today.getFullYear() && viewMonth === today.getMonth()}
-            className="h-9 w-9 rounded-xl border border-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-all disabled:opacity-20 active:scale-95 shadow-sm"
+            className="h-9 w-9 rounded-xl border border-white/5 flex items-center justify-center text-[#7C859E] hover:text-white hover:bg-white/5 transition-all disabled:opacity-20 active:scale-95 shadow-sm"
           >
             <ChevronRight size={16} strokeWidth={2.5} />
           </button>
@@ -280,7 +285,7 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
             {WEEKDAYS.map((d, i) => (
               <div
                 key={i}
-                className="text-center text-[10px] font-black text-slate-500 uppercase tracking-widest py-1"
+                className="text-center text-[10px] font-black text-[#7C859E] uppercase tracking-widest py-1"
               >
                 {d}
               </div>
@@ -302,16 +307,16 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
               return (
                 <div
                   key={day}
-                  title={isFuture ? '' : didLogin ? `Logged in ✅` : `No login ❌`}
+                  title={isFuture ? '' : didLogin ? `Logged in âœ…` : `No login âŒ`}
                   className={`flex flex-col items-center justify-center rounded-xl py-2 aspect-square transition-all duration-300 border
                     ${
                       isFuture
-                        ? 'bg-white/[0.02] text-slate-600 border-white/[0.02] cursor-not-allowed opacity-30'
+                        ? 'bg-white/[0.02] text-[#4A5578] border-white/[0.02] cursor-not-allowed opacity-30'
                         : didLogin
                           ? 'bg-emerald-500/10 text-emerald-400 border-emerald-400/20 hover:bg-emerald-500/25 shadow-sm shadow-emerald-500/5 cursor-pointer hover:scale-105 active:scale-95'
                           : 'bg-rose-500/5 text-rose-400 border-rose-500/10 hover:bg-rose-500/15 cursor-pointer hover:scale-105 active:scale-95'
                     }
-                    ${isToday ? 'ring-2 ring-indigo-500 ring-offset-1 ring-offset-slate-900 z-10 scale-105 border-indigo-400/40 bg-indigo-500/10 text-indigo-300 font-extrabold' : ''}
+                    ${isToday ? 'ring-2 ring-indigo-500 ring-offset-1 ring-offset-slate-900 z-10 scale-105 border-indigo-400/40 bg-[rgba(62,74,137,0.08)]0/10 text-indigo-300 font-extrabold' : ''}
                   `}
                 >
                   <span className="text-xs font-black">{day}</span>
@@ -329,22 +334,22 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
         </div>
 
         {/* Legend + total */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-white/5 bg-slate-950/30">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-white/5 bg-[rgba(25,30,47,0.30)]">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+              <span className="text-[10px] font-black text-[#7C859E] uppercase tracking-wider">
                 Logged In
               </span>
             </div>
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+              <span className="text-[10px] font-black text-[#7C859E] uppercase tracking-wider">
                 Missed
               </span>
             </div>
           </div>
-          <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+          <div className="text-[10px] font-black text-[#7C859E] uppercase tracking-wider">
             {totalLogins} Total Logins
           </div>
         </div>
@@ -352,3 +357,6 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
     </div>
   );
 }
+
+
+

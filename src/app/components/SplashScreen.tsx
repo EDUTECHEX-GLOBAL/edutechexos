@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect } from 'react';
 
 export default function SplashScreen() {
@@ -23,7 +23,7 @@ export default function SplashScreen() {
       }`}
     >
       <div className="relative flex flex-col items-center justify-center space-y-8">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_50%_at_50%_50%,rgba(45,106,79,0.06),transparent_70%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_50%_at_50%_50%,rgba(62,74,137,0.08),transparent_70%)] pointer-events-none" />
         <div className="flex flex-col items-center gap-2">
           <h1 className="font-display text-5xl md:text-7xl font-bold tracking-[-0.03em] text-foreground">
             EduTechEx<span className="text-gradient-warm">OS</span>

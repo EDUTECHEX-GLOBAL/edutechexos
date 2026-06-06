@@ -1,4 +1,4 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -12,7 +12,7 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-display font-semibold tracking-tight;
   }
-  ::selection { background: rgba(26,58,42,0.20); color: #1a2e1a; }
+  ::selection { background: rgba(62,74,137,0.20); color: #1E2636; }
   :focus-visible { @apply outline-2 outline-offset-2 outline-primary/50; }
 }
 
@@ -37,18 +37,18 @@
   }
   .btn-primary {
     @apply btn text-white shadow-glow hover:shadow-glow-lg hover:opacity-90 active:scale-[0.98];
-    background: #1a3a2a;
-    border: 1px solid rgba(26,58,42,0.20);
+    background: linear-gradient(135deg, #3E4A89, #2A3568);
+    border: 1px solid rgba(62,74,137,0.20);
   }
-  .btn-primary:hover { background: #0f2018; }
+  .btn-primary:hover { background: linear-gradient(135deg, #2A3568, #1f2a52); }
 
   .btn-secondary {
     @apply btn active:scale-[0.98];
     background: transparent;
-    color: #1a2e1a;
-    border: 1.5px solid rgba(26,46,26,0.25);
+    color: #1E2636;
+    border: 1.5px solid rgba(62,74,137,0.30);
   }
-  .btn-secondary:hover { background: rgba(0,0,0,0.04); }
+  .btn-secondary:hover { background: rgba(62,74,137,0.06); }
 
   .btn-accent {
     @apply btn text-white active:scale-[0.98];
@@ -75,7 +75,7 @@
   }
   .card-premium:hover {
     @apply shadow-card-hover -translate-y-0.5;
-    border-color: rgba(26,58,42,0.12);
+    border-color: rgba(62,74,137,0.12);
   }
   .card-dark {
     @apply relative overflow-hidden rounded-2xl bg-dark-surface border border-dark-border shadow-dark transition-all duration-300;
@@ -83,7 +83,7 @@
   .card-dark:hover { @apply -translate-y-0.5; border-color: rgba(79,70,229,0.20); }
   .card-gradient {
     @apply relative overflow-hidden rounded-2xl bg-surface border border-border/60 shadow-card transition-all duration-300;
-    background: linear-gradient(135deg, #ffffff 0%, #f5f1ea 100%);
+    background: linear-gradient(135deg, #ffffff 0%, #FAF8F5 100%);
   }
   .card-gradient:hover { @apply shadow-card-hover -translate-y-0.5; }
 
@@ -96,11 +96,11 @@
   /* ── Gradient text ──────────────────────────────────────── */
   .text-gradient {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #1a3a2a, #2d6a4f, #52b788);
+    background-image: linear-gradient(135deg, #3E4A89, #2A3568, #9BA6D3);
   }
   .text-gradient-green {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #0f2018, #1a3a2a, #2d6a4f);
+    background-image: linear-gradient(135deg, #191E2F, #3E4A89, #2A3568);
   }
   .text-gradient-lavender {
     @apply bg-clip-text text-transparent;
@@ -108,7 +108,7 @@
   }
   .text-gradient-warm {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #1a3a2a, #2d6a4f, #4f46e5);
+    background-image: linear-gradient(135deg, #191E2F, #3E4A89, #9BA6D3);
   }
 
   /* ── Grid pattern ───────────────────────────────────────── */
@@ -128,11 +128,11 @@
   /* ── Form inputs ────────────────────────────────────────── */
   .input-premium {
     @apply w-full rounded-xl border border-input bg-white px-4 py-3 text-sm font-medium text-foreground placeholder:text-ink-light/60 outline-none transition-all duration-200;
-    border-color: #ddd8d0;
+    border-color: #E0DDE8;
   }
   .input-premium:focus {
-    border-color: #1a3a2a;
-    box-shadow: 0 0 0 3px rgba(26,58,42,0.08);
+    border-color: #3E4A89;
+    box-shadow: 0 0 0 3px rgba(62,74,137,0.12);
   }
 
   /* ── Badges ─────────────────────────────────────────────── */

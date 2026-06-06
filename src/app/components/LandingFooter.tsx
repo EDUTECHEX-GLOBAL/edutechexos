@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React from 'react';
 import Link from 'next/link';
 import AnimatedSection from './AnimatedSection';
@@ -33,7 +33,7 @@ export default function LandingFooter() {
   return (
     <footer
       className="relative"
-      style={{ background: '#1a2e1a', borderTop: '1px solid rgba(255,255,255,0.06)' }}
+      style={{ background: '#191E2F', borderTop: '1px solid rgba(255,255,255,0.06)' }}
     >
       {/* Subtle grid */}
       <div
@@ -64,7 +64,7 @@ export default function LandingFooter() {
                 </svg>
               </div>
               <span className="font-bold text-base" style={{ color: '#ffffff' }}>
-                EduTechEx<span style={{ color: 'rgba(180,220,200,0.85)' }}>OS</span>
+                EduTechEx<span style={{ color: '#9BA6D3' }}>OS</span>
               </span>
             </Link>
             <p className="text-sm leading-relaxed max-w-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>

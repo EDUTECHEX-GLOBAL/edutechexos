@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { Search, X, Hash, MessageSquare } from 'lucide-react';
@@ -42,7 +42,7 @@ function HighlightText({ text, query }: { text: string; query: string }) {
     <span>
       {parts.map((part, i) =>
         part.toLowerCase() === query.toLowerCase() ? (
-          <strong key={i} className="font-bold text-slate-900">
+          <strong key={i} className="font-bold text-[#1E2636]">
             {part}
           </strong>
         ) : (
@@ -129,7 +129,7 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 bg-slate-900 flex-shrink-0">
+      <div className="flex items-center justify-between px-5 py-4 bg-[#191E2F] flex-shrink-0">
         <div className="flex items-center gap-2">
           <Search size={18} className="text-indigo-400" strokeWidth={2.5} />
           <h2 className="text-sm font-black uppercase tracking-widest text-white">
@@ -138,28 +138,28 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+          className="p-1.5 rounded-lg text-[#7C859E] hover:text-white hover:bg-slate-700 transition-colors"
         >
           <X size={18} strokeWidth={2.5} />
         </button>
       </div>
 
       {/* Search input */}
-      <div className="px-4 py-3 border-b border-slate-100 flex-shrink-0">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
-          <Search size={15} className="text-slate-400 flex-shrink-0" />
+      <div className="px-4 py-3 border-b border-[rgba(62,74,137,0.08)] flex-shrink-0">
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#FAF8F5] border border-[rgba(62,74,137,0.12)] focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
+          <Search size={15} className="text-[#7C859E] flex-shrink-0" />
           <input
             ref={inputRef}
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Search all messages…"
-            className="flex-1 bg-transparent text-sm text-slate-800 placeholder-slate-400 outline-none"
+            placeholder="Search all messagesâ€¦"
+            className="flex-1 bg-transparent text-sm text-[#1E2636] placeholder-slate-400 outline-none"
           />
           {inputValue && (
             <button
               onClick={() => setInputValue('')}
-              className="text-slate-400 hover:text-slate-600 transition-colors"
+              className="text-[#7C859E] hover:text-[#4A5578] transition-colors"
             >
               <X size={14} />
             </button>
@@ -170,14 +170,14 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
       {/* Results */}
       <div className="flex-1 overflow-y-auto">
         {!debouncedQuery ? (
-          /* Empty state – no query yet */
+          /* Empty state â€“ no query yet */
           <div className="flex flex-col items-center justify-center h-full gap-4 px-8 text-center">
-            <div className="h-14 w-14 rounded-2xl bg-slate-100 flex items-center justify-center">
-              <MessageSquare size={24} className="text-slate-300" strokeWidth={1.5} />
+            <div className="h-14 w-14 rounded-2xl bg-[rgba(62,74,137,0.08)] flex items-center justify-center">
+              <MessageSquare size={24} className="text-[#9BA6D3]" strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-700">Search across all channels</p>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              <p className="text-sm font-bold text-[#4A5578]">Search across all channels</p>
+              <p className="text-xs text-[#7C859E] mt-1 leading-relaxed">
                 Type a keyword to find messages from any channel.
               </p>
             </div>
@@ -185,12 +185,12 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
         ) : results.length === 0 ? (
           /* No results state */
           <div className="flex flex-col items-center justify-center h-full gap-4 px-8 text-center">
-            <div className="h-14 w-14 rounded-2xl bg-slate-100 flex items-center justify-center">
-              <Search size={24} className="text-slate-300" strokeWidth={1.5} />
+            <div className="h-14 w-14 rounded-2xl bg-[rgba(62,74,137,0.08)] flex items-center justify-center">
+              <Search size={24} className="text-[#9BA6D3]" strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-700">No results found</p>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              <p className="text-sm font-bold text-[#4A5578]">No results found</p>
+              <p className="text-xs text-[#7C859E] mt-1 leading-relaxed">
                 No messages match &quot;{debouncedQuery}&quot;. Try a different keyword.
               </p>
             </div>
@@ -199,19 +199,19 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
           /* Grouped results */
           <div className="py-2">
             <div className="px-5 py-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <span className="text-[11px] font-black uppercase tracking-widest text-[#7C859E]">
                 {results.length} result{results.length !== 1 ? 's' : ''}
               </span>
             </div>
             {Object.entries(grouped).map(([channelId, items]) => (
               <div key={channelId} className="mb-2">
                 {/* Channel header */}
-                <div className="flex items-center gap-2 px-5 py-2 bg-slate-50 border-y border-slate-100">
+                <div className="flex items-center gap-2 px-5 py-2 bg-[#FAF8F5] border-y border-[rgba(62,74,137,0.08)]">
                   <Hash size={12} className="text-indigo-500" strokeWidth={2.5} />
-                  <span className="text-[11px] font-black uppercase tracking-widest text-indigo-600">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-[#3E4A89]">
                     {items[0].channelName}
                   </span>
-                  <span className="ml-auto text-[10px] text-slate-400">
+                  <span className="ml-auto text-[10px] text-[#7C859E]">
                     {items.length} match{items.length !== 1 ? 'es' : ''}
                   </span>
                 </div>
@@ -221,7 +221,7 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
                   <button
                     key={result.messageId}
                     onClick={() => handleResultClick(channelId)}
-                    className="w-full flex items-start gap-3 px-5 py-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 last:border-0"
+                    className="w-full flex items-start gap-3 px-5 py-3 hover:bg-[rgba(62,74,137,0.06)] transition-colors text-left border-b border-slate-50 last:border-0"
                   >
                     {/* Avatar */}
                     <span
@@ -234,14 +234,14 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[12px] font-bold text-slate-800">
+                        <span className="text-[13px] font-bold text-[#1E2636]">
                           {result.sender}
                         </span>
-                        <span className="text-[10px] text-slate-400">
+                        <span className="text-[10px] text-[#7C859E]">
                           {formatTime(result.timestamp)}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                      <p className="text-xs text-[#4A5578] leading-relaxed line-clamp-2">
                         <HighlightText text={result.text} query={debouncedQuery} />
                       </p>
                     </div>
@@ -255,3 +255,6 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
     </div>
   );
 }
+
+
+

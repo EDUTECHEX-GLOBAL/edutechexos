@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React from 'react';
 import Link from 'next/link';
 import AnimatedSection from './AnimatedSection';
@@ -8,7 +8,7 @@ export default function LandingCTA() {
     <section
       id="cta"
       className="relative overflow-hidden py-32 px-6 lg:px-10"
-      style={{ background: '#1a2e1a' }}
+      style={{ background: '#191E2F' }}
     >
       {/* Grid */}
       <div className="absolute inset-0 pointer-events-none" style={{
@@ -18,8 +18,8 @@ export default function LandingCTA() {
 
       {/* Animated orbs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div style={{ position:'absolute', width:560, height:560, borderRadius:'50%', background:'radial-gradient(circle, rgba(45,106,79,0.22) 0%, transparent 65%)', filter:'blur(60px)', top:'-20%', left:'-10%', animation:'cta-orb-1 22s ease-in-out infinite', willChange:'transform' }} />
-        <div style={{ position:'absolute', width:480, height:480, borderRadius:'50%', background:'radial-gradient(circle, rgba(79,70,229,0.14) 0%, transparent 65%)', filter:'blur(64px)', bottom:'-15%', right:'-8%', animation:'cta-orb-2 28s ease-in-out infinite 4s', willChange:'transform' }} />
+        <div style={{ position:'absolute', width:560, height:560, borderRadius:'50%', background:'radial-gradient(circle, rgba(62,74,137,0.16) 0%, transparent 65%)', filter:'blur(60px)', top:'-20%', left:'-10%', animation:'cta-orb-1 22s ease-in-out infinite', willChange:'transform' }} />
+        <div style={{ position:'absolute', width:480, height:480, borderRadius:'50%', background:'radial-gradient(circle, rgba(42,53,104,0.12) 0%, transparent 65%)', filter:'blur(64px)', bottom:'-15%', right:'-8%', animation:'cta-orb-2 28s ease-in-out infinite 4s', willChange:'transform' }} />
         <div style={{ position:'absolute', width:360, height:360, borderRadius:'50%', background:'radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 65%)', filter:'blur(40px)', top:'40%', right:'30%', animation:'cta-orb-3 18s ease-in-out infinite 8s', willChange:'transform' }} />
       </div>
       <style>{`
@@ -89,7 +89,7 @@ export default function LandingCTA() {
           <Link
             href="/sign-up-login-screen?mode=user"
             className="inline-flex items-center justify-center gap-3 px-9 py-4 rounded-full font-bold text-sm transition-all duration-200 hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] w-full lg:w-auto"
-            style={{ background: '#ffffff', color: '#1a2e1a', boxShadow: '0 4px 24px rgba(0,0,0,0.30)' }}
+            style={{ background: '#ffffff', color: '#191E2F', boxShadow: '0 4px 24px rgba(0,0,0,0.30)' }}
           >
             Sign Up for Free
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

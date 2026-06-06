@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useMemo } from 'react';
 import {
@@ -103,19 +103,19 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
       <div
         className="flex h-14 shrink-0 items-center justify-between px-4"
         style={{
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+          background: 'linear-gradient(135deg, #191E2F 0%, #1E2538 100%)',
         }}
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-500/20">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-green-500/25 bg-[#1E2538]">
             <Bookmark
               size={16}
-              className="text-indigo-300"
+              className="text-[#C4CAE0]"
               strokeWidth={2.5}
             />
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#7C859E]">
               Pinned for later
             </p>
             <p className="text-sm font-black leading-none text-white">
@@ -125,14 +125,14 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
         </div>
         <div className="flex items-center gap-2">
           {bookmarkedItems.length > 0 && (
-            <span className="rounded-full bg-indigo-500/20 px-2.5 py-1 text-[11px] font-black text-indigo-300">
+            <span className="rounded-full bg-[#1E2538] px-2.5 py-1 text-[11px] font-black text-[#C4CAE0]">
               {bookmarkedItems.length} saved
             </span>
           )}
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-[#7C859E] transition-colors hover:bg-white/10 hover:text-white"
             title="Close"
           >
             <X size={16} strokeWidth={2.5} />
@@ -145,18 +145,18 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
         {bookmarkedItems.length === 0 ? (
           /* Empty state */
           <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[rgba(62,74,137,0.08)]">
               <Bookmark
                 size={28}
-                className="text-slate-300"
+                className="text-[#9BA6D3]"
                 strokeWidth={1.5}
               />
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-700">
+              <p className="text-sm font-bold text-[#4A5578]">
                 No saved messages yet
               </p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-400">
+              <p className="mt-1 text-sm leading-relaxed text-[#7C859E]">
                 Bookmark any message to find it here later. Click the bookmark
                 icon on any message to save it.
               </p>
@@ -168,22 +168,22 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
             {Object.entries(grouped).map(([channelId, group]) => (
               <div key={channelId}>
                 {/* Channel group header */}
-                <div className="flex items-center gap-2 bg-slate-50 px-5 py-2.5 border-b border-slate-100">
+                <div className="flex items-center gap-2 bg-[#FAF8F5] px-5 py-2.5 border-b border-[rgba(62,74,137,0.08)]">
                   <Hash
                     size={12}
                     className="shrink-0 text-indigo-500"
                     strokeWidth={2.5}
                   />
-                  <span className="text-[11px] font-black uppercase tracking-widest text-indigo-600">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-[#3E4A89]">
                     {group.channelName}
                   </span>
-                  <span className="ml-auto text-[10px] font-semibold text-slate-400">
+                  <span className="ml-auto text-[11px] font-semibold text-[#7C859E]">
                     {group.items.length} saved
                   </span>
                   <button
                     type="button"
                     onClick={() => handleGoToChannel(channelId)}
-                    className="flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-[10px] font-black text-indigo-600 transition-colors hover:bg-indigo-100"
+                    className="flex items-center gap-1 rounded-md bg-[rgba(62,74,137,0.08)] px-2 py-1 text-[11px] font-black text-[#3E4A89] transition-colors hover:bg-indigo-100"
                   >
                     Go to channel
                     <ArrowRight size={10} strokeWidth={2.5} />
@@ -198,17 +198,17 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
                   return (
                     <div
                       key={item.message.id}
-                      className="group flex items-start gap-3 border-b border-slate-50 px-5 py-3.5 transition-colors hover:bg-slate-50"
+                      className="group flex items-start gap-3 border-b border-slate-50 px-5 py-3.5 transition-colors hover:bg-[rgba(62,74,137,0.06)]"
                       style={{
                         borderLeftWidth: 3,
-                        borderLeftColor: item.message.color ?? '#4f46e5',
+                        borderLeftColor: item.message.color ?? '#3E4A89',
                       }}
                     >
                       {/* Avatar */}
                       <span
-                        className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-black text-white"
+                        className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-black text-white"
                         style={{
-                          backgroundColor: item.message.color ?? '#4f46e5',
+                          backgroundColor: item.message.color ?? '#3E4A89',
                         }}
                       >
                         {item.message.initials}
@@ -217,18 +217,18 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-xs font-bold text-slate-800">
+                          <span className="text-xs font-bold text-[#1E2636]">
                             {item.message.sender}
                           </span>
-                          <span className="flex items-center gap-0.5 text-[10px] text-slate-400">
+                          <span className="flex items-center gap-0.5 text-[10px] text-[#7C859E]">
                             <Hash size={9} strokeWidth={2.5} />
                             {item.channelName}
                           </span>
-                          <span className="ml-auto text-[10px] text-slate-400">
+                          <span className="ml-auto text-[10px] text-[#7C859E]">
                             {formatTime(item.message.timestamp)}
                           </span>
                         </div>
-                        <p className="line-clamp-3 text-xs leading-relaxed text-slate-600">
+                        <p className="line-clamp-3 text-sm leading-relaxed text-[#4A5578]">
                           {item.message.text}
                         </p>
 
@@ -237,7 +237,7 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
                           <button
                             type="button"
                             onClick={() => handleGoToChannel(channelId)}
-                            className="flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-600 transition-colors hover:bg-indigo-100"
+                            className="flex items-center gap-1 rounded-md bg-[rgba(62,74,137,0.08)] px-2 py-1 text-[11px] font-bold text-[#3E4A89] transition-colors hover:bg-indigo-100"
                           >
                             <ArrowRight size={10} strokeWidth={2.5} />
                             Go to channel
@@ -245,7 +245,7 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
                           <button
                             type="button"
                             onClick={() => toggleBookmark(item.message.id)}
-                            className="flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-600 transition-colors hover:bg-amber-100"
+                            className="flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-600 transition-colors hover:bg-amber-100"
                             title={
                               isBookmarked
                                 ? 'Remove bookmark'
@@ -272,3 +272,7 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
     </div>
   );
 }
+
+
+
+

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useMemo, useState } from 'react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { X, Mail, Copy, Check, Hash, MessageSquare, Send } from 'lucide-react';
@@ -21,7 +21,7 @@ interface UserProfileModalProps {
 const STATUS_CONFIG = {
   online: { label: 'Online', color: 'bg-green-400', textColor: 'text-green-600' },
   away: { label: 'Away', color: 'bg-amber-400', textColor: 'text-amber-600' },
-  offline: { label: 'Offline', color: 'bg-slate-400', textColor: 'text-slate-500' },
+  offline: { label: 'Offline', color: 'bg-slate-400', textColor: 'text-[#7C859E]' },
 };
 
 function formatTime(iso: string): string {
@@ -47,7 +47,7 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
 
   const [copied, setCopied] = useState(false);
 
-  // Channels this member belongs to — must be before the early return
+  // Channels this member belongs to â€” must be before the early return
   const memberChannels = useMemo(
     () =>
       member
@@ -60,7 +60,7 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
     [channels, member]
   );
 
-  // Last 3 messages from this member (scan all channels) — must be before the early return
+  // Last 3 messages from this member (scan all channels) â€” must be before the early return
   const recentMessages = useMemo(() => {
     if (!member) return [];
 
@@ -120,7 +120,7 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-[rgba(25,30,47,0.60)] backdrop-blur-sm" />
 
       {/* Card */}
       <div
@@ -130,7 +130,7 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 z-10 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          className="absolute top-3 right-3 z-10 p-1.5 rounded-lg text-[#7C859E] hover:text-[#4A5578] hover:bg-[rgba(62,74,137,0.08)] transition-colors"
         >
           <X size={18} strokeWidth={2.5} />
         </button>
@@ -146,10 +146,10 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
           </div>
 
           {/* Name */}
-          <h2 className="text-lg font-black text-slate-900">{member.name}</h2>
+          <h2 className="text-lg font-black text-[#1E2636]">{member.name}</h2>
 
           {/* Role badge */}
-          <span className="mt-1.5 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-black uppercase tracking-widest">
+          <span className="mt-1.5 px-3 py-1 rounded-full bg-indigo-100 text-[#3E4A89] text-[11px] font-black uppercase tracking-widest">
             {member.role}
           </span>
 
@@ -163,22 +163,22 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
         </div>
 
         {/* Body */}
-        <div className="px-5 pb-5 space-y-4 border-t border-slate-100">
+        <div className="px-5 pb-5 space-y-4 border-t border-[rgba(62,74,137,0.08)]">
           {/* Contact section */}
           <div className="pt-4">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#7C859E] mb-2">
               Contact
             </p>
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-              <Mail size={15} className="text-slate-400 flex-shrink-0" />
-              <span className="flex-1 text-sm text-slate-700 truncate">{member.email}</span>
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-[#FAF8F5] border border-[rgba(62,74,137,0.08)]">
+              <Mail size={15} className="text-[#7C859E] flex-shrink-0" />
+              <span className="flex-1 text-sm text-[#4A5578] truncate">{member.email}</span>
               <button
                 onClick={handleCopyEmail}
                 title="Copy email"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors flex-shrink-0"
+                className="p-1.5 rounded-lg text-[#7C859E] hover:text-[#3E4A89] hover:bg-[rgba(62,74,137,0.08)] transition-colors flex-shrink-0"
               >
                 {copied ? (
-                  <Check size={14} className="text-green-500" strokeWidth={2.5} />
+                  <Check size={14} className="text-[#9BA6D3]" strokeWidth={2.5} />
                 ) : (
                   <Copy size={14} strokeWidth={2} />
                 )}
@@ -189,14 +189,14 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
           {/* Channels section */}
           {memberChannels.length > 0 && (
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#7C859E] mb-2">
                 Channels
               </p>
               <div className="flex flex-wrap gap-2">
                 {memberChannels.map((ch) => (
                   <span
                     key={ch.id}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-[11px] font-semibold"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[rgba(62,74,137,0.08)] text-[#4A5578] text-[11px] font-semibold"
                   >
                     <Hash size={10} strokeWidth={3} />
                     {ch.name}
@@ -209,18 +209,18 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
           {/* Recent activity section */}
           {recentMessages.length > 0 && (
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#7C859E] mb-2">
                 Recent Activity
               </p>
               <div className="space-y-2">
                 {recentMessages.map((msg, idx) => (
                   <div
                     key={idx}
-                    className="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-100"
+                    className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#FAF8F5] border border-[rgba(62,74,137,0.08)]"
                   >
                     <MessageSquare
                       size={13}
-                      className="text-slate-300 flex-shrink-0 mt-0.5"
+                      className="text-[#9BA6D3] flex-shrink-0 mt-0.5"
                       strokeWidth={2}
                     />
                     <div className="flex-1 min-w-0">
@@ -228,11 +228,11 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
                         <span className="text-[10px] font-black text-indigo-500 uppercase tracking-wide">
                           {msg.channelName}
                         </span>
-                        <span className="text-[10px] text-slate-400 flex-shrink-0">
+                        <span className="text-[10px] text-[#7C859E] flex-shrink-0">
                           {formatTime(msg.timestamp)}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                      <p className="text-xs text-[#4A5578] leading-relaxed line-clamp-2">
                         {msg.text}
                       </p>
                     </div>
@@ -245,7 +245,7 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
           {/* Send DM button */}
           <button
             onClick={handleSendDM}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-sm font-bold transition-colors shadow-md shadow-indigo-200"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#3E4A89] hover:bg-[rgba(62,74,137,0.08)]0 active:bg-[#2A3568] text-white text-sm font-bold transition-colors shadow-md shadow-indigo-200"
           >
             <Send size={15} strokeWidth={2.5} />
             Send DM
@@ -255,3 +255,6 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
     </div>
   );
 }
+
+
+

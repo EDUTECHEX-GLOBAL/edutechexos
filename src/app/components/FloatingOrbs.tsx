@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React from 'react';
 import { useScrollProgress } from '@/hooks/useScrollProgress';
 
@@ -8,11 +8,11 @@ interface Orb {
 }
 
 const orbs: Orb[] = [
-  { size: 700, x: -15, y: -25, color1: '#2d6a4f', color2: '#52b788', duration: 30, delay: 0, blur: '140px', driftX: 8, driftY: -10 },
+  { size: 700, x: -15, y: -25, color1: '#3E4A89', color2: '#9BA6D3', duration: 30, delay: 0, blur: '140px', driftX: 8, driftY: -10 },
   { size: 600, x: 55, y: 35, color1: '#7c3aed', color2: '#c4b5fd', duration: 35, delay: -8, blur: '120px', driftX: -12, driftY: 8 },
-  { size: 500, x: 25, y: 65, color1: '#1b4332', color2: '#2d6a4f', duration: 25, delay: -15, blur: '100px', driftX: 10, driftY: 12 },
+  { size: 500, x: 25, y: 65, color1: '#191E2F', color2: '#3E4A89', duration: 25, delay: -15, blur: '100px', driftX: 10, driftY: 12 },
   { size: 450, x: 75, y: 15, color1: '#c4b5fd', color2: '#a78bfa', duration: 32, delay: -5, blur: '90px', driftX: -8, driftY: -12 },
-  { size: 350, x: 45, y: 80, color1: '#52b788', color2: '#2d6a4f', duration: 28, delay: -12, blur: '80px', driftX: 6, driftY: -8 },
+  { size: 350, x: 45, y: 80, color1: '#9BA6D3', color2: '#2A3568', duration: 28, delay: -12, blur: '80px', driftX: 6, driftY: -8 },
   { size: 250, x: 10, y: 50, color1: '#a78bfa', color2: '#7c3aed', duration: 22, delay: -3, blur: '60px', driftX: -15, driftY: 5 },
 ];
 

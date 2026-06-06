@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Activity,
@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import AdminGuard from '../components/AdminGuard';
 import LoginTrackerCalendar from './components/LoginTrackerCalendar';
 import { useDashboardStore } from '@/store/dashboardStore';
+import { getSocket } from '@/lib/socket';
 
 type AdminUser = { name: string; email: string; role: string };
 type AccessRequest = {
@@ -33,10 +34,21 @@ type AccessRequest = {
   requestedAt: string;
 };
 const API_BASE = '';
+const MAX_ADMINS = 3;
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
+const systemEmails = [
+  'admin@edutechex.in',
+  'aditya@edutechex.in',
+  'dev.rk@edutechex.in',
+  'design.sa@edutechex.in',
+  'tarun@edutechex.in',
+  'mohan.kumar@edutechex.in',
+  'mohan.reddy@edutechex.in',
+  'mohan.sen@edutechex.in'
+];
 
 export default function AdminPage() {
-  const { members, addMember, removeMember, channels, setMemberWorkspaceChannel } =
+  const { members, addMember, removeMember, channels, setMemberWorkspaceChannel, setMemberWorkspaceChannels, setMemberRole, loadLocalMembers } =
     useDashboardStore();
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -47,6 +59,7 @@ export default function AdminPage() {
   const [newExtraChannel, setNewExtraChannel] = useState('');
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [requestChannelById, setRequestChannelById] = useState<Record<string, string>>({});
+  const [promoteLoadingId, setPromoteLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
     const authData = localStorage.getItem('edutechex_token');
@@ -59,8 +72,17 @@ export default function AdminPage() {
     }
   }, []);
 
+  // Re-load member list on real-time member_updated events
+  useEffect(() => {
+    const socket = getSocket();
+    const onMemberUpdated = () => { loadLocalMembers?.(); };
+    socket.on('member_updated', onMemberUpdated);
+    return () => { socket.off('member_updated', onMemberUpdated); };
+  }, [loadLocalMembers]);
+
   useEffect(() => {
     // Primary: load from backend
+    loadLocalMembers?.();
     fetch(`${API_BASE}/api/access-requests`)
       .then((r) => r.json())
       .then((data: { success: boolean; requests?: AccessRequest[] }) => {
@@ -96,27 +118,74 @@ export default function AdminPage() {
   }, [members, search]);
 
   const onlineMembers = members.filter((m) => m.status === 'online').length;
-  const assignedExtraUsers = members.filter((m) => getExtraChannel(m.id)).length;
+  const assignedExtraUsers = members.filter((m) => getExtraChannels(m.id).length > 0).length;
   const pendingRequests = accessRequests.filter((r) => r.status === 'pending');
   const approvedRequests = accessRequests.filter((r) => r.status === 'approved');
 
-  function getExtraChannel(memberId: string) {
-    return extraChannels.find((c) => c.memberIds?.includes(memberId));
+  // Count total admins (hardcoded + members with Admin role)
+  const adminCount = members.filter((m) => m.role === 'Admin').length;
+  const canAddMoreAdmins = adminCount < MAX_ADMINS;
+
+  async function promoteToAdmin(member: { id: string; name: string; email: string }) {
+    if (!canAddMoreAdmins) {
+      toast.error(`Maximum ${MAX_ADMINS} admins allowed. Remove an existing admin first.`);
+      return;
+    }
+    if (!confirm(`Make ${member.name} an Admin? (${adminCount}/${MAX_ADMINS} admin slots used)`)) return;
+    setPromoteLoadingId(member.id);
+    try {
+      const authData = localStorage.getItem('edutechex_token');
+      const token = authData ? JSON.parse(authData).token : null;
+      const dbId = member.id.replace('member-', '');
+      const res = await fetch(`${API_BASE}/api/members/${dbId}/promote-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.error ?? 'Failed to promote admin.');
+        return;
+      }
+      setMemberRole(member.id, 'Admin');
+      await loadLocalMembers?.();
+      toast.success(data.message ?? `${member.name} is now an Admin.`);
+    } catch {
+      toast.error('Network error promoting admin.');
+    } finally {
+      setPromoteLoadingId(null);
+    }
+  }
+
+  function handleRoleChange(memberId: string, memberName: string, newRoleVal: string) {
+    if (newRoleVal === 'Admin' && !canAddMoreAdmins) {
+      toast.error(`Maximum ${MAX_ADMINS} admins allowed. Remove an existing admin first.`);
+      return;
+    }
+    setMemberRole(memberId, newRoleVal);
+    toast.success(`Role updated to ${newRoleVal} for ${memberName}`);
+  }
+
+  function getExtraChannels(memberId: string) {
+    return extraChannels.filter((c) => c.memberIds?.includes(memberId));
   }
   function getChannelMembers(channelId: string) {
     const channel = channels.find((c) => c.id === channelId);
     return members.filter((m) => channel?.memberIds?.includes(m.id));
   }
 
-  function handleChannelGrant(memberId: string, channelId: string) {
-    setMemberWorkspaceChannel(memberId, channelId || null);
+  function handleChannelToggle(memberId: string, channelId: string, checked: boolean) {
+    const current = getExtraChannels(memberId).map((c) => c.id);
+    const next = checked ? [...new Set([...current, channelId])] : current.filter((id) => id !== channelId);
+    setMemberWorkspaceChannels(memberId, next);
     const member = members.find((m) => m.id === memberId);
     const channel = extraChannels.find((c) => c.id === channelId);
-    toast.success(
-      channel
-        ? `${member?.name ?? 'User'} now has access to #${channel.name}.`
-        : `${member?.name ?? 'User'} now has general-only access.`
-    );
+    if (channel) {
+      toast.success(
+        checked
+          ? `${member?.name ?? 'User'} added to #${channel.name}.`
+          : `${member?.name ?? 'User'} removed from #${channel.name}.`
+      );
+    }
   }
 
   function handleAddMember(e: React.FormEvent) {
@@ -135,7 +204,7 @@ export default function AdminPage() {
       .join('')
       .toUpperCase()
       .slice(0, 2);
-    const colors = ['#2d6a4f', '#52b788', '#7c3aed', '#a78bfa', '#1b4332', '#c4b5fd'];
+    const colors = ['#3E4A89', '#9BA6D3', '#7c3aed', '#a78bfa', '#2A3568', '#c4b5fd'];
       const shortId =
       cleanName
         .toLowerCase()
@@ -176,42 +245,44 @@ export default function AdminPage() {
       return;
     }
 
+    const selectedChannel = requestChannelById[request.id] || null;
+
     // ── Persist approval to backend (cross-device) ──────────────────────────
     try {
       const res = await fetch(`${API_BASE}/api/access-requests/${request.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'approved' }),
+        body: JSON.stringify({ status: 'approved', channelId: selectedChannel }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toast.error(err.error ?? 'Failed to approve request on server.');
         return;
       }
+      
+      // Load updated members list
+      await loadLocalMembers();
     } catch {
       // Backend unreachable — still approve locally (offline fallback)
+      const colors = ['#3E4A89', '#9BA6D3', '#7c3aed', '#a78bfa', '#2A3568', '#c4b5fd'];
+      const initials = request.name
+        .split(' ')
+        .map((p) => p[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+      const memberId = makeMemberId(request.name);
+      addMember({
+        id: memberId,
+        initials,
+        name: request.name,
+        email: request.email,
+        role: request.role,
+        status: 'online',
+        color: colors[Math.floor(Math.random() * colors.length)],
+      });
+      if (selectedChannel) setMemberWorkspaceChannel(memberId, selectedChannel);
     }
-
-    // ── Add to workspace member list ────────────────────────────────────────
-    const colors = ['#2d6a4f', '#52b788', '#7c3aed', '#a78bfa', '#1b4332', '#c4b5fd'];
-    const initials = request.name
-      .split(' ')
-      .map((p) => p[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-    const memberId = makeMemberId(request.name);
-    addMember({
-      id: memberId,
-      initials,
-      name: request.name,
-      email: request.email,
-      role: request.role,
-      status: 'online',
-      color: colors[Math.floor(Math.random() * colors.length)],
-    });
-    const selectedChannel = requestChannelById[request.id];
-    if (selectedChannel) setMemberWorkspaceChannel(memberId, selectedChannel);
 
     // ── Update local UI state + localStorage fallback ───────────────────────
     const nextRequests = accessRequests.map((item) =>
@@ -367,7 +438,7 @@ export default function AdminPage() {
                   </h2>
                   <p className="text-sm text-ink-light">Grant one controlled channel per person.</p>
                 </div>
-                <label className="flex h-10 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 md:w-80 focus-within:border-primary focus-within:shadow-[0_0_0_3px_rgba(45,106,79,0.1)] transition-all">
+                <label className="flex h-10 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 md:w-80 focus-within:border-primary focus-within:shadow-[0_0_0_3px_rgba(62,74,137,0.12)] transition-all">
                   <Search size={15} className="text-ink-light" />
                   <input
                     value={search}
@@ -382,7 +453,7 @@ export default function AdminPage() {
                 <table className="w-full min-w-[820px] text-left">
                   <thead>
                     <tr className="border-b border-border">
-                      {['User', 'Role', 'Status', 'Current access', 'Grant extra channel', ''].map(
+                      {['User', 'Role', 'Status', 'Current access', 'Channel access', ''].map(
                         (h) => (
                           <th
                             key={h}
@@ -396,7 +467,7 @@ export default function AdminPage() {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {filteredMembers.map((member) => {
-                      const extraChannel = getExtraChannel(member.id);
+                      const memberExtraChannels = getExtraChannels(member.id);
                       const isAdminMember = member.role === 'Admin';
                       return (
                         <tr key={member.id} className="transition hover:bg-surface-muted/70">
@@ -419,11 +490,39 @@ export default function AdminPage() {
                             </div>
                           </td>
                           <td className="px-5 py-4">
-                            <span
-                              className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${isAdminMember ? 'bg-primary/10 text-primary' : 'bg-secondary text-ink'}`}
-                            >
-                              {member.role}
-                            </span>
+                            {systemEmails.includes(member.email.toLowerCase()) ? (
+                              <span
+                                className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${isAdminMember ? 'bg-primary/10 text-primary' : 'bg-secondary text-ink'}`}
+                              >
+                                {member.role}
+                              </span>
+                            ) : (
+                              <div className="flex flex-col gap-1.5">
+                                <select
+                                  value={member.role}
+                                  onChange={(e) => handleRoleChange(member.id, member.name, e.target.value)}
+                                  className="h-9 rounded-xl border border-border bg-surface px-2 text-xs font-semibold text-foreground outline-none focus:border-primary"
+                                >
+                                  <option value="Developer">Developer</option>
+                                  <option value="Designer">Designer</option>
+                                  <option value="Lead">Lead</option>
+                                  <option value="Manager">Manager</option>
+                                  <option value="Admin">Admin</option>
+                                </select>
+                                {!isAdminMember && canAddMoreAdmins && (
+                                  <button
+                                    type="button"
+                                    onClick={() => promoteToAdmin(member)}
+                                    disabled={promoteLoadingId === member.id}
+                                    className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary hover:bg-primary/20 transition-all disabled:opacity-50"
+                                    title={`Make Admin (${adminCount}/${MAX_ADMINS} slots used)`}
+                                  >
+                                    <ShieldCheck size={10} />
+                                    {promoteLoadingId === member.id ? 'Promoting...' : 'Make Admin'}
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </td>
                           <td className="px-5 py-4">
                             <span className="inline-flex items-center gap-2 text-xs font-semibold text-ink">
@@ -444,10 +543,12 @@ export default function AdminPage() {
                                   <span className="rounded-lg bg-surface border border-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-ink">
                                     #general
                                   </span>
-                                  {extraChannel ? (
-                                    <span className="rounded-lg bg-primary/10 border border-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-primary">
-                                      #{extraChannel.name}
-                                    </span>
+                                  {memberExtraChannels.length > 0 ? (
+                                    memberExtraChannels.map((ec) => (
+                                      <span key={ec.id} className="rounded-lg bg-primary/10 border border-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-primary">
+                                        #{ec.name}
+                                      </span>
+                                    ))
                                   ) : (
                                     <span className="rounded-lg bg-[#fffbeb] border border-[#f59e0b]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#d97706]">
                                       Needs assignment
@@ -458,25 +559,31 @@ export default function AdminPage() {
                             </div>
                           </td>
                           <td className="px-5 py-4">
-                            <select
-                              value={isAdminMember ? '__all' : (extraChannel?.id ?? '')}
-                              disabled={isAdminMember}
-                              onChange={(e) => handleChannelGrant(member.id, e.target.value)}
-                              className="h-10 w-full rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(45,106,79,0.1)] disabled:cursor-not-allowed disabled:bg-secondary disabled:text-ink-light"
-                            >
-                              {isAdminMember ? (
-                                <option value="__all">Full admin access</option>
-                              ) : (
-                                <>
-                                  <option value="">General only</option>
-                                  {extraChannels.map((c) => (
-                                    <option key={c.id} value={c.id}>
-                                      #{c.name}
-                                    </option>
-                                  ))}
-                                </>
-                              )}
-                            </select>
+                            {isAdminMember ? (
+                              <span className="text-xs text-ink-light italic">Full access</span>
+                            ) : (
+                              <div className="flex flex-col gap-1.5">
+                                {extraChannels.map((c) => {
+                                  const checked = memberExtraChannels.some((ec) => ec.id === c.id);
+                                  return (
+                                    <label key={c.id} className="flex items-center gap-2 cursor-pointer select-none group">
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={(e) => handleChannelToggle(member.id, c.id, e.target.checked)}
+                                        className="h-3.5 w-3.5 rounded border-border accent-primary cursor-pointer"
+                                      />
+                                      <span className={`text-xs font-semibold transition-colors ${checked ? 'text-primary' : 'text-ink-light group-hover:text-foreground'}`}>
+                                        #{c.name}
+                                      </span>
+                                    </label>
+                                  );
+                                })}
+                                {extraChannels.length === 0 && (
+                                  <span className="text-xs text-ink-light italic">No extra channels</span>
+                                )}
+                              </div>
+                            )}
                           </td>
                           <td className="px-5 py-4 text-right">
                             <button
@@ -542,7 +649,7 @@ export default function AdminPage() {
                           onChange={(e) =>
                             setRequestChannelById((v) => ({ ...v, [request.id]: e.target.value }))
                           }
-                          className="mb-3 h-10 w-full rounded-xl border border-[#f59e0b]/15 bg-surface px-3 text-xs font-semibold text-foreground outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(45,106,79,0.1)]"
+                          className="mb-3 h-10 w-full rounded-xl border border-[#f59e0b]/15 bg-surface px-3 text-xs font-semibold text-foreground outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(62,74,137,0.12)]"
                         >
                           <option value="">General only</option>
                           {extraChannels.map((c) => (
@@ -646,7 +753,7 @@ export default function AdminPage() {
                               <button
                                 key={`${channel.id}-${member.id}`}
                                 type="button"
-                                onClick={() => handleChannelGrant(member.id, '')}
+                                onClick={() => handleChannelToggle(member.id, channel.id, false)}
                                 className="rounded-lg border border-border bg-surface px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.06em] text-ink hover:border-red-200 hover:bg-red-50 hover:text-[#f43f5e] transition-all"
                                 title={`Remove ${member.name} from #${channel.name}`}
                               >
@@ -663,9 +770,9 @@ export default function AdminPage() {
                           value=""
                           onChange={(e) => {
                             if (!e.target.value) return;
-                            handleChannelGrant(e.target.value, channel.id);
+                            handleChannelToggle(e.target.value, channel.id, true);
                           }}
-                          className="h-10 w-full rounded-xl border border-border bg-surface-muted px-3 text-xs font-semibold text-ink outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(45,106,79,0.1)]"
+                          className="h-10 w-full rounded-xl border border-border bg-surface-muted px-3 text-xs font-semibold text-ink outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(62,74,137,0.12)]"
                         >
                           <option value="">Grant this channel to user</option>
                           {members

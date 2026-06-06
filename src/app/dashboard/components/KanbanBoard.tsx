@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -30,7 +30,7 @@ const COLUMNS: {
     id: 'todo',
     label: 'To Do',
     color: 'border-slate-300',
-    headerBg: 'bg-slate-700',
+    headerBg: 'bg-[#191E2F]',
     countBg: 'bg-slate-600',
     emptyText: 'No tasks here',
   },
@@ -75,7 +75,7 @@ function getInitials(name: string): string {
 }
 
 const AVATAR_COLORS = [
-  '#4f46e5',
+  '#3E4A89',
   '#0891b2',
   '#059669',
   '#dc2626',
@@ -112,7 +112,7 @@ function TaskCard({
 
   return (
     <div
-      className="group relative rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-all hover:border-slate-300 hover:shadow-md"
+      className="group relative rounded-xl border border-[rgba(62,74,137,0.12)] bg-white p-3 shadow-sm transition-all hover:border-slate-300 hover:shadow-md"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -121,7 +121,7 @@ function TaskCard({
         <button
           type="button"
           onClick={onDelete}
-          className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500"
+          className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md text-[#9BA6D3] transition-colors hover:bg-red-50 hover:text-red-500"
           title="Delete task"
         >
           <Trash2 size={11} strokeWidth={2.5} />
@@ -129,7 +129,7 @@ function TaskCard({
       )}
 
       {/* Task text */}
-      <p className="pr-6 text-sm font-medium leading-snug text-slate-800">
+      <p className="pr-6 text-sm font-medium leading-snug text-[#1E2636]">
         {task.text}
       </p>
 
@@ -148,7 +148,7 @@ function TaskCard({
           )}
           {/* Source channel */}
           {task.sourceChannel && (
-            <span className="flex items-center gap-0.5 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+            <span className="flex items-center gap-0.5 rounded-md bg-[rgba(62,74,137,0.08)] px-1.5 py-0.5 text-[11px] font-semibold text-[#7C859E]">
               <Hash size={8} strokeWidth={2.5} />
               {task.sourceChannel}
             </span>
@@ -161,7 +161,7 @@ function TaskCard({
             <button
               type="button"
               onClick={onMoveBack}
-              className="flex h-6 w-6 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              className="flex h-6 w-6 items-center justify-center rounded-md text-[#7C859E] transition-colors hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]"
               title="Move back"
             >
               <ChevronLeft size={13} strokeWidth={2.5} />
@@ -171,7 +171,7 @@ function TaskCard({
             <button
               type="button"
               onClick={onMoveForward}
-              className="flex h-6 w-6 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+              className="flex h-6 w-6 items-center justify-center rounded-md text-[#7C859E] transition-colors hover:bg-[rgba(62,74,137,0.08)] hover:text-[#3E4A89]"
               title="Move forward"
             >
               <ChevronRight size={13} strokeWidth={2.5} />
@@ -247,24 +247,24 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-none bg-slate-50">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-none bg-[#FAF8F5]">
       {/* Header */}
       <div
         className="flex h-14 shrink-0 items-center justify-between px-4"
         style={{
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+          background: 'linear-gradient(135deg, #191E2F 0%, #1E2538 100%)',
         }}
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-500/20">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-green-500/25 bg-[#1E2538]">
             <LayoutGrid
               size={16}
-              className="text-indigo-300"
+              className="text-[#C4CAE0]"
               strokeWidth={2.5}
             />
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#7C859E]">
               Task Management
             </p>
             <p className="text-sm font-black leading-none text-white">
@@ -273,13 +273,13 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-indigo-500/20 px-2.5 py-1 text-[11px] font-black text-indigo-300">
+          <span className="rounded-full bg-[#1E2538] px-2.5 py-1 text-[11px] font-black text-[#C4CAE0]">
             {kanbanTasks.length} task{kanbanTasks.length !== 1 ? 's' : ''} · yours
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-[#7C859E] transition-colors hover:bg-white/10 hover:text-white"
             title="Close"
           >
             <X size={16} strokeWidth={2.5} />
@@ -294,7 +294,7 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
           return (
             <div
               key={col.id}
-              className="flex w-72 shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+              className="flex w-72 shrink-0 flex-col overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-white shadow-sm"
             >
               {/* Column header */}
               <div
@@ -313,8 +313,8 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
               {/* Task list */}
               <div className="flex-1 space-y-2.5 overflow-y-auto p-3">
                 {tasks.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 py-8 text-center">
-                    <p className="text-xs font-semibold text-slate-400">
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[rgba(62,74,137,0.12)] py-8 text-center">
+                    <p className="text-xs font-semibold text-[#7C859E]">
                       {col.emptyText}
                     </p>
                   </div>
@@ -341,7 +341,7 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
 
               {/* Add task form (only in To Do column) */}
               {col.id === 'todo' && (
-                <div className="shrink-0 border-t border-slate-100 bg-slate-50/80 p-3">
+                <div className="shrink-0 border-t border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/80 p-3">
                   <div className="space-y-2">
                     <input
                       type="text"
@@ -349,7 +349,7 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
                       onChange={(e) => setNewTaskText(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder="Task description…"
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 transition-all"
+                      className="w-full rounded-lg border border-[rgba(62,74,137,0.12)] bg-white px-3 py-2 text-sm font-medium text-[#1E2636] placeholder-slate-400 outline-none focus:border-[#C4CAE0] focus:ring-2 focus:ring-[rgba(62,74,137,0.10)] transition-all"
                     />
                     <input
                       type="text"
@@ -357,13 +357,13 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
                       onChange={(e) => setNewTaskAssignee(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder="Assignee (optional)"
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 transition-all"
+                      className="w-full rounded-lg border border-[rgba(62,74,137,0.12)] bg-white px-3 py-2 text-sm font-medium text-[#1E2636] placeholder-slate-400 outline-none focus:border-[#C4CAE0] focus:ring-2 focus:ring-[rgba(62,74,137,0.10)] transition-all"
                     />
                     <button
                       type="button"
                       onClick={handleAddTask}
                       disabled={!newTaskText.trim()}
-                      className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 py-2 text-[11px] font-black uppercase tracking-[0.1em] text-white transition-all hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40 active:scale-95"
+                      className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#3E4A89] py-2 text-[11px] font-black uppercase tracking-[0.1em] text-white transition-all hover:bg-[rgba(62,74,137,0.08)]0 disabled:cursor-not-allowed disabled:opacity-40 active:scale-95"
                     >
                       <Plus size={12} strokeWidth={3} />
                       Add Task
@@ -378,3 +378,8 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
     </div>
   );
 }
+
+
+
+
+

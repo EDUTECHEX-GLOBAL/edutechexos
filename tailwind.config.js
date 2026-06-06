@@ -1,4 +1,4 @@
-/** @type {import('tailwindcss').Config} */
+﻿/** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
   content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
@@ -7,30 +7,30 @@ module.exports = {
     extend: {
       colors: {
         /* ── Core surfaces ───────────────────────────── */
-        background:      '#ede8dd',
-        foreground:      '#1a2e1a',
+        background:      '#F2F0EC',
+        foreground:      '#1E2636',
         surface:         '#ffffff',
-        'surface-muted': '#f5f1ea',
+        'surface-muted': '#FAF8F5',
 
         /* ── Text shades ─────────────────────────────── */
-        ink:       '#4d5d4d',
-        'ink-light': '#6b7b6b',
+        ink:         '#4A5578',
+        'ink-light': '#7C859E',
 
-        /* ── Primary — dark forest green ─────────────── */
+        /* ── Primary — Icy Blue ──────────────────────── */
         primary: {
-          DEFAULT:    '#1a3a2a',
+          DEFAULT:    '#3E4A89',
           foreground: '#ffffff',
-          light:      '#2d6a4f',
-          dark:       '#0f2018',
+          light:      '#9BA6D3',
+          dark:       '#2A3568',
         },
 
-        /* ── Secondary — warm cream ──────────────────── */
+        /* ── Secondary — Pure Frost ──────────────────── */
         secondary: {
-          DEFAULT:    '#f5f1ea',
-          foreground: '#1a2e1a',
+          DEFAULT:    '#FAF8F5',
+          foreground: '#1E2636',
         },
 
-        /* ── Accent — indigo/purple ──────────────────── */
+        /* ── Accent — kept for feature-card variety ──── */
         accent: {
           DEFAULT:    '#4f46e5',
           foreground: '#ffffff',
@@ -46,41 +46,41 @@ module.exports = {
           surface: '#f3f0ff',
         },
 
-        /* ── Green scale ─────────────────────────────── */
+        /* ── Blue scale ──────────────────────────────── */
         green: {
-          DEFAULT: '#1a3a2a',
-          light:   '#52b788',
-          dark:    '#0f2018',
-          surface: '#f0f5f0',
-          pale:    '#f5f8f5',
+          DEFAULT: '#3E4A89',
+          light:   '#9BA6D3',
+          dark:    '#2A3568',
+          surface: '#EFF6FF',
+          pale:    '#F2F0EC',
         },
 
         /* ── Muted ───────────────────────────────────── */
         muted: {
-          DEFAULT:    '#f5f1ea',
-          foreground: '#6b7b6b',
+          DEFAULT:    '#FAF8F5',
+          foreground: '#4A5578',
         },
 
-        /* ── Dark (footer / admin header) ────────────── */
+        /* ── Dark — Deep Slate ───────────────────────── */
         dark: {
-          DEFAULT:    '#1a2e1a',
-          foreground: '#f5f1ea',
-          muted:      '#8aaa8a',
-          border:     '#2e4a2e',
-          surface:    '#243424',
+          DEFAULT:    '#191E2F',
+          foreground: '#FAF8F5',
+          muted:      '#A0AEC0',
+          border:     '#191E2F',
+          surface:    '#191E2F',
         },
 
         /* ── Card ────────────────────────────────────── */
         card: {
           DEFAULT:    '#ffffff',
-          foreground: '#1a2e1a',
-          border:     '#ddd8d0',
+          foreground: '#1E2636',
+          border:     '#E0DDE8',
         },
 
         /* ── Structural ──────────────────────────────── */
-        border: '#ddd8d0',
-        input:  '#ddd8d0',
-        ring:   '#1a3a2a',
+        border: '#E0DDE8',
+        input:  '#E0DDE8',
+        ring:   '#3E4A89',
       },
 
       borderRadius: {
@@ -103,11 +103,11 @@ module.exports = {
       boxShadow: {
         glass:       '0 8px 32px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)',
         'glass-lg':  '0 16px 48px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.02)',
-        glow:        '0 0 40px -8px rgba(26,58,42,0.20)',
-        'glow-lg':   '0 0 60px -12px rgba(26,58,42,0.30)',
+        glow:        '0 0 40px -8px rgba(62,74,137,0.25)',
+        'glow-lg':   '0 0 60px -12px rgba(62,74,137,0.35)',
         soft:        '0 4px 16px rgba(0,0,0,0.04)',
         card:        '0 2px 8px rgba(0,0,0,0.04), 0 16px 32px -8px rgba(0,0,0,0.06)',
-        'card-hover':'0 4px 16px rgba(0,0,0,0.06), 0 24px 48px -8px rgba(26,58,42,0.10)',
+        'card-hover':'0 4px 16px rgba(0,0,0,0.06), 0 24px 48px -8px rgba(62,74,137,0.10)',
         dark:        '0 4px 24px rgba(0,0,0,0.18), 0 16px 48px rgba(0,0,0,0.10)',
       },
 
@@ -120,8 +120,8 @@ module.exports = {
         'float-slow':{ '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' }, '50%': { transform: 'translateY(-20px) rotate(2deg)' } },
         shimmer:     { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
         'glow-pulse': {
-          '0%, 100%': { boxShadow: '0 0 20px rgba(26,58,42,0.12), 0 0 40px rgba(26,58,42,0.04)' },
-          '50%':      { boxShadow: '0 0 30px rgba(26,58,42,0.25), 0 0 60px rgba(79,70,229,0.08)' },
+          '0%, 100%': { boxShadow: '0 0 20px rgba(62,74,137,0.15), 0 0 40px rgba(62,74,137,0.06)' },
+          '50%':      { boxShadow: '0 0 30px rgba(62,74,137,0.28), 0 0 60px rgba(62,74,137,0.12)' },
         },
         'neon-pulse': {
           '0%, 100%': { opacity: '0.4', filter: 'brightness(1)' },

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useEffect, useState } from 'react';
 import { MessageSquare, Smile, Pin, CheckSquare, X } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
@@ -14,7 +14,7 @@ export interface ToastData {
 }
 
 const TYPE_CONFIG = {
-  reply: { icon: MessageSquare, label: 'Reply', color: '#6366f1', bg: '#f5f3ff' },
+  reply: { icon: MessageSquare, label: 'Reply', color: '#3E4A89', bg: '#f5f3ff' },
   reaction: { icon: Smile, label: 'Reaction', color: '#f59e0b', bg: '#fffbeb' },
   pin: { icon: Pin, label: 'Pinned', color: '#8b5cf6', bg: '#f5f3ff' },
   task: { icon: CheckSquare, label: 'Task assigned', color: '#10b981', bg: '#ecfdf5' },
@@ -83,12 +83,12 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
           >
             {cfg.label}
           </span>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+          <span className="text-[10px] font-bold text-[#7C859E] uppercase tracking-tight">
             #{toast.channel}
           </span>
         </div>
-        <p className="text-[13px] font-bold text-slate-900 leading-tight">{toast.actor}</p>
-        <p className="text-xs font-medium text-slate-500 mt-1 leading-relaxed line-clamp-2">
+        <p className="text-[13px] font-bold text-[#1E2636] leading-tight">{toast.actor}</p>
+        <p className="text-xs font-medium text-[#7C859E] mt-1 leading-relaxed line-clamp-2">
           {toast.message}
         </p>
       </div>
@@ -96,7 +96,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
       {/* Dismiss */}
       <button
         onClick={handleDismiss}
-        className="flex-shrink-0 p-1 rounded-lg text-slate-300 hover:text-slate-900 hover:bg-slate-50 transition-all"
+        className="flex-shrink-0 p-1 rounded-lg text-[#9BA6D3] hover:text-[#1E2636] hover:bg-[#FAF8F5] transition-all"
       >
         <X size={14} strokeWidth={2.5} />
       </button>
@@ -126,3 +126,6 @@ export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
     </div>
   );
 }
+
+
+
