@@ -407,10 +407,6 @@ export default function LandingHero() {
           0%,100% { opacity: .10; }
           50%      { opacity: .22; }
         }
-        @keyframes ticker {
-          0%   { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
         @keyframes rh-in {
           from { opacity: 0; transform: translateY(22px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -644,39 +640,6 @@ export default function LandingHero() {
                 background: `rgba(212,175,55,${0.07 + (i % 3) * 0.08})`,
               }} />
             ))}
-          </div>
-        </div>
-
-        {/* ── Trusted By Ticker ──────────────────────────── */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-[#0A1128]/[0.05]
-                        bg-white/45 backdrop-blur-sm overflow-hidden py-4">
-          <div style={{ textAlign: 'center', marginBottom: 9 }}>
-            <span style={{
-              fontSize: 8, fontWeight: 900, letterSpacing: '.42em', textTransform: 'uppercase',
-              color: 'rgba(10,17,40,.25)',
-            }}>
-              Trusted Academic Partners
-            </span>
-          </div>
-          <div style={{ display: 'flex', overflow: 'hidden' }}>
-            <div style={{
-              display: 'flex', width: 'fit-content', alignItems: 'center', gap: 48,
-              animation: 'ticker 30s linear infinite',
-            }}>
-              {[...Array(2)].map((_, rep) => (
-                <React.Fragment key={rep}>
-                  {['Oxford', 'Harvard', 'Cambridge', 'Princeton', 'Stanford', 'MIT', 'Yale'].map(name => (
-                    <span key={name} style={{
-                      fontSize: 11, fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase',
-                      color: 'rgba(10,17,40,.2)', whiteSpace: 'nowrap',
-                      fontFamily: "'Playfair Display', serif",
-                    }}>
-                      {name}
-                    </span>
-                  ))}
-                </React.Fragment>
-              ))}
-            </div>
           </div>
         </div>
 
