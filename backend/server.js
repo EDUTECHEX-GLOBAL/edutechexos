@@ -83,6 +83,32 @@ io.on('connection', (socket) => {
     socket.to(channelId).emit('user_stopped_typing', { channelId, userName });
   });
 
+  // ── Direct Message rooms ──────────────────────────────────────────────
+  // Each DM conversation gets a room named dm:emailA::emailB (sorted)
+  socket.on('join_dm', ({ myEmail, partnerEmail }) => {
+    if (!myEmail || !partnerEmail) return;
+    const room = 'dm:' + [myEmail.toLowerCase(), partnerEmail.toLowerCase()].sort().join('::');
+    socket.join(room);
+  });
+
+  socket.on('leave_dm', ({ myEmail, partnerEmail }) => {
+    if (!myEmail || !partnerEmail) return;
+    const room = 'dm:' + [myEmail.toLowerCase(), partnerEmail.toLowerCase()].sort().join('::');
+    socket.leave(room);
+  });
+
+  socket.on('dm_typing_start', ({ myEmail, partnerEmail }) => {
+    if (!myEmail || !partnerEmail) return;
+    const room = 'dm:' + [myEmail.toLowerCase(), partnerEmail.toLowerCase()].sort().join('::');
+    socket.to(room).emit('dm_user_typing', { fromEmail: myEmail });
+  });
+
+  socket.on('dm_typing_stop', ({ myEmail, partnerEmail }) => {
+    if (!myEmail || !partnerEmail) return;
+    const room = 'dm:' + [myEmail.toLowerCase(), partnerEmail.toLowerCase()].sort().join('::');
+    socket.to(room).emit('dm_user_stopped_typing', { fromEmail: myEmail });
+  });
+
   socket.on('disconnect', () => {
     // rooms are automatically cleaned up on disconnect
   });
@@ -150,7 +176,24 @@ if (!MONGODB_URI) {
 }
 
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('Successfully connected to MongoDB Atlas'))
+  .then(() => {
+    console.log('Successfully connected to MongoDB Atlas');
+    // ── Drop any accidental TTL indexes on accessrequests ─────────────
+    // If MongoDB Atlas created a TTL on requestedAt, users vanish after
+    // that window. We remove it at startup so accounts are permanent.
+    mongoose.connection.collection('accessrequests').indexes()
+      .then((idxs) => {
+        idxs.forEach((idx) => {
+          if (idx.expireAfterSeconds !== undefined) {
+            mongoose.connection.collection('accessrequests')
+              .dropIndex(idx.name)
+              .then(() => console.log('[startup] Removed TTL index on accessrequests:', idx.name))
+              .catch((e) => console.warn('[startup] Could not drop TTL index:', e.message));
+          }
+        });
+      })
+      .catch(() => {});
+  })
   .catch((err) => {
     console.error('Failed to connect to MongoDB Atlas (non-fatal):', err);
     // Continue without exiting; DB-dependent routes may fail gracefully
@@ -205,6 +248,21 @@ const AccessRequestSchema = new mongoose.Schema({
   channelIds:  [{ type: String }],
 });
 const AccessRequest = mongoose.model('AccessRequest', AccessRequestSchema);
+
+// ── Direct Messages ──────────────────────────────────────────────────────────
+const DirectMessageSchema = new mongoose.Schema({
+  fromEmail:  { type: String, required: true, index: true },
+  fromName:   { type: String, required: true },
+  toEmail:    { type: String, required: true, index: true },
+  text:       { type: String, default: '' },
+  audioUrl:   { type: String },
+  files:      [{ name: String, url: String, type: String }],
+  timestamp:  { type: Date, default: Date.now },
+  read:       { type: Boolean, default: false },
+}, { strict: false });
+// Compound index so conversation queries are fast
+DirectMessageSchema.index({ fromEmail: 1, toEmail: 1, timestamp: -1 });
+const DirectMessage = mongoose.model('DirectMessage', DirectMessageSchema);
 
 // ── Password reset codes (TTL: 15 min) ──────────────────────────────────────
 const ResetCodeSchema = new mongoose.Schema({
@@ -756,6 +814,211 @@ app.patch('/api/meeting-access/:messageId/grant', authMiddleware, async (req, re
   }
 });
 
+// ── Direct Message Routes ──────────────────────────────────────────────────────
+
+// GET /api/dm/conversations — list all unique DM partners for the current user
+app.get('/api/dm/conversations', authMiddleware, async (req, res) => {
+  try {
+    const myEmail = req.user.email.toLowerCase();
+
+    // Pull latest message per conversation partner
+    const msgs = await DirectMessage.find({
+      $or: [{ fromEmail: myEmail }, { toEmail: myEmail }],
+    }).sort({ timestamp: -1 }).lean();
+
+    const convMap = new Map();
+    for (const msg of msgs) {
+      const partner = msg.fromEmail === myEmail ? msg.toEmail : msg.fromEmail;
+      const partnerName = msg.fromEmail === myEmail ? null : msg.fromName;
+      if (!convMap.has(partner)) {
+        convMap.set(partner, {
+          partnerEmail: partner,
+          partnerName: partnerName || partner,
+          lastMessage: msg.text || (msg.audioUrl ? '[Voice message]' : '[File]'),
+          lastTimestamp: msg.timestamp,
+          unread: 0,
+        });
+      }
+      if (msg.toEmail === myEmail && !msg.read) {
+        convMap.get(partner).unread = (convMap.get(partner).unread || 0) + 1;
+      }
+    }
+
+    // Enrich partner names from AccessRequest if missing
+    const convList = Array.from(convMap.values());
+    for (const conv of convList) {
+      if (!conv.partnerName || conv.partnerName === conv.partnerEmail) {
+        const u = await AccessRequest.findOne({ email: conv.partnerEmail }).lean().catch(() => null);
+        if (u) conv.partnerName = u.name;
+      }
+    }
+
+    res.json({ success: true, conversations: convList });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// GET /api/dm/:partnerEmail — fetch message thread with one user
+app.get('/api/dm/:partnerEmail', authMiddleware, async (req, res) => {
+  try {
+    const myEmail = req.user.email.toLowerCase();
+    const partnerEmail = decodeURIComponent(req.params.partnerEmail).toLowerCase();
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+
+    const msgs = await DirectMessage.find({
+      $or: [
+        { fromEmail: myEmail,      toEmail: partnerEmail },
+        { fromEmail: partnerEmail, toEmail: myEmail      },
+      ],
+    }).sort({ timestamp: 1 }).limit(limit).lean();
+
+    // Mark incoming messages as read
+    await DirectMessage.updateMany(
+      { fromEmail: partnerEmail, toEmail: myEmail, read: false },
+      { $set: { read: true } }
+    ).catch(() => {});
+
+    const formatted = msgs.map(({ _id, __v, ...m }) => ({ id: _id.toString(), ...m }));
+    res.json({ success: true, messages: formatted });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// POST /api/dm/:partnerEmail — send a direct message
+app.post('/api/dm/:partnerEmail', authMiddleware, async (req, res) => {
+  try {
+    const myEmail    = req.user.email.toLowerCase();
+    const myName     = req.user.name || req.user.email;
+    const partnerEmail = decodeURIComponent(req.params.partnerEmail).toLowerCase();
+    const { text, audioUrl, files } = req.body;
+
+    if (!text && !audioUrl && (!files || files.length === 0)) {
+      return res.status(400).json({ success: false, error: 'Message content is required.' });
+    }
+
+    const saved = await new DirectMessage({
+      fromEmail:  myEmail,
+      fromName:   myName,
+      toEmail:    partnerEmail,
+      text:       text || '',
+      audioUrl:   audioUrl || undefined,
+      files:      files   || [],
+      timestamp:  new Date(),
+      read:       false,
+    }).save();
+
+    const formatted = { id: saved._id.toString(), ...saved.toObject() };
+    delete formatted._id; delete formatted.__v;
+
+    // Push real-time to both sides of the conversation
+    const room = 'dm:' + [myEmail, partnerEmail].sort().join('::');
+    io.to(room).emit('dm_message', formatted);
+
+    res.json({ success: true, message: formatted });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// DELETE /api/dm/:id — soft-delete a single DM (only sender can delete)
+app.delete('/api/dm/:id', authMiddleware, async (req, res) => {
+  try {
+    const msg = await DirectMessage.findById(req.params.id).lean();
+    if (!msg) return res.status(404).json({ success: false, error: 'Message not found.' });
+    if (msg.fromEmail !== req.user.email.toLowerCase() && req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Only the sender can delete this message.' });
+    }
+    await DirectMessage.findByIdAndUpdate(req.params.id, { $set: { text: 'Message deleted.', deleted: true } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// GET /api/dm/unread-count — total unread DMs for current user
+app.get('/api/dm/unread-count', authMiddleware, async (req, res) => {
+  try {
+    const count = await DirectMessage.countDocuments({
+      toEmail: req.user.email.toLowerCase(),
+      read: false,
+    });
+    res.json({ success: true, count });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// ── Meeting Invite Email ───────────────────────────────────────────────────────
+
+// POST /api/meetings/invite — send a meeting invite email to all team members
+app.post('/api/meetings/invite', authMiddleware, async (req, res) => {
+  try {
+    const { title, time, joinLink, channelId } = req.body;
+    if (!title || !joinLink) {
+      return res.status(400).json({ success: false, error: 'title and joinLink are required.' });
+    }
+
+    // Collect ALL team members (hardcoded + approved DB users)
+    const toMap = new Map(VALID_ACCOUNTS.map(a => [a.email, { email: a.email, name: a.name }]));
+    try {
+      const dbUsers = await AccessRequest.find({ status: 'approved' }).lean();
+      for (const u of dbUsers) {
+        if (!toMap.has(u.email)) toMap.set(u.email, { email: u.email, name: u.name });
+      }
+    } catch (_) { /* non-fatal */ }
+
+    const to = Array.from(toMap.values());
+    const hostName = req.user?.name || req.user?.email || 'A team member';
+
+    const html = `
+      <div style="font-family:Inter,Arial,sans-serif;background:#f8fafc;padding:32px;">
+        <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#0A1128,#1E2E5C);padding:24px 28px;">
+            <p style="margin:0;color:rgba(212,175,55,0.7);font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;">EduTechExOS · Meeting Invite</p>
+            <h1 style="margin:8px 0 0;font-size:22px;color:#fff;">${title}</h1>
+          </div>
+          <div style="padding:28px;">
+            <p style="margin:0 0 20px;color:#334155;font-size:14px;line-height:1.7;">
+              <strong>${hostName}</strong> has scheduled a meeting and invited your team.
+            </p>
+            ${time ? `
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:14px 16px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;">
+              <span style="font-size:20px;">📅</span>
+              <div>
+                <p style="margin:0;font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;">Scheduled Time</p>
+                <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#1e293b;">${time}</p>
+              </div>
+            </div>` : ''}
+            <div style="margin-bottom:28px;padding:14px 16px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;">
+              <p style="margin:0;font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;">Channel</p>
+              <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#1e293b;">#${channelId || 'general'}</p>
+            </div>
+            <a href="${joinLink}" style="display:inline-block;padding:14px 32px;background:#D4AF37;color:#0A1128;font-weight:800;font-size:13px;text-decoration:none;border-radius:8px;">
+              Join Meeting →
+            </a>
+            <p style="margin:20px 0 0;font-size:12px;color:#94a3b8;word-break:break-all;">
+              Or copy this link:<br/>
+              <a href="${joinLink}" style="color:#3E4A89;">${joinLink}</a>
+            </p>
+          </div>
+          <div style="background:#f8fafc;padding:14px 28px;border-top:1px solid #f1f5f9;text-align:center;font-size:11px;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;">
+            &copy; 2026 EduTechExOS &middot; Institutional Team OS
+          </div>
+        </div>
+      </div>`;
+
+    const subject = `Meeting Invite: ${title}${time ? ' · ' + time : ''}`;
+    const { ok } = await sendBrevoEmail({ to, subject, html });
+    console.log(`[meeting-invite] ${ok ? 'OK' : 'FAILED'} → ${to.length} recipients`);
+    res.json({ success: true, sent: to.length, ok });
+  } catch (err) {
+    console.error('[meeting-invite]', err);
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
 // POST /api/media — register a media file (audio/video/screen) with access control
 app.post('/api/media', authMiddleware, async (req, res) => {
   try {
@@ -1079,11 +1342,24 @@ async function buildDigestHtml(since) {
 
 async function sendDigestEmails(since) {
   const html = await buildDigestHtml(since);
-  const to = VALID_ACCOUNTS.map((a) => ({ email: a.email, name: a.name }));
+
+  // ── Build recipient list: hardcoded + ALL approved DB users ──────────
+  // Previously only VALID_ACCOUNTS got the digest — new users were excluded.
+  const toMap = new Map(VALID_ACCOUNTS.map((a) => [a.email, { email: a.email, name: a.name }]));
+  try {
+    const dbUsers = await AccessRequest.find({ status: 'approved' }).lean();
+    for (const u of dbUsers) {
+      if (!toMap.has(u.email)) toMap.set(u.email, { email: u.email, name: u.name });
+    }
+  } catch (e) {
+    console.warn('[digest] Could not fetch DB users for digest:', e.message);
+  }
+  const to = Array.from(toMap.values());
+
   const subject = `EduTechExOS: Daily Team Digest — ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`;
   const { ok } = await sendBrevoEmail({ to, subject, html });
   const recipients = to.map((r) => r.email).join(', ');
-  console.log(`[digest] Brevo send ${ok ? 'OK' : 'FAILED'} → ${recipients}`);
+  console.log(`[digest] Brevo send ${ok ? 'OK' : 'FAILED'} → ${to.length} recipients: ${recipients}`);
   return { recipients };
 }
 
