@@ -344,7 +344,10 @@ export async function changePassword(
   newPassword: string
 ): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10002';
+    const API_URL =
+      process.env.BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      'https://edutechexos-backend.onrender.com';
     const res = await fetch(`${API_URL}/api/auth/change-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
