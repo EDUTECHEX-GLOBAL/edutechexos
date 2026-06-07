@@ -1,6 +1,7 @@
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage, firebaseConfigured } from '@/lib/firebase';
 import { blobToDataUrl } from '@/lib/uploadToR2';
+import { uploadToCloudinary } from '@/lib/uploadToCloudinary';
 
 /**
  * Uploads a File or Blob directly from the browser to Firebase Storage.
@@ -64,9 +65,12 @@ export async function uploadToFirebase(
 }
 
 /**
- * Smart upload: tries Firebase first, falls back to base64 data URL.
- * Use this everywhere in the app so nothing ever breaks even if
- * Firebase is not configured yet.
+ * Smart upload — tries storage providers in priority order:
+ *   1. Cloudinary  (free 25 GB, no card required)
+ *   2. Firebase    (if configured as a secondary option)
+ *   3. Base64 URL  (offline / no storage configured — always works)
+ *
+ * Use this everywhere in the app so nothing ever breaks.
  */
 export async function smartUpload(
   file: File | Blob,
@@ -75,10 +79,15 @@ export async function smartUpload(
     onProgress?: (percent: number) => void;
   }
 ): Promise<string> {
-  const url = await uploadToFirebase(file, options);
-  if (url) return url;
+  // 1. Try Cloudinary first (free, no card)
+  const cloudUrl = await uploadToCloudinary(file, options);
+  if (cloudUrl) return cloudUrl;
 
-  // Fallback: base64 data URL (works offline / before Firebase is set up)
-  console.warn('[upload] Firebase not available — using base64 fallback');
+  // 2. Try Firebase (if the user has configured it)
+  const firebaseUrl = await uploadToFirebase(file, options);
+  if (firebaseUrl) return firebaseUrl;
+
+  // 3. Last resort: base64 data URL — always works, stored in MongoDB
+  console.warn('[upload] No cloud storage configured — using base64 fallback');
   return blobToDataUrl(file);
 }
