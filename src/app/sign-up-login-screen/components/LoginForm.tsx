@@ -1,7 +1,8 @@
-﻿'use client';
+'use client';
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, Loader2, X, User, Lock, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Lock, ArrowRight, Mail, X } from 'lucide-react';
+
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -76,7 +77,6 @@ export default function LoginForm({
   }, [setValue]);
 
   function finishLogin(loginAccount: { name: string; email: string; role: string }, jwtToken?: string) {
-    // Role guard
     if (authMode === 'admin' && loginAccount.role !== 'Admin') {
       setIsLoading(false);
       setError('email', { message: 'Only the admin account can sign in from the Admin button.' });
@@ -88,9 +88,6 @@ export default function LoginForm({
       return;
     }
 
-    // If a different user is logging in, clear persisted store & settings so
-    // the new user never sees the previous user's bookmarks, notifications,
-    // display name, or other personal data.
     try {
       const prevRaw = localStorage.getItem('edutechex_token');
       if (prevRaw) {
@@ -102,14 +99,12 @@ export default function LoginForm({
       }
     } catch { /* ignore parse errors */ }
 
-    // Store token (real JWT from backend or mock fallback)
     const token = jwtToken || `mock-jwt-${Date.now()}`;
     localStorage.setItem(
       'edutechex_token',
       JSON.stringify({ user: loginAccount, token })
     );
 
-    // Track login date
     const today = new Date().toISOString().split('T')[0];
     const trackKey = `edutechex_logins_${loginAccount.email}`;
     const existing: string[] = JSON.parse(localStorage.getItem(trackKey) || '[]');
@@ -126,69 +121,6 @@ export default function LoginForm({
     else router.push('/dashboard');
   }
 
-  // ── Forgot-password: step 1 — request reset code ──────────────────────────
-  async function handleForgotRequest(e: React.FormEvent) {
-    e.preventDefault();
-    if (!forgotEmail.trim()) { setForgotError('Enter your email address.'); return; }
-    setForgotLoading(true);
-    setForgotError('');
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setForgotError(data.error ?? 'Failed to send reset code.');
-      } else {
-        if (data.previewUrl) setForgotPreviewUrl(data.previewUrl);
-        setForgotStep(2);
-      }
-    } catch {
-      setForgotError('Network error. Please try again.');
-    } finally {
-      setForgotLoading(false);
-    }
-  }
-
-  // ── Forgot-password: step 2 — submit code + new password ──────────────────
-  async function handleResetPassword(e: React.FormEvent) {
-    e.preventDefault();
-    if (!forgotCode.trim()) { setForgotError('Enter the 6-digit code.'); return; }
-    if (forgotNewPass.length < 6) { setForgotError('Password must be at least 6 characters.'); return; }
-    setForgotLoading(true);
-    setForgotError('');
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: forgotEmail.trim().toLowerCase(),
-          code: forgotCode.trim(),
-          newPassword: forgotNewPass,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setForgotError(data.error ?? 'Failed to reset password.');
-      } else {
-        toast.success('Password reset! Sign in with your new password.');
-        setForgotOpen(false);
-        setForgotStep(1);
-        setForgotEmail('');
-        setForgotCode('');
-        setForgotNewPass('');
-        setForgotError('');
-        setForgotPreviewUrl('');
-      }
-    } catch {
-      setForgotError('Network error. Please try again.');
-    } finally {
-      setForgotLoading(false);
-    }
-  }
-
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 700));
@@ -196,7 +128,6 @@ export default function LoginForm({
     const emailClean = data.email.trim().toLowerCase();
 
     try {
-      // ── Primary: backend authentication ────────────────────────────────────
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -219,7 +150,6 @@ export default function LoginForm({
 
       finishLogin(result.user, result.token);
     } catch {
-      // ── Fallback: backend unreachable — check localStorage ─────────────────
       const hardcoded = VALID_ACCOUNTS.find(
         (a) => a.email === emailClean && a.password === data.password
       );
@@ -246,7 +176,6 @@ export default function LoginForm({
         return;
       }
 
-      // Approved in localStorage fallback
       finishLogin({
         email: requestedAccount.email,
         name: requestedAccount.name,
@@ -255,273 +184,308 @@ export default function LoginForm({
     }
   };
 
-  const inputStyle = darkMode ? {
-    background: 'rgba(255,255,255,0.07)',
-    border: '1px solid rgba(255,255,255,0.12)',
-    color: '#ffffff',
-    borderRadius: '10px',
-    padding: '11px 12px 11px 38px',
-    width: '100%',
-    fontSize: '0.875rem',
-    outline: 'none',
-  } : undefined;
+  const inputIvyStyle = {
+    background: 'rgba(255, 255, 255, 0.8)',
+    border: '1px solid rgba(10, 17, 40, 0.08)',
+    transition: 'all 0.3s cubic-bezier(0.19, 1, 0.22, 1)',
+    borderRadius: '4px',
+  };
 
   return (
     <>
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+      <style>{`
+        .input-ivy:focus {
+          border-color: #D4AF37 !important;
+          box-shadow: 0 0 0 1px #D4AF37 !important;
+          background: white !important;
+          outline: none;
+        }
+      `}</style>
 
-      {/* Email */}
-      <div className="flex flex-col gap-1.5">
-        {!darkMode && (
-          <label htmlFor="login-email" className="text-sm font-semibold text-foreground">
-            Email address
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+        
+        {/* Email */}
+        <div className="space-y-2.5">
+          <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">
+            Institutional Email
           </label>
-        )}
-        <div className="relative">
-          {darkMode && (
-            <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-              style={{ color: 'rgba(180,200,255,0.50)' }} />
-          )}
-          <input
-            id="login-email"
-            type="email"
-            autoComplete="email"
-            placeholder={darkMode ? 'Username or Email' : 'you@edutechex.in'}
-            className={darkMode ? '' : `input-premium ${errors.email ? 'border-red-300 bg-red-50/30' : ''}`}
-            style={darkMode ? { ...inputStyle, borderColor: errors.email ? 'rgba(248,113,113,0.6)' : 'rgba(255,255,255,0.12)' } : undefined}
-            {...register('email', {
-              required: 'Email is required',
-              pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email address' },
-            })}
-          />
-        </div>
-        {errors.email && <p className="text-xs font-medium" style={{ color: darkMode ? 'rgba(248,113,113,0.90)' : '' }}>{errors.email.message}</p>}
-      </div>
-
-      {/* Password */}
-      <div className="flex flex-col gap-1.5">
-        {!darkMode && (
-          <div className="flex items-center justify-between">
-            <label htmlFor="login-password" className="text-sm font-semibold text-foreground">Password</label>
+          <div className="relative group">
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0A1128]/30 group-focus-within:text-[#D4AF37] transition-colors" />
+            <input
+              type="email"
+              autoComplete="email"
+              placeholder="email@institution.edu"
+              className={`input-ivy w-full pl-12 pr-4 py-4 text-sm text-[#0A1128] font-medium placeholder:text-[#0A1128]/20 ${errors.email ? 'border-red-300 bg-red-50/30' : ''}`}
+              style={{ ...inputIvyStyle, borderColor: errors.email ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)' }}
+              {...register('email', {
+                required: 'Email is required',
+                pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email address' },
+              })}
+            />
           </div>
-        )}
-        <div className="relative">
-          {darkMode && (
-            <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-              style={{ color: 'rgba(180,200,255,0.50)' }} />
-          )}
-          <input
-            id="login-password"
-            type={showPassword ? 'text' : 'password'}
-            autoComplete="current-password"
-            placeholder="Password"
-            className={darkMode ? '' : `input-premium pr-11 ${errors.password ? 'border-red-300 bg-red-50/30' : ''}`}
-            style={darkMode ? { ...inputStyle, paddingRight: '40px', borderColor: errors.password ? 'rgba(248,113,113,0.6)' : 'rgba(255,255,255,0.12)' } : undefined}
-            {...register('password', {
-              required: 'Password is required',
-              minLength: { value: 6, message: 'Password must be at least 6 characters' },
-            })}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-            style={{ color: darkMode ? 'rgba(180,200,255,0.50)' : undefined }}
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
-          >
-            {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-          </button>
+          {errors.email && <p className="text-xs font-medium text-red-600 ml-1">{errors.email.message}</p>}
         </div>
-        {errors.password && (
-          <p className="text-xs font-medium" style={{ color: darkMode ? 'rgba(248,113,113,0.90)' : '' }}>{errors.password.message}</p>
-        )}
-      </div>
 
-      {/* Forgot password link */}
-      <div className={darkMode ? 'flex justify-end -mt-2' : 'flex justify-end'}>
-        <button
-          type="button"
-          onClick={() => { setForgotOpen(true); setForgotStep(1); setForgotError(''); setForgotEmail(''); setForgotCode(''); setForgotNewPass(''); setForgotPreviewUrl(''); }}
-          className="text-xs font-medium hover:underline"
-          style={{ color: darkMode ? 'rgba(180,210,255,0.65)' : '#3E4A89' }}
-        >
-          Forgot Password?
-        </button>
-      </div>
-
-      {/* Submit button */}
-      <button
-        type="submit"
-        disabled={isLoading}
-        className={darkMode
-          ? 'w-full flex items-center justify-center gap-2 font-bold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]'
-          : 'btn-primary w-full justify-center py-3.5 text-sm'}
-        style={darkMode ? {
-          background: 'linear-gradient(135deg, #7a4a20 0%, #9b5e28 50%, #8a5220 100%)',
-          color: '#ffe4b5',
-          border: '1px solid rgba(255,200,140,0.30)',
-          borderRadius: '12px',
-          padding: '12px',
-          fontSize: '0.9rem',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,220,160,0.20)',
-          minHeight: '46px',
-        } : { minHeight: '48px' }}
-      >
-        {isLoading ? (
-          <span className="flex items-center justify-center gap-2">
-            <Loader2 size={15} className="animate-spin" />
-            Signing in...
-          </span>
-        ) : (
-          <>Sign In {darkMode && <ArrowRight size={15} />}</>
-        )}
-      </button>
-
-      {authMode === 'user' && (
-        <p className="text-center text-sm" style={{ color: darkMode ? 'rgba(180,200,255,0.60)' : '' }}>
-          {darkMode ? "Don't have an account? " : 'Need access? '}
-          <button
-            type="button"
-            onClick={onSwitchToSignup}
-            className="font-semibold hover:underline transition-colors"
-            style={{ color: darkMode ? 'rgba(220,235,255,0.90)' : '' }}
-          >
-            {darkMode ? 'Sign Up' : 'Create account'}
-          </button>
-        </p>
-      )}
-    </form>
-
-    {/* ── Forgot Password Modal ───────────────────────────────────────────── */}
-    {forgotOpen && (
-      <div className="fixed inset-0 z-[300] flex items-center justify-center bg-ink/40 p-4 backdrop-blur-sm">
-        <div className="w-full max-w-md rounded-2xl border border-border bg-white shadow-2xl">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-border px-6 py-4">
-            <div>
-              <h3 className="font-display font-bold text-base text-foreground">
-                {forgotStep === 1 ? 'Reset your password' : 'Enter the code'}
-              </h3>
-              <p className="text-xs text-ink-light mt-0.5">
-                {forgotStep === 1
-                  ? 'We will email a 6-digit reset code to your address.'
-                  : `Code sent to ${forgotEmail} — check your inbox (or spam).`}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setForgotOpen(false)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-light hover:bg-secondary hover:text-foreground transition-all"
+        {/* Password */}
+        <div className="space-y-2.5">
+          <div className="flex justify-between items-center ml-1">
+            <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80">
+              Security Key
+            </label>
+            <button 
+              type="button" 
+              onClick={() => { setForgotOpen(true); setForgotStep(1); setForgotError(''); setForgotEmail(''); }}
+              className="text-[10px] font-bold text-[#D4AF37] hover:underline transition-all"
             >
-              <X size={16} />
+              Forgot Key?
             </button>
           </div>
+          <div className="relative group">
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0A1128]/30 group-focus-within:text-[#D4AF37] transition-colors" />
+            <input
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              placeholder="••••••••••••"
+              className={`input-ivy w-full pl-12 pr-12 py-4 text-sm text-[#0A1128] font-medium placeholder:text-[#0A1128]/20 ${errors.password ? 'border-red-300 bg-red-50/30' : ''}`}
+              style={{ ...inputIvyStyle, borderColor: errors.password ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)' }}
+              {...register('password', {
+                required: 'Password is required',
+                minLength: { value: 6, message: 'Password must be at least 6 characters' },
+              })}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#0A1128]/20 hover:text-[#0A1128]/60 transition-colors"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+          {errors.password && (
+            <p className="text-xs font-medium text-red-600 ml-1">{errors.password.message}</p>
+          )}
+        </div>
 
-          {/* Body */}
-          <div className="px-6 py-5">
-            {forgotError && (
-              <div className="mb-4 rounded-lg border border-red-200 bg-red-50/50 px-4 py-2.5 text-xs font-medium text-red-600">
-                {forgotError}
+        {/* Submit button */}
+        <div className="pt-4">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="group relative w-full bg-[#0A1128] text-[#D4AF37] py-5 font-black uppercase tracking-[0.3em] text-[11px] overflow-hidden transition-all hover:shadow-[0_0_32px_rgba(212,175,55,0.25)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#0A1128]/30 border border-[#0A1128]"
+          >
+            <span className="relative z-10 flex items-center justify-center gap-2">
+              {isLoading ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  Authenticating...
+                </>
+              ) : (
+                <>Enter System <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" /></>
+              )}
+            </span>
+            {/* Gold shimmer sweep on hover */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#D4AF37]/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+          </button>
+        </div>
+
+        {authMode === 'user' && (
+          <div className="text-center pt-4">
+            <p className="text-xs text-[#0A1128]/40">
+              New to the institution? 
+              <button
+                type="button"
+                onClick={onSwitchToSignup}
+                className="text-[#0A1128] font-bold hover:text-[#D4AF37] underline underline-offset-4 transition-colors ml-1"
+              >
+                Request Access
+              </button>
+            </p>
+          </div>
+        )}
+      </form>
+
+      {/* Forgot Password Modal Refactored for Ivy Style */}
+      {forgotOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#0A1128]/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-white/40 bg-white/80 backdrop-blur-xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-[#0A1128]/5 px-8 py-6">
+              <div>
+                <h3 className="font-serif text-2xl text-[#0A1128]">
+                  {forgotStep === 1 ? 'Reset Security Key' : 'Verify Key'}
+                </h3>
               </div>
-            )}
+              <button
+                type="button"
+                onClick={() => setForgotOpen(false)}
+                className="text-[#0A1128]/30 hover:text-[#0A1128] transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
 
-            {/* Step 1 — email */}
-            {forgotStep === 1 && (
-              <form onSubmit={handleForgotRequest} className="flex flex-col gap-4" noValidate>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-foreground">Email address</label>
-                  <input
-                    type="email"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="you@edutechex.in"
-                    className="input-premium"
-                    autoFocus
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={forgotLoading}
-                  className="btn-primary w-full justify-center py-3 text-sm"
-                >
-                  {forgotLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 size={15} className="animate-spin" /> Sending code…
-                    </span>
-                  ) : 'Send reset code'}
-                </button>
-              </form>
-            )}
 
-            {/* Step 2 — code + new password */}
-            {forgotStep === 2 && (
-              <form onSubmit={handleResetPassword} className="flex flex-col gap-4" noValidate>
-                {forgotPreviewUrl && (
-                  <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs text-ink">
-                    <span className="font-semibold text-primary">Dev mode:</span>{' '}
-                    <a href={forgotPreviewUrl} target="_blank" rel="noreferrer" className="underline text-primary">
-                      Preview email →
-                    </a>
-                  </div>
-                )}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-foreground">6-digit code</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={6}
-                    value={forgotCode}
-                    onChange={(e) => setForgotCode(e.target.value.replace(/\D/g, ''))}
-                    placeholder="123456"
-                    className="input-premium tracking-[0.4em] text-center font-mono text-lg"
-                    autoFocus
-                  />
+            <div className="px-8 py-8">
+              {forgotError && (
+                <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-600">
+                  {forgotError}
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-foreground">New password</label>
-                  <div className="relative">
+              )}
+
+              {forgotStep === 1 ? (
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!forgotEmail.trim()) { setForgotError('Enter your email address.'); return; }
+                  setForgotLoading(true);
+                  setForgotError('');
+                  try {
+                    const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data.success) {
+                      setForgotError(data.error ?? 'Failed to send reset code.');
+                    } else {
+                      if (data.previewUrl) setForgotPreviewUrl(data.previewUrl);
+                      setForgotStep(2);
+                    }
+                  } catch {
+                    setForgotError('Network error. Please try again.');
+                  } finally {
+                    setForgotLoading(false);
+                  }
+                }} className="space-y-6">
+                  <div className="space-y-2.5">
+                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">Email address</label>
                     <input
-                      type={forgotShowPass ? 'text' : 'password'}
-                      value={forgotNewPass}
-                      onChange={(e) => setForgotNewPass(e.target.value)}
-                      placeholder="New password (min. 6 chars)"
-                      className="input-premium pr-11"
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="you@institution.edu"
+                      className="input-ivy w-full px-4 py-4 text-sm text-[#0A1128] font-medium"
+                      style={inputIvyStyle}
+                      autoFocus
                     />
-                    <button
-                      type="button"
-                      onClick={() => setForgotShowPass((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-light hover:text-foreground"
-                    >
-                      {forgotShowPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
                   </div>
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => { setForgotStep(1); setForgotError(''); }}
-                    className="btn-secondary flex-1 py-3 text-sm"
-                  >
-                    ← Back
-                  </button>
                   <button
                     type="submit"
                     disabled={forgotLoading}
-                    className="btn-primary flex-1 justify-center py-3 text-sm"
+                    className="w-full bg-[#0A1128] text-white py-4 font-black uppercase tracking-[0.2em] text-[10px] rounded-xs transition-all hover:bg-[#D4AF37] hover:text-[#0A1128]"
                   >
                     {forgotLoading ? (
                       <span className="flex items-center justify-center gap-2">
-                        <Loader2 size={15} className="animate-spin" /> Resetting…
+                        <Loader2 size={14} className="animate-spin" /> Sending...
                       </span>
-                    ) : 'Reset password'}
+                    ) : 'Send Reset Code'}
                   </button>
-                </div>
-              </form>
-            )}
+                </form>
+              ) : (
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!forgotCode.trim()) { setForgotError('Enter the 6-digit code.'); return; }
+                  if (forgotNewPass.length < 6) { setForgotError('Password must be at least 6 characters.'); return; }
+                  setForgotLoading(true);
+                  setForgotError('');
+                  try {
+                    const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        email: forgotEmail.trim().toLowerCase(),
+                        code: forgotCode.trim(),
+                        newPassword: forgotNewPass,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data.success) {
+                      setForgotError(data.error ?? 'Failed to reset password.');
+                    } else {
+                      toast.success('Security key reset! Sign in with your new key.');
+                      setForgotOpen(false);
+                      setForgotStep(1);
+                      setForgotEmail('');
+                      setForgotCode('');
+                      setForgotNewPass('');
+                      setForgotError('');
+                      setForgotPreviewUrl('');
+                    }
+                  } catch {
+                    setForgotError('Network error. Please try again.');
+                  } finally {
+                    setForgotLoading(false);
+                  }
+                }} className="space-y-6">
+                  {forgotPreviewUrl && (
+                    <div className="rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/5 px-4 py-2.5 text-xs text-[#0A1128]">
+                      <span className="font-semibold text-[#D4AF37]">Dev mode:</span>{' '}
+                      <a href={forgotPreviewUrl} target="_blank" rel="noreferrer" className="underline text-[#D4AF37]">
+                        Preview email →
+                      </a>
+                    </div>
+                  )}
+                  <div className="space-y-2.5">
+                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">6-Digit Code</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={forgotCode}
+                      onChange={(e) => setForgotCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="123456"
+                      className="input-ivy w-full px-4 py-4 text-center font-mono text-xl tracking-[0.4em] text-[#0A1128]"
+                      style={inputIvyStyle}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="space-y-2.5">
+                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">New Security Key</label>
+                    <div className="relative">
+                      <input
+                        type={forgotShowPass ? 'text' : 'password'}
+                        value={forgotNewPass}
+                        onChange={(e) => setForgotNewPass(e.target.value)}
+                        placeholder="Min. 6 characters"
+                        className="input-ivy w-full pl-4 pr-12 py-4 text-sm text-[#0A1128] font-medium"
+                        style={inputIvyStyle}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setForgotShowPass((v) => !v)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[#0A1128]/20 hover:text-[#0A1128]/60"
+                      >
+                        {forgotShowPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex gap-4 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => { setForgotStep(1); setForgotError(''); }}
+                      className="flex-1 bg-transparent border border-[#0A1128]/10 text-[#0A1128] py-4 font-black uppercase tracking-[0.2em] text-[10px] rounded-sm hover:bg-[#0A1128]/5 transition-all"
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={forgotLoading}
+                      className="flex-1 bg-[#0A1128] text-white py-4 font-black uppercase tracking-[0.2em] text-[10px] rounded-sm transition-all hover:bg-[#D4AF37] hover:text-[#0A1128]"
+                    >
+
+                      {forgotLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <Loader2 size={14} className="animate-spin" /> Verifying...
+                        </span>
+                      ) : 'Reset Key'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
     </>
   );
 }
