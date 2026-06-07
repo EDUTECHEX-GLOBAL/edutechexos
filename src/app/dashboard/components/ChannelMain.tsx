@@ -1,10 +1,11 @@
 ﻿'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Users, Search, Video, Bot, FileText, Activity, Pin, X, MessageSquare, LayoutGrid, BookOpen, BarChart2, Bookmark, Phone, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Search, Video, Bot, FileText, Activity, Pin, X, MessageSquare, LayoutGrid, BookOpen, BarChart2, Bookmark } from 'lucide-react';
 import MessageFeed from './MessageFeed';
 import MessageInput from './MessageInput';
 import TypingIndicator from './TypingIndicator';
+import StartMeetCard from './StartMeetCard';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { getSocket } from '@/lib/socket';
 import { toast } from 'sonner';
@@ -42,7 +43,7 @@ export default function ChannelMain({
   const channel = channels.find((c) => c.id === activeChannelId) ?? channels[0];
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
-  const [meetDropdownOpen, setMeetDropdownOpen] = useState(false);
+  const [startMeetOpen, setStartMeetOpen] = useState(false);
   const meetingState = getMeetingState();
 
   // Listen for remote typing events so TypingIndicator shows other users
@@ -62,15 +63,6 @@ export default function ChannelMain({
     };
   }, [setTyping]);
 
-  useEffect(() => {
-    if (!meetDropdownOpen) return;
-    const h = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('.meet-dropdown')) setMeetDropdownOpen(false);
-    };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, [meetDropdownOpen]);
   const pinnedIds = pinnedMessageIds[activeChannelId] ?? [];
   const typing = typingUsers[activeChannelId] ?? [];
   const allMessages = messages[activeChannelId] ?? [];
@@ -125,26 +117,14 @@ export default function ChannelMain({
             <Search size={16} />
           </motion.button>
 
-          <div className="relative meet-dropdown">
-            <button onClick={() => setMeetDropdownOpen((v) => !v)}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors ${meetingState.link ? 'bg-[#3E4A89] hover:bg-[#2A3568]' : 'bg-slate-400 cursor-default'}`}>
-              <Video size={14} />Meet<ChevronDown size={12} />
-            </button>
-            {meetDropdownOpen && (
-              <div className="absolute right-0 top-9 z-50 w-48 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-2 shadow-xl">
-                <button onClick={() => { setMeetDropdownOpen(false); if (meetingState.link) window.open(meetingState.link, '_blank'); else toast.info(meetingState.message); }}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]">
-                  <Video size={16} className="text-[#3E4A89]" />Join meet
-                </button>
-                {onOpenVideoCall && (
-                  <button onClick={() => { setMeetDropdownOpen(false); onOpenVideoCall(); }}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]">
-                    <Phone size={16} className="text-green-600" />Start video call
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+          {/* Meet button → opens StartMeetCard lobby */}
+          <button
+            onClick={() => setStartMeetOpen(true)}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors bg-[#3E4A89] hover:bg-[#2A3568]"
+            title="Start or join a meeting"
+          >
+            <Video size={14} />Meet
+          </button>
 
           <motion.button whileTap={{ scale: 0.88 }} whileHover={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}
             onClick={onToggleAI}
@@ -291,9 +271,28 @@ export default function ChannelMain({
           </div>
         </div>
       )}
+
+      {/* ── Start Meet Card lobby ──────────────────────────────────────── */}
+      {startMeetOpen && (
+        <StartMeetCard
+          channelName={channel.name}
+          onClose={() => setStartMeetOpen(false)}
+          meetLink={meetingState.link}
+          onJoinGoogleMeet={() => {
+            if (meetingState.link) window.open(meetingState.link, '_blank');
+            else toast.info(meetingState.message);
+          }}
+          onStartVideoCall={onOpenVideoCall ? () => {
+            setStartMeetOpen(false);
+            onOpenVideoCall!();
+          } : undefined}
+          participants={members.slice(0, 4).map((m) => ({
+            name: m.name,
+            initials: m.initials,
+            color: m.color,
+          }))}
+        />
+      )}
     </div>
   );
 }
-
-
-
