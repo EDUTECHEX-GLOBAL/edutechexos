@@ -33,7 +33,7 @@ type AccessRequest = {
   status: 'pending' | 'approved' | 'rejected';
   requestedAt: string;
 };
-const API_BASE = '';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 const MAX_ADMINS = 3;
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
 const systemEmails = [

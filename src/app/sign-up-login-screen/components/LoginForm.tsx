@@ -19,7 +19,7 @@ type AccessRequest = {
 };
 
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
-const API_BASE = '';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
 // Hardcoded fallback for when backend is unreachable
 const VALID_ACCOUNTS = [

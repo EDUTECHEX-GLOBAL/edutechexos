@@ -308,29 +308,19 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
                           </div>
                         )}
 
-                        {/* Audio — only sender and admin can play voice recordings */}
-                        {msg.audioUrl && (isOwn || isAdmin) && (
+                        {/* Audio — visible to all channel members */}
+                        {msg.audioUrl && (
                           <div className={`mt-2 rounded-xl p-2 ${isOwn ? 'bg-white/10' : 'bg-[#FAF8F5] dark:bg-slate-700'}`}>
-                            <audio className="w-48 h-8" controls src={msg.audioUrl}><track kind="captions" /></audio>
-                            <p className={`mt-1 text-[11px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}>Voice note</p>
-                          </div>
-                        )}
-                        {msg.audioUrl && !isOwn && !isAdmin && (
-                          <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/10 px-3 py-2">
-                            <p className="text-[11px] font-bold text-amber-600">🔒 Voice note (private)</p>
+                            <audio className="w-full h-8" controls src={msg.audioUrl}><track kind="captions" /></audio>
+                            <p className={`mt-1 text-[11px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}>🎤 Voice note</p>
                           </div>
                         )}
 
-                        {/* Video — only sender and admin can play screen recordings */}
-                        {msg.videoUrl && (isOwn || isAdmin) && (
-                          <div className="mt-2 w-64">
+                        {/* Video — visible to all channel members */}
+                        {msg.videoUrl && (
+                          <div className="mt-2 w-full max-w-xs">
                             <video className="w-full rounded-xl bg-black" controls src={msg.videoUrl}><track kind="captions" /></video>
-                            <p className={`mt-1 text-[11px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}>Screen recording</p>
-                          </div>
-                        )}
-                        {msg.videoUrl && !isOwn && !isAdmin && (
-                          <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/10 px-3 py-2">
-                            <p className="text-[11px] font-bold text-amber-600">🔒 Screen recording (private)</p>
+                            <p className={`mt-1 text-[11px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}>🎥 Screen recording</p>
                           </div>
                         )}
 
