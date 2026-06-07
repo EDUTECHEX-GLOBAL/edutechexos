@@ -1,7 +1,8 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { useDashboardStore } from '@/store/dashboardStore';
+import { MessageLoading } from '@/components/ui/message-loading';
 
 interface TypingIndicatorProps {
   channelId: string;
@@ -11,8 +12,7 @@ export default function TypingIndicator({ channelId }: TypingIndicatorProps) {
   const typingUsers = useDashboardStore((s) => s.typingUsers[channelId] ?? []);
   const members     = useDashboardStore((s) => s.members);
 
-  /* â”€â”€ reserve the same space even when nobody is typing so the
-        layout doesn't jump when the indicator appears / disappears â”€â”€ */
+  /* reserve height so layout never jumps when indicator appears/disappears */
   if (typingUsers.length === 0) {
     return <div className="h-9" />;
   }
@@ -32,7 +32,8 @@ export default function TypingIndicator({ channelId }: TypingIndicatorProps) {
 
   return (
     <div className="typing-indicator-wrapper flex items-center gap-2 px-5 py-1">
-      {/* â”€â”€ Avatar stack â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+
+      {/* ── Avatar stack ─────────────────────────────────────────────── */}
       <div className="flex -space-x-1.5">
         {typingMembers.map((member, i) => (
           <div
@@ -46,23 +47,19 @@ export default function TypingIndicator({ channelId }: TypingIndicatorProps) {
         ))}
       </div>
 
-      {/* â”€â”€ Bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <div className="flex items-center gap-2.5 rounded-2xl rounded-bl-sm bg-white dark:bg-slate-800 border border-[rgba(62,74,137,0.12)]  px-3.5 py-2 shadow-sm">
-        {/* Animated dots */}
-        <div className="flex items-end gap-[3px]">
-          <span className="typing-dot" style={{ animationDelay: '0ms' }}   />
-          <span className="typing-dot" style={{ animationDelay: '160ms' }} />
-          <span className="typing-dot" style={{ animationDelay: '320ms' }} />
-        </div>
+      {/* ── Bubble with MessageLoading SVG ──────────────────────────── */}
+      <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm bg-white dark:bg-slate-800 border border-[rgba(62,74,137,0.12)] px-3 py-1.5 shadow-sm">
 
-        {/* Label */}
-        <span className="text-[11px] font-semibold leading-none text-[#7C859E] dark:text-[#7C859E]">
+        {/* The animated SVG dots — sized down to match the bubble */}
+        <span className="flex items-center text-[#7C859E] dark:text-slate-400" style={{ width: 20, height: 20 }}>
+          <MessageLoading />
+        </span>
+
+        {/* Who's typing */}
+        <span className="text-[11px] font-semibold leading-none text-[#7C859E] dark:text-slate-400">
           {label}
         </span>
       </div>
     </div>
   );
 }
-
-
-
