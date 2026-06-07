@@ -4,7 +4,7 @@ import { CHANNELS } from '@/data/mockData';
 
 // Route message API calls through the backend so Socket.IO events are emitted.
 // Falls back to relative Next.js routes if the env var is not set.
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
 // ─── Auth helpers ────────────────────────────────────────────────────────────
 function getStoredAuth(): { token?: string; user?: { email?: string } } | null {
@@ -818,7 +818,11 @@ export const useDashboardStore = create<DashboardState>()(
       loadLocalMembers: async () => {
         try {
           const res = await apiFetch(`${API_BASE}/api/members`);
-          if (!res.ok) return;
+          if (!res.ok) {
+            console.warn(`[members] /api/members returned ${res.status} — backend may be waking up (Render cold start). Retrying in 10s…`);
+            setTimeout(() => useDashboardStore.getState().loadLocalMembers?.(), 10_000);
+            return;
+          }
           const data = await res.json();
           if (!data.success || !data.members) return;
 
@@ -868,7 +872,10 @@ export const useDashboardStore = create<DashboardState>()(
               },
             };
           });
-        } catch { /* backend unavailable */ }
+        } catch (err) {
+          console.warn('[members] Backend unreachable — Render may be cold-starting. Retrying in 15s…', err);
+          setTimeout(() => useDashboardStore.getState().loadLocalMembers?.(), 15_000);
+        }
       },
       addMember: (member) => {
         const isSystem = ['admin@edutechex.in', 'aditya@edutechex.in', 'dev.rk@edutechex.in', 'design.sa@edutechex.in', 'tarun@edutechex.in', 'mohan.kumar@edutechex.in', 'mohan.reddy@edutechex.in', 'mohan.sen@edutechex.in'].includes(member.email.toLowerCase());

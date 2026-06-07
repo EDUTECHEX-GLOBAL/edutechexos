@@ -343,7 +343,7 @@ export default function EduTechExOSDashboard() {
     if (!raw) return;
     try {
       const { token } = JSON.parse(raw);
-      fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/settings`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com'}/api/settings`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((r) => r.json())
@@ -379,7 +379,7 @@ export default function EduTechExOSDashboard() {
       if (!raw) return;
       try {
         const { token } = JSON.parse(raw);
-        fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/settings`, {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com'}/api/settings`, {
           method: 'PUT',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify(settings),
@@ -512,7 +512,11 @@ export default function EduTechExOSDashboard() {
       loadLocalMessages?.();
       loadLocalWikiPages?.();
     }, 3000);
-    return () => clearInterval(interval);
+    // Refresh members every 30 s so newly approved users appear without a hard reload
+    const membersInterval = setInterval(() => {
+      useDashboardStore.getState().loadLocalMembers?.();
+    }, 30_000);
+    return () => { clearInterval(interval); clearInterval(membersInterval); };
   }, []); // Zustand actions are stable refs � empty deps is safe
 
   // ── Socket.IO real-time message delivery ──────────────────────────────────

@@ -10,7 +10,7 @@ import { useDashboardStore } from '@/store/dashboardStore';
 import type { Message } from '@/store/dashboardStore';
 import { GOOGLE_MEET_LINKS } from '@/lib/meetLinks';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
 interface CalendarPanelProps {
   onClose: () => void;

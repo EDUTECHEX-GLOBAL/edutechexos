@@ -12,7 +12,7 @@ import {
 import { useDashboardStore } from '@/store/dashboardStore';
 import { toast } from 'sonner';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
 const MONTH_NAMES = [
   'January',
