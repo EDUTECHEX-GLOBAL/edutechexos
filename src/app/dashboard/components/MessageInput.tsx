@@ -267,25 +267,31 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
   // Helper to send media (used for auto-sending video recordings)
   async function sendMedia(kind: 'audio' | 'video', blob: Blob, mimeType: string) {
     setRecordingSending(true);
+    const toastId = toast.loading(`Uploading ${kind === 'video' ? 'recording' : 'voice note'} to Cloudinary…`);
     try {
-      // Upload to Firebase Storage; falls back to base64 if not configured
+      // Upload to Cloudinary (free 25 GB); falls back to base64 if not configured
       const file = new File([blob], `${kind}-${Date.now()}.webm`, { type: mimeType });
       const folder = kind === 'video' ? 'video' : 'audio';
-      const mediaUrl = await smartUpload(file, { folder });
-      const targetId = (channels.find((c) => c.name.toLowerCase() === 'general')?.id) || channelId;
-      addMessage(targetId, {
+      const mediaUrl = await smartUpload(file, {
+        folder,
+        onProgress: (pct) => {
+          toast.loading(`Uploading… ${pct}%`, { id: toastId });
+        },
+      });
+      // Always send to the current channel — never redirect to #general
+      addMessage(channelId, {
         id: `msg-${kind}-${Date.now()}`,
         sender: currentUser?.name ?? 'You',
         initials: currentUser?.initials ?? 'Y',
         color: currentUser?.color ?? '#3E4A89',
         timestamp: new Date().toISOString(),
-        text: kind === 'video' ? 'Screen recording' : 'Voice note',
+        text: kind === 'video' ? '🎥 Screen recording' : '🎤 Voice note',
         ...(kind === 'video' ? { videoUrl: mediaUrl } : { audioUrl: mediaUrl }),
         ...(replyToId ? { parentId: replyToId } : {}),
       });
-      toast.success(`${kind === 'video' ? 'Screen recording' : 'Voice note'} sent!`);
+      toast.success(`${kind === 'video' ? 'Screen recording' : 'Voice note'} sent!`, { id: toastId });
     } catch {
-      toast.error(`Could not send the ${kind} recording.`);
+      toast.error(`Could not upload the ${kind} recording.`, { id: toastId });
     } finally {
       setRecordingSending(false);
     }

@@ -10,9 +10,9 @@ import { useTheme } from '@/components/ThemeProvider';
 import {
   sendMeetingEmailInvitation,
   sendMentionEmailNotification,
-  uploadLocalFile,
   changePassword,
 } from '@/app/actions/dbActions';
+import { smartUpload } from '@/lib/uploadToFirebase';
 import NotificationPanel from './NotificationPanel';
 import AIPanel from './AIPanel';
 import { getSocket } from '@/lib/socket';
@@ -836,30 +836,13 @@ export default function EduTechExOSDashboard() {
     if (!file || !channel) return;
 
     try {
-      let fileUrl: string | null = null;
-      let fileName = file.name;
-      let fileType = file.type;
-
-      // Try server upload first; fall back to data URL (Vercel ephemeral FS-safe)
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const result = await uploadLocalFile(formData);
-        if (result.success && result.url) {
-          fileUrl = result.url;
-          fileName = result.name || file.name;
-          fileType = result.type || file.type;
-        }
-      } catch { /* server upload failed — fall through to data URL */ }
-
-      if (!fileUrl) {
-        fileUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      }
+      // Upload directly to Cloudinary (free 25 GB); base64 fallback if not configured
+      const folder = file.type.startsWith('audio/')
+        ? 'audio'
+        : file.type.startsWith('video/')
+          ? 'video'
+          : 'files';
+      const fileUrl = await smartUpload(file, { folder });
 
       addMessage(activeChannelId, {
         id: `msg-file-${Date.now()}`,
@@ -868,7 +851,7 @@ export default function EduTechExOSDashboard() {
         color: currentUserColor,
         timestamp: new Date().toISOString(),
         text: composerMessage.trim(),
-        files: [{ name: fileName, url: fileUrl, type: fileType }],
+        files: [{ name: file.name, url: fileUrl, type: file.type }],
       });
       setComposerMessage('');
       toast.success('File shared to channel');
@@ -1068,19 +1051,10 @@ export default function EduTechExOSDashboard() {
         `${recordedPreview.kind}-note-${Date.now()}.webm`,
         { type: recordedPreview.mimeType }
       );
-      const formData = new FormData();
-      formData.append('file', file);
+      const folder = recordedPreview.kind === 'video' ? 'video' : 'audio';
 
-      let mediaUrl: string | null = null;
-      try {
-        const result = await uploadLocalFile(formData);
-        if (result.success && result.url) mediaUrl = result.url;
-      } catch { /* server upload failed, will use data URL */ }
-
-      // Always fall back to data URL if server upload failed (works everywhere including Vercel)
-      if (!mediaUrl) {
-        mediaUrl = await blobToDataUrl(recordedPreview.blob);
-      }
+      // Upload directly to Cloudinary (free 25 GB); base64 fallback if not configured
+      const mediaUrl = await smartUpload(file, { folder });
 
       addMessage(activeChannelId, {
         id: `msg-${recordedPreview.kind}-${Date.now()}`,

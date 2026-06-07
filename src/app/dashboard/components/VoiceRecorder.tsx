@@ -1,6 +1,7 @@
 ﻿'use client';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Mic, MicOff, Square, Send, Trash2, Sparkles, Volume2, Loader2 } from 'lucide-react';
+import { smartUpload } from '@/lib/uploadToFirebase';
 
 interface VoiceRecorderProps {
   onSend: (url: string) => void;
@@ -47,15 +48,26 @@ function useVoiceNote(onSend: (url: string) => void) {
     if (!previewUrl) return;
     const res = await fetch(previewUrl);
     const blob = await res.blob();
-    const form = new FormData();
-    form.append('file', blob, 'voice-note.webm');
     try {
+      // Try server-side Cloudinary upload first (via /api/upload)
+      const form = new FormData();
+      form.append('file', blob, 'voice-note.webm');
       const uploadRes = await fetch('/api/upload', { method: 'POST', body: form });
-      const { url } = await uploadRes.json();
+      if (uploadRes.ok) {
+        const { url } = await uploadRes.json();
+        if (url) { onSend(url); setPreviewUrl(null); setDuration(0); return; }
+      }
+    } catch { /* fall through to browser-direct upload */ }
+    try {
+      // Browser-direct Cloudinary upload (no server hop) — also free & permanent
+      const file = new File([blob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
+      const url = await smartUpload(file, { folder: 'audio' });
       onSend(url);
     } catch {
-      // Fallback: send data URL directly
-      onSend(previewUrl);
+      // Last resort: send base64 data URL (self-contained, playable by all users)
+      const reader = new FileReader();
+      reader.onload = () => onSend(reader.result as string);
+      reader.readAsDataURL(blob);
     }
     setPreviewUrl(null);
     setDuration(0);
