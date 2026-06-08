@@ -2445,22 +2445,33 @@ export default function EduTechExOSDashboard() {
         </div>
       </nav>
 
-      {/* ── AI Copilot popup (anchored to right rail) ─────────────── */}
+      {/* ── AI Copilot modal overlay ───────────────────────────────── */}
       <AnimatePresence>
         {rightPanel === 'ai' && (
           <motion.div
-            key="ai-popup"
-            initial={{ opacity: 0, x: 16, scale: 0.97 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 10, scale: 0.97 }}
-            transition={{ type: 'spring', damping: 26, stiffness: 360, mass: 0.8 }}
-            className="fixed bottom-4 right-16 z-[199] w-[360px] overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl"
-            style={{ maxHeight: '75vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.20), 0 4px 16px rgba(62,74,137,0.14)' }}
+            key="ai-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-[199] flex items-center justify-center bg-[rgba(15,18,34,0.55)] backdrop-blur-sm p-4"
+            onClick={() => setRightPanel('closed')}
           >
-            <AIPanel
-              activeChannel={activeChannelId}
-              onClose={() => setRightPanel('closed')}
-            />
+            <motion.div
+              key="ai-popup"
+              initial={{ opacity: 0, y: 24, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 380, mass: 0.7 }}
+              className="w-full max-w-[420px] overflow-hidden rounded-2xl shadow-2xl"
+              style={{ height: '82vh', display: 'flex', flexDirection: 'column' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <AIPanel
+                activeChannel={activeChannelId}
+                onClose={() => setRightPanel('closed')}
+              />
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
