@@ -18,6 +18,7 @@ import AIPanel from './AIPanel';
 import { getSocket } from '@/lib/socket';
 
 import MyActivityCalendar from './MyActivityCalendar';
+import CalendarPanel from './CalendarPanel';
 import SearchPanel from './SearchPanel';
 import FigmaPanel from './FigmaPanel';
 import IntegrationsPanel from './IntegrationsPanel';
@@ -293,6 +294,7 @@ export default function EduTechExOSDashboard() {
   const [composerMessage, setComposerMessage] = useState('');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [activityCalendarOpen, setActivityCalendarOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [channelsExpanded, setChannelsExpanded] = useState(true);
   const [membersOpen, setMembersOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -1301,6 +1303,7 @@ export default function EduTechExOSDashboard() {
           {[
             { icon: CheckSquare,  label: 'Tasks',        action: () => setKanbanOpen(true) },
             { icon: BookOpen,     label: 'Wiki',         action: () => setWikiOpen(true) },
+            { icon: CalendarDays, label: 'Calendar',     action: () => setCalendarOpen(true) },
             { icon: Layers,       label: 'Figma',        action: () => setFigmaOpen(true) },
             { icon: Zap,          label: 'Integrations', action: () => setIntegrationsOpen(true) },
             ...(isAdmin ? [{ icon: BarChart2, label: 'Analytics', action: () => setAnalyticsOpen(true) }] : []),
@@ -1727,6 +1730,12 @@ export default function EduTechExOSDashboard() {
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
                   >
                     <Bookmark size={15} /> Saved messages
+                  </button>
+                  <button
+                    onClick={() => { setMoreOpen(false); setCalendarOpen(true); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
+                  >
+                    <CalendarDays size={15} /> Team calendar
                   </button>
                   {isAdmin && (
                     <button
@@ -2676,6 +2685,7 @@ export default function EduTechExOSDashboard() {
 
       {/* ── Feature panels (AnimatePresence enables exit animations) ── */}
       <AnimatePresence>
+        {calendarOpen && <CalendarPanel key="calendar" onClose={() => setCalendarOpen(false)} />}
         {figmaOpen    && <FigmaPanel    key="figma"    onClose={() => setFigmaOpen(false)} />}
         {integrationsOpen && (
           <IntegrationsPanel
