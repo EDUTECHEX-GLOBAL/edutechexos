@@ -32,12 +32,17 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
     const emailClean = data.email.trim().toLowerCase();
 
     try {
-      // ── Try backend first ──────────────────────────────────────────────────
+      // ── Try backend first (25-second timeout handles Render cold-starts) ───
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 25_000);
+
       const res = await fetch(`${API_BASE}/api/access-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...data, email: emailClean }),
+        signal: controller.signal,
       });
+      clearTimeout(timer);
       const result = await res.json();
 
       if (result.exists) {

@@ -81,11 +81,17 @@ export default function AdminPage() {
   }, [loadLocalMembers]);
 
   useEffect(() => {
-    // Primary: load from backend
+    // Primary: load members + access requests from backend
     loadLocalMembers?.();
-    fetch(`${API_BASE}/api/access-requests`)
+
+    // Load access requests with a 20-second timeout so Render cold-starts don't block the UI
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20_000);
+
+    fetch(`${API_BASE}/api/access-requests`, { signal: controller.signal })
       .then((r) => r.json())
       .then((data: { success: boolean; requests?: AccessRequest[] }) => {
+        clearTimeout(timer);
         if (data.success && Array.isArray(data.requests)) {
           setAccessRequests(data.requests);
           // Keep localStorage in sync as offline fallback
@@ -93,11 +99,24 @@ export default function AdminPage() {
         }
       })
       .catch(() => {
-        // Fallback: use localStorage if backend unreachable
+        clearTimeout(timer);
+        // Fallback: use localStorage if backend unreachable / timed out
         const cached = localStorage.getItem(ACCESS_REQUESTS_KEY);
         if (cached) {
           try { setAccessRequests(JSON.parse(cached)); } catch { /* ignore */ }
         }
+        // Retry once after 15 seconds (backend may still be waking up)
+        setTimeout(() => {
+          fetch(`${API_BASE}/api/access-requests`)
+            .then((r) => r.json())
+            .then((data: { success: boolean; requests?: AccessRequest[] }) => {
+              if (data.success && Array.isArray(data.requests)) {
+                setAccessRequests(data.requests);
+                localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify(data.requests));
+              }
+            })
+            .catch(() => { /* silent — already showing cached */ });
+        }, 15_000);
       });
   }, []);
 
@@ -247,11 +266,27 @@ export default function AdminPage() {
 
     const selectedChannel = requestChannelById[request.id] || null;
 
+    // Build member object up-front — used in both online and offline paths
+    const MEMBER_COLORS = ['#3E4A89', '#9BA6D3', '#7c3aed', '#a78bfa', '#2A3568', '#c4b5fd'];
+    const initials = request.name.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2);
+    // Use the DB id so the member-id matches what loadLocalMembers returns later
+    const memberId = `member-${request.id}`;
+    const color = MEMBER_COLORS[
+      Math.abs(request.email.split('').reduce((h, c) => (c.charCodeAt(0) + ((h << 5) - h)), 0))
+      % MEMBER_COLORS.length
+    ];
+
     // ── Persist approval to backend (cross-device) ──────────────────────────
     try {
+      const authData = localStorage.getItem('edutechex_token');
+      const token = authData ? JSON.parse(authData).token : null;
+
       const res = await fetch(`${API_BASE}/api/access-requests/${request.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ status: 'approved', channelId: selectedChannel }),
       });
       if (!res.ok) {
@@ -259,29 +294,17 @@ export default function AdminPage() {
         toast.error(err.error ?? 'Failed to approve request on server.');
         return;
       }
-      
-      // Load updated members list
-      await loadLocalMembers();
-    } catch {
-      // Backend unreachable — still approve locally (offline fallback)
-      const colors = ['#3E4A89', '#9BA6D3', '#7c3aed', '#a78bfa', '#2A3568', '#c4b5fd'];
-      const initials = request.name
-        .split(' ')
-        .map((p) => p[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-      const memberId = makeMemberId(request.name);
-      addMember({
-        id: memberId,
-        initials,
-        name: request.name,
-        email: request.email,
-        role: request.role,
-        status: 'online',
-        color: colors[Math.floor(Math.random() * colors.length)],
-      });
+
+      // ✅ Immediately add to local store so the people list updates right away
+      addMember({ id: memberId, initials, name: request.name, email: request.email, role: request.role, status: 'online', color });
       if (selectedChannel) setMemberWorkspaceChannel(memberId, selectedChannel);
+
+      // Sync from backend in background (don't await — keep UI snappy)
+      loadLocalMembers?.();
+    } catch {
+      // Backend unreachable — still approve locally so the list updates
+      addMember({ id: makeMemberId(request.name), initials, name: request.name, email: request.email, role: request.role, status: 'online', color });
+      if (selectedChannel) setMemberWorkspaceChannel(makeMemberId(request.name), selectedChannel);
     }
 
     // ── Update local UI state + localStorage fallback ───────────────────────

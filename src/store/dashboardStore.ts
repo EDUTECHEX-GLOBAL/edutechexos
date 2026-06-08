@@ -819,8 +819,10 @@ export const useDashboardStore = create<DashboardState>()(
         try {
           const res = await apiFetch(`${API_BASE}/api/members`);
           if (!res.ok) {
-            console.warn(`[members] /api/members returned ${res.status} — backend may be waking up (Render cold start). Retrying in 10s…`);
-            setTimeout(() => useDashboardStore.getState().loadLocalMembers?.(), 10_000);
+            // 401 = token expired or not logged in yet; 5xx = backend waking up
+            const retryDelay = res.status === 401 ? 5_000 : 10_000;
+            console.warn(`[members] /api/members returned ${res.status} — retrying in ${retryDelay / 1000}s…`);
+            setTimeout(() => useDashboardStore.getState().loadLocalMembers?.(), retryDelay);
             return;
           }
           const data = await res.json();
