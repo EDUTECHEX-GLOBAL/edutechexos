@@ -1,87 +1,39 @@
-﻿'use client';
+'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, X, CalendarDays, Flame, TrendingUp } from 'lucide-react';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-function getDaysInMonth(year: number, month: number) {
-  return new Date(year, month + 1, 0).getDate();
+function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate(); }
+function getFirstDay(y: number, m: number)    { return new Date(y, m, 1).getDay(); }
+function toDateStr(y: number, m: number, d: number) {
+  return `${y}-${String(m + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 }
+function isWeekend(dateStr: string) { const d = new Date(dateStr).getDay(); return d === 0 || d === 6; }
 
-function getFirstDay(year: number, month: number) {
-  return new Date(year, month, 1).getDay();
-}
-
-function toDateStr(year: number, month: number, day: number) {
-  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-}
-
-function calcStreak(loginDates: string[], todayStr: string): number {
-  let streak = 0;
-  const sorted = [...loginDates].sort().reverse();
-  let check = new Date(todayStr);
+function calcStreak(dates: string[], todayStr: string): number {
+  let s = 0;
+  const sorted = [...dates].sort().reverse();
+  const cur = new Date(todayStr);
   for (let i = 0; i < 365; i++) {
-    const d = check.toISOString().split('T')[0];
-    if (sorted.includes(d)) {
-      streak++;
-      check.setDate(check.getDate() - 1);
-    } else if (i === 0) {
-      check.setDate(check.getDate() - 1);
-    } else {
-      break;
-    }
+    const ds = cur.toISOString().split('T')[0];
+    if (sorted.includes(ds)) { s++; cur.setDate(cur.getDate() - 1); }
+    else if (i === 0)         { cur.setDate(cur.getDate() - 1); }
+    else break;
   }
-  return streak;
+  return s;
 }
 
-const RadialProgress = ({ percentage, color }: { percentage: number; color: string }) => {
-  const radius = 18;
-  const stroke = 3.5;
-  const circumference = radius * 2 * Math.PI;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
-
-  return (
-    <div className="relative flex items-center justify-center h-12 w-12 shrink-0">
-      <svg className="h-full w-full transform -rotate-90">
-        <circle
-          stroke="rgba(255, 255, 255, 0.1)"
-          fill="transparent"
-          strokeWidth={stroke}
-          r={radius}
-          cx={24}
-          cy={24}
-        />
-        <circle
-          stroke={color}
-          fill="transparent"
-          strokeWidth={stroke}
-          strokeDasharray={circumference + ' ' + circumference}
-          style={{ strokeDashoffset }}
-          strokeLinecap="round"
-          r={radius}
-          cx={24}
-          cy={24}
-          className="transition-all duration-700 ease-out"
-        />
-      </svg>
-      <span className="absolute text-[10px] font-black text-white tabular-nums">{percentage}%</span>
-    </div>
-  );
-};
-
-interface Props {
-  open: boolean;
-  onClose: () => void;
-}
+interface Props { open: boolean; onClose: () => void; }
 
 export default function MyActivityCalendar({ open, onClose }: Props) {
-  const [mounted, setMounted] = useState(false);
-  const [viewYear, setViewYear] = useState(0);
-  const [viewMonth, setViewMonth] = useState(0);
-  const [loginDates, setLoginDates] = useState<string[]>([]);
-  const [userName, setUserName] = useState('You');
+  const [mounted,      setMounted]      = useState(false);
+  const [viewYear,     setViewYear]     = useState(0);
+  const [viewMonth,    setViewMonth]    = useState(0);
+  const [loginDates,   setLoginDates]   = useState<string[]>([]);
+  const [userName,     setUserName]     = useState('You');
   const [userInitials, setUserInitials] = useState('ME');
-  const [userColor, setUserColor] = useState('#3E4A89');
+  const [userColor,    setUserColor]    = useState('#3E4A89');
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -91,7 +43,6 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
     setMounted(true);
   }, []);
 
-  // Load current user's login dates (real from backend, fallback to localStorage)
   useEffect(() => {
     if (!open || !mounted) return;
     try {
@@ -101,231 +52,177 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
       if (!user) return;
 
       setUserName(user.name?.split(' ')[0] || 'You');
-      setUserInitials(
-        user.name
-          ?.split(' ')
-          .map((n: string) => n[0])
-          .join('')
-          .slice(0, 2)
-          .toUpperCase() || 'ME'
-      );
-      const colors: Record<string, string> = {
-        Admin: '#0ea5e9', Manager: '#3E4A89', Developer: '#10b981', Designer: '#f59e0b',
-      };
-      setUserColor(colors[user.role] || '#3E4A89');
+      setUserInitials(user.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'ME');
+      const COLORS: Record<string, string> = { Admin: '#0ea5e9', Manager: '#3E4A89', Developer: '#10b981', Designer: '#f59e0b' };
+      setUserColor(COLORS[user.role] || '#3E4A89');
 
-      // Fetch real login history from backend
       const apiBase = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
-      fetch(`${apiBase}/api/login-history`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-        .then((r) => r.ok ? r.json() : null)
-        .then((data) => {
-          if (data?.success && data.history?.[user.email]) {
-            setLoginDates(data.history[user.email]);
-          } else {
-            // Fallback to localStorage
-            const key = `edutechex_logins_${user.email}`;
-            let stored: string[] = JSON.parse(localStorage.getItem(key) || '[]');
-            if (stored.length === 0) {
-              const generated: string[] = [];
-              const today = new Date();
-              for (let i = 0; i < 30; i++) {
-                const date = new Date();
-                date.setDate(today.getDate() - i);
-                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                if (Math.random() < (isWeekend ? 0.12 : 0.88)) generated.push(date.toISOString().split('T')[0]);
-              }
-              const todayStr = today.toISOString().split('T')[0];
-              if (!generated.includes(todayStr)) generated.push(todayStr);
-              localStorage.setItem(key, JSON.stringify(generated));
-              stored = generated;
-            }
-            setLoginDates(stored);
-          }
-        })
-        .catch(() => {
+      fetch(`${apiBase}/api/login-history`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.success && data.history?.[user.email]) { setLoginDates(data.history[user.email]); return; }
           const key = `edutechex_logins_${user.email}`;
-          const stored: string[] = JSON.parse(localStorage.getItem(key) || '[]');
+          let stored: string[] = JSON.parse(localStorage.getItem(key) || '[]');
+          if (!stored.length) {
+            const gen: string[] = []; const today = new Date();
+            for (let i = 0; i < 30; i++) {
+              const d = new Date(); d.setDate(today.getDate() - i);
+              if (Math.random() < (d.getDay() === 0 || d.getDay() === 6 ? 0.1 : 0.85)) gen.push(d.toISOString().split('T')[0]);
+            }
+            const ts = today.toISOString().split('T')[0]; if (!gen.includes(ts)) gen.push(ts);
+            localStorage.setItem(key, JSON.stringify(gen)); stored = gen;
+          }
           setLoginDates(stored);
-        });
-    } catch (e) {
-      console.error('Error fetching user activity details:', e);
-    }
+        })
+        .catch(() => { setLoginDates(JSON.parse(localStorage.getItem(`edutechex_logins_${user.email}`) || '[]')); });
+    } catch { /**/ }
   }, [open, mounted]);
 
   if (!mounted || !open) return null;
 
-  const today = new Date();
+  const today    = new Date();
   const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate());
   const daysInMonth = getDaysInMonth(viewYear, viewMonth);
-  const firstDay = getFirstDay(viewYear, viewMonth);
+  const firstDay    = getFirstDay(viewYear, viewMonth);
 
-  // Stats
-  const thisMonthLogins = loginDates.filter((d) => {
-    const [y, m] = d.split('-').map(Number);
-    return y === viewYear && m === viewMonth + 1;
-  }).length;
+  /* ── Stats ── */
+  const thisMonthLogins = loginDates.filter(d => { const [y,m] = d.split('-').map(Number); return y === viewYear && m === viewMonth + 1; }).length;
+  const totalLogins     = loginDates.length;
+  const streak          = calcStreak(loginDates, todayStr);
 
-  const totalLogins = loginDates.length;
-  const streak = calcStreak(loginDates, todayStr);
-
-  const totalPastDays = Array.from({ length: daysInMonth }, (_, i) => {
-    return toDateStr(viewYear, viewMonth, i + 1) <= todayStr;
+  const workdaysElapsed = Array.from({ length: daysInMonth }, (_, i) => {
+    const ds = toDateStr(viewYear, viewMonth, i + 1);
+    return ds <= todayStr && !isWeekend(ds);
   }).filter(Boolean).length;
-  const loginRate = totalPastDays > 0 ? Math.round((thisMonthLogins / totalPastDays) * 100) : 0;
 
-  const monthLabel = new Date(viewYear, viewMonth).toLocaleString('default', {
-    month: 'long',
-    year: 'numeric',
+  const loginRate   = workdaysElapsed > 0 ? Math.round((thisMonthLogins / workdaysElapsed) * 100) : 0;
+  const monthLabel  = new Date(viewYear, viewMonth).toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  /* ── Last 7 days strip ── */
+  const last7 = Array.from({ length: 7 }, (_, i) => {
+    const d  = new Date(today); d.setDate(today.getDate() - (6 - i));
+    const ds = d.toISOString().split('T')[0];
+    return { ds, label: ['S','M','T','W','T','F','S'][d.getDay()], loggedIn: loginDates.includes(ds), isToday: ds === todayStr, weekend: d.getDay() === 0 || d.getDay() === 6 };
   });
 
-  const prevMonth = () => {
-    if (viewMonth === 0) {
-      setViewYear((y) => y - 1);
-      setViewMonth(11);
-    } else setViewMonth((m) => m - 1);
-  };
-  const nextMonth = () => {
-    if (viewMonth === 11) {
-      setViewYear((y) => y + 1);
-      setViewMonth(0);
-    } else setViewMonth((m) => m + 1);
-  };
+  const prevMonth = () => viewMonth === 0  ? (setViewYear(y => y-1), setViewMonth(11))    : setViewMonth(m => m-1);
+  const nextMonth = () => viewMonth === 11 ? (setViewYear(y => y+1), setViewMonth(0))     : setViewMonth(m => m+1);
+  const isCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth();
+
+  const STATS = [
+    { icon: <CalendarDays size={15} className="text-emerald-400" />, value: thisMonthLogins, top: 'This month',  sub: 'days logged in',      color: 'text-emerald-400' },
+    { icon: <Flame        size={15} className="text-orange-400 animate-pulse" />, value: streak, top: 'Day streak',   sub: streak === 1 ? 'day in a row' : 'days in a row', color: 'text-orange-400' },
+    { icon: <TrendingUp   size={15} className="text-sky-400"     />, value: `${loginRate}%`, top: 'Active rate',  sub: 'of workdays',         color: 'text-sky-400' },
+  ];
 
   return (
-    <div
-      ref={overlayRef}
-      onClick={(e) => {
-        if (e.target === overlayRef.current) onClose();
-      }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(25,30,47,0.40)] backdrop-blur-md p-4 animate-in fade-in duration-200"
-    >
-      {/* High-End Dark-Glassmorphism Modal Card */}
-      <div className="w-full max-w-sm bg-[rgba(25,30,47,0.95)] border border-white/10 text-white rounded-3xl shadow-2xl shadow-[rgba(25,30,47,0.20)] overflow-hidden animate-in slide-in-from-bottom-4 duration-300 backdrop-blur-xl">
-        {/* Premium Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-white/5 bg-gradient-to-r from-indigo-700/60 to-purple-700/40">
-          <div className="flex items-center gap-3.5">
-            <div
-              className="h-10 w-10 rounded-2xl flex items-center justify-center text-sm font-black text-white border border-white/20 shadow-md shadow-slate-950/20"
-              style={{ backgroundColor: userColor }}
-            >
+    <div ref={overlayRef} onClick={e => { if (e.target === overlayRef.current) onClose(); }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,18,34,0.65)] backdrop-blur-md p-4 animate-in fade-in duration-200">
+
+      <div className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+        style={{ background: '#0F1222', border: '1px solid rgba(255,255,255,0.08)' }}>
+
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-5 py-4" style={{ background: 'linear-gradient(135deg, #1a2140 0%, #1e2538 100%)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl flex items-center justify-center text-sm font-black text-white shadow-lg shrink-0" style={{ backgroundColor: userColor }}>
               {userInitials}
             </div>
             <div>
-              <p className="text-sm font-black text-white tracking-tight">{userName}'s Activity</p>
-              <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">
-                Personal Log OS
-              </p>
+              <p className="text-sm font-black text-white leading-tight">{userName}</p>
+              <p className="text-[10px] text-white/40 mt-0.5 font-semibold">Login Activity</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-9 w-9 rounded-2xl flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all border border-white/5 active:scale-95"
-          >
-            <X size={16} strokeWidth={2.5} />
+          <button onClick={onClose} className="h-8 w-8 rounded-xl flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all">
+            <X size={16} />
           </button>
         </div>
 
-        {/* Stats Row with radial glows */}
-        <div className="grid grid-cols-3 divide-x divide-white/5 bg-white/[0.02] border-b border-white/5">
-          <div className="flex flex-col items-center py-4 gap-1">
-            <div className="flex items-center gap-1.5 text-emerald-400">
-              <CalendarDays size={14} strokeWidth={2.5} />
-              <span className="text-lg font-black">{thisMonthLogins}</span>
+        {/* ── Stats — 3 clear cards ── */}
+        <div className="grid grid-cols-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          {STATS.map((s, i) => (
+            <div key={i} className="flex flex-col items-center py-4 gap-0.5" style={{ borderLeft: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+              <div className="flex items-center gap-1.5 mb-1">{s.icon}<span className={`text-2xl font-black tabular-nums ${s.color}`}>{s.value}</span></div>
+              <p className="text-[10px] font-black text-white/70">{s.top}</p>
+              <p className="text-[9px] text-white/25 font-medium">{s.sub}</p>
             </div>
-            <p className="text-[9px] font-black text-[#7C859E] uppercase tracking-widest">
-              This Month
-            </p>
-          </div>
-          <div className="flex flex-col items-center py-4 gap-1">
-            <div className="flex items-center gap-1.5 text-orange-400">
-              <Flame size={14} className="animate-pulse" strokeWidth={2.5} />
-              <span className="text-lg font-black">{streak}</span>
-            </div>
-            <p className="text-[9px] font-black text-[#7C859E] uppercase tracking-widest">
-              Active Streak
-            </p>
-          </div>
-          <div className="flex flex-col items-center py-4 gap-1">
-            <div className="flex items-center gap-2">
-              <RadialProgress percentage={loginRate} color={userColor} />
-            </div>
-            <p className="text-[9px] font-black text-[#7C859E] uppercase tracking-widest mt-1">
-              Login Rate
-            </p>
+          ))}
+        </div>
+
+        {/* ── Last 7 days ── */}
+        <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-white/25 mb-2.5">Last 7 days</p>
+          <div className="grid grid-cols-7 gap-1.5">
+            {last7.map((d, i) => (
+              <div key={i} className="flex flex-col items-center gap-1">
+                <span className="text-[9px] font-bold text-white/25">{d.label}</span>
+                <div className={`h-8 w-full rounded-xl flex items-center justify-center text-[11px] font-black transition-all
+                  ${d.isToday ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}
+                  ${d.loggedIn  ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/30'
+                  : d.weekend   ? 'bg-white/[0.03] text-white/15'
+                  :               'bg-rose-500/15 text-rose-400/50'}`}
+                >
+                  {d.loggedIn ? '✓' : d.weekend ? '—' : '·'}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Month Nav */}
-        <div className="flex items-center justify-between px-6 py-4">
-          <button
-            type="button"
-            onClick={prevMonth}
-            className="h-9 w-9 rounded-xl border border-white/5 flex items-center justify-center text-[#7C859E] hover:text-white hover:bg-white/5 transition-all active:scale-95 shadow-sm"
-          >
-            <ChevronLeft size={16} strokeWidth={2.5} />
+        {/* ── Month nav ── */}
+        <div className="flex items-center justify-between px-5 py-3">
+          <button onClick={prevMonth} className="h-8 w-8 rounded-xl flex items-center justify-center text-white/35 hover:text-white hover:bg-white/5 transition-all active:scale-95">
+            <ChevronLeft size={16} />
           </button>
-          <span className="text-sm font-black text-slate-200 tracking-tight">{monthLabel}</span>
-          <button
-            type="button"
-            onClick={nextMonth}
-            disabled={viewYear === today.getFullYear() && viewMonth === today.getMonth()}
-            className="h-9 w-9 rounded-xl border border-white/5 flex items-center justify-center text-[#7C859E] hover:text-white hover:bg-white/5 transition-all disabled:opacity-20 active:scale-95 shadow-sm"
-          >
-            <ChevronRight size={16} strokeWidth={2.5} />
+          <span className="text-sm font-black text-white/75">{monthLabel}</span>
+          <button onClick={nextMonth} disabled={isCurrentMonth}
+            className="h-8 w-8 rounded-xl flex items-center justify-center text-white/35 hover:text-white hover:bg-white/5 transition-all disabled:opacity-20 active:scale-95">
+            <ChevronRight size={16} />
           </button>
         </div>
 
-        {/* Calendar Grid (Unique Glass Squircle layout) */}
-        <div className="px-6 pb-6">
-          {/* Weekday headers */}
+        {/* ── Calendar grid ── */}
+        <div className="px-5 pb-4">
+          {/* Day headers — single letter */}
           <div className="grid grid-cols-7 gap-1 mb-2">
-            {WEEKDAYS.map((d, i) => (
-              <div
-                key={i}
-                className="text-center text-[10px] font-black text-[#7C859E] uppercase tracking-widest py-1"
-              >
-                {d}
+            {WEEKDAYS.map(d => (
+              <div key={d} className="text-center text-[9px] font-black text-white/20 uppercase tracking-widest py-0.5">
+                {d[0]}
               </div>
             ))}
           </div>
 
           <div className="grid grid-cols-7 gap-1.5">
-            {Array.from({ length: firstDay }).map((_, i) => (
-              <div key={`b${i}`} className="bg-white/[0.01] rounded-xl" />
-            ))}
+            {Array.from({ length: firstDay }).map((_, i) => <div key={`b${i}`} />)}
 
             {Array.from({ length: daysInMonth }, (_, i) => {
               const day = i + 1;
-              const dateStr = toDateStr(viewYear, viewMonth, day);
-              const isToday = dateStr === todayStr;
-              const isFuture = dateStr > todayStr;
-              const didLogin = loginDates.includes(dateStr);
+              const ds  = toDateStr(viewYear, viewMonth, day);
+              const isToday   = ds === todayStr;
+              const isFuture  = ds > todayStr;
+              const didLogin  = loginDates.includes(ds);
+              const weekend   = isWeekend(ds);
+
+              let bg = '', textC = 'text-white/15', border = '';
+              if (!isFuture) {
+                if (didLogin)           { bg = 'bg-emerald-500/20'; textC = 'text-emerald-300'; border = 'border border-emerald-500/25'; }
+                else if (!weekend)      { bg = 'bg-rose-500/10';    textC = 'text-rose-400/55'; border = 'border border-rose-500/12'; }
+                else                    { textC = 'text-white/20'; }
+              }
 
               return (
-                <div
-                  key={day}
-                  title={isFuture ? '' : didLogin ? `Logged in âœ…` : `No login âŒ`}
-                  className={`flex flex-col items-center justify-center rounded-xl py-2 aspect-square transition-all duration-300 border
-                    ${
-                      isFuture
-                        ? 'bg-white/[0.02] text-[#4A5578] border-white/[0.02] cursor-not-allowed opacity-30'
-                        : didLogin
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-400/20 hover:bg-emerald-500/25 shadow-sm shadow-emerald-500/5 cursor-pointer hover:scale-105 active:scale-95'
-                          : 'bg-rose-500/5 text-rose-400 border-rose-500/10 hover:bg-rose-500/15 cursor-pointer hover:scale-105 active:scale-95'
-                    }
-                    ${isToday ? 'ring-2 ring-indigo-500 ring-offset-1 ring-offset-slate-900 z-10 scale-105 border-indigo-400/40 bg-[rgba(62,74,137,0.08)]0/10 text-indigo-300 font-extrabold' : ''}
+                <div key={day}
+                  title={isFuture ? '' : didLogin ? 'Logged in ✓' : weekend ? 'Weekend' : 'No login'}
+                  className={`relative aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-black transition-all cursor-default
+                    ${bg} ${textC} ${border}
+                    ${isToday ? 'ring-2 ring-indigo-400 ring-offset-[2px] scale-110 z-10' : ''}
+                    ${!isFuture && !isToday ? 'hover:scale-105' : ''}
                   `}
                 >
-                  <span className="text-xs font-black">{day}</span>
+                  {day}
+                  {/* Status dot at bottom */}
                   {!isFuture && (
-                    <span
-                      className={`absolute bottom-1.5 h-1 w-1 rounded-full ${
-                        didLogin ? 'bg-emerald-500' : 'bg-rose-500'
-                      }`}
-                    />
+                    <span className={`absolute bottom-[3px] h-1 w-1 rounded-full ${didLogin ? 'bg-emerald-400' : weekend ? 'bg-white/10' : 'bg-rose-400/40'}`} />
                   )}
                 </div>
               );
@@ -333,30 +230,31 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
           </div>
         </div>
 
-        {/* Legend + total */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-white/5 bg-[rgba(25,30,47,0.30)]">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-              <span className="text-[10px] font-black text-[#7C859E] uppercase tracking-wider">
-                Logged In
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
-              <span className="text-[10px] font-black text-[#7C859E] uppercase tracking-wider">
-                Missed
-              </span>
-            </div>
+        {/* ── Month progress bar + legend ── */}
+        <div className="px-5 pb-5 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)' }}>
+          {/* Progress bar */}
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Month attendance</p>
+            <p className="text-[10px] font-black text-white/40 tabular-nums">{thisMonthLogins} / {workdaysElapsed} workdays</p>
           </div>
-          <div className="text-[10px] font-black text-[#7C859E] uppercase tracking-wider">
-            {totalLogins} Total Logins
+          <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+            <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${Math.min(loginRate, 100)}%`, backgroundColor: userColor }} />
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center gap-4 mt-3">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-3 rounded-sm" style={{ background: 'rgba(16,185,129,0.6)' }} />
+              <span className="text-[9px] font-black text-white/30 uppercase tracking-wider">Logged in</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-3 rounded-sm" style={{ background: 'rgba(244,63,94,0.25)' }} />
+              <span className="text-[9px] font-black text-white/30 uppercase tracking-wider">Missed</span>
+            </span>
+            <span className="ml-auto text-[9px] font-black text-white/25 uppercase tracking-wider tabular-nums">{totalLogins} total logins</span>
           </div>
         </div>
       </div>
     </div>
   );
 }
-
-
-
