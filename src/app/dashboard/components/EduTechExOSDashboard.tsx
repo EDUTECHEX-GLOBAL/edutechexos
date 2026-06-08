@@ -20,7 +20,7 @@ import { getSocket } from '@/lib/socket';
 import MyActivityCalendar from './MyActivityCalendar';
 import CalendarPanel from './CalendarPanel';
 import SearchPanel from './SearchPanel';
-import FigmaPanel from './FigmaPanel';
+
 import IntegrationsPanel from './IntegrationsPanel';
 
 import UserProfileModal from './UserProfileModal';
@@ -87,7 +87,7 @@ import {
   X,
   Zap,
   Layout,
-  Layers,
+
   Share2,
   MessageSquare,
   ExternalLink,
@@ -420,7 +420,7 @@ export default function EduTechExOSDashboard() {
   const [kanbanOpen, setKanbanOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [bookmarksPanelOpen, setBookmarksPanelOpen] = useState(false);
-  const [figmaOpen, setFigmaOpen]       = useState(false);
+
   const [integrationsOpen, setIntegrationsOpen] = useState(false);
   const [profileMember, setProfileMember] = useState<(typeof members)[0] | null>(null);
   const currentMember = currentUser?.email
@@ -1304,7 +1304,7 @@ export default function EduTechExOSDashboard() {
             { icon: CheckSquare,  label: 'Tasks',        action: () => setKanbanOpen(true) },
             { icon: BookOpen,     label: 'Wiki',         action: () => setWikiOpen(true) },
             { icon: CalendarDays, label: 'Calendar',     action: () => setCalendarOpen(true) },
-            { icon: Layers,       label: 'Figma',        action: () => setFigmaOpen(true) },
+
             { icon: Zap,          label: 'Integrations', action: () => setIntegrationsOpen(true) },
             ...(isAdmin ? [{ icon: BarChart2, label: 'Analytics', action: () => setAnalyticsOpen(true) }] : []),
           ].map(({ icon: Icon, label, action }) => (
@@ -1745,12 +1745,7 @@ export default function EduTechExOSDashboard() {
                       <BarChart2 size={15} /> Analytics
                     </button>
                   )}
-                  <button
-                    onClick={() => { setMoreOpen(false); setFigmaOpen(true); }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
-                  >
-                    <Layers size={15} /> Figma viewer
-                  </button>
+
                   <button
                     onClick={() => { setMoreOpen(false); setIntegrationsOpen(true); }}
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
@@ -2686,7 +2681,7 @@ export default function EduTechExOSDashboard() {
       {/* ── Feature panels (AnimatePresence enables exit animations) ── */}
       <AnimatePresence>
         {calendarOpen && <CalendarPanel key="calendar" onClose={() => setCalendarOpen(false)} />}
-        {figmaOpen    && <FigmaPanel    key="figma"    onClose={() => setFigmaOpen(false)} />}
+
         {integrationsOpen && (
           <IntegrationsPanel
             key="integrations"
