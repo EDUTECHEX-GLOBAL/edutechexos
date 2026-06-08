@@ -50,6 +50,9 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [showAISuggestions, setShowAISuggestions] = useState(false);
+  const [linkPreview, setLinkPreview] = useState<{ url: string; title: string; description: string; image: string; siteName: string } | null>(null);
+  const [linkPreviewLoading, setLinkPreviewLoading] = useState(false);
+  const linkPreviewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const addMessage = useDashboardStore((s) => s.addMessage);
   const setTyping = useDashboardStore((s) => s.setTyping);
@@ -125,6 +128,31 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
     }
   }, [message]);
 
+  // URL detection for link preview — debounced 800 ms
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+  useEffect(() => {
+    const urlMatch = message.match(/https?:\/\/[^\s]+/);
+    if (!urlMatch) { setLinkPreview(null); return; }
+    const url = urlMatch[0].replace(/[.,!?)]+$/, '');
+    if (linkPreview?.url === url) return;
+    if (linkPreviewTimerRef.current) clearTimeout(linkPreviewTimerRef.current);
+    linkPreviewTimerRef.current = setTimeout(async () => {
+      setLinkPreviewLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/og?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        if (data.success && (data.preview.title || data.preview.description || data.preview.image)) {
+          setLinkPreview({ ...data.preview, url });
+        } else {
+          setLinkPreview(null);
+        }
+      } catch { setLinkPreview(null); }
+      finally { setLinkPreviewLoading(false); }
+    }, 800);
+    return () => { if (linkPreviewTimerRef.current) clearTimeout(linkPreviewTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message]);
+
   // Typing indicator â€” updates local state AND broadcasts via socket
   const handleTyping = useCallback(() => {
     if (!currentUser?.name) return;
@@ -168,8 +196,10 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
         timestamp: new Date().toISOString(),
         text: message,
         ...(replyToId ? { parentId: replyToId } : {}),
+        ...(linkPreview ? { linkPreview } : {}),
       });
       setMessage('');
+      setLinkPreview(null);
       setShowAISuggestions(false);
     } finally {
       setIsLoading(false);
@@ -506,6 +536,29 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
             50% { transform: scaleY(0.5); }
           }
         `}</style>
+      )}
+
+      {/* Link preview card */}
+      {(linkPreviewLoading || linkPreview) && (
+        <div className="mx-1 overflow-hidden rounded-xl border border-[rgba(62,74,137,0.12)] bg-white shadow-sm">
+          {linkPreviewLoading ? (
+            <div className="flex items-center gap-2 px-3 py-2 text-xs text-[#7C859E]">
+              <Loader2 size={12} className="animate-spin" /> Fetching preview…
+            </div>
+          ) : linkPreview && (
+            <div className="flex gap-3 p-2.5">
+              {linkPreview.image && (
+                <img src={linkPreview.image} alt="" className="h-14 w-20 shrink-0 rounded-lg object-cover" />
+              )}
+              <div className="min-w-0 flex-1">
+                {linkPreview.siteName && <p className="text-[10px] font-black uppercase tracking-wider text-[#7C859E]">{linkPreview.siteName}</p>}
+                {linkPreview.title && <p className="truncate text-sm font-bold text-[#1E2636]">{linkPreview.title}</p>}
+                {linkPreview.description && <p className="line-clamp-1 text-xs text-[#7C859E]">{linkPreview.description}</p>}
+              </div>
+              <button onClick={() => setLinkPreview(null)} className="shrink-0 self-start rounded p-1 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)]"><X size={12} /></button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Input area */}

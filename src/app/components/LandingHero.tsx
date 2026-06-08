@@ -366,6 +366,200 @@ function TasksCard() {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   DASHBOARD MOCKUP
+───────────────────────────────────────────────────────────────────────────── */
+function DashboardMockup({ dotCount }: { dotCount: number }) {
+  const messages = [
+    { init: 'AK', name: 'Aditya K.', text: 'LMS integration proposal is ready for review.', time: '9:14 AM', ai: false },
+    { init: 'AI', name: 'EduTechEx AI', text: '3 action items extracted from this thread.', time: '9:15 AM', ai: true },
+    { init: 'JM', name: 'Mohan S.', text: 'Great — I\'ll schedule a walkthrough for tomorrow.', time: '9:17 AM', ai: false },
+    { init: 'SA', name: 'Designer SA', text: 'Updated the curriculum doc with new frameworks.', time: '9:21 AM', ai: false },
+  ];
+
+  const navItems = [
+    { icon: '⊞', active: false },
+    { icon: '≡', active: true },
+    { icon: '✦', active: false },
+    { icon: '✓', active: false },
+    { icon: '◎', active: false },
+  ];
+
+  return (
+    <div style={{
+      width: 480,
+      borderRadius: 14,
+      overflow: 'hidden',
+      boxShadow: '0 32px 80px rgba(10,17,40,0.18), 0 8px 24px rgba(10,17,40,0.10)',
+      border: '1px solid rgba(10,17,40,0.10)',
+      background: '#fff',
+    }}>
+      {/* Browser chrome */}
+      <div style={{
+        height: 40, background: '#F3F2F0',
+        borderBottom: '1px solid rgba(10,17,40,0.07)',
+        display: 'flex', alignItems: 'center', gap: 12, padding: '0 14px',
+      }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {['#FF5F57','#FEBC2E','#28C840'].map((c, i) => (
+            <div key={i} style={{ width: 11, height: 11, borderRadius: '50%', background: c }} />
+          ))}
+        </div>
+        <div style={{
+          flex: 1, height: 22, borderRadius: 5,
+          background: 'rgba(10,17,40,0.05)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 10, fontWeight: 600, color: 'rgba(10,17,40,0.35)', letterSpacing: '.02em',
+        }}>
+          app.edutechex.in/dashboard
+        </div>
+      </div>
+
+      {/* App shell */}
+      <div style={{ display: 'flex', height: 340 }}>
+
+        {/* Sidebar */}
+        <div style={{
+          width: 46, background: '#0A1128',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          padding: '14px 0', gap: 4,
+        }}>
+          {/* Logo */}
+          <div style={{
+            width: 28, height: 28, borderRadius: 7, background: '#D4AF37',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 8, fontWeight: 900, color: '#0A1128', marginBottom: 10,
+          }}>EX</div>
+          {navItems.map(({ icon, active }, i) => (
+            <div key={i} style={{
+              width: 32, height: 32, borderRadius: 8,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: active ? 'rgba(212,175,55,0.15)' : 'transparent',
+              fontSize: 14,
+              color: active ? '#D4AF37' : 'rgba(255,255,255,0.28)',
+              cursor: 'pointer',
+            }}>
+              {icon}
+            </div>
+          ))}
+        </div>
+
+        {/* Channel list */}
+        <div style={{
+          width: 130, background: '#0D1630',
+          borderRight: '1px solid rgba(255,255,255,0.05)',
+          padding: '14px 0',
+        }}>
+          <div style={{ fontSize: 8, fontWeight: 900, letterSpacing: '.28em', textTransform: 'uppercase', color: 'rgba(212,175,55,0.45)', padding: '0 12px', marginBottom: 10 }}>
+            Channels
+          </div>
+          {['#general','#curriculum','#planning','#design','#ai-digest'].map((ch, i) => (
+            <div key={ch} style={{
+              padding: '6px 12px', fontSize: 11, fontWeight: i === 0 ? 700 : 500,
+              color: i === 0 ? '#fff' : 'rgba(255,255,255,0.35)',
+              background: i === 0 ? 'rgba(212,175,55,0.10)' : 'transparent',
+              borderLeft: i === 0 ? '2px solid #D4AF37' : '2px solid transparent',
+              cursor: 'pointer',
+            }}>
+              {ch}
+            </div>
+          ))}
+          <div style={{ margin: '12px 12px 6px', fontSize: 8, fontWeight: 900, letterSpacing: '.28em', textTransform: 'uppercase', color: 'rgba(212,175,55,0.35)' }}>
+            Team
+          </div>
+          {['Aditya K.','Designer SA','Dev RK'].map((name, i) => (
+            <div key={name} style={{
+              padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: i === 0 ? '#10b981' : 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.30)', fontWeight: 500 }}>{name}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Main chat area */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff' }}>
+          {/* Channel header */}
+          <div style={{
+            height: 44, borderBottom: '1px solid rgba(10,17,40,0.06)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '0 14px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#0A1128' }}>#general</span>
+              <span style={{ fontSize: 9, color: 'rgba(10,17,40,0.35)', fontWeight: 500 }}>14 members</span>
+            </div>
+            <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+              {[0,1,2].map(i => (
+                <div key={i} style={{
+                  width: 5, height: 5, borderRadius: '50%',
+                  background: i < dotCount ? '#D4AF37' : 'rgba(10,17,40,0.10)',
+                  transition: 'background .22s ease',
+                }} />
+              ))}
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div style={{ flex: 1, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'hidden' }}>
+            {messages.map((msg, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <div style={{
+                  width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                  background: msg.ai
+                    ? 'linear-gradient(135deg, #0A1128, #1E2E5C)'
+                    : `hsl(${i * 55 + 200}, 40%, 50%)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 7.5, fontWeight: 900, color: msg.ai ? '#D4AF37' : '#fff',
+                }}>
+                  {msg.init}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 2 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: msg.ai ? '#0A1128' : '#0A1128' }}>{msg.name}</span>
+                    <span style={{ fontSize: 9, color: 'rgba(10,17,40,0.30)' }}>{msg.time}</span>
+                    {msg.ai && (
+                      <span style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: '.18em', textTransform: 'uppercase', color: '#D4AF37', background: 'rgba(212,175,55,0.10)', padding: '1px 5px', borderRadius: 4 }}>AI</span>
+                    )}
+                  </div>
+                  <div style={{
+                    fontSize: 11, color: msg.ai ? 'rgba(10,17,40,0.65)' : 'rgba(10,17,40,0.72)',
+                    lineHeight: 1.45,
+                    background: msg.ai ? 'rgba(212,175,55,0.05)' : 'transparent',
+                    padding: msg.ai ? '5px 8px' : '0',
+                    borderRadius: msg.ai ? 6 : 0,
+                    border: msg.ai ? '1px solid rgba(212,175,55,0.12)' : 'none',
+                  }}>
+                    {msg.text}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Message input */}
+          <div style={{
+            margin: '0 10px 10px',
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '7px 10px 7px 12px',
+            background: 'rgba(10,17,40,0.03)',
+            borderRadius: 8, border: '1px solid rgba(10,17,40,0.07)',
+          }}>
+            <span style={{ flex: 1, fontSize: 10.5, color: 'rgba(10,17,40,0.22)' }}>
+              Message #general…
+            </span>
+            <div style={{
+              width: 24, height: 24, borderRadius: 6, background: '#D4AF37',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 900, color: '#0A1128',
+            }}>↑</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    MAIN HERO
 ───────────────────────────────────────────────────────────────────────────── */
 export default function LandingHero() {
@@ -449,8 +643,7 @@ export default function LandingHero() {
           LEFT — Deep Navy diagonal panel
       ════════════════════════════════════════════════════════ */}
       <div
-        className="hero-diag relative lg:w-[54%] bg-[#0A1128] z-10 flex flex-col
-                   justify-center px-10 md:px-16 lg:px-20 xl:px-28 py-32 min-h-screen"
+        className="hero-diag relative lg:w-[54%] bg-[#0A1128] z-10 flex flex-col justify-center px-10 md:px-16 lg:px-20 xl:px-28 py-32 min-h-screen"
       >
         {/* Dot grid */}
         <div className="absolute inset-0 pointer-events-none" style={{
@@ -499,9 +692,6 @@ export default function LandingHero() {
             }}>
               <span style={{ color: '#0A1128', fontSize: 10, fontWeight: 900 }}>EX</span>
             </div>
-            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.38em', textTransform: 'uppercase', color: 'rgba(212,175,55,.52)' }}>
-              Institutional Operating System
-            </span>
           </div>
 
           {/* Gold rule */}
@@ -547,36 +737,13 @@ export default function LandingHero() {
             <a href="#features" className="cta-outline">Explore Features</a>
           </div>
 
-          {/* Social proof */}
-          <div className="rh d5 flex items-center gap-4">
-            <div style={{ display: 'flex' }}>
-              {['dean1', 'tech2', 'admin3', 'fac4'].map((u, i) => (
-                <img key={u} src={`https://i.pravatar.cc/40?u=${u}`} alt=""
-                  style={{
-                    width: 30, height: 30, borderRadius: '50%',
-                    border: '2px solid #0A1128', marginLeft: i === 0 ? 0 : -9,
-                  }} />
-              ))}
-            </div>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(249,248,246,.78)' }}>14 members active</div>
-              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.2em', textTransform: 'uppercase', color: 'rgba(212,175,55,.48)' }}>
-                Verified Institutional Access
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Version watermark */}
-        <div className="rh d6 absolute bottom-8 hidden lg:block" style={{ left: 'clamp(40px, 10vw, 112px)' }}>
-          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.30em', textTransform: 'uppercase', color: 'rgba(212,175,55,.22)' }}>
-            v2.4.0 · Secured · Institutional Grade
-          </span>
-        </div>
+
       </div>
 
       {/* ════════════════════════════════════════════════════════
-          RIGHT — Bone White + Floating Product Cards
+          RIGHT — Bone White + Dashboard Mockup
       ════════════════════════════════════════════════════════ */}
       <div className="hidden lg:flex relative flex-1 bg-[#F9F8F6] overflow-hidden">
 
@@ -599,48 +766,9 @@ export default function LandingHero() {
           background: 'linear-gradient(to bottom, transparent, rgba(212,175,55,.12) 40%, rgba(212,175,55,.12) 60%, transparent)',
         }} />
 
-        {/* ── Floating card stage ────────────────────────── */}
-        <div className="relative w-full h-full">
-
-          {/* CARD 1 — Morning Digest : top-left */}
-          <div style={{
-            position: 'absolute', top: '7%', left: '5%',
-            animation: 'fa 7s ease-in-out infinite',
-            filter: 'drop-shadow(0 8px 24px rgba(10,17,40,0.06))',
-          }}>
-            <DigestCard liveTime={liveTime} />
-          </div>
-
-          {/* CARD 2 — Embedded AI : center-right (largest, most prominent) */}
-          <div style={{
-            position: 'absolute', top: '24%', right: '4%',
-            animation: 'fb 9s ease-in-out infinite 1.5s',
-            filter: 'drop-shadow(0 12px 36px rgba(10,17,40,0.08))',
-          }}>
-            <AICard dotCount={dotCount} />
-          </div>
-
-          {/* CARD 3 — Tasks : bottom-left */}
-          <div style={{
-            position: 'absolute', bottom: '7%', left: '10%',
-            animation: 'fc 6.5s ease-in-out infinite 0.8s',
-            filter: 'drop-shadow(0 8px 20px rgba(10,17,40,0.06))',
-          }}>
-            <TasksCard />
-          </div>
-
-          {/* Decorative gold dot matrix */}
-          <div style={{
-            position: 'absolute', top: '58%', left: '50%',
-            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 7,
-          }}>
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} style={{
-                width: 3.5, height: 3.5, borderRadius: '50%',
-                background: `rgba(212,175,55,${0.07 + (i % 3) * 0.08})`,
-              }} />
-            ))}
-          </div>
+        {/* ── Dashboard mockup ────────────────────────── */}
+        <div className="relative w-full h-full flex items-center justify-center px-8">
+          <DashboardMockup dotCount={dotCount} />
         </div>
 
       </div>

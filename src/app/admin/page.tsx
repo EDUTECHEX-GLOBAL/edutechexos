@@ -72,12 +72,19 @@ export default function AdminPage() {
     }
   }, []);
 
-  // Re-load member list on real-time member_updated events
+  // Re-load member list on real-time member_updated / member_removed events
   useEffect(() => {
     const socket = getSocket();
     const onMemberUpdated = () => { loadLocalMembers?.(); };
+    const onMemberRemoved = ({ memberId }: { memberId: string }) => {
+      useDashboardStore.getState().removeMemberLocally(memberId);
+    };
     socket.on('member_updated', onMemberUpdated);
-    return () => { socket.off('member_updated', onMemberUpdated); };
+    socket.on('member_removed', onMemberRemoved);
+    return () => {
+      socket.off('member_updated', onMemberUpdated);
+      socket.off('member_removed', onMemberRemoved);
+    };
   }, [loadLocalMembers]);
 
   useEffect(() => {

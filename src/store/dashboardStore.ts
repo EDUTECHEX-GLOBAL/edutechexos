@@ -73,6 +73,7 @@ export type LinkPreview = {
   title?: string;
   description?: string;
   image?: string;
+  siteName?: string;
 };
 
 export type Message = {
@@ -217,6 +218,7 @@ type DashboardState = {
   loadLocalMembers: () => Promise<void>;
   addMember: (member: Member) => void;
   removeMember: (memberId: string) => void;
+  removeMemberLocally: (memberId: string) => void;
   addMemberToChannel: (channelId: string, memberId: string) => void;
   removeMemberFromChannel: (channelId: string, memberId: string) => void;
   setMemberWorkspaceChannel: (memberId: string, channelId: string | null) => void;
@@ -831,22 +833,11 @@ export const useDashboardStore = create<DashboardState>()(
           const dbMembers: Member[] = data.members;
           set((s) => {
             // Update workspace channels with correct member IDs
+            // All approved members get access to every workspace channel
+            const allMemberIds = dbMembers.map((m) => m.id);
             const newChannels = s.channels.map((ch) => {
               if (!isWS(ch.id)) return ch;
-              if (ch.id === 'general') {
-                const allMemberIds = dbMembers.map((m) => m.id);
-                return syncCount({ ...ch, memberIds: allMemberIds });
-              }
-              const assignedMemberIds = dbMembers
-                .filter((m: any) =>
-                  (Array.isArray((m as any).channelIds) && (m as any).channelIds.includes(ch.id)) ||
-                  (m as any).channelId === ch.id
-                )
-                .map((m) => m.id);
-
-              const systemMemberIds = ch.memberIds?.filter((id) => !id.startsWith('member-') || INITIAL_MEMBERS.some((m) => m.id === id)) ?? [];
-              const mergedMemberIds = [...new Set([...systemMemberIds, ...assignedMemberIds])];
-              return syncCount({ ...ch, memberIds: mergedMemberIds });
+              return syncCount({ ...ch, memberIds: allMemberIds });
             });
 
             // Ensure every member has a DM channel in the channels list
@@ -919,6 +910,13 @@ export const useDashboardStore = create<DashboardState>()(
           .catch(() => {});
         }
 
+        set((s) => ({
+          members: s.members.filter((m) => m.id !== memberId),
+          channels: s.channels.map((ch) => syncCount({ ...ch, memberIds: withoutM(ch.memberIds, memberId) })),
+        }));
+      },
+      // Only removes from local state — used by socket handlers to avoid re-calling the DELETE API
+      removeMemberLocally: (memberId) => {
         set((s) => ({
           members: s.members.filter((m) => m.id !== memberId),
           channels: s.channels.map((ch) => syncCount({ ...ch, memberIds: withoutM(ch.memberIds, memberId) })),

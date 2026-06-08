@@ -20,7 +20,6 @@ import { getSocket } from '@/lib/socket';
 import MyActivityCalendar from './MyActivityCalendar';
 import SearchPanel from './SearchPanel';
 import FigmaPanel from './FigmaPanel';
-import CalendarPanel from './CalendarPanel';
 import IntegrationsPanel from './IntegrationsPanel';
 
 import UserProfileModal from './UserProfileModal';
@@ -88,6 +87,9 @@ import {
   Zap,
   Layout,
   Layers,
+  Share2,
+  MessageSquare,
+  ExternalLink,
 } from 'lucide-react';
 
 type CurrentUser = {
@@ -283,6 +285,8 @@ export default function EduTechExOSDashboard() {
     kanbanTasks,
     addKanbanTask,
     updateKanbanTaskStatus,
+    activeThreadId,
+    setActiveThread,
   } = useDashboardStore();
   const [rightPanel, setRightPanel] = useState<'ai' | 'closed'>('closed');
   const [rightSidePanel, setRightSidePanel] = useState<'pinned' | 'bookmarked' | null>(null);
@@ -295,6 +299,10 @@ export default function EduTechExOSDashboard() {
   const [newChannelOpen, setNewChannelOpen] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelDescription, setNewChannelDescription] = useState('');
+  const [forwardingMsg, setForwardingMsg] = useState<{ id: string; text: string; sender: string } | null>(null);
+  const [forwardQuery, setForwardQuery] = useState('');
+  const [threadReplyText, setThreadReplyText] = useState('');
+  const [linkPreviewCache, setLinkPreviewCache] = useState<Record<string, { title: string; description: string; image: string; siteName: string } | null>>({});
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [meetMenuOpen, setMeetMenuOpen] = useState(false);
@@ -411,7 +419,6 @@ export default function EduTechExOSDashboard() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [bookmarksPanelOpen, setBookmarksPanelOpen] = useState(false);
   const [figmaOpen, setFigmaOpen]       = useState(false);
-  const [calendarOpen, setCalendarOpen] = useState(false);
   const [integrationsOpen, setIntegrationsOpen] = useState(false);
   const [profileMember, setProfileMember] = useState<(typeof members)[0] | null>(null);
   const currentMember = currentUser?.email
@@ -495,6 +502,14 @@ export default function EduTechExOSDashboard() {
     .filter((member) => !mentionQuery || member.name.toLowerCase().includes(mentionQuery))
     .slice(0, 6);
 
+  const BROADCAST_MENTIONS = [
+    { id: '@here',    label: '@here',    desc: 'Notify all active channel members' },
+    { id: '@channel', label: '@channel', desc: 'Notify everyone in this channel'   },
+  ];
+  const broadcastSuggestions = BROADCAST_MENTIONS.filter(
+    (b) => !mentionQuery || b.id.slice(1).startsWith(mentionQuery.toLowerCase())
+  );
+
   const firstMessageDate = useMemo(() => {
     const first = channelMessages[0]?.timestamp;
     return first ? formatDate(first) : 'TODAY';
@@ -530,9 +545,10 @@ export default function EduTechExOSDashboard() {
     // Join correct room (DMs use 'dm-X-Y', workspace channels use their id)
     socket.emit('join_channel', activeChannelId);
 
-    // Rejoin whenever socket reconnects (Render wakes from sleep, network blip, etc.)
+    // Rejoin room and reload messages whenever socket reconnects (Render cold start, network blip)
     const handleReconnect = () => {
       socket.emit('join_channel', activeChannelId);
+      useDashboardStore.getState().loadLocalMessages?.();
     };
 
     const handleNewMessage = ({ channelId, message }: { channelId: string; message: import('@/store/dashboardStore').Message }) => {
@@ -718,6 +734,32 @@ export default function EduTechExOSDashboard() {
       text,
     });
 
+    // @here / @channel — notify all channel members at once
+    const isBroadcast = /@(here|channel)\b/i.test(text);
+    if (isBroadcast) {
+      const broadcastTargets = activeChannelMembers.filter(
+        (m) => m.email.toLowerCase() !== currentUserEmail
+      );
+      if (broadcastTargets.length > 0) {
+        addNotification({
+          type: 'mention',
+          actor: currentUser?.name ?? 'EduTechExOS',
+          actorInitials: currentUser?.initials ?? 'OS',
+          actorColor: currentUserColor,
+          channel: channel.name,
+          message: text,
+          recipientEmails: broadcastTargets.map((m) => m.email),
+        });
+        if (settings.soundNotifications) playNotificationSound();
+        if (settings.desktopNotifications) {
+          showDesktopNotification(
+            `@${/@channel/i.test(text) ? 'channel' : 'here'} in #${channel.name}`,
+            text
+          );
+        }
+      }
+    }
+
     if (mentionedMembers.length > 0) {
       addNotification({
         type: 'mention',
@@ -762,7 +804,9 @@ export default function EduTechExOSDashboard() {
     setMentionMenuOpen(false);
   }
 
-  const visibleMessages = channelMessages;
+  // Only top-level messages in main feed; replies live in the thread panel
+  const visibleMessages = channelMessages.filter((m) => !m.parentId);
+  const replyCount = (msgId: string) => channelMessages.filter((m) => m.parentId === msgId).length;
 
   function insertComposerText(prefix: string, suffix = '') {
     const input = composerRef.current;
@@ -1257,7 +1301,6 @@ export default function EduTechExOSDashboard() {
           {[
             { icon: CheckSquare,  label: 'Tasks',        action: () => setKanbanOpen(true) },
             { icon: BookOpen,     label: 'Wiki',         action: () => setWikiOpen(true) },
-            { icon: CalendarDays, label: 'Calendar',     action: () => setCalendarOpen(true) },
             { icon: Layers,       label: 'Figma',        action: () => setFigmaOpen(true) },
             { icon: Zap,          label: 'Integrations', action: () => setIntegrationsOpen(true) },
             ...(isAdmin ? [{ icon: BarChart2, label: 'Analytics', action: () => setAnalyticsOpen(true) }] : []),
@@ -1700,12 +1743,6 @@ export default function EduTechExOSDashboard() {
                     <Layers size={15} /> Figma viewer
                   </button>
                   <button
-                    onClick={() => { setMoreOpen(false); setCalendarOpen(true); }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
-                  >
-                    <CalendarDays size={15} /> Team calendar
-                  </button>
-                  <button
                     onClick={() => { setMoreOpen(false); setIntegrationsOpen(true); }}
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
                   >
@@ -1935,6 +1972,31 @@ export default function EduTechExOSDashboard() {
                           </div>
                         )}
 
+                        {/* Link preview card */}
+                        {message.linkPreview && !scheduledMeet && (
+                          <a href={message.linkPreview.url} target="_blank" rel="noreferrer"
+                            className={`mt-2 block overflow-hidden rounded-xl border transition-colors hover:opacity-90
+                              ${isOwn ? 'border-white/20 bg-white/10' : 'border-[rgba(62,74,137,0.12)] bg-[#FAF8F5]'}`}>
+                            {message.linkPreview.image && (
+                              <img src={message.linkPreview.image} alt="" className="h-32 w-full object-cover" />
+                            )}
+                            <div className="px-3 py-2">
+                              {message.linkPreview.siteName && (
+                                <p className={`text-[10px] font-black uppercase tracking-wider ${isOwn ? 'text-white/50' : 'text-[#7C859E]'}`}>{message.linkPreview.siteName}</p>
+                              )}
+                              {message.linkPreview.title && (
+                                <p className={`text-sm font-bold leading-snug ${isOwn ? 'text-white' : 'text-[#1E2636]'}`}>{message.linkPreview.title}</p>
+                              )}
+                              {message.linkPreview.description && (
+                                <p className={`mt-0.5 text-xs line-clamp-2 ${isOwn ? 'text-white/70' : 'text-[#7C859E]'}`}>{message.linkPreview.description}</p>
+                              )}
+                              <p className={`mt-1 flex items-center gap-1 text-[10px] ${isOwn ? 'text-white/40' : 'text-[#9BA6D3]'}`}>
+                                <ExternalLink size={10} />{new URL(message.linkPreview.url).hostname}
+                              </p>
+                            </div>
+                          </a>
+                        )}
+
                         {/* Audio */}
                         {message.audioUrl && (
                           <div className={`mt-2 rounded-xl p-2 ${isOwn ? 'bg-white/10' : 'bg-[#FAF8F5]'}`}>
@@ -1995,6 +2057,14 @@ export default function EduTechExOSDashboard() {
                                 </div>
                               )}
                             </div>
+                            {!message.isDeleted && (
+                              <button
+                                onClick={() => { setActiveThread(activeThreadId === message.id ? null : message.id); setThreadReplyText(''); }}
+                                className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[rgba(62,74,137,0.08)] ${activeThreadId === message.id ? 'text-[#3E4A89]' : 'text-[#7C859E] hover:text-[#3E4A89]'}`}
+                                title="Reply in thread">
+                                <MessageSquare size={13} />
+                              </button>
+                            )}
                             <button
                               onClick={() => toggleBookmark(message.id, { channelId: activeChannelId, text: message.text, sender: message.sender, timestamp: message.timestamp })}
                               className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[rgba(62,74,137,0.08)] ${isBookmarked ? 'text-amber-500' : 'text-[#7C859E] hover:text-amber-500'}`}
@@ -2007,6 +2077,14 @@ export default function EduTechExOSDashboard() {
                               title={isPinned ? 'Unpin' : 'Pin'}>
                               <Pin size={13} />
                             </button>
+                            {!message.isDeleted && !message.poll && (
+                              <button
+                                onClick={() => setForwardingMsg({ id: message.id, text: message.text ?? '', sender: message.sender })}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#3E4A89]"
+                                title="Forward message">
+                                <Share2 size={13} />
+                              </button>
+                            )}
                             {(isOwn || isAdmin) && (
                               <button
                                 onClick={() => deleteMessage(activeChannelId, message.id)}
@@ -2060,6 +2138,19 @@ export default function EduTechExOSDashboard() {
                         )}
                       </div>
                     )}
+
+                    {/* Thread reply count */}
+                    {!message.isDeleted && replyCount(message.id) > 0 && (
+                      <button
+                        onClick={() => { setActiveThread(activeThreadId === message.id ? null : message.id); setThreadReplyText(''); }}
+                        className={`mt-1 flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold transition-colors
+                          ${activeThreadId === message.id
+                            ? 'bg-indigo-50 text-[#3E4A89]'
+                            : 'text-[#3E4A89] hover:bg-indigo-50'}`}>
+                        <MessageSquare size={12} />
+                        {replyCount(message.id)} {replyCount(message.id) === 1 ? 'reply' : 'replies'}
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -2094,13 +2185,23 @@ export default function EduTechExOSDashboard() {
 
         <footer className="shrink-0 border-t border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/95 backdrop-blur-md px-4 py-3">
           {/* Mention dropdown */}
-          {mentionMenuOpen && mentionSuggestions.length > 0 && (
-            <div className="mb-2 overflow-hidden rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-xl">
+          {mentionMenuOpen && (broadcastSuggestions.length > 0 || mentionSuggestions.length > 0) && (
+            <div className="mb-2 overflow-hidden rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] dark:bg-[#191E2F] shadow-xl">
+              {broadcastSuggestions.map((b) => (
+                <button key={b.id} onClick={() => insertMention(b.id.slice(1))}
+                  className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/40 text-sm font-bold text-amber-700">@</div>
+                  <div>
+                    <p className="text-sm font-bold text-amber-700 dark:text-amber-400">{b.label}</p>
+                    <p className="text-xs text-[#7C859E]">{b.desc}</p>
+                  </div>
+                </button>
+              ))}
               {mentionSuggestions.map((member) => (
                 <button key={member.id} onClick={() => insertMention(member.name)}
                   className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-[rgba(62,74,137,0.08)] transition-colors">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold text-white" style={{ backgroundColor: member.color }}>{member.initials}</div>
-                  <div><p className="text-sm font-bold text-[#1E2636]">{member.name}</p><p className="text-xs text-[#7C859E]">{member.role}</p></div>
+                  <div><p className="text-sm font-bold text-[#1E2636] dark:text-white">{member.name}</p><p className="text-xs text-[#7C859E]">{member.role}</p></div>
                 </button>
               ))}
             </div>
@@ -2464,6 +2565,109 @@ export default function EduTechExOSDashboard() {
         )}
       </AnimatePresence>
 
+      {/* ── Thread Panel ──────────────────────────────────────────── */}
+      <AnimatePresence>
+        {activeThreadId && (() => {
+          const rootMsg = channelMessages.find((m) => m.id === activeThreadId);
+          const replies = channelMessages.filter((m) => m.parentId === activeThreadId);
+          const sendReply = () => {
+            const text = threadReplyText.trim();
+            if (!text || !currentMember) return;
+            addMessage(activeChannelId, {
+              id: `msg-${Date.now()}`,
+              sender: currentMember.name,
+              initials: currentMember.initials,
+              color: currentMember.color,
+              timestamp: new Date().toISOString(),
+              text,
+              parentId: activeThreadId,
+            });
+            setThreadReplyText('');
+          };
+          return (
+            <motion.div
+              key="thread-panel"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+              className="fixed top-0 right-14 z-[150] h-full w-[380px] border-l border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/97 backdrop-blur-md shadow-2xl flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex h-14 shrink-0 items-center justify-between border-b border-[rgba(62,74,137,0.12)] px-4">
+                <div className="flex items-center gap-2">
+                  <MessageSquare size={15} className="text-[#3E4A89]" />
+                  <span className="text-sm font-bold text-[#1E2636]">Thread</span>
+                  <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-black text-[#3E4A89]">{replies.length} {replies.length === 1 ? 'reply' : 'replies'}</span>
+                </div>
+                <button onClick={() => setActiveThread(null)} className="rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]">
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Root message */}
+              {rootMsg && (
+                <div className="shrink-0 border-b border-[rgba(62,74,137,0.08)] bg-white/60 px-4 py-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: rootMsg.color }}>{rootMsg.initials}</div>
+                    <span className="text-xs font-bold text-[#4A5578]">{rootMsg.sender}</span>
+                    <span className="text-[10px] text-[#9BA6D3] ml-auto">{formatTime(rootMsg.timestamp)}</span>
+                  </div>
+                  <p className="text-sm text-[#1E2636] leading-relaxed line-clamp-4">{rootMsg.text}</p>
+                </div>
+              )}
+
+              {/* Replies list */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                {replies.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                    <MessageSquare size={32} className="mb-3 text-slate-200" />
+                    <p className="text-sm font-semibold text-[#7C859E]">No replies yet</p>
+                    <p className="text-xs text-[#9BA6D3] mt-1">Be the first to reply</p>
+                  </div>
+                ) : replies.map((reply) => {
+                  const replyIsOwn = reply.sender === currentUser?.name;
+                  return (
+                    <div key={reply.id} className={`flex items-start gap-2.5 ${replyIsOwn ? 'flex-row-reverse' : ''}`}>
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: reply.color }}>{reply.initials}</div>
+                      <div className={`max-w-[80%] ${replyIsOwn ? 'items-end' : 'items-start'} flex flex-col`}>
+                        <span className="mb-0.5 text-[11px] font-bold text-[#7C859E]">{reply.sender}</span>
+                        <div className={`rounded-2xl px-3 py-2 text-sm leading-relaxed shadow-sm
+                          ${replyIsOwn ? 'bg-[#1E2538] text-white rounded-br-sm' : 'bg-white border border-[rgba(62,74,137,0.08)] text-[#1E2636] rounded-bl-sm'}`}>
+                          {reply.text}
+                        </div>
+                        <span className="mt-0.5 text-[10px] text-[#9BA6D3]">{formatTime(reply.timestamp)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Reply input */}
+              <div className="shrink-0 border-t border-[rgba(62,74,137,0.08)] p-3">
+                <div className="flex items-end gap-2">
+                  <textarea
+                    value={threadReplyText}
+                    onChange={(e) => setThreadReplyText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
+                    placeholder="Reply in thread…"
+                    rows={1}
+                    className="flex-1 resize-none rounded-2xl border border-[rgba(62,74,137,0.12)] bg-white px-3 py-2.5 text-sm text-[#1E2636] placeholder-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/20"
+                    style={{ maxHeight: '100px', overflowY: 'auto' }}
+                  />
+                  <button
+                    onClick={sendReply}
+                    disabled={!threadReplyText.trim()}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#3E4A89] text-white hover:bg-[#2A3568] disabled:bg-slate-200 disabled:cursor-not-allowed transition-all">
+                    <Send size={15} />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
+
       <NotificationPanel open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
       <MyActivityCalendar
         open={activityCalendarOpen}
@@ -2480,9 +2684,6 @@ export default function EduTechExOSDashboard() {
             channels={channels}
           />
         )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {calendarOpen && <CalendarPanel key="calendar" onClose={() => setCalendarOpen(false)} />}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -3665,6 +3866,110 @@ export default function EduTechExOSDashboard() {
         </motion.div>
       )}
       </AnimatePresence>
+
+      {/* ─── Forward Message Modal ──────────────────────────────────────────── */}
+      {forwardingMsg && (() => {
+        const sourceName = channel?.id.startsWith('member-') ? 'DM' : `#${channel?.name ?? activeChannelId}`;
+        const wsChannels = channels.filter((c) => !c.id.startsWith('member-') && !c.id.startsWith('dm-') && c.id !== activeChannelId);
+        const dmMembers = members.filter((m) => m.id !== currentMemberId);
+        const q = forwardQuery.toLowerCase();
+        const filteredWS = wsChannels.filter((c) => c.name.toLowerCase().includes(q));
+        const filteredDMs = dmMembers.filter((m) => m.name.toLowerCase().includes(q));
+
+        const doForward = (targetId: string, targetLabel: string) => {
+          const preview = forwardingMsg.text.length > 300 ? forwardingMsg.text.slice(0, 300) + '…' : forwardingMsg.text;
+          const quoted = preview.replace(/\n/g, '\n> ');
+          const fwdText = `↪ Forwarded from **${sourceName}** · *${forwardingMsg.sender}:*\n> ${quoted}`;
+          addMessage(targetId, {
+            id: `msg-${Date.now()}`,
+            sender: currentMember?.name ?? currentUser?.name ?? 'You',
+            initials: currentMember?.initials ?? currentUser?.initials ?? 'Y',
+            color: currentMember?.color ?? '#64748b',
+            timestamp: new Date().toISOString(),
+            text: fwdText,
+          });
+          toast.success(`Forwarded to ${targetLabel}`);
+          setForwardingMsg(null);
+          setForwardQuery('');
+        };
+
+        return (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+            onClick={() => { setForwardingMsg(null); setForwardQuery(''); }}>
+            <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl"
+              onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-[rgba(62,74,137,0.08)] px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Share2 size={15} className="text-[#3E4A89]" />
+                  <h3 className="font-bold text-[#1E2636]">Forward message</h3>
+                </div>
+                <button onClick={() => { setForwardingMsg(null); setForwardQuery(''); }} className="text-[#7C859E] hover:text-[#4A5578]"><X size={16} /></button>
+              </div>
+              {/* Message preview */}
+              <div className="border-b border-[rgba(62,74,137,0.08)] bg-[rgba(62,74,137,0.04)] px-4 py-3">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#7C859E]">From {sourceName}</p>
+                <p className="line-clamp-2 text-sm italic text-[#4A5578]">"{forwardingMsg.text.slice(0, 120)}{forwardingMsg.text.length > 120 ? '…' : ''}"</p>
+              </div>
+              {/* Search */}
+              <div className="border-b border-[rgba(62,74,137,0.08)] px-4 py-2">
+                <input
+                  autoFocus
+                  type="text"
+                  value={forwardQuery}
+                  onChange={(e) => setForwardQuery(e.target.value)}
+                  placeholder="Search channels or people…"
+                  className="w-full rounded-xl border border-[rgba(62,74,137,0.12)] bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                />
+              </div>
+              {/* List */}
+              <div className="max-h-64 overflow-y-auto">
+                {filteredWS.length > 0 && (
+                  <>
+                    <p className="px-4 pb-1 pt-2 text-[10px] font-bold uppercase tracking-widest text-[#7C859E]">Channels</p>
+                    {filteredWS.map((ch) => (
+                      <button key={ch.id} onClick={() => doForward(ch.id, `#${ch.name}`)}
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[rgba(62,74,137,0.06)]">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
+                          <Hash size={14} className="text-[#3E4A89]" />
+                        </div>
+                        <span className="text-sm font-semibold text-[#1E2636]">{ch.name}</span>
+                      </button>
+                    ))}
+                  </>
+                )}
+                {filteredDMs.length > 0 && (
+                  <>
+                    <p className="px-4 pb-1 pt-2 text-[10px] font-bold uppercase tracking-widest text-[#7C859E]">Direct Messages</p>
+                    {filteredDMs.map((m) => {
+                      const sorted = [m.id, currentMemberId].sort();
+                      const dmId = `dm-${sorted[0]}-${sorted[1]}`;
+                      return (
+                        <button key={m.id} onClick={() => doForward(dmId, m.name)}
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[rgba(62,74,137,0.06)]">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                            style={{ backgroundColor: m.color }}>
+                            {m.initials}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-[#1E2636]">{m.name}</p>
+                            <p className="text-xs text-[#7C859E]">{m.role}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+                {filteredWS.length === 0 && filteredDMs.length === 0 && (
+                  <p className="py-8 text-center text-sm text-[#7C859E]">
+                    {forwardQuery ? `No results for "${forwardQuery}"` : 'No destinations available'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

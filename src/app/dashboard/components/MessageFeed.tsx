@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Trash2, Paperclip, Pencil, Check, X, Pin, Bookmark, MessageSquare, ChevronDown } from 'lucide-react';
+import { Trash2, Paperclip, Pencil, Check, X, Pin, Bookmark, MessageSquare, ChevronDown, Share2, Hash } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { MESSAGES_BY_CHANNEL } from '@/data/mockData';
@@ -52,9 +52,12 @@ function PollCard({ msg, channelId, userEmail }: { msg: any; channelId: string; 
   );
 }
 
-// Wrap @Name tokens in markdown bold so ReactMarkdown renders them as <strong>
+// Wrap @Name tokens in markdown bold; @here/@channel get bold+italic to stand out
 function applyMentionBold(text: string): string {
-  return text.replace(/@([A-Za-z][^\s@,!?\n]*)/g, '**@$1**');
+  return text.replace(/@([A-Za-z][^\s@,!?\n]*)/g, (_, name) => {
+    if (/^(here|channel)$/i.test(name)) return `***@${name}***`;
+    return `**@${name}**`;
+  });
 }
 
 function MarkdownContent({ text, isOwn }: { text: string; isOwn: boolean }) {
@@ -110,6 +113,132 @@ function MeetingCard({ text }: { text: string }) {
   );
 }
 
+/* ── Forward Modal ───────────────────────────────────────────────────────── */
+interface FwdMsg { id: string; text: string; sender: string; }
+
+function ForwardModal({ msg, sourceChannelId, onClose }: { msg: FwdMsg; sourceChannelId: string; onClose: () => void }) {
+  const channels = useDashboardStore((s) => s.channels);
+  const members  = useDashboardStore((s) => s.members);
+  const addMessage = useDashboardStore((s) => s.addMessage);
+  const [query, setQuery] = useState('');
+  const [currentUser, setCurrentUser] = useState<{ name: string; initials: string; color: string } | null>(null);
+  const [currentMemberId, setCurrentMemberId] = useState('');
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('edutechex_token');
+      if (raw) {
+        const { user } = JSON.parse(raw);
+        if (user) {
+          setCurrentUser(user);
+          const m = members.find((mb) => mb.email?.toLowerCase() === user.email?.toLowerCase());
+          if (m) setCurrentMemberId(m.id);
+        }
+      }
+    } catch { /* */ }
+  }, [members]);
+
+  const sourceChannel = channels.find((c) => c.id === sourceChannelId);
+  const sourceName = sourceChannel?.id.startsWith('member-') ? 'DM' : `#${sourceChannel?.name ?? sourceChannelId}`;
+
+  const wsChannels = channels.filter((c) => !c.id.startsWith('member-') && c.id !== sourceChannelId);
+  const dmMembers  = members.filter((m) => m.id !== currentMemberId);
+
+  const q = query.toLowerCase();
+  const filteredWS  = wsChannels.filter((c) => c.name.toLowerCase().includes(q));
+  const filteredDMs = dmMembers.filter((m) => m.name.toLowerCase().includes(q));
+
+  function doForward(targetId: string, targetLabel: string) {
+    const preview = msg.text.length > 300 ? msg.text.slice(0, 300) + '…' : msg.text;
+    const quoted  = preview.replace(/\n/g, '\n> ');
+    const text    = `↪ Forwarded from **${sourceName}** · *${msg.sender}:*\n> ${quoted}`;
+    addMessage(targetId, {
+      id: `msg-${Date.now()}`,
+      sender: currentUser?.name ?? 'You',
+      initials: currentUser?.initials ?? 'Y',
+      color: currentUser?.color ?? '#64748b',
+      timestamp: new Date().toISOString(),
+      text,
+    });
+    toast.success(`Forwarded to ${targetLabel}`);
+    onClose();
+  }
+
+  function forwardToChannel(ch: { id: string; name: string }) {
+    doForward(ch.id, `#${ch.name}`);
+  }
+
+  function forwardToDM(member: { id: string; name: string }) {
+    const sorted = [member.id, currentMemberId].sort();
+    const dmId = `dm-${sorted[0]}-${sorted[1]}`;
+    doForward(dmId, member.name);
+  }
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={onClose}>
+      <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] dark:bg-[#191E2F] shadow-2xl"
+        onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[rgba(62,74,137,0.08)] px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Share2 size={15} className="text-[#3E4A89]" />
+            <h3 className="font-bold text-[#1E2636] dark:text-white">Forward message</h3>
+          </div>
+          <button onClick={onClose} className="text-[#7C859E] hover:text-[#4A5578]"><X size={16} /></button>
+        </div>
+        {/* Preview */}
+        <div className="border-b border-[rgba(62,74,137,0.08)] bg-[rgba(62,74,137,0.04)] px-4 py-3">
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#7C859E]">From {sourceName}</p>
+          <p className="line-clamp-2 text-sm text-[#4A5578] dark:text-[#9BA6D3] italic">"{msg.text.slice(0, 120)}{msg.text.length > 120 ? '…' : ''}"</p>
+        </div>
+        {/* Search */}
+        <div className="border-b border-[rgba(62,74,137,0.08)] px-4 py-2">
+          <input autoFocus type="text" value={query} onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search channels or people…"
+            className="w-full rounded-xl border border-[rgba(62,74,137,0.12)] bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:border-indigo-400 dark:text-white dark:placeholder-slate-500" />
+        </div>
+        {/* List */}
+        <div className="max-h-60 overflow-y-auto">
+          {filteredWS.length > 0 && (
+            <>
+              <p className="px-4 pb-1 pt-2 text-[10px] font-bold uppercase tracking-widest text-[#7C859E]">Channels</p>
+              {filteredWS.map((ch) => (
+                <button key={ch.id} onClick={() => forwardToChannel(ch)}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[rgba(62,74,137,0.06)]">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-900/30">
+                    <Hash size={14} className="text-[#3E4A89]" />
+                  </div>
+                  <span className="text-sm font-semibold text-[#1E2636] dark:text-white">{ch.name}</span>
+                </button>
+              ))}
+            </>
+          )}
+          {filteredDMs.length > 0 && (
+            <>
+              <p className="px-4 pb-1 pt-2 text-[10px] font-bold uppercase tracking-widest text-[#7C859E]">Direct Messages</p>
+              {filteredDMs.map((m) => (
+                <button key={m.id} onClick={() => forwardToDM(m)}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[rgba(62,74,137,0.06)]">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                    style={{ backgroundColor: (m as any).color ?? '#64748b' }}>{(m as any).initials ?? m.name[0]}</div>
+                  <div>
+                    <p className="text-sm font-semibold text-[#1E2636] dark:text-white">{m.name}</p>
+                    <p className="text-xs text-[#7C859E]">{(m as any).role}</p>
+                  </div>
+                </button>
+              ))}
+            </>
+          )}
+          {filteredWS.length === 0 && filteredDMs.length === 0 && (
+            <p className="py-8 text-center text-sm text-[#7C859E]">No results for "{query}"</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
   const allMessages = useDashboardStore((s) => s.messages[channelId]) ?? MESSAGES_BY_CHANNEL[channelId] ?? [];
   const deleteMessage = useDashboardStore((s) => s.deleteMessage);
@@ -127,6 +256,7 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
+  const [forwardingMsg, setForwardingMsg] = useState<FwdMsg | null>(null);
 
   const messages = parentId
     ? allMessages.filter((m) => m.parentId === parentId || m.id === parentId)
@@ -394,6 +524,15 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
                               <Pin size={13} />
                             </button>
 
+                            {!msg.isDeleted && !msg.poll && (
+                              <button
+                                onClick={() => setForwardingMsg({ id: msg.id, text: msg.text ?? '', sender: msg.sender })}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#3E4A89]"
+                                title="Forward message">
+                                <Share2 size={13} />
+                              </button>
+                            )}
+
                             {isOwn && !msg.poll && (
                               <button onClick={() => { setEditingId(msg.id); setEditText(msg.text ?? ''); }}
                                 className="flex h-7 w-7 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]"
@@ -452,6 +591,9 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
         );
       })}
       <div ref={bottomRef} className="h-1" />
+      {forwardingMsg && (
+        <ForwardModal msg={forwardingMsg} sourceChannelId={channelId} onClose={() => setForwardingMsg(null)} />
+      )}
     </div>
   );
 }

@@ -31,12 +31,10 @@ export function getSocket(): Socket {
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
-      // Cap retries so a sleeping Render backend doesn't spam hundreds of
-      // connect_error logs per session. 8 attempts × 30 s max delay ≈ 4 min.
-      reconnectionAttempts: 8,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 2000,
-      reconnectionDelayMax: 30000,
-      timeout: 10000,
+      reconnectionDelayMax: 60000,
+      timeout: 20000,
     });
 
     socket.on('connect', () => {

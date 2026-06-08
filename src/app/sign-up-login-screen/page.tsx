@@ -69,10 +69,7 @@ export default function AuthPage() {
             LEFT — Deep Navy Brand Panel
         ══════════════════════════════════════════════════ */}
         <section
-          className="auth-diag relative lg:w-[44%] bg-[#0A1128] z-10
-                     flex flex-col justify-center
-                     px-10 md:px-14 lg:px-20 xl:px-24
-                     py-20 lg:py-0 min-h-[380px] lg:min-h-screen"
+          className="auth-diag relative lg:w-[44%] bg-[#0A1128] z-10 flex flex-col justify-center px-10 md:px-14 lg:px-20 xl:px-24 py-20 lg:py-0 min-h-[380px] lg:min-h-screen"
         >
           {/* Dot grid */}
           <div className="absolute inset-0 pointer-events-none" style={{
@@ -174,44 +171,14 @@ export default function AuthPage() {
               world-class curriculum and academic intelligence.
             </p>
 
-            {/* Avatar row */}
-            <div className="rh d4 flex items-center gap-4">
-              <div style={{ display: 'flex' }}>
-                {['dean1', 'tech2', 'admin3'].map((u, i) => (
-                  <img key={u} src={`https://i.pravatar.cc/80?u=${u}`} alt=""
-                    style={{
-                      width: 34, height: 34, borderRadius: '50%',
-                      border: '2px solid #0A1128',
-                      marginLeft: i === 0 ? 0 : -10,
-                    }} />
-                ))}
-              </div>
-              <span style={{
-                fontSize: 10, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase',
-                color: 'rgba(249,248,246,.35)',
-              }}>
-                Verified Institution Access
-              </span>
-            </div>
           </div>
 
-          {/* Bottom watermark */}
-          <div className="rh d5 absolute bottom-8 hidden lg:block"
-            style={{ left: 'clamp(40px, 8vw, 96px)' }}>
-            <span style={{
-              fontSize: 9, fontWeight: 700, letterSpacing: '.32em', textTransform: 'uppercase',
-              color: 'rgba(212,175,55,.22)',
-            }}>
-              System v2.4.0 · Secured Encryption
-            </span>
-          </div>
         </section>
 
         {/* ══════════════════════════════════════════════════
             RIGHT — Bone White Form Panel
         ══════════════════════════════════════════════════ */}
-        <section className="relative flex-1 bg-[#F9F8F6] flex flex-col overflow-y-auto
-                            min-h-screen lg:h-screen">
+        <section className="relative flex-1 bg-[#F9F8F6] flex flex-col overflow-y-auto min-h-screen lg:h-screen">
 
           {/* Paper texture overlay */}
           <div className="absolute inset-0 opacity-[.025] pointer-events-none" style={{
@@ -236,9 +203,49 @@ export default function AuthPage() {
             <span className="watermark">EduTechEx</span>
           </div>
 
+          {/* ── Back to Home button ───────────────────────── */}
+          <div className="absolute top-6 left-6 z-20">
+            <Link
+              href="/"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 7,
+                padding: '9px 16px',
+                background: 'rgba(255,255,255,0.75)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid rgba(10,17,40,0.08)',
+                borderRadius: 6,
+                fontSize: 10,
+                fontWeight: 900,
+                letterSpacing: '0.22em',
+                textTransform: 'uppercase',
+                color: 'rgba(10,17,40,0.6)',
+                textDecoration: 'none',
+                boxShadow: '0 2px 12px rgba(10,17,40,0.06)',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLAnchorElement).style.color = '#D4AF37';
+                (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(212,175,55,0.35)';
+                (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 4px 20px rgba(212,175,55,0.15)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(10,17,40,0.6)';
+                (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(10,17,40,0.08)';
+                (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 2px 12px rgba(10,17,40,0.06)';
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <path d="M13 8H3M7 4l-4 4 4 4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Back to Home
+            </Link>
+          </div>
+
           {/* ── Centered Form Card ────────────────────────── */}
-          <div className="relative flex-1 flex flex-col items-center justify-center
-                          px-6 py-16 lg:py-20 z-10">
+          <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-16 lg:py-20 z-10">
 
             {/* Glassmorphism card wrapper */}
             <div
@@ -304,8 +311,7 @@ export default function AuthPage() {
           </div>
 
           {/* ── Trusted Partners Ticker ────────────────────── */}
-          <div className="relative z-10 w-full py-5 bg-white/40 backdrop-blur-sm
-                          border-t border-[#0A1128]/5 overflow-hidden">
+          <div className="relative z-10 w-full py-5 bg-white/40 backdrop-blur-sm border-t border-[#0A1128]/5 overflow-hidden">
             <div style={{ textAlign: 'center', marginBottom: 10 }}>
               <span style={{
                 fontSize: 8, fontWeight: 900, letterSpacing: '.45em', textTransform: 'uppercase',

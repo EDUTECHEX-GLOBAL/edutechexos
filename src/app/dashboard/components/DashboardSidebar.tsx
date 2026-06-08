@@ -240,11 +240,16 @@ export default function DashboardSidebar({
         } catch { /* ignore */ }
       }
     };
+    const handleMemberRemoved = ({ memberId }: { memberId: string }) => {
+      if (memberId) useDashboardStore.getState().removeMemberLocally(memberId);
+    };
     socket.on('login_status_updated', handleLoginUpdate);
     socket.on('member_updated', handleMemberUpdated);
+    socket.on('member_removed', handleMemberRemoved);
     return () => {
       socket.off('login_status_updated', handleLoginUpdate);
       socket.off('member_updated', handleMemberUpdated);
+      socket.off('member_removed', handleMemberRemoved);
     };
   }, []);
 
