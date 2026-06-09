@@ -13,6 +13,7 @@ import {
   MessageSquare,
   RefreshCw,
   Search,
+  Send,
   Settings,
   ShieldCheck,
   Trash2,
@@ -75,6 +76,10 @@ export default function AdminPage() {
   const [promoteLoadingId, setPromoteLoadingId] = useState<string | null>(null);
   const [activityStats, setActivityStats] = useState<ActivityStat[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
+  const [broadcastSubject, setBroadcastSubject] = useState('');
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcastSending, setBroadcastSending] = useState(false);
+  const [broadcastLastSent, setBroadcastLastSent] = useState<{ subject: string; count: number; at: string } | null>(null);
 
   useEffect(() => {
     const authData = localStorage.getItem('edutechex_token');
@@ -441,6 +446,34 @@ export default function AdminPage() {
     setAccessRequests(nextRequests);
     localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify(nextRequests));
     toast.success('Access request removed.');
+  }
+
+  async function handleBroadcast() {
+    if (!broadcastSubject.trim()) { toast.error('Please enter a subject.'); return; }
+    if (!broadcastMessage.trim()) { toast.error('Please enter a message.'); return; }
+    if (!confirm(`Send this email to all ${members.length} workspace members?\n\nSubject: ${broadcastSubject}`)) return;
+    setBroadcastSending(true);
+    try {
+      const token = getAdminToken();
+      const res = await fetch(`${API_BASE}/api/admin/broadcast-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ subject: broadcastSubject.trim(), message: broadcastMessage.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setBroadcastLastSent({ subject: broadcastSubject.trim(), count: data.sentTo, at: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) });
+        setBroadcastSubject('');
+        setBroadcastMessage('');
+        toast.success(`Email sent to ${data.sentTo} members.`);
+      } else {
+        toast.error(data.error ?? 'Failed to send email.');
+      }
+    } catch {
+      toast.error('Could not reach the server. Please try again.');
+    } finally {
+      setBroadcastSending(false);
+    }
   }
 
   const statCards = [
@@ -950,6 +983,74 @@ export default function AdminPage() {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+              {/* ── Broadcast Email ──────────────────────────────────────── */}
+              <div className="card-premium p-5">
+                <div className="mb-5 flex items-start justify-between">
+                  <div>
+                    <h2 className="font-display font-bold text-lg tracking-[-0.02em] text-foreground">
+                      Broadcast Email
+                    </h2>
+                    <p className="text-sm text-ink-light">
+                      Send one email to all {members.length} workspace members at once.
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <Send size={16} className="text-primary" />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-light">
+                      Subject
+                    </label>
+                    <input
+                      type="text"
+                      value={broadcastSubject}
+                      onChange={(e) => setBroadcastSubject(e.target.value)}
+                      placeholder="e.g. Team update — June 2026"
+                      maxLength={150}
+                      className="h-10 w-full rounded-xl border border-border bg-surface px-3 text-sm font-medium text-foreground placeholder-slate-300 outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(62,74,137,0.12)]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-light">
+                      Message
+                    </label>
+                    <textarea
+                      value={broadcastMessage}
+                      onChange={(e) => setBroadcastMessage(e.target.value)}
+                      placeholder="Write your message here. Plain text — line breaks are preserved."
+                      rows={5}
+                      maxLength={2000}
+                      className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2.5 text-sm font-medium text-foreground placeholder-slate-300 outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(62,74,137,0.12)]"
+                    />
+                    <p className="mt-1 text-right text-[10px] text-ink-light">
+                      {broadcastMessage.length}/2000
+                    </p>
+                  </div>
+
+                  {broadcastLastSent && (
+                    <div className="rounded-xl border border-green-100 bg-green-50 px-3 py-2.5 text-xs font-medium text-green-700">
+                      ✓ Last sent at {broadcastLastSent.at} · &ldquo;{broadcastLastSent.subject}&rdquo; → {broadcastLastSent.count} members
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleBroadcast}
+                    disabled={broadcastSending || !broadcastSubject.trim() || !broadcastMessage.trim()}
+                    className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white transition-all hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {broadcastSending ? (
+                      <><RefreshCw size={14} className="animate-spin" /> Sending…</>
+                    ) : (
+                      <><Send size={14} /> Send to All {members.length} Members</>
+                    )}
+                  </button>
                 </div>
               </div>
             </aside>
