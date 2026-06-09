@@ -899,18 +899,10 @@ export const useDashboardStore = create<DashboardState>()(
         }));
       },
       removeMember: (memberId) => {
-        const isSystemId = ['member-ac', 'member-rk', 'member-sa', 'member-tm', 'member-mk', 'member-mr', 'member-ms'].includes(memberId);
-        if (!isSystemId) {
-          const dbId = memberId.replace('member-', '');
-          apiFetch(`${API_BASE}/api/access-requests/${dbId}`, {
-            method: 'DELETE',
-          })
-          .then(() => {
-            get().loadLocalMembers();
-          })
-          .catch(() => {});
-        }
-
+        // Just update local state — callers are responsible for the backend DELETE.
+        // (Previously this fired its own apiFetch DELETE and then called
+        // loadLocalMembers() unconditionally in .then(), which restored the user
+        // from the DB whenever the DELETE failed or raced with other requests.)
         set((s) => ({
           members: s.members.filter((m) => m.id !== memberId),
           channels: s.channels.map((ch) => syncCount({ ...ch, memberIds: withoutM(ch.memberIds, memberId) })),

@@ -726,11 +726,9 @@ export default function AdminPage() {
                               type="button"
                               onClick={async () => {
                                 if (!confirm(`Remove ${member.name} from the workspace?\n\nThey will be logged out immediately if they are currently online.`)) return;
-                                // Optimistic local removal
-                                removeMember(member.id);
-                                toast.success(`${member.name} was removed from the workspace.`);
-                                // Persist to backend — extract the MongoDB _id from member.id
-                                // member.id is either "member-<mongoId>" (DB users) or hardcoded
+                                // Only update local state AFTER the backend confirms deletion.
+                                // If we optimistically remove first and the DELETE fails, the user
+                                // reappears on the next page refresh (still in the DB).
                                 const mongoId = member.id.startsWith('member-') ? member.id.slice(7) : null;
                                 if (mongoId && mongoId.length === 24) {
                                   try {
@@ -740,13 +738,21 @@ export default function AdminPage() {
                                       method: 'DELETE',
                                       headers: token ? { Authorization: `Bearer ${token}` } : {},
                                     });
-                                    if (!res.ok) {
+                                    if (res.ok) {
+                                      // Confirmed deleted in DB — now safe to update local state
+                                      removeMember(member.id);
+                                      toast.success(`${member.name} was removed from the workspace.`);
+                                    } else {
                                       const body = await res.json().catch(() => ({}));
-                                      toast.error(`Backend error: ${body.error ?? res.status}`);
+                                      toast.error(`Could not remove ${member.name}: ${body.error ?? res.status}`);
                                     }
                                   } catch {
-                                    toast.error('Could not reach the server — user removed locally only.');
+                                    toast.error('Could not reach the server. Please try again.');
                                   }
+                                } else {
+                                  // Hardcoded / system member — no DB record, just remove locally
+                                  removeMember(member.id);
+                                  toast.success(`${member.name} was removed from the workspace.`);
                                 }
                               }}
                               className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-light transition-all hover:bg-red-50 hover:text-[#f43f5e]"
