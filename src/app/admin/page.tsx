@@ -102,15 +102,27 @@ export default function AdminPage() {
     };
   }, [loadLocalMembers]);
 
+  // Helper — read the stored JWT token once
+  function getAdminToken(): string | null {
+    try { return JSON.parse(localStorage.getItem('edutechex_token') ?? '').token ?? null; }
+    catch { return null; }
+  }
+
   useEffect(() => {
     // Primary: load members + access requests from backend
     loadLocalMembers?.();
+
+    const token = getAdminToken();
+    if (!token) return; // not logged in — nothing to load
 
     // Load access requests with a 20-second timeout so Render cold-starts don't block the UI
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20_000);
 
-    fetch(`${API_BASE}/api/access-requests`, { signal: controller.signal })
+    fetch(`${API_BASE}/api/access-requests`, {
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${token}` },  // ← was missing (caused 403)
+    })
       .then((r) => r.json())
       .then((data: { success: boolean; requests?: AccessRequest[] }) => {
         clearTimeout(timer);
@@ -129,7 +141,10 @@ export default function AdminPage() {
         }
         // Retry once after 15 seconds (backend may still be waking up)
         setTimeout(() => {
-          fetch(`${API_BASE}/api/access-requests`)
+          const t2 = getAdminToken();
+          fetch(`${API_BASE}/api/access-requests`, {
+            headers: t2 ? { Authorization: `Bearer ${t2}` } : {},
+          })
             .then((r) => r.json())
             .then((data: { success: boolean; requests?: AccessRequest[] }) => {
               if (data.success && Array.isArray(data.requests)) {
@@ -217,12 +232,26 @@ export default function AdminPage() {
     }
   }
 
-  function handleRoleChange(memberId: string, memberName: string, newRoleVal: string) {
+  async function handleRoleChange(memberId: string, memberName: string, newRoleVal: string) {
     if (newRoleVal === 'Admin' && !canAddMoreAdmins) {
       toast.error(`Maximum ${MAX_ADMINS} admins allowed. Remove an existing admin first.`);
       return;
     }
+    // Optimistic local update
     setMemberRole(memberId, newRoleVal);
+
+    // Persist to backend for DB members (id looks like "member-<24-char-hex>")
+    const rawId = memberId.replace('member-', '');
+    if (rawId.length === 24) {
+      try {
+        const token = getAdminToken();
+        await fetch(`${API_BASE}/api/access-requests/${rawId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify({ role: newRoleVal }),
+        });
+      } catch { /* non-critical — local update already applied */ }
+    }
     toast.success(`Role updated to ${newRoleVal} for ${memberName}`);
   }
 
@@ -234,10 +263,25 @@ export default function AdminPage() {
     return members.filter((m) => channel?.memberIds?.includes(m.id));
   }
 
-  function handleChannelToggle(memberId: string, channelId: string, checked: boolean) {
+  async function handleChannelToggle(memberId: string, channelId: string, checked: boolean) {
     const current = getExtraChannels(memberId).map((c) => c.id);
     const next = checked ? [...new Set([...current, channelId])] : current.filter((id) => id !== channelId);
+    // Optimistic local update
     setMemberWorkspaceChannels(memberId, next);
+
+    // Persist to backend for DB members
+    const rawId = memberId.replace('member-', '');
+    if (rawId.length === 24) {
+      try {
+        const token = getAdminToken();
+        await fetch(`${API_BASE}/api/access-requests/${rawId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify({ channelIds: next }),
+        });
+      } catch { /* non-critical — local update already applied */ }
+    }
+
     const member = members.find((m) => m.id === memberId);
     const channel = extraChannels.find((c) => c.id === channelId);
     if (channel) {
@@ -249,7 +293,7 @@ export default function AdminPage() {
     }
   }
 
-  function handleAddMember(e: React.FormEvent) {
+  async function handleAddMember(e: React.FormEvent) {
     e.preventDefault();
     if (!newName.trim() || !newEmail.trim()) return;
     const emailClean = newEmail.trim().toLowerCase();
@@ -259,33 +303,40 @@ export default function AdminPage() {
     }
 
     const cleanName = newName.trim();
-    const initials = cleanName
-      .split(' ')
-      .map((p) => p[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    const initials = cleanName.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2);
     const colors = ['#3E4A89', '#9BA6D3', '#7c3aed', '#a78bfa', '#2A3568', '#c4b5fd'];
-      const shortId =
-      cleanName
-        .toLowerCase()
-        .replace(/[^a-z]/g, '')
-        .slice(0, 4) + Math.floor(Math.random() * 1000);
-    const memberId = `member-${shortId}`;
+    const color = colors[Math.floor(Math.random() * colors.length)];
 
-    addMember({
-      id: memberId,
-      initials,
-      name: cleanName,
-      email: emailClean,
-      role: newRole,
-      status: 'online',
-      color: colors[Math.floor(Math.random() * colors.length)],
-    });
-    if (newRole !== 'Admin' && newExtraChannel)
-      setMemberWorkspaceChannel(memberId, newExtraChannel);
+    // ── Persist to backend first so the member survives page refresh ──────────
+    try {
+      const token = getAdminToken();
+      const res = await fetch(`${API_BASE}/api/members`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ name: cleanName, email: emailClean, role: newRole, channelId: newExtraChannel || null }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.member) {
+        // Use the real DB-backed ID returned by the server
+        addMember({ ...data.member, initials, status: 'online', color });
+        if (newRole !== 'Admin' && newExtraChannel)
+          setMemberWorkspaceChannel(data.member.id, newExtraChannel);
+        toast.success(`${cleanName} added. Default password: Welcome@2026`);
+      } else {
+        toast.error(data.error ?? 'Failed to add member on server.');
+        return;
+      }
+    } catch {
+      // Backend unreachable — add locally only (temporary, won't persist)
+      const tempId = `member-${cleanName.toLowerCase().replace(/[^a-z]/g, '').slice(0, 4)}${Math.floor(Math.random() * 1000)}`;
+      addMember({ id: tempId, initials, name: cleanName, email: emailClean, role: newRole, status: 'online', color });
+      if (newRole !== 'Admin' && newExtraChannel) setMemberWorkspaceChannel(tempId, newExtraChannel);
+      toast.warning(`${cleanName} added locally — backend unreachable, won't persist.`);
+    }
 
-    toast.success(`${cleanName} was added with general access.`);
     setNewName('');
     setNewEmail('');
     setNewRole('Developer');
@@ -361,7 +412,11 @@ export default function AdminPage() {
   async function rejectRequest(requestId: string) {
     // ── Delete from backend ─────────────────────────────────────────────────
     try {
-      await fetch(`${API_BASE}/api/access-requests/${requestId}`, { method: 'DELETE' });
+      const token = getAdminToken();
+      await fetch(`${API_BASE}/api/access-requests/${requestId}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},  // ← was missing (caused 403)
+      });
     } catch {
       // Backend unreachable — still remove locally
     }
