@@ -738,12 +738,15 @@ export default function AdminPage() {
                                       method: 'DELETE',
                                       headers: token ? { Authorization: `Bearer ${token}` } : {},
                                     });
-                                    if (res.ok) {
-                                      // Confirmed deleted in DB — now safe to update local state
+                                    const body = await res.json().catch(() => ({}));
+                                    if (res.ok && body.success) {
+                                      // Backend confirmed deletion — update local state then
+                                      // resync from DB so any in-flight loadLocalMembers calls
+                                      // that raced with the delete get corrected immediately.
                                       removeMember(member.id);
                                       toast.success(`${member.name} was removed from the workspace.`);
+                                      loadLocalMembers?.();
                                     } else {
-                                      const body = await res.json().catch(() => ({}));
                                       toast.error(`Could not remove ${member.name}: ${body.error ?? res.status}`);
                                     }
                                   } catch {
