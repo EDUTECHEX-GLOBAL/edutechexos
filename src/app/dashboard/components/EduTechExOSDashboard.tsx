@@ -639,23 +639,31 @@ export default function EduTechExOSDashboard() {
   }, [currentUserEmail, loadLocalNotifications]);
 
   // Activity heartbeat — ping backend every 60 s so admin can see session time.
-  // Disclosed to users in Settings → Privacy. No opt-out (business platform policy).
+  // Stops automatically if the endpoint returns 404 (backend not yet deployed).
   useEffect(() => {
     if (!currentUserEmail) return;
     const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
-    const ping = () => {
+    let endpointAvailable = true; // set false on first 404 to stop future pings
+    let intervalId: ReturnType<typeof setInterval>;
+
+    const ping = async () => {
+      if (!endpointAvailable) return;
       const authData = localStorage.getItem('edutechex_token');
       const token = authData ? (() => { try { return JSON.parse(authData).token; } catch { return null; } })() : null;
       if (!token) return;
-      fetch(`${API_BASE}/api/activity/heartbeat`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      }).then(r => r.ok ? r.json() : null   // swallow 4xx/5xx silently (e.g. before backend deploys)
-      ).catch(() => {});                     // swallow network errors too
+      try {
+        const res = await fetch(`${API_BASE}/api/activity/heartbeat`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        });
+        // 404 = route doesn't exist yet on this backend build — stop pinging until next page load
+        if (res.status === 404) { endpointAvailable = false; clearInterval(intervalId); }
+      } catch { /* network error — will retry next tick */ }
     };
+
     ping(); // immediate first ping on mount
-    const interval = setInterval(ping, 60_000);
-    return () => clearInterval(interval);
+    intervalId = setInterval(ping, 60_000);
+    return () => clearInterval(intervalId);
   }, [currentUserEmail]);
 
   // Sync dark mode from store on mount
