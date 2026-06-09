@@ -9,7 +9,41 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const rateLimit = require('express-rate-limit');
+// ── Zero-dependency rate limiter — replaces express-rate-limit entirely.
+// express-rate-limit throws ERR_ERL_UNEXPECTED_X_FORWARDED_FOR on Render
+// (a proxy host) even with app.set('trust proxy', 1) + validate:false due
+// to stale cached node_modules.  This implementation has no such issue.
+function makeRateLimiter({ windowMs, max, message }) {
+  const store = new Map(); // ip → { count, resetAt }
+  // Sweep stale entries every 10 minutes to avoid memory leak on long uptime
+  setInterval(() => {
+    const now = Date.now();
+    for (const [ip, entry] of store) {
+      if (now > entry.resetAt) store.delete(ip);
+    }
+  }, 10 * 60 * 1000).unref();
+
+  return function rateLimitMiddleware(req, res, next) {
+    // Honour the proxy-set header; fall back to socket address
+    const ip =
+      (req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
+      req.socket?.remoteAddress ||
+      'unknown';
+    const now = Date.now();
+    let entry = store.get(ip);
+    if (!entry || now > entry.resetAt) {
+      entry = { count: 0, resetAt: now + windowMs };
+      store.set(ip, entry);
+    }
+    entry.count += 1;
+    if (entry.count > max) {
+      return res.status(429).json(
+        typeof message === 'object' ? message : { error: message || 'Too many requests.' }
+      );
+    }
+    next();
+  };
+}
 // nodemailer replaced by Brevo HTTP API (no IP-whitelist issues)
 const jwt = require('jsonwebtoken');
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
@@ -151,36 +185,24 @@ app.use(express.json());
 
 // ── Rate Limiting ─────────────────────────────────────────────────────────────
 // Auth endpoints: strict limit to prevent brute-force / credential stuffing
-// validate: false disables ALL express-rate-limit runtime validation checks,
-// including the ERR_ERL_UNEXPECTED_X_FORWARDED_FOR check that fires on Render
-// because the host's reverse proxy sets X-Forwarded-For.
-// We already handle proxy trust via app.set('trust proxy', 1) above.
-const RATE_LIMIT_DEFAULTS = {
-  standardHeaders: true,
-  legacyHeaders: false,
-  validate: false,
-};
-
-const authLimiter = rateLimit({
-  ...RATE_LIMIT_DEFAULTS,
+const authLimiter = makeRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,
   message: { error: 'Too many auth attempts. Please wait 15 minutes before trying again.' },
 });
 
 // Message/API endpoints: generous limit for normal usage
-const apiLimiter = rateLimit({
-  ...RATE_LIMIT_DEFAULTS,
+const apiLimiter = makeRateLimiter({
   windowMs: 60 * 1000, // 1 minute
   max: 120,
   message: { error: 'Too many requests. Please slow down.' },
 });
 
 // Global fallback
-const globalLimiter = rateLimit({
-  ...RATE_LIMIT_DEFAULTS,
+const globalLimiter = makeRateLimiter({
   windowMs: 60 * 1000,
   max: 300,
+  message: { error: 'Too many requests.' },
 });
 
 app.use('/api/auth/', authLimiter);
