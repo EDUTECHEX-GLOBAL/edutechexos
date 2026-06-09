@@ -42,6 +42,12 @@ async function sendBrevoEmail({ to, subject, html }) {
 }
 
 const app = express();
+
+// Render (and most PaaS hosts) sit behind a reverse proxy that sets
+// X-Forwarded-For. Tell Express to trust the first proxy hop so that
+// express-rate-limit can identify real client IPs correctly.
+app.set('trust proxy', 1);
+
 const httpServer = http.createServer(app);
 
 // Allow requests from the Vercel frontend and local dev
