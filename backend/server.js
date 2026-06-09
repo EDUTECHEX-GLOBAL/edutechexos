@@ -151,29 +151,36 @@ app.use(express.json());
 
 // ── Rate Limiting ─────────────────────────────────────────────────────────────
 // Auth endpoints: strict limit to prevent brute-force / credential stuffing
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+// validate: { xForwardedForHeader: false } silences the express-rate-limit
+// ERR_ERL_UNEXPECTED_X_FORWARDED_FOR warning on Render/proxy hosts.
+// We already trust the proxy via app.set('trust proxy', 1) above, but
+// express-rate-limit v7 requires this flag to be explicitly set as well.
+const RATE_LIMIT_DEFAULTS = {
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
+};
+
+const authLimiter = rateLimit({
+  ...RATE_LIMIT_DEFAULTS,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
   message: { error: 'Too many auth attempts. Please wait 15 minutes before trying again.' },
 });
 
 // Message/API endpoints: generous limit for normal usage
 const apiLimiter = rateLimit({
+  ...RATE_LIMIT_DEFAULTS,
   windowMs: 60 * 1000, // 1 minute
   max: 120,
-  standardHeaders: true,
-  legacyHeaders: false,
   message: { error: 'Too many requests. Please slow down.' },
 });
 
 // Global fallback
 const globalLimiter = rateLimit({
+  ...RATE_LIMIT_DEFAULTS,
   windowMs: 60 * 1000,
   max: 300,
-  standardHeaders: true,
-  legacyHeaders: false,
 });
 
 app.use('/api/auth/', authLimiter);
