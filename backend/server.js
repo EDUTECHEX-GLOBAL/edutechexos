@@ -1,3 +1,16 @@
+// ── Safety: if a stale cached express-rate-limit exists in node_modules,
+// delete it NOW before anything requires it so ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+// can never be thrown. This handles Render's persistent node_modules cache.
+try {
+  const path = require('path');
+  const fs   = require('fs');
+  const rlDir = path.join(__dirname, 'node_modules', 'express-rate-limit');
+  if (fs.existsSync(rlDir)) {
+    fs.rmSync(rlDir, { recursive: true, force: true });
+    console.log('[startup] Removed stale express-rate-limit from node_modules cache.');
+  }
+} catch (_) {}
+
 const cron = require('node-cron');
 const dns = require('dns');
 // Override system DNS with Google's public resolvers to fix querySrv ECONNREFUSED

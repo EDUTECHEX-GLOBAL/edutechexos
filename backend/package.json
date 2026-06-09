@@ -6,7 +6,7 @@
   "scripts": {
     "build": "echo \"No build needed\"",
     "start": "node server.js",
-    "postinstall": "npm install mongoose@^7.5.0"
+    "postinstall": "npm prune --production 2>/dev/null || npm prune 2>/dev/null || true"
   },
   "dependencies": {
     "cors": "^2.8.5",
