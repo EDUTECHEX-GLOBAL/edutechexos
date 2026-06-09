@@ -1483,8 +1483,15 @@ app.post('/api/meetings/invite', authMiddleware, async (req, res) => {
       </div>`;
 
     const subject = `Meeting Invite: ${title}${time ? ' · ' + time : ''}`;
-    const { ok } = await sendBrevoEmail({ to, subject, html });
-    console.log(`[meeting-invite] ${ok ? 'OK' : 'FAILED'} → ${to.length} recipients`);
+    const [primaryRecipient, ...otherRecipients] = to;
+    const bccRecipients = otherRecipients.map(r => ({ email: r.email }));
+    const { ok } = await sendBrevoEmail({
+      to: [{ email: primaryRecipient.email }],
+      bcc: bccRecipients.length > 0 ? bccRecipients : undefined,
+      subject,
+      html,
+    });
+    console.log(`[meeting-invite] ${ok ? 'OK' : 'FAILED'} → ${to.length} recipients (BCC)`);
     res.json({ success: true, sent: to.length, ok });
   } catch (err) {
     console.error('[meeting-invite]', err);

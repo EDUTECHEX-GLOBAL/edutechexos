@@ -8,7 +8,6 @@ import AppLogo from '@/components/ui/AppLogo';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { useTheme } from '@/components/ThemeProvider';
 import {
-  sendMeetingEmailInvitation,
   sendMentionEmailNotification,
   changePassword,
 } from '@/app/actions/dbActions';
@@ -1283,14 +1282,25 @@ export default function EduTechExOSDashboard() {
     }, 200);
 
     // Send email invite in the background — does not block returning to chat
-    if (sendEmailInvite && allMemberEmails.length > 0) {
+    if (sendEmailInvite) {
       try {
-        const emailResult = await sendMeetingEmailInvitation(title, timeLabel, allMemberEmails, meetLink);
+        const authData = localStorage.getItem('edutechex_token');
+        const token = authData ? JSON.parse(authData).token : null;
+        const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+        const emailRes = await fetch(`${BACKEND}/api/meetings/invite`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ title, time: timeLabel, joinLink: meetLink, channelId: activeChannelId }),
+        });
+        const emailResult = await emailRes.json().catch(() => ({}));
         if (emailResult.success) {
           toast.success(
-            `Meeting scheduled. Email invite sent to ${allMemberEmails.length} team member${allMemberEmails.length === 1 ? '' : 's'}.`
+            `Meeting scheduled. Email invite sent to ${emailResult.sent} team member${emailResult.sent === 1 ? '' : 's'}.`
           );
-          trackEvent('meeting_scheduled', { emailInviteSent: true, inviteeCount: allMemberEmails.length });
+          trackEvent('meeting_scheduled', { emailInviteSent: true, inviteeCount: emailResult.sent });
         } else {
           const reason = emailResult.error ? ` (${emailResult.error})` : '';
           toast.warning(`Meeting scheduled, but email delivery failed${reason}.`);
