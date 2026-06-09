@@ -40,9 +40,10 @@ async function apiFetch(url: string, options: RequestInit = {}): Promise<Respons
 
   const method = (options.method || 'GET').toUpperCase();
 
-  // Attach userEmail to query string for GET; merge into body for POST/PATCH/DELETE
+  // Attach userEmail to query string for GET and DELETE (no body);
+  // merge into body for POST/PATCH/PUT with an existing JSON body
   if (email) {
-    if (method === 'GET') {
+    if (method === 'GET' || (method === 'DELETE' && !options.body)) {
       const sep = url.includes('?') ? '&' : '?';
       url = `${url}${sep}userEmail=${encodeURIComponent(email)}`;
     } else if (options.body && typeof options.body === 'string') {

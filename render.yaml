@@ -31,3 +31,10 @@ services:
         sync: false
       - key: SMTP_FROM
         sync: false
+      # JWT signing secret — MUST match the secret used when tokens were issued.
+      # If not set, falls back to the hardcoded default (less secure).
+      - key: JWT_SECRET
+        sync: false
+      # Brevo API key for transactional email (meeting invites, mentions)
+      - key: BREVO_API_KEY
+        sync: false
