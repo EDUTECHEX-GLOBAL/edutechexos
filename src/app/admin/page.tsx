@@ -6,8 +6,12 @@ import {
   Activity,
   Bell,
   CheckCircle2,
+  Clock,
+  Eye,
   Hash,
   Mail,
+  MessageSquare,
+  RefreshCw,
   Search,
   Settings,
   ShieldCheck,
@@ -24,6 +28,15 @@ import { useDashboardStore } from '@/store/dashboardStore';
 import { getSocket } from '@/lib/socket';
 
 type AdminUser = { name: string; email: string; role: string };
+type ActivityStat = {
+  email: string;
+  name: string;
+  totalMinutes: number;
+  activeDays: number;
+  lastSeen: string | null;
+  messageCount: number;
+  taskCount: number;
+};
 type AccessRequest = {
   id: string;
   name: string;
@@ -60,6 +73,8 @@ export default function AdminPage() {
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [requestChannelById, setRequestChannelById] = useState<Record<string, string>>({});
   const [promoteLoadingId, setPromoteLoadingId] = useState<string | null>(null);
+  const [activityStats, setActivityStats] = useState<ActivityStat[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
 
   useEffect(() => {
     const authData = localStorage.getItem('edutechex_token');
@@ -125,6 +140,26 @@ export default function AdminPage() {
             .catch(() => { /* silent — already showing cached */ });
         }, 15_000);
       });
+  }, []);
+
+  // Load activity stats for the monitoring dashboard
+  useEffect(() => {
+    const authData = localStorage.getItem('edutechex_token');
+    if (!authData) return;
+    let token: string | null = null;
+    try { token = JSON.parse(authData).token; } catch { return; }
+    if (!token) return;
+
+    setActivityLoading(true);
+    fetch(`${API_BASE}/api/activity/stats`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data: { success: boolean; stats?: ActivityStat[] }) => {
+        if (data.success && Array.isArray(data.stats)) setActivityStats(data.stats);
+      })
+      .catch(() => { /* non-critical — section shows empty state */ })
+      .finally(() => setActivityLoading(false));
   }, []);
 
   const workspaceChannels = useMemo(
@@ -618,10 +653,29 @@ export default function AdminPage() {
                           <td className="px-5 py-4 text-right">
                             <button
                               type="button"
-                              onClick={() => {
-                                if (confirm(`Remove ${member.name} from the workspace?`)) {
-                                  removeMember(member.id);
-                                  toast.success(`${member.name} was removed.`);
+                              onClick={async () => {
+                                if (!confirm(`Remove ${member.name} from the workspace?\n\nThey will be logged out immediately if they are currently online.`)) return;
+                                // Optimistic local removal
+                                removeMember(member.id);
+                                toast.success(`${member.name} was removed from the workspace.`);
+                                // Persist to backend — extract the MongoDB _id from member.id
+                                // member.id is either "member-<mongoId>" (DB users) or hardcoded
+                                const mongoId = member.id.startsWith('member-') ? member.id.slice(7) : null;
+                                if (mongoId && mongoId.length === 24) {
+                                  try {
+                                    const authData = localStorage.getItem('edutechex_token');
+                                    const token = authData ? JSON.parse(authData).token : null;
+                                    const res = await fetch(`${API_BASE}/api/access-requests/${mongoId}`, {
+                                      method: 'DELETE',
+                                      headers: token ? { Authorization: `Bearer ${token}` } : {},
+                                    });
+                                    if (!res.ok) {
+                                      const body = await res.json().catch(() => ({}));
+                                      toast.error(`Backend error: ${body.error ?? res.status}`);
+                                    }
+                                  } catch {
+                                    toast.error('Could not reach the server — user removed locally only.');
+                                  }
                                 }
                               }}
                               className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-light transition-all hover:bg-red-50 hover:text-[#f43f5e]"
@@ -823,6 +877,132 @@ export default function AdminPage() {
 
           <section className="mt-10">
             <LoginTrackerCalendar />
+          </section>
+
+          {/* ── Activity Monitoring Dashboard ──────────────────────────────── */}
+          <section className="mt-10">
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <p className="mb-1 font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-primary">
+                  Last 7 days · With user permission
+                </p>
+                <h2 className="font-display font-bold text-2xl tracking-[-0.02em] text-foreground flex items-center gap-2">
+                  <Eye size={20} className="text-primary" />
+                  Activity Monitoring
+                </h2>
+                <p className="mt-1 text-sm text-ink-light">
+                  In-app session time, messages sent, and engagement per team member. Users can see exactly what is tracked in Settings → Privacy.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const authData = localStorage.getItem('edutechex_token');
+                  if (!authData) return;
+                  let token: string | null = null;
+                  try { token = JSON.parse(authData).token; } catch { return; }
+                  if (!token) return;
+                  setActivityLoading(true);
+                  fetch(`${API_BASE}/api/activity/stats`, { headers: { Authorization: `Bearer ${token}` } })
+                    .then((r) => r.json())
+                    .then((data: { success: boolean; stats?: ActivityStat[] }) => {
+                      if (data.success && Array.isArray(data.stats)) setActivityStats(data.stats);
+                    })
+                    .catch(() => {})
+                    .finally(() => setActivityLoading(false));
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-surface text-xs font-semibold text-ink hover:border-primary/20 hover:text-primary transition-all"
+              >
+                <RefreshCw size={13} className={activityLoading ? 'animate-spin' : ''} />
+                Refresh
+              </button>
+            </div>
+
+            {activityLoading ? (
+              <div className="flex items-center justify-center py-16 text-ink-light text-sm">
+                <RefreshCw size={16} className="animate-spin mr-2" /> Loading activity data…
+              </div>
+            ) : activityStats.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border bg-surface-muted p-10 text-center text-sm text-ink-light">
+                No activity data yet. Data appears once users open the dashboard.
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {activityStats
+                  .sort((a, b) => (b.totalMinutes ?? 0) - (a.totalMinutes ?? 0))
+                  .map((stat) => {
+                    const hrs = Math.floor((stat.totalMinutes ?? 0) / 60);
+                    const mins = (stat.totalMinutes ?? 0) % 60;
+                    const timeLabel = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+                    const lastSeenLabel = stat.lastSeen
+                      ? new Date(stat.lastSeen).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+                      : 'Never';
+                    const member = members.find((m) => m.email.toLowerCase() === stat.email.toLowerCase());
+                    const initials = member?.initials ?? (stat.name.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2) || '??');
+                    const color = member?.color ?? '#64748b';
+                    const engagementPct = Math.min(100, Math.round(((stat.totalMinutes ?? 0) / (7 * 8 * 60)) * 100));
+
+                    return (
+                      <div key={stat.email} className="card-premium p-5 flex flex-col gap-3">
+                        {/* Header */}
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-black text-white"
+                            style={{ backgroundColor: color }}>
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate font-bold text-sm text-foreground">{stat.name || stat.email}</p>
+                            <p className="truncate text-[11px] text-ink-light">{stat.email}</p>
+                          </div>
+                          <span className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            member?.status === 'online' ? 'bg-emerald-50 text-emerald-600' :
+                            member?.status === 'away'   ? 'bg-amber-50 text-amber-600' :
+                            'bg-secondary text-ink-light'
+                          }`}>
+                            {member?.status ?? 'offline'}
+                          </span>
+                        </div>
+
+                        {/* Engagement bar */}
+                        <div>
+                          <div className="mb-1 flex justify-between text-[10px] font-semibold text-ink-light">
+                            <span>Engagement this week</span>
+                            <span>{engagementPct}%</span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+                            <div className="h-full rounded-full bg-gradient-to-r from-primary to-green-light transition-all"
+                              style={{ width: `${engagementPct}%` }} />
+                          </div>
+                        </div>
+
+                        {/* Stats row */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="flex flex-col items-center rounded-xl bg-surface-muted py-2.5 px-1">
+                            <Clock size={12} className="mb-1 text-primary" />
+                            <span className="text-sm font-black text-foreground">{timeLabel}</span>
+                            <span className="text-[9px] text-ink-light uppercase tracking-wide">Session</span>
+                          </div>
+                          <div className="flex flex-col items-center rounded-xl bg-surface-muted py-2.5 px-1">
+                            <MessageSquare size={12} className="mb-1 text-primary" />
+                            <span className="text-sm font-black text-foreground">{stat.messageCount ?? 0}</span>
+                            <span className="text-[9px] text-ink-light uppercase tracking-wide">Messages</span>
+                          </div>
+                          <div className="flex flex-col items-center rounded-xl bg-surface-muted py-2.5 px-1">
+                            <Activity size={12} className="mb-1 text-primary" />
+                            <span className="text-sm font-black text-foreground">{stat.activeDays ?? 0}</span>
+                            <span className="text-[9px] text-ink-light uppercase tracking-wide">Days</span>
+                          </div>
+                        </div>
+
+                        {/* Last seen */}
+                        <p className="text-[11px] text-ink-light border-t border-border pt-2">
+                          <span className="font-semibold text-foreground">Last active:</span> {lastSeenLabel}
+                        </p>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
           </section>
         </main>
 

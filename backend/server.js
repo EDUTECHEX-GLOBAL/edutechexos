@@ -26,12 +26,18 @@ async function sendBrevoEmail({ to, subject, html }) {
   const fromEmail = (fromRaw.match(/<(.+)>/) || [])[1] || fromRaw.trim();
   const fromName  = fromRaw.replace(/<.*>/, '').trim() || 'EduTechExOS';
 
+  console.log(`[Brevo] Sending "${subject}" from ${fromEmail} to ${Array.isArray(to) ? to.map(r => r.email).join(', ') : to}`);
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: { 'api-key': apiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({ sender: { name: fromName, email: fromEmail }, to, subject, htmlContent: html }),
   });
-  if (!res.ok) { const b = await res.text(); console.error('[Brevo]', res.status, b); return { ok: false }; }
+  if (!res.ok) {
+    const b = await res.text();
+    console.error('[Brevo] FAILED', res.status, b);
+    return { ok: false, brevoError: `${res.status}: ${b}` };
+  }
+  console.log(`[Brevo] OK — delivered to ${Array.isArray(to) ? to.length : 1} recipient(s)`);
   return { ok: true };
 }
 
@@ -291,6 +297,7 @@ const MessageSchema = new mongoose.Schema(
   // so future message types never get silently dropped
   { strict: false }
 );
+MessageSchema.index({ text: 'text', sender: 'text' });
 const Message = mongoose.model('Message', MessageSchema);
 
 // ── Hardcoded accounts (never touch the DB) ──────────────────────────────────
@@ -352,6 +359,7 @@ const KanbanTaskSchema = new mongoose.Schema(
   },
   { strict: false }
 );
+KanbanTaskSchema.index({ text: 'text', assignee: 'text' });
 const KanbanTask = mongoose.model('KanbanTask', KanbanTaskSchema);
 
 const WikiPageSchema = new mongoose.Schema({
@@ -363,6 +371,7 @@ const WikiPageSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+WikiPageSchema.index({ title: 'text', content: 'text' });
 const WikiPage = mongoose.model('WikiPage', WikiPageSchema);
 
 // Bookmark schema — persisted per-user on backend
@@ -411,6 +420,21 @@ const LoginEventSchema = new mongoose.Schema({
 });
 LoginEventSchema.index({ email: 1, dateStr: 1 });
 const LoginEvent = mongoose.model('LoginEvent', LoginEventSchema);
+
+// ── ActivitySession schema — tracks app usage time per user per day ───────────
+// Heartbeat is sent every 60 s from the dashboard. Each ping adds up to 2 min
+// (capped so a forgotten tab doesn't inflate counts).
+const ActivitySessionSchema = new mongoose.Schema({
+  email:          { type: String, required: true, index: true },
+  name:           { type: String, default: '' },
+  dateStr:        { type: String, required: true, index: true }, // YYYY-MM-DD IST
+  totalMinutes:   { type: Number, default: 0 },
+  lastHeartbeat:  { type: Date, default: null },
+  messageCount:   { type: Number, default: 0 },
+  taskCount:      { type: Number, default: 0 },
+});
+ActivitySessionSchema.index({ email: 1, dateStr: 1 }, { unique: true });
+const ActivitySession = mongoose.model('ActivitySession', ActivitySessionSchema);
 
 // ── MediaFile schema — separate storage for audio/video with access control ───
 const MediaFileSchema = new mongoose.Schema({
@@ -625,16 +649,28 @@ app.patch('/api/access-requests/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE /api/access-requests/:id — admin removes a request
+// DELETE /api/access-requests/:id — admin removes a user
 app.delete('/api/access-requests/:id', authMiddleware, async (req, res) => {
   if (!req.user || req.user.role !== 'Admin') {
     return res.status(403).json({ success: false, error: 'Admin access required.' });
   }
   try {
     const { id } = req.params;
+    // Fetch the user's email BEFORE deleting so we can broadcast it
+    const target = await AccessRequest.findById(id).lean();
+    const removedEmail = target?.email ?? null;
+
     await AccessRequest.findByIdAndDelete(id);
+
+    // Broadcast to all connected clients:
+    // 1. member_removed  — admin panel removes the row from the members table
+    // 2. user_forcefully_removed — the removed user's dashboard detects their own email and logs them out
     io.emit('member_removed', { memberId: `member-${id}` });
-    res.json({ success: true });
+    if (removedEmail) {
+      io.emit('user_forcefully_removed', { email: removedEmail.toLowerCase() });
+    }
+
+    res.json({ success: true, removedEmail });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
@@ -787,6 +823,126 @@ app.get('/api/login-history', authMiddleware, async (req, res) => {
     res.json({ success: true, history });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// ─── Activity tracking endpoints ──────────────────────────────────────────────
+
+// POST /api/activity/heartbeat — dashboard pings every 60 s while active
+// Adds up to 2 minutes per ping (cap prevents idle tabs from inflating counts).
+app.post('/api/activity/heartbeat', authMiddleware, async (req, res) => {
+  try {
+    const email = req.user?.email?.toLowerCase();
+    const name  = req.user?.name ?? '';
+    if (!email) return res.status(401).json({ success: false });
+
+    const now = new Date();
+    // Build IST date string
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(now.getTime() + istOffset);
+    const dateStr = istDate.toISOString().slice(0, 10);
+
+    const session = await ActivitySession.findOneAndUpdate(
+      { email, dateStr },
+      { $setOnInsert: { email, name, dateStr, totalMinutes: 0, messageCount: 0, taskCount: 0 } },
+      { upsert: true, new: true }
+    );
+
+    // Calculate minutes to add — cap at 2 min per ping regardless of gap
+    let minutesToAdd = 1;
+    if (session.lastHeartbeat) {
+      const gapMs = now - new Date(session.lastHeartbeat);
+      const gapMin = gapMs / 60000;
+      minutesToAdd = Math.min(Math.round(gapMin), 2);
+    }
+
+    await ActivitySession.updateOne(
+      { email, dateStr },
+      { $set: { lastHeartbeat: now, name }, $inc: { totalMinutes: minutesToAdd } }
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// GET /api/activity/stats — admin only, returns per-user stats for last 7 days
+app.get('/api/activity/stats', authMiddleware, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Admin only.' });
+    }
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const cutoffStr = new Date(sevenDaysAgo.getTime() + istOffset).toISOString().slice(0, 10);
+
+    // Aggregate session time per user over last 7 days
+    const sessions = await ActivitySession.find({ dateStr: { $gte: cutoffStr } }).lean();
+
+    const statsMap = {};
+    sessions.forEach((s) => {
+      if (!statsMap[s.email]) {
+        statsMap[s.email] = {
+          email: s.email,
+          name: s.name,
+          totalMinutes: 0,
+          activeDays: 0,
+          lastSeen: null,
+          messageCount: 0,
+          taskCount: 0,
+        };
+      }
+      const u = statsMap[s.email];
+      u.totalMinutes  += s.totalMinutes  || 0;
+      u.messageCount  += s.messageCount  || 0;
+      u.taskCount     += s.taskCount     || 0;
+      u.activeDays    += 1;
+      if (!u.lastSeen || (s.lastHeartbeat && new Date(s.lastHeartbeat) > new Date(u.lastSeen))) {
+        u.lastSeen = s.lastHeartbeat;
+      }
+    });
+
+    // Also include members who haven't had a session yet (show zeros)
+    const allRequests = await AccessRequest.find({ status: 'approved' }).lean();
+    allRequests.forEach((r) => {
+      if (!statsMap[r.email.toLowerCase()]) {
+        statsMap[r.email.toLowerCase()] = {
+          email: r.email.toLowerCase(),
+          name: r.name,
+          totalMinutes: 0,
+          activeDays: 0,
+          lastSeen: null,
+          messageCount: 0,
+          taskCount: 0,
+        };
+      }
+    });
+
+    res.json({ success: true, stats: Object.values(statsMap) });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// POST /api/activity/message — increments message count for today's session
+app.post('/api/activity/message', authMiddleware, async (req, res) => {
+  try {
+    const email = req.user?.email?.toLowerCase();
+    if (!email) return res.status(401).json({ success: false });
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const dateStr = new Date(now.getTime() + istOffset).toISOString().slice(0, 10);
+    await ActivitySession.findOneAndUpdate(
+      { email, dateStr },
+      { $inc: { messageCount: 1 }, $set: { name: req.user?.name ?? '' }, $setOnInsert: { totalMinutes: 0, taskCount: 0, activeDays: 0 } },
+      { upsert: true }
+    );
+    res.json({ success: true });
+  } catch {
+    res.json({ success: true }); // non-critical — never fail a message send
   }
 });
 
@@ -1694,6 +1850,57 @@ app.patch('/api/messages/:id', async (req, res) => {
   }
 });
 
+// ─── Full-text search across messages, wiki pages, and tasks ─────────────────
+// GET /api/search?q=<query>&limit=<n>   (auth required)
+app.get('/api/search', authMiddleware, async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    if (!q) return res.json({ success: true, results: [], total: 0 });
+
+    const textFilter = { $text: { $search: q } };
+    const scoreProj = { score: { $meta: 'textScore' } };
+
+    const [msgDocs, wikiDocs, taskDocs] = await Promise.all([
+      Message.find(textFilter, scoreProj).sort({ score: { $meta: 'textScore' } }).limit(limit).lean(),
+      WikiPage.find(textFilter, scoreProj).sort({ score: { $meta: 'textScore' } }).limit(10).lean(),
+      KanbanTask.find(textFilter, scoreProj).sort({ score: { $meta: 'textScore' } }).limit(10).lean(),
+    ]);
+
+    const results = [
+      ...msgDocs.map(d => ({
+        type: 'message', id: String(d._id), channelId: d.channelId,
+        text: d.text, sender: d.sender, timestamp: d.timestamp, score: d.score,
+      })),
+      ...wikiDocs.map(d => ({
+        type: 'wiki', id: String(d._id), channelId: d.channelId,
+        text: `${d.title}: ${String(d.content).replace(/<[^>]*>/g, '').slice(0, 200)}`,
+        sender: d.createdBy, timestamp: d.updatedAt, score: d.score,
+      })),
+      ...taskDocs.map(d => ({
+        type: 'task', id: String(d._id), channelId: d.sourceChannel,
+        text: `${d.text} → ${d.assignee} [${d.status}]`,
+        sender: d.assignee, timestamp: d.createdAt, score: d.score,
+      })),
+    ].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, limit);
+
+    res.json({ success: true, results, total: results.length });
+  } catch (err) {
+    // If text index doesn't exist yet, fall back to regex search
+    if (String(err).includes('text index')) {
+      const q = String(req.query.q || '').trim();
+      const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      const msgs = await Message.find({ text: re }).limit(20).lean();
+      return res.json({
+        success: true,
+        results: msgs.map(d => ({ type: 'message', id: String(d._id), channelId: d.channelId, text: d.text, sender: d.sender, timestamp: d.timestamp })),
+        total: msgs.length,
+      });
+    }
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
 // GET Kanban Tasks (filtered by user)
 app.get('/api/kanban', async (req, res) => {
   try {
@@ -1955,8 +2162,11 @@ app.post('/api/email', async (req, res) => {
       return res.status(400).json({ success: false, error: 'to, subject, htmlContent are required' });
     }
     const recipients = Array.isArray(to) ? to : [{ email: String(to) }];
-    const { ok } = await sendBrevoEmail({ to: recipients, subject, html: htmlContent });
-    if (!ok) return res.status(502).json({ success: false, error: 'Brevo send failed' });
+    const result = await sendBrevoEmail({ to: recipients, subject, html: htmlContent });
+    if (!result.ok) {
+      console.error('[/api/email] Brevo rejected the request:', result.brevoError);
+      return res.status(502).json({ success: false, error: result.brevoError ?? 'Brevo send failed' });
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });

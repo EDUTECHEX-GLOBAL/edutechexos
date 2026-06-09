@@ -31,6 +31,7 @@ import BookmarksPanel from './BookmarksPanel';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
+import { trackEvent } from '@/app/PostHogProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /* Shared spring config used for every modal/panel */
@@ -91,6 +92,10 @@ import {
   Share2,
   MessageSquare,
   ExternalLink,
+  Eye,
+  Clock,
+  Menu,
+  ChevronLeft,
 } from 'lucide-react';
 
 type CurrentUser = {
@@ -291,6 +296,8 @@ export default function EduTechExOSDashboard() {
   } = useDashboardStore();
   const [rightPanel, setRightPanel] = useState<'ai' | 'closed'>('closed');
   const [rightSidePanel, setRightSidePanel] = useState<'pinned' | 'bookmarked' | null>(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'chat' | 'tasks' | 'ai'>('chat');
   const [composerMessage, setComposerMessage] = useState('');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [activityCalendarOpen, setActivityCalendarOpen] = useState(false);
@@ -321,7 +328,7 @@ export default function EduTechExOSDashboard() {
   const emojiBtnRef = useRef<HTMLButtonElement>(null);
   const emojiPanelRef = useRef<HTMLDivElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<'profile' | 'appearance' | 'notifications' | 'meeting' | 'security'>('profile');
+  const [settingsTab, setSettingsTab] = useState<'profile' | 'appearance' | 'notifications' | 'meeting' | 'security' | 'privacy'>('profile');
   const [pwCurrent, setPwCurrent]   = useState('');
   const [pwNew, setPwNew]           = useState('');
   const [pwConfirm, setPwConfirm]   = useState('');
@@ -594,11 +601,23 @@ export default function EduTechExOSDashboard() {
       }
     };
 
+    // ── Force-logout: fires when an admin removes this user ──────────────────
+    const handleForcefullyRemoved = ({ email }: { email: string }) => {
+      const me = currentUserRef.current?.email?.toLowerCase();
+      if (!me || me !== email.toLowerCase()) return;          // not this user, ignore
+      // Wipe session and redirect immediately
+      localStorage.removeItem('edutechex_token');
+      // Show a brief toast then hard-redirect (toast lib may not render after push, so use replace)
+      try { toast.error('Your account has been removed by the admin.', { duration: 3000 }); } catch { /* */ }
+      setTimeout(() => { window.location.replace('/sign-up-login-screen'); }, 800);
+    };
+
     socket.on('connect', handleReconnect);
     socket.on('new_message', handleNewMessage);
     socket.on('message_updated', handleUpdatedMessage);
     socket.on('message_deleted', handleDeletedMessage);
     socket.on('member_updated', handleMemberUpdated);
+    socket.on('user_forcefully_removed', handleForcefullyRemoved);
 
     return () => {
       socket.off('connect', handleReconnect);
@@ -606,6 +625,7 @@ export default function EduTechExOSDashboard() {
       socket.off('message_updated', handleUpdatedMessage);
       socket.off('message_deleted', handleDeletedMessage);
       socket.off('member_updated', handleMemberUpdated);
+      socket.off('user_forcefully_removed', handleForcefullyRemoved);
       socket.emit('leave_channel', activeChannelId);
     };
   }, [activeChannelId, addMessageFromSocket, updateMessageFromSocket, deleteMessageFromSocket]);
@@ -617,6 +637,25 @@ export default function EduTechExOSDashboard() {
     const interval = setInterval(() => loadLocalNotifications?.(currentUserEmail), 5000);
     return () => clearInterval(interval);
   }, [currentUserEmail, loadLocalNotifications]);
+
+  // Activity heartbeat — ping backend every 60 s so admin can see session time.
+  // Disclosed to users in Settings → Privacy. No opt-out (business platform policy).
+  useEffect(() => {
+    if (!currentUserEmail) return;
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+    const ping = () => {
+      const authData = localStorage.getItem('edutechex_token');
+      const token = authData ? (() => { try { return JSON.parse(authData).token; } catch { return null; } })() : null;
+      if (!token) return;
+      fetch(`${API_BASE}/api/activity/heartbeat`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      }).catch(() => { /* non-critical — ignore network errors */ });
+    };
+    ping(); // immediate first ping on mount
+    const interval = setInterval(ping, 60_000);
+    return () => clearInterval(interval);
+  }, [currentUserEmail]);
 
   // Sync dark mode from store on mount
   useEffect(() => {
@@ -721,6 +760,20 @@ export default function EduTechExOSDashboard() {
     const text = composerMessage.trim();
     if (!text || !channel) return;
 
+    // Increment today's message count in the activity tracker (fire-and-forget)
+    {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+      const authData = localStorage.getItem('edutechex_token');
+      const token = authData ? (() => { try { return JSON.parse(authData).token; } catch { return null; } })() : null;
+      if (token) {
+        fetch(`${API_BASE}/api/activity/message`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        }).catch(() => {});
+      }
+    }
+    trackEvent('message_sent', { channel: channel?.name, channelId: activeChannelId });
+
     const mentionedMembers = activeChannelMembers.filter(
       (member) =>
         member.email.toLowerCase() !== currentUserEmail &&
@@ -799,6 +852,7 @@ export default function EduTechExOSDashboard() {
           status: 'todo',
         });
         toast.success(`📋 Task added to Kanban board for @${firstMentioned.name}`);
+        trackEvent('task_created', { source: 'mention', channel: channel?.name, assignee: firstMentioned.name });
       }
     }
 
@@ -1165,21 +1219,26 @@ export default function EduTechExOSDashboard() {
     if (!channel) return;
 
     const title = meetTitle.trim();
-    if (!title || !meetDate || !meetTime || selectedInvitees.length === 0) {
-      toast.error('Add a title, time, and at least one mentioned person.');
+    if (!title || !meetDate || !meetTime) {
+      toast.error('Please add a title and set a date & time for the meeting.');
       return;
     }
 
     const meetLink = companyMeetLink;
-    const inviteeEmails = selectedInvitees.map((member) => member.email);
     const inviteeNames = selectedInvitees.map((member) => `@${member.name}`).join(', ');
+    // Email goes to ALL workspace members (except the scheduler themselves).
+    // The selectedInvitees are only for the "@mention" in the chat message.
+    const allMemberEmails = members
+      .map((m) => m.email)
+      .filter((e) => e && e.toLowerCase() !== currentUserEmail);
     const timeLabel = `${meetDate} at ${meetTime}`;
-    const text = [
+    const textLines = [
       `Meeting Scheduled: ${title}`,
       `Time: ${timeLabel}`,
-      `Mentioned people: ${inviteeNames}`,
+      ...(inviteeNames ? [`Mentioned: ${inviteeNames}`] : []),
       `Join Link: ${meetLink}`,
-    ].join('\n');
+    ];
+    const text = textLines.join('\n');
 
     addMessage(activeChannelId, {
       id: `meeting-${Date.now()}`,
@@ -1197,7 +1256,7 @@ export default function EduTechExOSDashboard() {
       actorColor: currentUserColor,
       channel: channel.name,
       message: `scheduled "${title}" for ${timeLabel}. Join: ${meetLink}`,
-      recipientEmails: inviteeEmails,
+      recipientEmails: allMemberEmails,
     });
 
     // Always close the modal and return to chat first, then send email in background
@@ -1214,22 +1273,25 @@ export default function EduTechExOSDashboard() {
       composerRef.current?.focus();
     }, 200);
 
-    // Send email invite in the background � doesn't block returning to chat
-    if (sendEmailInvite) {
+    // Send email invite in the background — does not block returning to chat
+    if (sendEmailInvite && allMemberEmails.length > 0) {
       try {
-        const emailResult = await sendMeetingEmailInvitation(title, timeLabel, inviteeEmails, meetLink);
+        const emailResult = await sendMeetingEmailInvitation(title, timeLabel, allMemberEmails, meetLink);
         if (emailResult.success) {
           toast.success(
-            `Meeting scheduled. Email invite sent to ${inviteeEmails.length} recipient${inviteeEmails.length === 1 ? '' : 's'}.`
+            `Meeting scheduled. Email invite sent to ${allMemberEmails.length} team member${allMemberEmails.length === 1 ? '' : 's'}.`
           );
+          trackEvent('meeting_scheduled', { emailInviteSent: true, inviteeCount: allMemberEmails.length });
         } else {
-          toast.warning('Meeting scheduled, but email delivery failed.');
+          const reason = emailResult.error ? ` (${emailResult.error})` : '';
+          toast.warning(`Meeting scheduled, but email delivery failed${reason}.`);
         }
-      } catch {
-        toast.warning('Meeting scheduled, but email could not be sent.');
+      } catch (err) {
+        toast.warning(`Meeting scheduled, but email could not be sent. (${String(err)})`);
       }
     } else {
       toast.success('Meeting scheduled successfully.');
+      trackEvent('meeting_scheduled', { emailInviteSent: false });
     }
   }
 
@@ -1283,6 +1345,167 @@ export default function EduTechExOSDashboard() {
     <div className="dashboard-root dashboard-workspace-no-panel text-[#1E2636]">
 
       {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• LEFT ICON RAIL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+
+      {/* ══ MOBILE HEADER ══ */}
+      <div className="mobile-header">
+        <button className="mobile-header-btn" onClick={() => setMobileSidebarOpen(true)} aria-label="Open channels">
+          <Menu size={20} strokeWidth={2.5} />
+        </button>
+        <div className="mobile-header-channel">
+          <span className="mobile-header-hash">#</span>
+          <span className="mobile-header-name">{channel?.name ?? 'general'}</span>
+        </div>
+        <button className="mobile-header-btn" onClick={() => setGlobalSearchOpen(true)} aria-label="Search">
+          <Search size={18} strokeWidth={2.5} />
+        </button>
+        <button className="mobile-header-btn" onClick={() => setSettingsOpen(true)} aria-label="Settings">
+          <Settings size={18} strokeWidth={2.5} />
+        </button>
+        <div className="mobile-header-avatar" style={{ background: currentUserColor }}
+          onClick={() => setSettingsOpen(true)} role="button" tabIndex={0}>
+          {currentUser?.name?.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0,2) ?? '?'}
+        </div>
+      </div>
+
+      {/* ══ MOBILE DRAWER BACKDROP ══ */}
+      {mobileSidebarOpen && (
+        <div className="mobile-drawer-overlay" onClick={() => setMobileSidebarOpen(false)} />
+      )}
+
+      {/* ══ MOBILE CHANNEL DRAWER ══ */}
+      <div className={`mobile-drawer${mobileSidebarOpen ? ' open' : ''}`}>
+        <div className="mobile-drawer-header">
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-lg flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg,#3E4A89,#4f52a0)' }}>
+              <AppLogo size={14} />
+            </div>
+            <span className="text-[14px] font-black text-white">EduTechExOS</span>
+          </div>
+          <button className="mobile-drawer-close" onClick={() => setMobileSidebarOpen(false)}>
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="px-3 py-2.5 border-b border-[rgba(62,74,137,0.10)]">
+          <button
+            onClick={() => { setMobileSidebarOpen(false); setGlobalSearchOpen(true); }}
+            className="sidebar-search-input w-full"
+          >
+            <Search size={13} />
+            <span className="text-[12.5px]">Search workspace…</span>
+          </button>
+        </div>
+
+        <div className="sidebar-scroll flex-1">
+          <section className="mb-4">
+            <p className="sidebar-section-label mt-2">Channels</p>
+            {channels.filter((c: { id: string }) => !c.id.startsWith('member-')).map((ch: { id: string; name: string }) => {
+              const isActive = ch.id === activeChannelId;
+              return (
+                <button key={ch.id}
+                  className={`sidebar-channel-btn${isActive ? ' active' : ''}`}
+                  onClick={() => { setActiveChannel(ch.id); setMobileSidebarOpen(false); setMobileTab('chat'); }}>
+                  <Hash size={13} style={{ opacity: isActive ? 1 : 0.55, flexShrink: 0 }} />
+                  <span className="min-w-0 flex-1 truncate">{ch.name}</span>
+                </button>
+              );
+            })}
+          </section>
+          <section>
+            <p className="sidebar-section-label">Direct Messages</p>
+            {channels.filter((c: { id: string }) => c.id.startsWith('member-')).map((ch: { id: string; name: string }) => {
+              const isActive = ch.id === activeChannelId;
+              const member = members.find((m: { email: string }) => `member-${m.email}` === ch.id);
+              const initials = ch.name.split(' ').map((p: string) => p[0]).join('').toUpperCase().slice(0,2);
+              return (
+                <button key={ch.id}
+                  className={`sidebar-channel-btn${isActive ? ' active' : ''}`}
+                  onClick={() => { setActiveChannel(ch.id); setMobileSidebarOpen(false); setMobileTab('chat'); }}>
+                  <span className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-black text-white"
+                    style={{ background: 'linear-gradient(135deg,#3E4A89,#2A3568)' }}>
+                    {initials}
+                    <span className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-[#191E2F] ${(member as { status?: string })?.status === 'online' ? 'bg-emerald-400' : 'bg-[#7C859E]'}`} />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[13px]">{ch.name}</span>
+                </button>
+              );
+            })}
+          </section>
+        </div>
+
+        <div className="sidebar-footer">
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                style={{ background: currentUserColor }}>
+                {currentUser?.name?.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0,2) ?? '?'}
+              </div>
+              <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 ${settings.status === 'online' ? 'bg-emerald-400' : settings.status === 'away' ? 'bg-amber-400' : 'bg-[#7C859E]'}`}
+                style={{ borderColor: '#191E2F' }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12px] font-semibold text-white">{currentUser?.name}</p>
+              <p className="truncate text-[10px]" style={{ color: 'rgba(124,133,158,0.75)' }}>{currentUser?.role}</p>
+            </div>
+            <button onClick={() => { localStorage.removeItem('edutechex_token'); toast.success('Signed out'); router.push('/sign-up-login-screen'); }}
+              className="flex h-7 w-7 items-center justify-center rounded" style={{ color: 'rgba(255,255,255,0.42)' }}>
+              <LogOut size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ══ MOBILE TASKS PANEL (full-screen) ══ */}
+      {mobileTab === 'tasks' && (
+        <div className="mobile-panel-overlay">
+          <div className="mobile-panel-header">
+            <button className="mobile-header-btn" onClick={() => setMobileTab('chat')}>
+              <ChevronLeft size={22} strokeWidth={2.5} />
+            </button>
+            <span className="mobile-panel-title">Tasks</span>
+          </div>
+          <div className="mobile-panel-body">
+            <KanbanBoard onClose={() => setMobileTab('chat')} />
+          </div>
+        </div>
+      )}
+
+      {/* ══ MOBILE AI PANEL (full-screen) ══ */}
+      {mobileTab === 'ai' && (
+        <div className="mobile-panel-overlay" style={{ background: '#FAFAF8' }}>
+          <AIPanel activeChannel={activeChannelId} onClose={() => setMobileTab('chat')} />
+        </div>
+      )}
+
+      {/* ══ MOBILE BOTTOM NAV ══ */}
+      <nav className="mobile-nav">
+        <button className="mobile-nav-btn" onClick={() => setMobileSidebarOpen(true)}>
+          {unreadNotifications > 0 && <span className="mobile-nav-badge">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>}
+          <Hash size={20} strokeWidth={2} />
+          Channels
+        </button>
+        <button className={`mobile-nav-btn${mobileTab === 'chat' ? ' active' : ''}`}
+          onClick={() => setMobileTab('chat')}>
+          <MessageSquare size={20} strokeWidth={2} />
+          Chat
+        </button>
+        <button className={`mobile-nav-btn${mobileTab === 'tasks' ? ' active' : ''}`}
+          onClick={() => setMobileTab('tasks')}>
+          <Layout size={20} strokeWidth={2} />
+          Tasks
+        </button>
+        <button className={`mobile-nav-btn${mobileTab === 'ai' ? ' active' : ''}`}
+          onClick={() => { if (mobileTab !== 'ai') trackEvent('ai_copilot_opened', { channel: channel?.name }); setMobileTab('ai'); }}>
+          <Bot size={20} strokeWidth={2} />
+          Copilot
+        </button>
+        <button className="mobile-nav-btn" onClick={() => setSettingsOpen(true)}>
+          <Settings size={20} strokeWidth={2} />
+          More
+        </button>
+      </nav>
+
       <nav className="workspace-rail">
         <div className="rail-top">
           <motion.div
@@ -2426,7 +2649,7 @@ export default function EduTechExOSDashboard() {
           <motion.button
             whileHover={{ scale: 1.10 }}
             whileTap={{ scale: 0.90 }}
-            onClick={() => setRightPanel(rightPanel === 'ai' ? 'closed' : 'ai')}
+            onClick={() => { const next = rightPanel === 'ai' ? 'closed' : 'ai'; if (next === 'ai') trackEvent('ai_copilot_opened', { channel: channel?.name }); setRightPanel(next); }}
             className="relative flex items-center justify-center"
             style={{
               width: 40, height: 40, borderRadius: '50%',
@@ -2707,561 +2930,471 @@ export default function EduTechExOSDashboard() {
         <motion.div
           key="settings"
           {...BACKDROP}
-          className="fixed inset-0 z-[115] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm dark:bg-black/70"
+          className="fixed inset-0 z-[115] flex items-center justify-center bg-[rgba(15,18,34,0.55)] p-4 backdrop-blur-sm"
           onClick={() => setSettingsOpen(false)}
         >
           <motion.div
             {...CARD}
-            className="flex w-full max-w-2xl overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl  dark:bg-[#191E2F]"
-            style={{ maxHeight: '90vh' }}
+            className="flex w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            style={{ maxHeight: '88vh', border: '1px solid rgba(62,74,137,0.10)' }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* ── Left nav ──────────────────────────────────────── */}
-            <div className="flex w-44 shrink-0 flex-col border-r border-[rgba(62,74,137,0.12)] bg-[#FAF8F5]  dark:bg-slate-800/60">
-              <div className="flex h-14 items-center gap-2.5 border-b border-[rgba(62,74,137,0.12)] px-4 ">
-                <Settings size={16} className="shrink-0 text-green-700" />
-                <span className="text-sm font-black text-[#1E2636]">Settings</span>
+            {/* ── Left sidebar ── */}
+            <div className="flex w-48 shrink-0 flex-col" style={{ background: '#F7F6F2', borderRight: '1px solid rgba(62,74,137,0.08)' }}>
+              <div className="flex items-center gap-3 px-4 py-5 border-b border-[rgba(62,74,137,0.07)]">
+                <div className="h-9 w-9 shrink-0 rounded-xl flex items-center justify-center text-xs font-black text-white shadow-sm"
+                  style={{ background: '#3E4A89' }}>
+                  {settings.avatarEmoji || currentUser?.initials || 'G'}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-black text-[#1E2636]">{settings.displayName || currentUser?.name}</p>
+                  <p className="truncate text-[10px] text-[#9BA6D3]">{currentUser?.role}</p>
+                </div>
               </div>
-              <nav className="flex-1 space-y-0.5 p-2">
+              <nav className="flex-1 p-2 space-y-0.5">
                 {([
-                  { id: 'profile',       icon: UserCheck,  label: 'Profile'       },
-                  { id: 'appearance',    icon: Palette,    label: 'Appearance'    },
-                  { id: 'notifications', icon: Bell,       label: 'Notifications' },
-                  { id: 'meeting',       icon: Video,      label: 'Meeting'       },
-                  { id: 'security',      icon: ShieldCheck, label: 'Security'     },
+                  { id: 'profile',       icon: UserCheck,   label: 'Profile'       },
+                  { id: 'appearance',    icon: Palette,     label: 'Appearance'    },
+                  { id: 'notifications', icon: Bell,        label: 'Notifications' },
+                  { id: 'meeting',       icon: Video,       label: 'Meeting'       },
+                  { id: 'security',      icon: ShieldCheck, label: 'Security'      },
+                  { id: 'privacy',       icon: Eye,         label: 'Privacy'       },
                 ] as const).map(({ id, icon: Icon, label }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setSettingsTab(id)}
-                    className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-bold transition-all ${
+                  <button key={id} type="button" onClick={() => setSettingsTab(id)}
+                    className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs font-bold transition-all ${
                       settingsTab === id
-                        ? 'bg-[#1E2538] text-white border border-[rgba(62,74,137,0.15)] shadow-sm'
-                        : 'text-[#4A5578] hover:bg-[rgba(62,74,137,0.08)] dark:text-[#9BA6D3]/60'
-                    }`}
-                  >
-                    <Icon size={15} />
+                        ? 'bg-[#3E4A89] text-white shadow-sm'
+                        : 'text-[#4A5578] hover:bg-[rgba(62,74,137,0.07)] hover:text-[#1E2636]'
+                    }`}>
+                    <Icon size={14} />
                     {label}
                   </button>
                 ))}
               </nav>
-              {/* Sign out shortcut */}
-              <div className="border-t border-[rgba(62,74,137,0.12)] p-2 ">
-                <button
-                  type="button"
-                  onClick={() => {
-                    localStorage.removeItem('edutechex_token');
-                    toast.success('Signed out');
-                    router.push('/sign-up-login-screen');
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                >
-                  <LogOut size={15} />
-                  Sign out
+              <div className="p-2 border-t border-[rgba(62,74,137,0.07)]">
+                <button type="button"
+                  onClick={() => { localStorage.removeItem('edutechex_token'); toast.success('Signed out'); router.push('/sign-up-login-screen'); }}
+                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs font-bold text-red-400 hover:bg-red-50 hover:text-red-600 transition-all">
+                  <LogOut size={14} /> Sign out
                 </button>
               </div>
             </div>
 
-            {/* ── Right content ──────────────────────────────────── */}
-            <form onSubmit={saveSettings} className="flex min-h-0 flex-1 flex-col">
-              {/* Tab header */}
-              <div className="flex h-14 items-center justify-between border-b border-[rgba(62,74,137,0.12)] px-5 ">
-                <h2 className="text-base font-black text-[#1E2636]">
-                  {settingsTab === 'profile'       && 'Profile'}
-                  {settingsTab === 'appearance'    && 'Appearance'}
-                  {settingsTab === 'notifications' && 'Notifications'}
-                  {settingsTab === 'meeting'       && 'Meeting'}
-                  {settingsTab === 'security'      && 'Security'}
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setSettingsOpen(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800"
-                  title="Close settings"
-                >
-                  <X size={18} />
+            {/* ── Right content ── */}
+            <form onSubmit={saveSettings} className="flex min-h-0 flex-1 flex-col bg-white">
+              <div className="flex h-14 shrink-0 items-center justify-between px-6 border-b border-[rgba(62,74,137,0.08)]">
+                <div>
+                  <h2 className="text-sm font-black text-[#1E2636]">
+                    {settingsTab === 'profile'       && 'Profile'}
+                    {settingsTab === 'appearance'    && 'Appearance'}
+                    {settingsTab === 'notifications' && 'Notifications'}
+                    {settingsTab === 'meeting'       && 'Meeting'}
+                    {settingsTab === 'security'      && 'Security'}
+                    {settingsTab === 'privacy'       && 'Privacy & Monitoring'}
+                  </h2>
+                  <p className="text-[10px] text-[#9BA6D3]">
+                    {settingsTab === 'profile'       && 'Your identity in this workspace'}
+                    {settingsTab === 'appearance'    && 'Customize how the app looks and feels'}
+                    {settingsTab === 'notifications' && 'Control how and when you get notified'}
+                    {settingsTab === 'meeting'       && 'Meeting links and schedule'}
+                    {settingsTab === 'security'      && 'Password and account security'}
+                    {settingsTab === 'privacy'       && 'What activity data the admin can see'}
+                  </p>
+                </div>
+                <button type="button" onClick={() => setSettingsOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[#9BA6D3] hover:bg-[rgba(62,74,137,0.06)] hover:text-[#4A5578] transition-all">
+                  <X size={16} />
                 </button>
               </div>
 
               {/* Scrollable body */}
-              <div className="flex-1 space-y-4 overflow-y-auto p-5">
+              <div className="flex-1 space-y-3 overflow-y-auto p-5">
 
-                {/* ── PROFILE ─────────────────────────────────────── */}
+                {/* ── PROFILE ── */}
                 {settingsTab === 'profile' && (
                   <>
-                    {/* Avatar card */}
-                    <div className="flex items-center gap-4 rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
-                      <div
-                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-lg shadow-indigo-200 text-3xl"
-                        style={settings.avatarEmoji ? { background: 'rgba(62,74,137,0.06)', border: '2px solid rgba(62,74,137,0.15)' } : { background: '#3E4A89' }}
-                      >
+                    {/* User card */}
+                    <div className="flex items-center gap-4 rounded-2xl p-4" style={{ background: '#F7F6F2', border: '1px solid rgba(62,74,137,0.08)' }}>
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-3xl"
+                        style={settings.avatarEmoji ? { background: 'rgba(62,74,137,0.08)', border: '2px solid rgba(62,74,137,0.15)' } : { background: '#3E4A89' }}>
                         {settings.avatarEmoji
                           ? settings.avatarEmoji
-                          : <span className="text-lg font-black text-white">{currentUser?.initials ?? 'G'}</span>
+                          : <span className="text-base font-black text-white">{currentUser?.initials ?? 'G'}</span>
                         }
                       </div>
                       <div>
                         <p className="font-black text-[#1E2636]">{settings.displayName || currentUser?.name}</p>
-                        <p className="text-sm text-[#7C859E] dark:text-[#7C859E]">{currentUser?.email}</p>
-                        <span className="mt-1 inline-flex rounded-md bg-indigo-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#3E4A89] dark:bg-indigo-900/40 dark:text-indigo-300">
+                        <p className="text-xs text-[#7C859E] mt-0.5">{currentUser?.email}</p>
+                        <span className="mt-1.5 inline-flex rounded-lg bg-indigo-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#3E4A89]">
                           {currentUser?.role}
                         </span>
                       </div>
                     </div>
 
-                    {/* Avatar picker */}
-                    <div>
-                      <label className="text-xs font-black uppercase tracking-[0.12em] text-[#7C859E]">
-                        Choose avatar
-                      </label>
-                      <p className="mt-0.5 text-[11px] text-[#7C859E]">Pick a character � shows in your profile and sidebar.</p>
-                      <div className="mt-2 grid grid-cols-6 gap-2">
-                        {/* "None" option � reverts to initials */}
-                        <button
-                          type="button"
-                          onClick={() => setSettings((v) => ({ ...v, avatarEmoji: '' }))}
-                          className={`flex h-10 w-10 items-center justify-center rounded-xl border-2 text-[10px] font-black transition-all ${
-                            !settings.avatarEmoji
-                              ? 'border-[#3E4A89] bg-[#3E4A89] text-white shadow-md'
-                              : 'border-[rgba(62,74,137,0.15)] bg-white text-[#4A5578] hover:border-[rgba(62,74,137,0.35)]'
-                          }`}
-                          title="Use initials"
-                        >
-                          {currentUser?.initials ?? 'G'}
-                        </button>
-                        {AVATAR_OPTIONS.map((emoji) => (
-                          <button
-                            key={emoji}
-                            type="button"
-                            onClick={() => setSettings((v) => ({ ...v, avatarEmoji: emoji }))}
-                            className={`flex h-10 w-10 items-center justify-center rounded-xl border-2 text-xl transition-all hover:scale-110 ${
-                              settings.avatarEmoji === emoji
-                                ? 'border-[#3E4A89] bg-indigo-50 shadow-md shadow-indigo-100 scale-110'
-                                : 'border-[rgba(62,74,137,0.12)] bg-white hover:border-[rgba(62,74,137,0.30)]'
-                            }`}
-                            title={emoji}
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
                     {/* Display name */}
-                    <div>
-                      <label className="text-xs font-black uppercase tracking-[0.12em] text-[#7C859E] dark:text-[#7C859E]">
-                        Display name
-                      </label>
-                      <input
-                        value={settings.displayName}
+                    <div className="rounded-2xl p-4" style={{ border: '1px solid rgba(62,74,137,0.08)' }}>
+                      <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">Display name</label>
+                      <input value={settings.displayName}
                         onChange={(e) => setSettings((v) => ({ ...v, displayName: e.target.value }))}
                         placeholder={currentUser?.name ?? 'Your name'}
-                        className="mt-2 h-11 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-bold outline-none focus:border-[#3E4A89] focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:placeholder-slate-500"
+                        className="mt-2 h-10 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-semibold text-[#1E2636] outline-none focus:border-[#3E4A89] focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0]"
                       />
-                      <p className="mt-1.5 text-xs text-[#7C859E]">This name appears in chat messages and the team list.</p>
+                      <p className="mt-1.5 text-[11px] text-[#9BA6D3]">Shown in chat messages and the people list.</p>
                     </div>
 
                     {/* Status */}
-                    <div>
-                      <label className="text-xs font-black uppercase tracking-[0.12em] text-[#7C859E] dark:text-[#7C859E]">
-                        Status
-                      </label>
-                      <div className="mt-2 grid grid-cols-4 gap-2">
+                    <div className="rounded-2xl p-4" style={{ border: '1px solid rgba(62,74,137,0.08)' }}>
+                      <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">Status</label>
+                      <div className="mt-2.5 grid grid-cols-4 gap-2">
                         {([
                           { id: 'online',  label: 'Online',  dot: 'bg-emerald-500' },
-                          { id: 'away',    label: 'Away',    dot: 'bg-amber-400'  },
-                          { id: 'busy',    label: 'Busy',    dot: 'bg-red-500'    },
-                          { id: 'offline', label: 'Offline', dot: 'bg-slate-300'  },
+                          { id: 'away',    label: 'Away',    dot: 'bg-amber-400'   },
+                          { id: 'busy',    label: 'Busy',    dot: 'bg-red-500'     },
+                          { id: 'offline', label: 'Offline', dot: 'bg-slate-300'   },
                         ] as const).map(({ id, label, dot }) => (
-                          <button
-                            key={id}
-                            type="button"
-                            onClick={() => setSettings((v) => ({ ...v, status: id }))}
-                            className={`flex flex-col items-center gap-1.5 rounded-xl border py-3 text-xs font-bold transition-all ${
+                          <button key={id} type="button" onClick={() => setSettings((v) => ({ ...v, status: id }))}
+                            className={`flex flex-col items-center gap-2 rounded-xl border py-3 text-xs font-bold transition-all ${
                               settings.status === id
-                                ? 'border-[rgba(62,74,137,0.25)] bg-[rgba(62,74,137,0.08)] text-[#3E4A89] shadow-sm dark:border-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300'
-                                : 'border-[rgba(62,74,137,0.12)] bg-white text-[#7C859E] hover:border-slate-300 hover:bg-[rgba(62,74,137,0.06)]  dark:bg-slate-800 dark:text-[#7C859E]'
-                            }`}
-                          >
+                                ? 'border-[#3E4A89] bg-indigo-50 text-[#3E4A89]'
+                                : 'border-[rgba(62,74,137,0.10)] bg-white text-[#7C859E] hover:border-[rgba(62,74,137,0.20)] hover:bg-[rgba(62,74,137,0.04)]'
+                            }`}>
                             <span className={`h-3 w-3 rounded-full ${dot}`} />
                             {label}
                           </button>
                         ))}
                       </div>
-                      <p className="mt-1.5 text-xs text-[#7C859E]">Your status dot is visible to everyone in the People list.</p>
-                    </div>
-                  </>
-                )}
-
-                {/* ── APPEARANCE ──────────────────────────────────── */}
-                {settingsTab === 'appearance' && (
-                  <>
-                    {/* Dark mode */}
-                    <div className="flex items-center justify-between rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-[#4A5578] dark:bg-slate-700 dark:text-[#9BA6D3]">
-                          {darkMode ? <Moon size={16} /> : <Sun size={16} />}
-                        </div>
-                        <div>
-                          <p className="text-sm font-black text-[#1E2636]">Dark mode</p>
-                          <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">Currently {darkMode ? 'on' : 'off'} — affects the whole app</p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => { toggleTheme(); storeDarkModeToggle(); }}
-                        className={`relative h-6 w-11 rounded-full transition-colors ${darkMode ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}
-                      >
-                        <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${darkMode ? 'translate-x-6' : 'translate-x-1'}`} />
-                      </button>
+                      <p className="mt-2 text-[11px] text-[#9BA6D3]">Visible to everyone in the People list.</p>
                     </div>
 
-                    {/* Compact chat */}
-                    <div className="flex items-center justify-between rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-[#4A5578] dark:bg-slate-700 dark:text-[#9BA6D3]">
-                          <Layout size={16} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-black text-[#1E2636]">Compact chat</p>
-                          <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">Reduce spacing between messages</p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setSettings((v) => ({ ...v, compactChat: !v.compactChat }))}
-                        className={`relative h-6 w-11 rounded-full transition-colors ${settings.compactChat ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}
-                      >
-                        <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.compactChat ? 'translate-x-6' : 'translate-x-1'}`} />
-                      </button>
-                    </div>
-
-                    {/* Font size */}
-                    <div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-[#4A5578] dark:bg-slate-700 dark:text-[#9BA6D3]">
-                          <Type size={16} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-black text-[#1E2636]">Message font size</p>
-                          <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">Controls the size of text in chat bubbles</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 pl-12">
-                        {([
-                          { id: 'normal', label: 'Normal (14px)' },
-                          { id: 'large',  label: 'Large (16px)'  },
-                        ] as const).map(({ id, label }) => (
-                          <button
-                            key={id}
-                            type="button"
-                            onClick={() => setSettings((v) => ({ ...v, fontSize: id }))}
-                            className={`flex-1 rounded-xl border py-2.5 text-xs font-bold transition-all ${
-                              settings.fontSize === id
-                                ? 'border-[rgba(62,74,137,0.25)] bg-[rgba(62,74,137,0.08)] text-[#3E4A89] dark:border-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300'
-                                : 'border-[rgba(62,74,137,0.12)] bg-white text-[#7C859E] hover:bg-[rgba(62,74,137,0.06)]  dark:bg-slate-800 dark:text-[#7C859E]'
-                            }`}
-                          >
-                            {label}
+                    {/* Avatar picker */}
+                    <div className="rounded-2xl p-4" style={{ border: '1px solid rgba(62,74,137,0.08)' }}>
+                      <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">Avatar emoji</label>
+                      <p className="mt-0.5 text-[11px] text-[#9BA6D3] mb-2.5">Appears next to your name. Leave blank to use initials.</p>
+                      <div className="grid grid-cols-8 gap-1.5">
+                        <button type="button" onClick={() => setSettings((v) => ({ ...v, avatarEmoji: '' }))}
+                          className={`flex h-9 w-9 items-center justify-center rounded-xl border text-[10px] font-black transition-all ${
+                            !settings.avatarEmoji ? 'border-[#3E4A89] bg-[#3E4A89] text-white' : 'border-[rgba(62,74,137,0.12)] bg-white text-[#4A5578] hover:border-[rgba(62,74,137,0.30)]'
+                          }`}>
+                          {currentUser?.initials ?? 'G'}
+                        </button>
+                        {AVATAR_OPTIONS.map((emoji) => (
+                          <button key={emoji} type="button" onClick={() => setSettings((v) => ({ ...v, avatarEmoji: emoji }))}
+                            className={`flex h-9 w-9 items-center justify-center rounded-xl border text-lg transition-all ${
+                              settings.avatarEmoji === emoji
+                                ? 'border-[#3E4A89] bg-indigo-50 scale-110 shadow-sm'
+                                : 'border-[rgba(62,74,137,0.10)] bg-white hover:border-[rgba(62,74,137,0.25)] hover:scale-110'
+                            }`}>
+                            {emoji}
                           </button>
                         ))}
                       </div>
                     </div>
-
-                    {/* Enter to send */}
-                    <div className="flex items-center justify-between rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-[#4A5578] dark:bg-slate-700 dark:text-[#9BA6D3]">
-                          <Send size={15} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-black text-[#1E2636]">Enter to send</p>
-                          <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">
-                            {settings.enterToSend
-                              ? 'Enter sends · Shift+Enter for new line'
-                              : 'Click the send button to post'}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setSettings((v) => ({ ...v, enterToSend: !v.enterToSend }))}
-                        className={`relative h-6 w-11 rounded-full transition-colors ${settings.enterToSend ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}
-                      >
-                        <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.enterToSend ? 'translate-x-6' : 'translate-x-1'}`} />
-                      </button>
-                    </div>
                   </>
                 )}
 
-                {/* ── NOTIFICATIONS ───────────────────────────────── */}
-                {settingsTab === 'notifications' && (
-                  <>
-                    {/* Email */}
-                    <div className="flex items-center justify-between rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-green-700 dark:bg-indigo-900/40 dark:text-indigo-400">
-                          <Mail size={16} />
+                {/* ── APPEARANCE ── */}
+                {settingsTab === 'appearance' && (
+                  <div className="space-y-2">
+                    {[
+                      {
+                        icon: <Sun size={15} />, iconBg: 'bg-amber-50 text-amber-500',
+                        title: 'Dark mode', sub: darkMode ? 'Currently on — switch to light' : 'Currently off — switch to dark',
+                        control: (
+                          <button type="button" onClick={() => { toggleTheme(); storeDarkModeToggle(); }}
+                            className={`relative h-6 w-11 rounded-full transition-colors ${darkMode ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}>
+                            <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${darkMode ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        ),
+                      },
+                      {
+                        icon: <Layout size={15} />, iconBg: 'bg-violet-50 text-violet-500',
+                        title: 'Compact chat', sub: settings.compactChat ? 'Messages are tightly spaced' : 'Normal spacing between messages',
+                        control: (
+                          <button type="button" onClick={() => setSettings((v) => ({ ...v, compactChat: !v.compactChat }))}
+                            className={`relative h-6 w-11 rounded-full transition-colors ${settings.compactChat ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}>
+                            <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.compactChat ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        ),
+                      },
+                      {
+                        icon: <Send size={15} />, iconBg: 'bg-blue-50 text-blue-500',
+                        title: 'Enter to send',
+                        sub: settings.enterToSend ? 'Enter sends message · Shift+Enter for new line' : 'Use the send button to post',
+                        control: (
+                          <button type="button" onClick={() => setSettings((v) => ({ ...v, enterToSend: !v.enterToSend }))}
+                            className={`relative h-6 w-11 rounded-full transition-colors ${settings.enterToSend ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}>
+                            <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.enterToSend ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        ),
+                      },
+                    ].map((row) => (
+                      <div key={row.title} className="flex items-center justify-between rounded-xl px-4 py-3.5"
+                        style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}>
+                        <div className="flex items-center gap-3">
+                          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${row.iconBg}`}>{row.icon}</span>
+                          <div>
+                            <p className="text-xs font-bold text-[#1E2636]">{row.title}</p>
+                            <p className="text-[11px] text-[#9BA6D3]">{row.sub}</p>
+                          </div>
                         </div>
+                        {row.control}
+                      </div>
+                    ))}
+                    <div className="rounded-xl px-4 py-3.5" style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}>
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-500"><Type size={15} /></span>
                         <div>
-                          <p className="text-sm font-black text-[#1E2636]">Email on @mention</p>
-                          <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">Send an email when someone @mentions you</p>
+                          <p className="text-xs font-bold text-[#1E2636]">Message font size</p>
+                          <p className="text-[11px] text-[#9BA6D3]">Size of text in chat bubbles</p>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setSettings((v) => ({ ...v, emailNotifications: !v.emailNotifications }))}
-                        className={`relative h-6 w-11 rounded-full transition-colors ${settings.emailNotifications ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}
-                      >
+                      <div className="flex gap-2">
+                        {([{ id: 'normal', label: 'Normal', sub: '14px' }, { id: 'large', label: 'Large', sub: '16px' }] as const).map(({ id, label, sub }) => (
+                          <button key={id} type="button" onClick={() => setSettings((v) => ({ ...v, fontSize: id }))}
+                            className={`flex-1 rounded-xl border py-2.5 text-xs font-bold transition-all ${
+                              settings.fontSize === id
+                                ? 'border-[#3E4A89] bg-indigo-50 text-[#3E4A89]'
+                                : 'border-[rgba(62,74,137,0.10)] bg-white text-[#7C859E] hover:border-[rgba(62,74,137,0.20)]'
+                            }`}>
+                            {label} <span className="opacity-60 font-medium">({sub})</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+
+                {/* ── NOTIFICATIONS ── */}
+                {settingsTab === 'notifications' && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between rounded-xl px-4 py-3.5" style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}>
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500"><Mail size={15} /></span>
+                        <div>
+                          <p className="text-xs font-bold text-[#1E2636]">Email on @mention</p>
+                          <p className="text-[11px] text-[#9BA6D3]">Receive an email when someone mentions you</p>
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => setSettings((v) => ({ ...v, emailNotifications: !v.emailNotifications }))}
+                        className={`relative h-6 w-11 rounded-full transition-colors ${settings.emailNotifications ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}>
                         <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.emailNotifications ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                     </div>
-
-                    {/* Desktop notifications */}
-                    <div className="rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
+                    <div className="rounded-xl px-4 py-3.5" style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400">
-                            <Monitor size={16} />
-                          </div>
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-500"><Monitor size={15} /></span>
                           <div>
-                            <p className="text-sm font-black text-[#1E2636]">Desktop notifications</p>
-                            <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">Browser pop-up for incoming messages</p>
+                            <p className="text-xs font-bold text-[#1E2636]">Desktop notifications</p>
+                            <p className="text-[11px] text-[#9BA6D3]">Browser pop-up when new messages arrive</p>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const next = !settings.desktopNotifications;
-                            setSettings((v) => ({ ...v, desktopNotifications: next }));
-                            if (next && typeof Notification !== 'undefined' && Notification.permission === 'default') {
-                              Notification.requestPermission();
-                            }
-                          }}
-                          className={`relative h-6 w-11 rounded-full transition-colors ${settings.desktopNotifications ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}
-                        >
+                        <button type="button" onClick={() => {
+                          const next = !settings.desktopNotifications;
+                          setSettings((v) => ({ ...v, desktopNotifications: next }));
+                          if (next && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
+                        }} className={`relative h-6 w-11 rounded-full transition-colors ${settings.desktopNotifications ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}>
                           <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.desktopNotifications ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                       </div>
                       {settings.desktopNotifications && typeof Notification !== 'undefined' && Notification.permission === 'denied' && (
-                        <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 dark:bg-red-900/30 dark:text-red-400">
-                          �  Notifications are blocked in your browser. Go to browser Site Settings to allow them.
+                        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-500">
+                          Notifications blocked in your browser. Go to Site Settings to allow them.
                         </p>
                       )}
                     </div>
-
-                    {/* Sound */}
-                    <div className="flex items-center justify-between rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
+                    <div className="flex items-center justify-between rounded-xl px-4 py-3.5" style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}>
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">
-                          <Volume2 size={16} />
-                        </div>
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-500"><Volume2 size={15} /></span>
                         <div>
-                          <p className="text-sm font-black text-[#1E2636]">Sound alerts</p>
-                          <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">Play a soft chime when new messages arrive</p>
+                          <p className="text-xs font-bold text-[#1E2636]">Sound alerts</p>
+                          <p className="text-[11px] text-[#9BA6D3]">Play a chime when new messages arrive</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={playNotificationSound}
-                          className="rounded-lg border border-[rgba(62,74,137,0.12)] bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-[#7C859E] hover:bg-[rgba(62,74,137,0.06)] dark:border-slate-600 dark:bg-slate-800"
-                          title="Preview sound"
-                        >
+                        <button type="button" onClick={playNotificationSound}
+                          className="rounded-lg border border-[rgba(62,74,137,0.10)] bg-white px-2.5 py-1 text-[10px] font-bold text-[#7C859E] hover:border-[rgba(62,74,137,0.25)] hover:text-[#3E4A89] transition-all">
                           Preview
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setSettings((v) => ({ ...v, soundNotifications: !v.soundNotifications }))}
-                          className={`relative h-6 w-11 rounded-full transition-colors ${settings.soundNotifications ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}
-                        >
+                        <button type="button" onClick={() => setSettings((v) => ({ ...v, soundNotifications: !v.soundNotifications }))}
+                          className={`relative h-6 w-11 rounded-full transition-colors ${settings.soundNotifications ? 'bg-[#3E4A89]' : 'bg-slate-200'}`}>
                           <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.soundNotifications ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
 
-                {/* ── MEETING ─────────────────────────────────────── */}
+                {/* ── MEETING ── */}
                 {settingsTab === 'meeting' && (
                   <>
-                    {/* Current schedule */}
-                    <div className="rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
-                      <p className="mb-3 text-xs font-black uppercase tracking-[0.14em] text-[#7C859E] dark:text-[#7C859E]">
-                        Scheduled meeting links
-                      </p>
-                      <div className="space-y-2.5">
-                        {[
-                          { days: 'Mon – Thu (before 2 PM)', label: 'Main meet',      link: DEFAULT_COMPANY_MEET_LINK,     dot: 'bg-[rgba(62,74,137,0.08)]0' },
-                          { days: 'Thursday from 2 PM',      label: 'Thursday PM',    link: THURSDAY_AFTERNOON_MEET_LINK,  dot: 'bg-amber-500'  },
-                          { days: 'Friday (all day)',         label: 'Friday meet',    link: FRIDAY_MEET_LINK,              dot: 'bg-emerald-500'},
-                          { days: 'Saturday & Sunday',        label: 'No meeting',     link: null,                          dot: 'bg-slate-300'  },
-                        ].map(({ days, label, link, dot }) => (
-                          <div key={label} className="flex items-center justify-between gap-4 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white px-4 py-2.5 ">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} />
-                              <div className="min-w-0">
-                                <p className="text-xs font-bold text-[#4A5578]">{label}</p>
-                                <p className="text-[11px] text-[#7C859E]">{days}</p>
-                              </div>
+                    <div className="rounded-2xl p-4 space-y-2" style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3] mb-3">Recurring meet schedule</p>
+                      {[
+                        { days: 'Mon to Thu AM',  label: 'Main meet',   link: DEFAULT_COMPANY_MEET_LINK,    dot: 'bg-[#3E4A89]'   },
+                        { days: 'Thu from 2 PM',  label: 'Thursday PM', link: THURSDAY_AFTERNOON_MEET_LINK, dot: 'bg-amber-400'   },
+                        { days: 'Friday',         label: 'Friday meet', link: FRIDAY_MEET_LINK,             dot: 'bg-emerald-500' },
+                        { days: 'Sat and Sun',    label: 'No meeting',  link: null,                         dot: 'bg-slate-200'   },
+                      ].map(({ days, label, link, dot }) => (
+                        <div key={label} className="flex items-center justify-between rounded-xl px-3 py-2.5"
+                          style={{ border: '1px solid rgba(62,74,137,0.07)', background: '#F7F6F2' }}>
+                          <div className="flex items-center gap-2.5">
+                            <span className={`h-2 w-2 rounded-full shrink-0 ${dot}`} />
+                            <div>
+                              <p className="text-xs font-bold text-[#1E2636]">{label}</p>
+                              <p className="text-[10px] text-[#9BA6D3]">{days}</p>
                             </div>
-                            {link ? (
-                              <a
-                                href={link}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="shrink-0 rounded-lg bg-[rgba(62,74,137,0.08)] px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-green-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400"
-                              >
-                                Open ↗
-                              </a>
-                            ) : (
-                              <span className="shrink-0 rounded-lg bg-[rgba(62,74,137,0.08)] px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-[#7C859E] dark:bg-slate-700 dark:text-[#7C859E]">
-                                Off
-                              </span>
-                            )}
                           </div>
-                        ))}
-                      </div>
+                          {link
+                            ? <a href={link} target="_blank" rel="noreferrer" className="rounded-lg bg-indigo-50 px-2.5 py-1 text-[10px] font-bold text-[#3E4A89] hover:bg-indigo-100 transition-colors">Join</a>
+                            : <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-[#9BA6D3]">Off</span>
+                          }
+                        </div>
+                      ))}
                     </div>
-
-                    {/* Override main link */}
-                    <div>
-                      <label className="text-xs font-black uppercase tracking-[0.12em] text-[#7C859E] dark:text-[#7C859E]">
-                        Override main meet link
-                      </label>
-                      <input
-                        value={settings.meetLink}
+                    <div className="rounded-2xl p-4" style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}>
+                      <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">Override main meet link</label>
+                      <input value={settings.meetLink}
                         onChange={(e) => setSettings((v) => ({ ...v, meetLink: e.target.value }))}
                         placeholder={DEFAULT_COMPANY_MEET_LINK}
-                        className="mt-2 h-11 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-bold outline-none focus:border-[#3E4A89] focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:placeholder-slate-500"
+                        className="mt-2 h-10 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-semibold text-[#1E2636] outline-none focus:border-[#3E4A89] focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0]"
                       />
-                      <p className="mt-1.5 text-xs text-[#7C859E]">Replaces the Mon–Thu default link. Leave blank to use the built-in link.</p>
+                      <p className="mt-1.5 text-[11px] text-[#9BA6D3]">Leave blank to use the built-in link.</p>
                     </div>
                   </>
                 )}
-                {/* ── SECURITY ────────────────────────────────────── */}
+
+                {/* ── SECURITY ── */}
                 {settingsTab === 'security' && (
                   <>
-                    {/* Info banner */}
-                    <div className="flex items-start gap-3 rounded-2xl border border-[rgba(62,74,137,0.15)] bg-[rgba(62,74,137,0.08)] p-4 dark:border-indigo-800 dark:bg-indigo-900/20">
-                      <ShieldCheck size={18} className="mt-0.5 shrink-0 text-green-700 dark:text-indigo-400" />
+                    <div className="flex items-start gap-3 rounded-2xl p-4" style={{ background: '#F0F4FF', border: '1px solid rgba(62,74,137,0.12)' }}>
+                      <ShieldCheck size={16} className="mt-0.5 shrink-0 text-[#3E4A89]" />
                       <div>
-                        <p className="text-sm font-black text-indigo-800 dark:text-indigo-300">Change your password</p>
-                        <p className="mt-0.5 text-xs text-green-700 dark:text-indigo-400">
-                          You must enter your current password to set a new one. Minimum 8 characters.
-                          System accounts (admin, core team) must contact admin to change passwords.
-                        </p>
+                        <p className="text-xs font-black text-[#3E4A89]">Change your password</p>
+                        <p className="mt-0.5 text-[11px] text-[#7C859E] leading-relaxed">Enter your current password to set a new one. Minimum 8 characters.</p>
                       </div>
                     </div>
-
-                    {/* Change password — uses a div + button, NOT a nested form (HTML forbids form-in-form) */}
-                    <div className="space-y-4">
+                    <div className="rounded-2xl p-4 space-y-4" style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}>
                       <div>
-                        <label className="text-xs font-black uppercase tracking-[0.12em] text-[#7C859E] dark:text-[#7C859E]">
-                          Current password
-                        </label>
-                        <input
-                          type="password"
-                          value={pwCurrent}
-                          onChange={(e) => setPwCurrent(e.target.value)}
-                          placeholder="Enter your current password"
-                          autoComplete="current-password"
-                          required
-                          className="mt-2 h-11 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-bold outline-none focus:border-[#3E4A89] focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:placeholder-slate-500"
-                        />
+                        <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">Current password</label>
+                        <input type="password" value={pwCurrent} onChange={(e) => setPwCurrent(e.target.value)}
+                          placeholder="Enter your current password" autoComplete="current-password"
+                          className="mt-2 h-10 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-semibold outline-none focus:border-[#3E4A89] focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0]" />
                       </div>
-
                       <div>
-                        <label className="text-xs font-black uppercase tracking-[0.12em] text-[#7C859E] dark:text-[#7C859E]">
-                          New password
-                        </label>
-                        <input
-                          type="password"
-                          value={pwNew}
-                          onChange={(e) => setPwNew(e.target.value)}
-                          placeholder="Min 8 characters"
-                          autoComplete="new-password"
-                          required
-                          className="mt-2 h-11 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-bold outline-none focus:border-[#3E4A89] focus:ring-4 focus:ring-indigo-100 dark:border-slate-600 dark:bg-slate-800 dark:placeholder-slate-500"
-                        />
-                        {/* Strength bar */}
+                        <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">New password</label>
+                        <input type="password" value={pwNew} onChange={(e) => setPwNew(e.target.value)}
+                          placeholder="Minimum 8 characters" autoComplete="new-password"
+                          className="mt-2 h-10 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-semibold outline-none focus:border-[#3E4A89] focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0]" />
                         {pwNew.length > 0 && (
-                          <div className="mt-2 space-y-1">
-                            <div className="flex gap-1">
-                              {[8, 10, 12].map((threshold, i) => (
-                                <div
-                                  key={i}
-                                  className={`h-1.5 flex-1 rounded-full transition-colors ${
-                                    pwNew.length >= threshold
-                                      ? i === 0 ? 'bg-red-400' : i === 1 ? 'bg-amber-400' : 'bg-emerald-500'
-                                      : 'bg-slate-200 dark:bg-slate-700'
-                                  }`}
-                                />
+                          <div className="mt-2">
+                            <div className="flex gap-1 mb-1">
+                              {[8, 10, 12].map((t, i) => (
+                                <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${
+                                  pwNew.length >= t ? (i === 0 ? 'bg-red-400' : i === 1 ? 'bg-amber-400' : 'bg-emerald-500') : 'bg-slate-100'
+                                }`} />
                               ))}
                             </div>
-                            <p className="text-[10px] text-[#7C859E]">
-                              {pwNew.length < 8  ? 'Too short' :
-                               pwNew.length < 10 ? 'Weak — try adding numbers or symbols' :
-                               pwNew.length < 12 ? 'Moderate' : 'Strong ✓'}
+                            <p className="text-[10px] text-[#9BA6D3]">
+                              {pwNew.length < 8 ? 'Too short' : pwNew.length < 10 ? 'Weak' : pwNew.length < 12 ? 'Moderate' : 'Strong'}
                             </p>
                           </div>
                         )}
                       </div>
-
                       <div>
-                        <label className="text-xs font-black uppercase tracking-[0.12em] text-[#7C859E] dark:text-[#7C859E]">
-                          Confirm new password
-                        </label>
-                        <input
-                          type="password"
-                          value={pwConfirm}
-                          onChange={(e) => setPwConfirm(e.target.value)}
-                          placeholder="Repeat new password"
-                          autoComplete="new-password"
-                          required
-                          className={`mt-2 h-11 w-full rounded-xl border px-3 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-100 dark:bg-slate-800 dark:placeholder-slate-500 ${
-                            pwConfirm && pwNew !== pwConfirm
-                              ? 'border-red-400 focus:border-red-400'
-                              : 'border-[rgba(62,74,137,0.12)] focus:border-[#3E4A89] dark:border-slate-600'
-                          }`}
-                        />
-                        {pwConfirm && pwNew !== pwConfirm && (
-                          <p className="mt-1.5 text-xs font-semibold text-red-500">Passwords do not match.</p>
-                        )}
+                        <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">Confirm new password</label>
+                        <input type="password" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)}
+                          placeholder="Repeat new password" autoComplete="new-password"
+                          className={`mt-2 h-10 w-full rounded-xl border px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0] ${
+                            pwConfirm && pwNew !== pwConfirm ? 'border-red-300 focus:border-red-400' : 'border-[rgba(62,74,137,0.12)] focus:border-[#3E4A89]'
+                          }`} />
+                        {pwConfirm && pwNew !== pwConfirm && <p className="mt-1.5 text-[11px] font-semibold text-red-500">Passwords do not match.</p>}
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={handleChangePassword}
+                      <button type="button" onClick={handleChangePassword}
                         disabled={pwLoading || !pwCurrent || !pwNew || pwNew !== pwConfirm}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#3E4A89] py-3 text-sm font-black text-white hover:bg-[#2A3568] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[rgba(62,74,137,0.08)]0 dark:hover:bg-[#3E4A89]"
-                      >
-                        {pwLoading ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
-                        {pwLoading ? 'Changing password�¦' : 'Change password'}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#3E4A89] py-2.5 text-sm font-black text-white hover:bg-[#2A3568] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        {pwLoading ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
+                        {pwLoading ? 'Updating...' : 'Update password'}
                       </button>
+                    </div>
+                  </>
+                )}
+
+                {/* ── PRIVACY ── */}
+                {settingsTab === 'privacy' && (
+                  <>
+                    <div className="flex items-start gap-3 rounded-2xl p-4" style={{ background: '#F0F4FF', border: '1px solid rgba(62,74,137,0.12)' }}>
+                      <Eye size={16} className="mt-0.5 shrink-0 text-[#3E4A89]" />
+                      <div>
+                        <p className="text-xs font-black text-[#3E4A89]">Activity monitoring is active</p>
+                        <p className="mt-0.5 text-[11px] text-[#7C859E] leading-relaxed">
+                          As a business platform, EduTechExOS tracks your in-app activity so admins can manage workload and team engagement. Only activity <strong>inside this app</strong> is tracked — nothing on your device, browser history, or other applications.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl p-4 space-y-3" style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">What is collected</p>
+                      {[
+                        { icon: Clock,        label: 'Session time',      desc: 'How long you have the app open and active each day' },
+                        { icon: MessageSquare,label: 'Message count',     desc: 'Number of messages you send per day in workspace channels' },
+                        { icon: CheckSquare,  label: 'Task activity',     desc: 'Tasks you create or complete (count only, not content)' },
+                        { icon: Bell,         label: 'Login timestamps',  desc: 'When you sign in and which days you are active' },
+                      ].map(({ icon: Icon, label, desc }) => (
+                        <div key={label} className="flex items-start gap-3 py-2 border-b border-[rgba(62,74,137,0.06)] last:border-0">
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ background: 'rgba(62,74,137,0.08)' }}>
+                            <Icon size={13} className="text-[#3E4A89]" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-[#1E2636]">{label}</p>
+                            <p className="text-[11px] text-[#7C859E]">{desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="rounded-2xl p-4" style={{ border: '1px solid rgba(16,185,129,0.18)', background: 'rgba(16,185,129,0.04)' }}>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600 mb-2">What is NOT collected</p>
+                      <ul className="space-y-1.5">
+                        {[
+                          'Message content or file contents',
+                          'Screen recordings or screenshots',
+                          'Keyboard input or clipboard data',
+                          'Websites visited or apps used outside EduTechExOS',
+                          'Camera or microphone access',
+                        ].map((item) => (
+                          <li key={item} className="flex items-center gap-2 text-[11px] text-[#4A7C6F]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="flex items-start gap-3 rounded-2xl p-4" style={{ background: 'rgba(241,245,249,0.7)', border: '1px solid rgba(62,74,137,0.07)' }}>
+                      <ShieldCheck size={14} className="mt-0.5 shrink-0 text-[#9BA6D3]" />
+                      <p className="text-[11px] text-[#7C859E] leading-relaxed">
+                        Data is stored securely in the company database and visible only to admins. It is used solely for team management — not shared with third parties.
+                      </p>
                     </div>
                   </>
                 )}
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-between border-t border-[rgba(62,74,137,0.12)] bg-[#FAF8F5]/80 px-5 py-4 ">
-                <p className="text-xs font-semibold text-[#7C859E]">
-                  {settingsTab === 'security' ? 'Password is saved separately — use the button above.' : 'Changes apply immediately after saving.'}
+              <div className="flex items-center justify-between px-5 py-3.5 border-t border-[rgba(62,74,137,0.08)]" style={{ background: '#F7F6F2' }}>
+                <p className="text-[11px] text-[#9BA6D3]">
+                  {settingsTab === 'security' ? 'Use the button above to update password.' : 'Changes save automatically.'}
                 </p>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSettingsOpen(false)}
-                    className="h-9 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white px-4 text-xs font-black uppercase tracking-[0.1em] text-[#4A5578] hover:bg-[rgba(62,74,137,0.08)] dark:border-slate-600 dark:bg-slate-800 dark:text-[#9BA6D3]"
-                  >
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setSettingsOpen(false)}
+                    className="h-8 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white px-4 text-xs font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.05)] transition-all">
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    className="h-9 rounded-xl bg-[#3E4A89] px-5 text-xs font-black uppercase tracking-[0.1em] text-white hover:bg-[#2A3568] dark:bg-[rgba(62,74,137,0.08)]0 dark:hover:bg-[#3E4A89]"
-                  >
-                    Save settings
+                  <button type="submit"
+                    className="h-8 rounded-xl bg-[#3E4A89] px-5 text-xs font-bold text-white hover:bg-[#2A3568] transition-all">
+                    Save
                   </button>
                 </div>
               </div>
@@ -3442,21 +3575,10 @@ export default function EduTechExOSDashboard() {
                       </span>
                     </div>
                     <p className="text-[11px] mt-1" style={{ color: '#7C859E' }}>
-                      {sendEmailInvite && selectedInvitees.length > 0
-                        ? `Will email ${selectedInvitees.length} person${selectedInvitees.length > 1 ? 's' : ''}`
-                        : sendEmailInvite ? 'Select people on the right to invite'
+                      {sendEmailInvite
+                        ? `Will email all ${members.filter(m => m.email && m.email.toLowerCase() !== currentUserEmail).length} team members`
                         : 'In-app notification only'}
                     </p>
-                    {sendEmailInvite && selectedInvitees.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {selectedInvitees.map((inv) => (
-                          <span key={inv.id} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                            style={{ background: 'rgba(62,74,137,0.12)', color: '#3E4A89' }}>
-                            <Mail size={9} />{inv.email}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -3465,7 +3587,7 @@ export default function EduTechExOSDashboard() {
               <div className="flex flex-col sm:w-[48%] overflow-hidden" style={{ background: '#F2F0EC' }}>
                 <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
                   <span className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: '#7C859E' }}>
-                    Invite People &middot; {meetInviteeIds.length} selected
+                    @Mention in Chat &middot; {meetInviteeIds.length} selected
                   </span>
                   {availableInvitees.length > 0 && (
                     <button
@@ -3594,8 +3716,8 @@ export default function EduTechExOSDashboard() {
                 )}
                 <span className="text-[13px] font-semibold" style={{ color: '#7C859E' }}>
                   {meetInviteeIds.length > 0
-                    ? `${meetInviteeIds.length} person${meetInviteeIds.length > 1 ? 's' : ''} invited`
-                    : 'No invitees selected'}
+                    ? `${meetInviteeIds.length} @mentioned in chat`
+                    : 'No one @mentioned'}
                 </span>
               </div>
 

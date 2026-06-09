@@ -70,6 +70,7 @@
     "next": "15.1.11",
     "nodemailer": "^8.0.7",
     "openai": "^6.39.0",
+    "posthog-js": "^1.383.2",
     "puppeteer": "^25.0.4",
     "react": "19.0.3",
     "react-dom": "19.0.3",

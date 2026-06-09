@@ -1,82 +1,171 @@
 'use client';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Loader2, CheckSquare, Square, Sparkles, StopCircle, Bot, MessageSquare, ListChecks } from 'lucide-react';
-import { MOCK_TASKS, MOCK_AI_RESPONSES } from '@/data/mockData';
+import {
+  X, Send, Loader2, CheckSquare, Square, Sparkles, StopCircle,
+  Bot, MessageSquare, ListChecks, CheckCircle2, Search, ClipboardList, Users,
+} from 'lucide-react';
+import { MOCK_TASKS } from '@/data/mockData';
 import { toast } from 'sonner';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { extractActionItems } from '@/app/actions/aiActions';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useChat, Chat } from '@ai-sdk/react';
+import { DefaultChatTransport, type UIMessage } from 'ai';
 
 interface AIPanelProps {
   onClose: () => void;
   activeChannel: string;
 }
 
-type AIMessage = { id: string; role: 'user' | 'assistant'; text: string; timestamp: string };
+const QUICK_PROMPTS = [
+  'Project status',
+  'List tasks in progress',
+  'Extract tasks',
+  'Who is on the team?',
+  'Search for meeting notes',
+  'Daily summary',
+];
 
-const QUICK_PROMPTS = ['Project status', 'Extract tasks', 'Daily summary', 'List blockers'];
+function ToolResultCard({ toolName, result }: { toolName: string; result: Record<string, unknown> }) {
+  if (toolName === 'create_task') {
+    const ok = result.success as boolean;
+    return (
+      <div className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 text-[12px] ${
+        ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+           : 'border-red-200 bg-red-50 text-red-700'
+      }`}>
+        <CheckCircle2 size={13} className={`mt-0.5 shrink-0 ${ok ? 'text-emerald-500' : 'text-red-400'}`} />
+        <span className="font-semibold">
+          {ok ? (result.message as string) ?? 'Task created.' : `Task failed: ${result.error ?? 'unknown error'}`}
+        </span>
+      </div>
+    );
+  }
+  if (toolName === 'search_messages') {
+    const results = (result.results as Array<Record<string,unknown>>) ?? [];
+    return (
+      <div className="rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#F0F4FF] px-3 py-2.5 text-[12px]">
+        <div className="flex items-center gap-1.5 mb-1.5 text-[#3E4A89] font-bold">
+          <Search size={11} /> {results.length} result{results.length !== 1 ? 's' : ''} found
+        </div>
+        {results.slice(0, 3).map((r, i) => (
+          <p key={i} className="truncate text-[11px] text-[#4A5578] py-0.5 border-b border-[rgba(62,74,137,0.08)] last:border-0">
+            <span className="font-semibold">{String(r.sender ?? '')}:</span> {String(r.text ?? '').slice(0, 80)}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  if (toolName === 'list_tasks') {
+    const tasks = (result.tasks as Array<Record<string,unknown>>) ?? [];
+    return (
+      <div className="rounded-xl border border-[rgba(62,74,137,0.12)] bg-white px-3 py-2.5 text-[12px]">
+        <div className="flex items-center gap-1.5 mb-1.5 text-[#3E4A89] font-bold">
+          <ClipboardList size={11} /> {(result.total as number) ?? tasks.length} task{((result.total as number) ?? 0) !== 1 ? 's' : ''}
+        </div>
+        {tasks.slice(0, 4).map((t, i) => (
+          <p key={i} className="truncate text-[11px] text-[#4A5578] py-0.5 border-b border-[rgba(62,74,137,0.06)] last:border-0">
+            <span className={`inline-block w-14 font-bold ${t.status === 'done' ? 'text-emerald-600' : t.status === 'inprogress' ? 'text-amber-600' : 'text-[#9BA6D3]'}`}>
+              {String(t.status)}
+            </span>
+            {String(t.text ?? '').slice(0, 60)} → {String(t.assignee ?? '')}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  if (toolName === 'get_members') {
+    const members = (result.members as Array<Record<string,unknown>>) ?? [];
+    return (
+      <div className="rounded-xl border border-[rgba(62,74,137,0.12)] bg-white px-3 py-2.5 text-[12px]">
+        <div className="flex items-center gap-1.5 mb-1.5 text-[#3E4A89] font-bold">
+          <Users size={11} /> {members.length} team member{members.length !== 1 ? 's' : ''}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {members.slice(0, 8).map((m, i) => (
+            <span key={i} className="rounded-full bg-[rgba(62,74,137,0.08)] px-2 py-0.5 text-[10px] font-semibold text-[#3E4A89]">
+              {String(m.name ?? '')}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
+function getToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('edutechex_token');
+    return raw ? JSON.parse(raw).token : null;
+  } catch { return null; }
+}
 
 export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
-  const [aiInput,     setAiInput]     = useState('');
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [activeTab,   setActiveTab]   = useState<'chat' | 'tasks'>('chat');
-  const [messages,    setMessages]    = useState<AIMessage[]>(
-    MOCK_AI_RESPONSES.map(m => ({ id: m.id, role: m.role as 'user' | 'assistant', text: m.text, timestamp: m.timestamp }))
-  );
+  const [activeTab, setActiveTab] = useState<'chat' | 'tasks'>('chat');
   const [tasks, setTasks] = useState(MOCK_TASKS);
+  const [inputValue, setInputValue] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
-  const abortRef  = useRef<AbortController | null>(null);
   const inputRef  = useRef<HTMLInputElement>(null);
 
   const channelMessages = useDashboardStore(s => s.messages[activeChannel] || []);
+  const transcriptRef = useRef('');
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages.length, isStreaming]);
+  // Keep transcript ref fresh
+  useEffect(() => {
+    transcriptRef.current = channelMessages.length > 0
+      ? channelMessages.slice(-40).map(m => `[${m.sender}]: ${m.text}`).join('\n')
+      : '';
+  }, [channelMessages]);
 
-  const handleAskAI = useCallback(async () => {
-    if (!aiInput.trim() || isStreaming) return;
-    const question = aiInput.trim();
-    const userMsg: AIMessage = { id: `user-${Date.now()}`, role: 'user', text: question, timestamp: new Date().toISOString() };
-    setMessages(prev => [...prev, userMsg]);
-    setAiInput('');
-    setIsStreaming(true);
-    const assistantId = `ai-${Date.now()}`;
-    setMessages(prev => [...prev, { id: assistantId, role: 'assistant', text: '', timestamp: new Date().toISOString() }]);
+  // Context ref read by prepareSendMessagesRequest at send time
+  const contextRef = useRef({ channelName: activeChannel, channelId: activeChannel });
+  contextRef.current = { channelName: activeChannel, channelId: activeChannel };
 
-    const channelTranscript = channelMessages.length > 0
-      ? channelMessages.slice(-40).map(m => `[${new Date(m.timestamp).toISOString()}] ${m.sender}: ${m.text}`).join('\n') : '';
+  // Create the Chat instance once — uses a ref so it survives re-renders
+  const chatRef = useRef<Chat<UIMessage>>(null!);
+  if (!chatRef.current) {
+    chatRef.current = new Chat({
+      transport: new DefaultChatTransport({
+        api: '/api/ai/chat',
+        prepareSendMessagesRequest: ({ messages, body }) => ({
+          body: {
+            ...body,
+            uiMessages: messages,
+            channelName: contextRef.current.channelName,
+            channelId: contextRef.current.channelId,
+            channelTranscript: transcriptRef.current,
+            userToken: getToken(),
+          },
+        }),
+      }),
+    });
+  }
 
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
-    try {
-      const res = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [{ role: 'user', content: question }], channelName: activeChannel, channelTranscript }),
-        signal: ctrl.signal,
-      });
-      if (!res.ok || !res.body) throw new Error('Stream failed');
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let acc = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        acc += decoder.decode(value, { stream: true });
-        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, text: acc } : m));
-      }
-    } catch (err: unknown) {
-      if ((err as Error).name !== 'AbortError') {
-        toast.error('Copilot encountered an error. Please try again.');
-        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, text: 'Sorry, I ran into an error. Please try again.' } : m));
-      }
-    } finally {
-      setIsStreaming(false);
-      abortRef.current = null;
-    }
-  }, [aiInput, isStreaming, activeChannel, channelMessages]);
+  const { messages, sendMessage, status, stop } = useChat({ chat: chatRef.current });
+  const isLoading = status === 'streaming' || status === 'submitted';
 
-  const handleStop = () => abortRef.current?.abort();
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages.length, isLoading]);
+
+  const handleSend = useCallback(() => {
+    const text = inputValue.trim();
+    if (!text || isLoading) return;
+    setInputValue('');
+    sendMessage({ text });
+  }, [inputValue, isLoading, sendMessage]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  };
+
+  const handleQuickPrompt = (prompt: string) => {
+    setInputValue(prompt);
+    inputRef.current?.focus();
+  };
 
   const toggleTask = (taskId: string) => {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, done: !t.done } : t));
@@ -124,16 +213,16 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
               <p className="text-sm font-bold text-white leading-tight">EduTechEx Copilot</p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-[10px] text-white/40 font-medium">#{activeChannel}</span>
-                {isStreaming
+                {isLoading
                   ? <span className="flex items-center gap-1 text-[9px] font-bold text-amber-300"><Loader2 size={8} className="animate-spin" />thinking…</span>
-                  : <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-400"><Sparkles size={8} />ready</span>
+                  : <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-400"><Sparkles size={8} />agent ready</span>
                 }
               </div>
             </div>
           </div>
           <div className="flex items-center gap-1">
-            {isStreaming && (
-              <button onClick={handleStop} title="Stop" className="h-7 w-7 rounded-lg flex items-center justify-center text-white/40 hover:text-red-400 hover:bg-red-400/10 transition-all">
+            {isLoading && (
+              <button onClick={() => stop()} title="Stop" className="h-7 w-7 rounded-lg flex items-center justify-center text-white/40 hover:text-red-400 hover:bg-red-400/10 transition-all">
                 <StopCircle size={14} />
               </button>
             )}
@@ -143,7 +232,7 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
           </div>
         </div>
 
-        {/* Tabs inside header */}
+        {/* Tabs */}
         <div className="flex gap-1 mt-3">
           {([
             { id: 'chat'  as const, label: 'Chat',  icon: <MessageSquare size={11} /> },
@@ -171,40 +260,97 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
         {/* Chat tab */}
         {activeTab === 'chat' && (
           <div className="flex flex-col gap-3 p-4">
-            {messages.map(msg => (
-              <div key={msg.id} className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
 
-                {/* Avatar */}
-                {msg.role === 'assistant' && (
-                  <div className="h-6 w-6 shrink-0 rounded-lg bg-[#252D45] flex items-center justify-center mt-1">
-                    <Bot size={12} className="text-white/70" />
-                  </div>
-                )}
-
-                <div className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[88%]`}>
-                  <div className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
-                    msg.role === 'user'
-                      ? 'bg-[#3E4A89] text-white rounded-tr-sm'
-                      : 'bg-white border border-[rgba(62,74,137,0.10)] text-[#2D3550] rounded-tl-sm shadow-sm'
-                  }`}>
-                    {msg.role === 'assistant' ? (
-                      msg.text ? (
-                        <div className="prose prose-sm max-w-none prose-p:my-1 prose-li:my-0.5">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
-                        </div>
-                      ) : (
-                        <span className="flex items-center gap-2 text-[#9BA6D3]">
-                          <Loader2 size={12} className="animate-spin" /> Thinking…
-                        </span>
-                      )
-                    ) : msg.text}
-                  </div>
-                  <span className="text-[10px] text-[#9BA6D3] px-1">
-                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+            {/* Welcome state */}
+            {messages.length === 0 && (
+              <div className="flex flex-col items-center gap-2 py-8 text-center">
+                <div className="h-12 w-12 rounded-2xl bg-[#252D45] flex items-center justify-center">
+                  <Sparkles size={20} className="text-white/70" />
                 </div>
+                <p className="text-sm font-bold text-[#4A5578]">EduTechEx Copilot</p>
+                <p className="text-xs text-[#9BA6D3] max-w-[200px] leading-relaxed">
+                  I can create tasks, search messages, list team members, and answer questions about this workspace.
+                </p>
               </div>
-            ))}
+            )}
+
+            {messages.map(msg => {
+              const textContent = msg.parts
+                .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+                .map(p => p.text)
+                .join('');
+
+              type ToolPart = { type: string; toolCallId: string; state: string; input?: unknown; output?: unknown; errorText?: string };
+              const toolParts = msg.parts
+                .filter(p => typeof p.type === 'string' && p.type.startsWith('tool-'))
+                .map(p => p as unknown as ToolPart);
+
+              const hasPendingTool = toolParts.some(p => p.state === 'input-streaming' || p.state === 'input-available' || p.state === 'output-streaming');
+              const completedTools = toolParts.filter(p => p.state === 'output-available');
+
+              return (
+                <div key={msg.id} className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+
+                  {msg.role === 'assistant' && (
+                    <div className="h-6 w-6 shrink-0 rounded-lg bg-[#252D45] flex items-center justify-center mt-1">
+                      <Bot size={12} className="text-white/70" />
+                    </div>
+                  )}
+
+                  <div className={`flex flex-col gap-1.5 ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[90%]`}>
+
+                    {/* Completed tool result cards */}
+                    {msg.role === 'assistant' && completedTools.map((p, i) => {
+                      const toolName = p.type.replace(/^tool-/, '');
+                      return (
+                        <ToolResultCard
+                          key={i}
+                          toolName={toolName}
+                          result={(p.output as Record<string, unknown>) ?? {}}
+                        />
+                      );
+                    })}
+
+                    {/* In-progress tool call spinner */}
+                    {msg.role === 'assistant' && hasPendingTool && (
+                      <div className="flex items-center gap-1.5 rounded-xl bg-[#F0F4FF] border border-[rgba(62,74,137,0.12)] px-3 py-2 text-[11px] text-[#3E4A89] font-semibold">
+                        <Loader2 size={10} className="animate-spin" /> Running action…
+                      </div>
+                    )}
+
+                    {/* Text bubble */}
+                    {(textContent || (isLoading && msg === messages[messages.length - 1] && msg.role === 'assistant')) && (
+                      <div className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
+                        msg.role === 'user'
+                          ? 'bg-[#3E4A89] text-white rounded-tr-sm'
+                          : 'bg-white border border-[rgba(62,74,137,0.10)] text-[#2D3550] rounded-tl-sm shadow-sm'
+                      }`}>
+                        {msg.role === 'assistant' ? (
+                          textContent ? (
+                            <div className="prose prose-sm max-w-none prose-p:my-1 prose-li:my-0.5">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{textContent}</ReactMarkdown>
+                            </div>
+                          ) : (
+                            <span className="flex items-center gap-2 text-[#9BA6D3]">
+                              <Loader2 size={12} className="animate-spin" /> Thinking…
+                            </span>
+                          )
+                        ) : textContent || (
+                          msg.parts
+                            .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+                            .map(p => p.text)
+                            .join('') || ''
+                        )}
+                      </div>
+                    )}
+
+                    <span className="text-[10px] text-[#9BA6D3] px-1">
+                      {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
             <div ref={bottomRef} />
           </div>
         )}
@@ -212,19 +358,14 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
         {/* Tasks tab */}
         {activeTab === 'tasks' && (
           <div className="p-4">
-
-            {/* Extract button */}
             <button onClick={extractTasksAction}
               className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-[rgba(62,74,137,0.25)] bg-white py-3 text-xs font-bold text-[#3E4A89] hover:border-[#3E4A89] hover:bg-indigo-50 transition-all mb-4">
               <Sparkles size={13} /> Extract action items from #{activeChannel}
             </button>
 
-            {/* Pending */}
             {pendingTasks.length > 0 && (
               <div className="mb-4">
-                <p className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3] mb-2 px-0.5">
-                  To do · {pendingTasks.length}
-                </p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3] mb-2 px-0.5">To do · {pendingTasks.length}</p>
                 <div className="space-y-1.5">
                   {pendingTasks.map(task => (
                     <div key={task.id} onClick={() => toggleTask(task.id)}
@@ -248,12 +389,9 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
               </div>
             )}
 
-            {/* Done */}
             {doneTasks.length > 0 && (
               <div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-[#C4CAE0] mb-2 px-0.5">
-                  Completed · {doneTasks.length}
-                </p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-[#C4CAE0] mb-2 px-0.5">Completed · {doneTasks.length}</p>
                 <div className="space-y-1.5">
                   {doneTasks.map(task => (
                     <div key={task.id} onClick={() => toggleTask(task.id)}
@@ -270,7 +408,7 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
               <div className="flex flex-col items-center gap-3 py-10 text-center">
                 <ListChecks size={24} className="text-slate-200" />
                 <p className="text-sm font-bold text-[#7C859E]">No tasks yet</p>
-                <p className="text-xs text-[#9BA6D3]">Click "Extract action items" to pull tasks from the chat.</p>
+                <p className="text-xs text-[#9BA6D3]">Click &quot;Extract action items&quot; to pull tasks from the chat.</p>
               </div>
             )}
           </div>
@@ -280,30 +418,27 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
       {/* ── Chat input ── */}
       {activeTab === 'chat' && (
         <div className="shrink-0 p-3 bg-[#FAFAF8] border-t border-[rgba(62,74,137,0.08)]">
-
-          {/* Quick prompts */}
           <div className="flex gap-1.5 mb-2.5 overflow-x-auto pb-0.5 scrollbar-none">
             {QUICK_PROMPTS.map(q => (
-              <button key={q} onClick={() => { setAiInput(q); inputRef.current?.focus(); }}
+              <button key={q} onClick={() => handleQuickPrompt(q)}
                 className="shrink-0 rounded-full border border-[rgba(62,74,137,0.12)] bg-white px-2.5 py-1 text-[10px] font-semibold text-[#4A5578] hover:border-[#3E4A89] hover:text-[#3E4A89] transition-all whitespace-nowrap">
                 {q}
               </button>
             ))}
           </div>
 
-          {/* Input row */}
           <div className="flex items-center gap-2 rounded-xl border border-[rgba(62,74,137,0.14)] bg-white px-3 py-2 focus-within:border-[#3E4A89] focus-within:ring-2 focus-within:ring-[rgba(62,74,137,0.08)] transition-all shadow-sm">
-            <input ref={inputRef} type="text" value={aiInput}
-              onChange={e => setAiInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAskAI()}
-              placeholder="Ask about this channel…"
+            <input ref={inputRef} type="text" value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask me anything, or say 'create a task for…'"
               className="flex-1 bg-transparent text-sm text-[#1E2636] placeholder-[#C4CAE0] outline-none font-medium"
             />
-            <button onClick={handleAskAI} disabled={!aiInput.trim() || isStreaming}
+            <button onClick={handleSend} disabled={!inputValue.trim() || isLoading}
               className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 transition-all ${
-                aiInput.trim() && !isStreaming ? 'bg-[#3E4A89] text-white hover:bg-[#2F3970] shadow-sm' : 'text-[#C4CAE0]'
+                inputValue.trim() && !isLoading ? 'bg-[#3E4A89] text-white hover:bg-[#2F3970] shadow-sm' : 'text-[#C4CAE0]'
               }`}>
-              {isStreaming ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+              {isLoading ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
             </button>
           </div>
         </div>

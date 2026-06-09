@@ -5,6 +5,7 @@ import { Eye, EyeOff, Loader2, Lock, ArrowRight, Mail, X } from 'lucide-react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
+import { identifyUser, trackEvent } from '@/app/PostHogProvider';
 
 type LoginFormData = { email: string; password: string };
 
@@ -113,6 +114,8 @@ export default function LoginForm({
     }
 
     toast.success(`Welcome back, ${loginAccount.name.split(' ')[0]}!`);
+    identifyUser(loginAccount.email, loginAccount.name);
+    trackEvent('login', { role: loginAccount.role });
     setIsLoading(false);
 
     const redirectPath = searchParams.get('redirect');

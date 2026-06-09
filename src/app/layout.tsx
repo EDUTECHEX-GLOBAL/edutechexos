@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import '../styles/tailwind.css';
 import { Toaster as SonnerToaster } from 'sonner';
+import PostHogProvider from './PostHogProvider';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -33,7 +34,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
       </head>
       <body className="m-0 p-0 h-full bg-background text-foreground antialiased" suppressHydrationWarning>
-        {children}
+        <PostHogProvider>
+          {children}
+        </PostHogProvider>
         <SonnerToaster
           position="bottom-right"
           richColors

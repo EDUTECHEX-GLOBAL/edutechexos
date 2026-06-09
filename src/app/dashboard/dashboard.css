@@ -502,8 +502,225 @@ html.dark {
     box-shadow: -4px 0 32px rgba(0,0,0,0.20);
   }
 }
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE  ≤ 768px  — Full native-app experience
+═══════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .dashboard-workspace-no-panel { grid-template-columns: 3.5rem minmax(0, 1fr) 3.5rem; }
-  .workspace-sidebar { display: none; }
-  .chat-header { flex-wrap: wrap; gap: 0.5rem; }
+
+  /* Use dynamic viewport height so the address bar is handled */
+  .dashboard-root {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  /* Collapse the 4-column grid to a single content column */
+  .dashboard-workspace,
+  .dashboard-workspace-no-panel,
+  .dashboard-workspace-panel-closed {
+    grid-template-columns: 1fr !important;
+    grid-template-rows:    minmax(0,1fr) !important;
+    height: 100dvh;
+  }
+
+  /* Hide every desktop chrome element */
+  .workspace-rail       { display: none !important; }
+  .workspace-right-rail { display: none !important; }
+  .workspace-sidebar    { display: none !important; }
+  .copilot-panel        { display: none !important; }
+
+  /* Chat area fills everything; fixed header + nav give padding */
+  .workspace-chat {
+    grid-column: 1;
+    grid-row:    1;
+    height: 100dvh;
+    padding-top:    52px;
+    padding-bottom: 56px;
+    /* keep the inner grid rows: (stripped header) | messages | composer */
+    grid-template-rows: 0px minmax(0,1fr) auto !important;
+    box-sizing: border-box;
+  }
+  .workspace-chat-has-pin {
+    grid-template-rows: 0px auto minmax(0,1fr) auto !important;
+  }
+
+  /* Hide the big desktop channel-header on mobile (we have the mobile-header) */
+  .chat-header { display: none !important; }
+
+  /* Composer sits right above the bottom nav — already handled by padding-bottom */
+
+  /* ── Mobile fixed top header ───────────────────────────────── */
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 52px;
+    z-index: 120;
+    background: rgba(25,30,47,0.97);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(62,74,137,0.18);
+    padding: 0 10px;
+    gap: 8px;
+  }
+  .mobile-header-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 10px;
+    border: none; background: transparent; cursor: pointer;
+    color: rgba(255,255,255,0.55);
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-header-btn:active { background: rgba(62,74,137,0.20); color: #93C5FD; }
+  .mobile-header-channel {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .mobile-header-hash {
+    display: flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+    background: linear-gradient(135deg, #3E4A89, #2A3568);
+    color: #fff; font-size: 12px; font-weight: 900;
+  }
+  .mobile-header-name {
+    font-size: 15px; font-weight: 700; color: #EEF2F8;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mobile-header-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; color: #fff;
+    flex-shrink: 0; cursor: pointer;
+    border: 1.5px solid rgba(62,74,137,0.40);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Mobile bottom navigation ──────────────────────────────── */
+  .mobile-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 56px;
+    z-index: 120;
+    background: rgba(25,30,47,0.98);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-top: 1px solid rgba(62,74,137,0.18);
+    /* iOS safe-area */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .mobile-nav-btn {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px;
+    border: none; background: transparent; cursor: pointer;
+    color: rgba(255,255,255,0.35);
+    font-size: 8.5px; font-weight: 700;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    transition: color 0.16s;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+  }
+  .mobile-nav-btn.active {
+    color: #93C5FD;
+  }
+  .mobile-nav-btn.active::before {
+    content: '';
+    position: absolute; top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 28px; height: 2px; border-radius: 0 0 3px 3px;
+    background: linear-gradient(90deg, #3E4A89, #93C5FD, #3E4A89);
+    box-shadow: 0 0 8px rgba(147,197,253,0.50);
+  }
+  .mobile-nav-btn svg { flex-shrink: 0; }
+
+  /* Badge on Channels nav button */
+  .mobile-nav-badge {
+    position: absolute; top: 5px; right: calc(50% - 16px);
+    min-width: 14px; height: 14px; border-radius: 99px;
+    background: #ef4444; color: #fff;
+    font-size: 8px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 3px;
+    border: 1.5px solid rgba(25,30,47,0.98);
+  }
+
+  /* ── Mobile channel drawer ─────────────────────────────────── */
+  .mobile-drawer-overlay {
+    display: block;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.50);
+    z-index: 148;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-drawer {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: min(82vw, 310px);
+    background: #191E2F;
+    z-index: 149;
+    display: flex; flex-direction: column;
+    box-shadow: 6px 0 40px rgba(0,0,0,0.45);
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
+    will-change: transform;
+    /* iOS momentum scroll inside */
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-drawer.open {
+    transform: translateX(0);
+  }
+  .mobile-drawer-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 14px 10px;
+    border-bottom: 1px solid rgba(62,74,137,0.12);
+    flex-shrink: 0;
+  }
+  .mobile-drawer-close {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: rgba(62,74,137,0.12); cursor: pointer;
+    color: rgba(255,255,255,0.55);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Mobile full-screen panel overlays (Tasks, AI) ─────────── */
+  .mobile-panel-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 130;
+    display: flex; flex-direction: column;
+    background: #F2F0EC;
+    /* Slide up from bottom */
+    animation: mobileSlideUp 0.28s cubic-bezier(0.32,0.72,0,1);
+  }
+  @keyframes mobileSlideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  .mobile-panel-header {
+    display: flex; align-items: center;
+    height: 52px; padding: 0 14px; gap: 10px;
+    background: rgba(25,30,47,0.97);
+    border-bottom: 1px solid rgba(62,74,137,0.15);
+    flex-shrink: 0;
+  }
+  .mobile-panel-title {
+    flex: 1; font-size: 15px; font-weight: 700; color: #EEF2F8;
+  }
+  .mobile-panel-body {
+    flex: 1; min-height: 0; overflow-y: auto;
+    padding-bottom: 56px; /* above bottom nav */
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Desktop: hide mobile-only elements */
+@media (min-width: 769px) {
+  .mobile-header          { display: none !important; }
+  .mobile-nav             { display: none !important; }
+  .mobile-drawer          { display: none !important; }
+  .mobile-drawer-overlay  { display: none !important; }
+  .mobile-panel-overlay   { display: none !important; }
 }

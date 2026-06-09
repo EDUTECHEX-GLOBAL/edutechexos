@@ -20,9 +20,12 @@ async function sendBrevoEmail(opts: {
       body: JSON.stringify({ to: opts.to, subject: opts.subject, htmlContent: opts.htmlContent }),
     });
     if (!res.ok) {
-      const body = await res.text();
+      const body = await res.text().catch(() => `HTTP ${res.status}`);
       console.error('[email-relay] failed:', res.status, body);
-      return { success: false, error: `relay ${res.status}: ${body}` };
+      // Try to parse JSON error from relay
+      let errorMsg = `relay ${res.status}: ${body}`;
+      try { const j = JSON.parse(body); if (j.error) errorMsg = j.error; } catch { /* raw text */ }
+      return { success: false, error: errorMsg };
     }
     return { success: true };
   } catch (err) {
