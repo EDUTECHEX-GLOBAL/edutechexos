@@ -12,8 +12,9 @@ import type { Message } from '@/store/dashboardStore';
 import { GOOGLE_MEET_LINKS } from '@/lib/meetLinks';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
-const GCAL_EMAIL_KEY   = 'edutechex_gcal_email';
-const DEADLINES_KEY    = 'edutechex_deadlines_v2';
+// Per-user keys so each team member's calendar and deadline cache are isolated.
+function gcalEmailKey(userEmail: string)  { return `edutechex_gcal_email_${userEmail}`; }
+function deadlinesKey(userEmail: string)  { return `edutechex_deadlines_v2_${userEmail}`; }
 const CACHE_TTL        = 24 * 60 * 60 * 1000;
 
 interface CalendarPanelProps { onClose: () => void; }
@@ -212,19 +213,23 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
         const ts = Date.now();
         setDeadlines(found);
         setLastScan(ts);
-        localStorage.setItem(DEADLINES_KEY, JSON.stringify({ data: found, ts }));
+        const userEmail = getCurrentUser()?.email?.toLowerCase() ?? 'guest';
+        localStorage.setItem(deadlinesKey(userEmail), JSON.stringify({ data: found, ts }));
       } finally { setScanning(false); }
     }, 60);
   }, []);
 
-  /* Restore persisted state on mount */
+  /* Restore persisted state on mount — all keys are scoped to the logged-in user */
   useEffect(() => {
-    setCurrentUser(getCurrentUser());
-    const saved = localStorage.getItem(GCAL_EMAIL_KEY);
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    const userEmail = user?.email?.toLowerCase() ?? 'guest';
+
+    const saved = localStorage.getItem(gcalEmailKey(userEmail));
     if (saved) { setGcalEmail(saved); setGcalSrc(buildSrc(saved)); setGcalActive(true); }
 
     try {
-      const cached = localStorage.getItem(DEADLINES_KEY);
+      const cached = localStorage.getItem(deadlinesKey(userEmail));
       if (cached) {
         const { data, ts } = JSON.parse(cached);
         setDeadlines(data); setLastScan(ts);
@@ -251,9 +256,14 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
     if (!email || !email.includes('@')) { setGcalError('Enter a valid Gmail address.'); return; }
     const src = buildSrc(email);
     setGcalSrc(src); setGcalActive(true); setGcalError('');
-    localStorage.setItem(GCAL_EMAIL_KEY, email);
+    const userEmail = currentUser?.email?.toLowerCase() ?? 'guest';
+    localStorage.setItem(gcalEmailKey(userEmail), email);
   }
-  function disconnectGcal() { setGcalActive(false); setGcalSrc(''); setGcalEmail(''); localStorage.removeItem(GCAL_EMAIL_KEY); }
+  function disconnectGcal() {
+    setGcalActive(false); setGcalSrc(''); setGcalEmail('');
+    const userEmail = currentUser?.email?.toLowerCase() ?? 'guest';
+    localStorage.removeItem(gcalEmailKey(userEmail));
+  }
 
   const TABS = [
     { id: 'upcoming'  as Tab, label: 'Upcoming',    badge: upcoming.length,        icon: <CalendarCheck size={13} /> },
