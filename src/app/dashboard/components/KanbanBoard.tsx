@@ -363,7 +363,7 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
                       type="button"
                       onClick={handleAddTask}
                       disabled={!newTaskText.trim()}
-                      className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#3E4A89] py-2 text-[11px] font-black uppercase tracking-[0.1em] text-white transition-all hover:bg-[rgba(62,74,137,0.08)]0 disabled:cursor-not-allowed disabled:opacity-40 active:scale-95"
+                      className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#3E4A89] py-2 text-[11px] font-black uppercase tracking-[0.1em] text-white transition-all hover:bg-[rgba(62,74,137,0.88)] disabled:cursor-not-allowed disabled:opacity-40 active:scale-95"
                     >
                       <Plus size={12} strokeWidth={3} />
                       Add Task

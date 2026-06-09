@@ -8,8 +8,8 @@ export async function GET(req: NextRequest) {
 
   try {
     await connectToDatabase();
-    // Fetch all messages (including soft-deleted so the UI can show placeholders)
-    const messages = await Message.find({}).sort({ timestamp: 1 }).lean();
+    // Fetch last 100 messages per channel (avoid full-table scan as history grows)
+    const messages = await Message.find({}).sort({ timestamp: -1 }).limit(1000).lean();
     const grouped: Record<string, any[]> = {};
 
     for (const msg of messages as any[]) {

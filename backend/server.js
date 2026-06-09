@@ -1332,6 +1332,20 @@ app.get('/api/dm/conversations', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/dm/unread-count — total unread DMs for current user
+// MUST be before /api/dm/:partnerEmail or Express captures it as a partner email
+app.get('/api/dm/unread-count', authMiddleware, async (req, res) => {
+  try {
+    const count = await DirectMessage.countDocuments({
+      toEmail: req.user.email.toLowerCase(),
+      read: false,
+    });
+    res.json({ success: true, count });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
 // GET /api/dm/:partnerEmail — fetch message thread with one user
 app.get('/api/dm/:partnerEmail', authMiddleware, async (req, res) => {
   try {
@@ -1405,19 +1419,6 @@ app.delete('/api/dm/:id', authMiddleware, async (req, res) => {
     }
     await DirectMessage.findByIdAndUpdate(req.params.id, { $set: { text: 'Message deleted.', deleted: true } });
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: String(err) });
-  }
-});
-
-// GET /api/dm/unread-count — total unread DMs for current user
-app.get('/api/dm/unread-count', authMiddleware, async (req, res) => {
-  try {
-    const count = await DirectMessage.countDocuments({
-      toEmail: req.user.email.toLowerCase(),
-      read: false,
-    });
-    res.json({ success: true, count });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
@@ -2258,20 +2259,12 @@ app.post('/api/wikipages', async (req, res) => {
   try {
     const { id, channelId, title, content } = req.body;
     const userEmail = getUserEmail(req);
-    const updateFields = { 
-      channelId, 
-      title, 
-      content,
-      updatedAt: new Date()
-    };
-    // Only set createdBy on insert (not on update)
-    if (userEmail) {
-      updateFields.createdBy = userEmail;
-    }
+    const setFields = { channelId, title, content, updatedAt: new Date() };
+    const setOnInsertFields = userEmail ? { createdBy: userEmail } : {};
     const updated = await WikiPage.findOneAndUpdate(
       { _id: id },
-      updateFields,
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { $set: setFields, $setOnInsert: setOnInsertFields },
+      { upsert: true, new: true }
     ).lean();
     
     const { _id, ...rest } = updated;

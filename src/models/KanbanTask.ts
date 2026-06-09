@@ -6,7 +6,7 @@ export interface IKanbanTask extends Document {
   assigneeInitials: string;
   assigneeEmail?: string;
   sourceChannel: string;
-  status: 'todo' | 'in-progress' | 'done';
+  status: 'todo' | 'inprogress' | 'done';
   createdAt: Date;
 }
 
@@ -17,7 +17,7 @@ const KanbanTaskSchema: Schema = new Schema(
     assigneeInitials:  { type: String, required: true },
     assigneeEmail:     { type: String },
     sourceChannel:     { type: String, required: true },
-    status:            { type: String, enum: ['todo', 'in-progress', 'done'], default: 'todo' },
+    status:            { type: String, enum: ['todo', 'inprogress', 'done'], default: 'todo' },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
