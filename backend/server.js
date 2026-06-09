@@ -151,14 +151,14 @@ app.use(express.json());
 
 // ── Rate Limiting ─────────────────────────────────────────────────────────────
 // Auth endpoints: strict limit to prevent brute-force / credential stuffing
-// validate: { xForwardedForHeader: false } silences the express-rate-limit
-// ERR_ERL_UNEXPECTED_X_FORWARDED_FOR warning on Render/proxy hosts.
-// We already trust the proxy via app.set('trust proxy', 1) above, but
-// express-rate-limit v7 requires this flag to be explicitly set as well.
+// validate: false disables ALL express-rate-limit runtime validation checks,
+// including the ERR_ERL_UNEXPECTED_X_FORWARDED_FOR check that fires on Render
+// because the host's reverse proxy sets X-Forwarded-For.
+// We already handle proxy trust via app.set('trust proxy', 1) above.
 const RATE_LIMIT_DEFAULTS = {
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { xForwardedForHeader: false },
+  validate: false,
 };
 
 const authLimiter = rateLimit({
