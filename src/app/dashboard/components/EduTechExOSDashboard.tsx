@@ -650,7 +650,8 @@ export default function EduTechExOSDashboard() {
       fetch(`${API_BASE}/api/activity/heartbeat`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      }).catch(() => { /* non-critical — ignore network errors */ });
+      }).then(r => r.ok ? r.json() : null   // swallow 4xx/5xx silently (e.g. before backend deploys)
+      ).catch(() => {});                     // swallow network errors too
     };
     ping(); // immediate first ping on mount
     const interval = setInterval(ping, 60_000);

@@ -154,9 +154,9 @@ export default function AdminPage() {
     fetch(`${API_BASE}/api/activity/stats`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => r.json())
-      .then((data: { success: boolean; stats?: ActivityStat[] }) => {
-        if (data.success && Array.isArray(data.stats)) setActivityStats(data.stats);
+      .then((r) => r.ok ? r.json() : null)   // 404 before backend deploys → null
+      .then((data: { success: boolean; stats?: ActivityStat[] } | null) => {
+        if (data?.success && Array.isArray(data.stats)) setActivityStats(data.stats);
       })
       .catch(() => { /* non-critical — section shows empty state */ })
       .finally(() => setActivityLoading(false));
@@ -904,9 +904,9 @@ export default function AdminPage() {
                   if (!token) return;
                   setActivityLoading(true);
                   fetch(`${API_BASE}/api/activity/stats`, { headers: { Authorization: `Bearer ${token}` } })
-                    .then((r) => r.json())
-                    .then((data: { success: boolean; stats?: ActivityStat[] }) => {
-                      if (data.success && Array.isArray(data.stats)) setActivityStats(data.stats);
+                    .then((r) => r.ok ? r.json() : null)
+                    .then((data: { success: boolean; stats?: ActivityStat[] } | null) => {
+                      if (data?.success && Array.isArray(data.stats)) setActivityStats(data.stats);
                     })
                     .catch(() => {})
                     .finally(() => setActivityLoading(false));
