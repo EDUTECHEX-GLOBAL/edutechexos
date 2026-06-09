@@ -554,6 +554,12 @@ const MeetingAccessSchema = new mongoose.Schema({
 MeetingAccessSchema.index({ messageId: 1, channelId: 1 }, { unique: true });
 const MeetingAccess = mongoose.model('MeetingAccess', MeetingAccessSchema);
 
+// ── Revoked-email set — populated immediately when admin deletes a user.
+// Blocks their JWT on every subsequent API call without a DB round-trip.
+// Resets on server restart, but deleted users can't log in again (DB record gone)
+// so a new JWT can never be issued to them after restart.
+const revokedEmails = new Set();
+
 // ── Auth middleware ──────────────────────────────────────────────────────────
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -561,6 +567,10 @@ function authMiddleware(req, res, next) {
     try {
       const token = authHeader.slice(7);
       const decoded = jwt.verify(token, JWT_SECRET);
+      // Immediately reject deleted users — their JWT is no longer valid
+      if (revokedEmails.has(decoded.email?.toLowerCase())) {
+        return res.status(401).json({ success: false, error: 'Account removed. Please contact admin.' });
+      }
       req.user = decoded; // { email, name, role }
     } catch (err) {
       // Token invalid — continue without auth, will fall back to query params
@@ -710,9 +720,12 @@ app.delete('/api/access-requests/:id', authMiddleware, async (req, res) => {
 
     await AccessRequest.findByIdAndDelete(id);
 
+    // Revoke their JWT immediately — all subsequent API calls return 401
+    if (removedEmail) revokedEmails.add(removedEmail.toLowerCase());
+
     // Broadcast to all connected clients:
-    // 1. member_removed  — admin panel removes the row from the members table
-    // 2. user_forcefully_removed — the removed user's dashboard detects their own email and logs them out
+    // 1. member_removed         — removes the row from every member list instantly
+    // 2. user_forcefully_removed — the removed user's UI detects their email and forces logout
     io.emit('member_removed', { memberId: `member-${id}` });
     if (removedEmail) {
       io.emit('user_forcefully_removed', { email: removedEmail.toLowerCase() });

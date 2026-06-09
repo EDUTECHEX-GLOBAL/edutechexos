@@ -87,18 +87,34 @@ export default function AdminPage() {
     }
   }, []);
 
-  // Re-load member list on real-time member_updated / member_removed events
+  // Re-load member list on real-time member_updated / member_removed events.
+  // Also listen for user_forcefully_removed so an admin who somehow gets removed
+  // while on this page is immediately logged out.
   useEffect(() => {
     const socket = getSocket();
     const onMemberUpdated = () => { loadLocalMembers?.(); };
     const onMemberRemoved = ({ memberId }: { memberId: string }) => {
       useDashboardStore.getState().removeMemberLocally(memberId);
     };
+    const onForcefullyRemoved = ({ email }: { email: string }) => {
+      const stored = localStorage.getItem('edutechex_token');
+      if (!stored) return;
+      try {
+        const me = JSON.parse(stored)?.user?.email?.toLowerCase();
+        if (me && me === email.toLowerCase()) {
+          localStorage.removeItem('edutechex_token');
+          toast.error('Your account has been removed by the admin.');
+          setTimeout(() => { window.location.replace('/sign-up-login-screen'); }, 800);
+        }
+      } catch { /* ignore */ }
+    };
     socket.on('member_updated', onMemberUpdated);
     socket.on('member_removed', onMemberRemoved);
+    socket.on('user_forcefully_removed', onForcefullyRemoved);
     return () => {
       socket.off('member_updated', onMemberUpdated);
       socket.off('member_removed', onMemberRemoved);
+      socket.off('user_forcefully_removed', onForcefullyRemoved);
     };
   }, [loadLocalMembers]);
 
