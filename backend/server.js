@@ -1834,12 +1834,18 @@ async function sendDigestEmails(since) {
   } catch (e) {
     console.warn('[digest] Could not fetch DB users for digest:', e.message);
   }
-  const to = Array.from(toMap.values());
+  const allRecipients = Array.from(toMap.values());
+  const [primaryRecipient, ...otherRecipients] = allRecipients;
 
   const subject = `EduTechExOS: Daily Team Digest — ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`;
-  const { ok } = await sendBrevoEmail({ to, subject, html });
-  const recipients = to.map((r) => r.email).join(', ');
-  console.log(`[digest] Brevo send ${ok ? 'OK' : 'FAILED'} → ${to.length} recipients: ${recipients}`);
+  const { ok } = await sendBrevoEmail({
+    to: [{ email: primaryRecipient.email }],
+    bcc: otherRecipients.length > 0 ? otherRecipients.map(r => ({ email: r.email })) : undefined,
+    subject,
+    html,
+  });
+  const recipients = allRecipients.map((r) => r.email).join(', ');
+  console.log(`[digest] Brevo send ${ok ? 'OK' : 'FAILED'} → ${allRecipients.length} recipients (BCC): ${recipients}`);
   return { recipients };
 }
 
