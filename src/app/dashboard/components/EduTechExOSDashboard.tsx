@@ -1853,7 +1853,7 @@ export default function EduTechExOSDashboard() {
               </span>
 
               {/* Gold gradient channel name */}
-              <span className="truncate text-[22px] font-black leading-tight max-w-[260px]" style={{
+              <span className="truncate text-[22px] font-black leading-tight max-w-[140px] sm:max-w-[260px]" style={{
                 background: 'linear-gradient(135deg, #FFFFFF 0%, #EEF2F8 55%, #C4CAE0 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
@@ -2092,7 +2092,7 @@ export default function EduTechExOSDashboard() {
                         {scheduledMeet ? (
                           /* ── Meeting Scheduled Card ─────────────────── */
                           <div
-                            className="w-[288px] overflow-hidden rounded-2xl"
+                            className="w-full max-w-[288px] overflow-hidden rounded-2xl"
                             style={{
                               boxShadow: '0 8px 32px rgba(25,30,47,0.18), 0 2px 8px rgba(25,30,47,0.10)',
                               border: '1px solid rgba(155,166,211,0.22)',
@@ -2848,7 +2848,7 @@ export default function EduTechExOSDashboard() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
               transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-              className="fixed top-0 right-14 z-[150] h-full w-[380px] border-l border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/97 backdrop-blur-md shadow-2xl flex flex-col"
+              className="fixed top-0 right-0 md:right-14 z-[150] h-full w-full md:w-[380px] border-l border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/97 backdrop-blur-md shadow-2xl flex flex-col"
             >
               {/* Header */}
               <div className="flex h-14 shrink-0 items-center justify-between border-b border-[rgba(62,74,137,0.12)] px-4">

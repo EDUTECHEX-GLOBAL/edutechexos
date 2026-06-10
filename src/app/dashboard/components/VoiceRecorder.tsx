@@ -248,7 +248,7 @@ export default function VoiceRecorder({ onSend }: VoiceRecorderProps) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-[rgba(62,74,137,0.08)] bg-white p-4 shadow-sm min-w-[260px]">
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-[rgba(62,74,137,0.08)] bg-white p-4 shadow-sm w-full max-w-[320px]">
       <p className="text-[10px] font-black uppercase tracking-widest text-[#7C859E]">Voice</p>
 
       {/* Idle state */}

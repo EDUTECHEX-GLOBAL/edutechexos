@@ -79,7 +79,7 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
 
       <div
         ref={panelRef}
-        className="fixed bottom-4 left-16 z-[201] w-[380px] rounded-2xl flex flex-col overflow-hidden"
+        className="fixed bottom-4 left-2 right-2 sm:left-16 sm:right-auto sm:w-[380px] z-[201] rounded-2xl flex flex-col overflow-hidden"
         style={{
           maxHeight: '78vh',
           background: 'linear-gradient(160deg,#191E2F 0%,#312e81 40%,#191E2F 100%)',
