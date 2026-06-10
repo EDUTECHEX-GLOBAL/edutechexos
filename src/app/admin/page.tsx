@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   Activity,
   Bell,
+  CalendarDays,
   CheckCircle2,
   Clock,
   Eye,
@@ -93,7 +94,7 @@ export default function AdminPage() {
     at: string;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<
-    'people' | 'requests' | 'channels' | 'broadcast' | 'activity'
+    'people' | 'requests' | 'channels' | 'broadcast' | 'activity' | 'attendance'
   >('people');
 
   useEffect(() => {
@@ -630,6 +631,7 @@ export default function AdminPage() {
     { id: 'channels' as const, Icon: Hash, label: 'Channels', badge: 0 },
     { id: 'broadcast' as const, Icon: Send, label: 'Broadcast', badge: 0 },
     { id: 'activity' as const, Icon: Activity, label: 'Activity', badge: 0 },
+    { id: 'attendance' as const, Icon: CalendarDays, label: 'Attendance', badge: 0 },
   ];
 
   return (
@@ -1361,9 +1363,6 @@ export default function AdminPage() {
           ════════════════════════════════════════════════════════════ */}
           {activeTab === 'activity' && (
             <div className="space-y-8">
-              {/* Login tracker calendar */}
-              <LoginTrackerCalendar />
-
               {/* Activity monitoring */}
               <div>
                 <div className="mb-6 flex items-center justify-between">
@@ -1538,6 +1537,66 @@ export default function AdminPage() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════
+              TAB: ATTENDANCE COMMAND CENTER
+          ════════════════════════════════════════════════════════════ */}
+          {activeTab === 'attendance' && (
+            <div>
+              {/* Dark hero banner */}
+              <div className="mb-6 overflow-hidden rounded-2xl bg-slate-950 px-7 py-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-indigo-400">
+                      Admin · Real-time tracking
+                    </p>
+                    <h2 className="mt-1 text-2xl font-black tracking-tight text-white">
+                      Attendance Command Center
+                    </h2>
+                    <p className="mt-1 text-sm font-medium text-slate-400">
+                      Review daily login patterns, manage check-ins, and track streaks per team
+                      member.
+                    </p>
+                  </div>
+                  {/* Today's quick presence dots */}
+                  <div className="shrink-0 rounded-2xl border border-white/10 bg-white/5 px-5 py-4">
+                    <p className="mb-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                      Present today
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {members.slice(0, 12).map((m) => (
+                        <div
+                          key={m.id}
+                          title={m.name}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-[10px] font-black text-white transition-transform hover:scale-110"
+                          style={{
+                            backgroundColor:
+                              m.status === 'online' ? m.color : `${m.color}55`,
+                            outline:
+                              m.status === 'online'
+                                ? `2px solid ${m.color}`
+                                : '2px solid transparent',
+                            outlineOffset: '2px',
+                          }}
+                        >
+                          {m.initials}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-2.5 text-xs font-semibold text-slate-500">
+                      <span className="text-emerald-400 font-bold">
+                        {members.filter((m) => m.status === 'online').length}
+                      </span>{' '}
+                      / {members.length} online now
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Calendar component */}
+              <LoginTrackerCalendar />
             </div>
           )}
         </main>
