@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import React from 'react';
 import Link from 'next/link';
 import AnimatedSection from './AnimatedSection';
@@ -9,7 +9,7 @@ const footerGroups = [
     links: [
       { label: 'Features', href: '#features' },
       { label: 'How it works', href: '#how-it-works' },
-      { label: 'Testimonials', href: '#testimonials' },
+      { label: 'Request access', href: '/sign-up-login-screen' },
     ],
   },
   {
@@ -17,7 +17,7 @@ const footerGroups = [
     links: [
       { label: 'Sign in', href: '/sign-up-login-screen' },
       { label: 'Get access', href: '/sign-up-login-screen' },
-      { label: 'Admin', href: '/sign-up-login-screen?mode=admin&redirect=/admin' },
+      { label: 'Admin portal', href: '/sign-up-login-screen?mode=admin&redirect=/admin' },
     ],
   },
   {
@@ -31,70 +31,54 @@ const footerGroups = [
 
 export default function LandingFooter() {
   return (
-    <footer
-      className="relative"
-      style={{ background: '#191E2F', borderTop: '1px solid rgba(255,255,255,0.06)' }}
-    >
-      {/* Subtle grid */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)
-          `,
-          backgroundSize: '52px 52px',
-        }}
-      />
+    <footer className="relative" style={{ background: '#04060E', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      {/* Amber signal hairline top */}
+      <div className="absolute top-0 left-0 right-0 signal-line pointer-events-none" />
+
+      {/* Dot grid */}
+      <div className="absolute inset-0 dot-grid pointer-events-none" />
 
       <div className="relative max-w-screen-xl mx-auto px-6 lg:px-10 py-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-16">
+
           {/* Brand column */}
           <AnimatedSection direction="up" className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2.5 no-underline group mb-5">
-              <div
-                className="w-8 h-8 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-105"
-                style={{
-                  background: 'rgba(255,255,255,0.12)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <circle cx="5" cy="8" r="2.5" fill="white" />
-                  <circle cx="11" cy="5" r="1.8" fill="white" opacity="0.65" />
-                  <circle cx="11" cy="11" r="1.8" fill="white" opacity="0.65" />
-                </svg>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#F0A028', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'transform .3s', boxShadow: '0 4px 12px rgba(240,160,40,0.25)' }} className="group-hover:scale-105">
+                <span style={{ color: '#04060E', fontSize: 10, fontWeight: 900 }}>EX</span>
               </div>
-              <span className="font-bold text-base" style={{ color: '#ffffff' }}>
-                EduTechEx<span style={{ color: '#9BA6D3' }}>OS</span>
-              </span>
+              <div>
+                <span style={{ fontFamily: "'Cabinet Grotesk', 'Inter', sans-serif", fontSize: 17, fontWeight: 800, color: '#EEF0F8', letterSpacing: '-0.02em' }}>
+                  EduTechEx<span style={{ color: '#F0A028' }}>OS</span>
+                </span>
+                <span style={{ display: 'block', fontSize: 7.5, fontWeight: 700, letterSpacing: '.32em', textTransform: 'uppercase', color: 'rgba(240,160,40,0.35)', marginTop: 2 }}>
+                  Institutional OS
+                </span>
+              </div>
             </Link>
-            <p
-              className="text-sm leading-relaxed max-w-xs"
-              style={{ color: 'rgba(255,255,255,0.45)' }}
-            >
+            <p style={{ fontSize: 13, lineHeight: 1.72, color: 'rgba(238,240,248,0.38)', maxWidth: '28ch', fontWeight: 400 }}>
               Internal operating system for the EduTechEx team. Built in Hyderabad.
             </p>
+            <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10D9A0', boxShadow: '0 0 8px rgba(16,217,160,0.6)', flexShrink: 0 }} />
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: '#10D9A0', fontFamily: "'JetBrains Mono', monospace" }}>System online</span>
+            </div>
           </AnimatedSection>
 
           {/* Link groups */}
           {footerGroups.map((group, i) => (
             <AnimatedSection key={group.title} direction="up" delay={i * 0.08}>
-              <h4
-                className="text-xs font-bold uppercase tracking-[0.16em] mb-5"
-                style={{ color: 'rgba(255,255,255,0.55)' }}
-              >
+              <h4 style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.28em', textTransform: 'uppercase', color: 'rgba(238,240,248,0.35)', marginBottom: 18, fontFamily: "'JetBrains Mono', monospace" }}>
                 {group.title}
               </h4>
-              <ul className="flex flex-col gap-3">
-                {group.links.map((link) => (
+              <ul style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {group.links.map(link => (
                   <li key={link.label}>
                     <Link
                       href={link.href}
-                      className="text-sm font-medium transition-all duration-200 hover:translate-x-1 inline-block"
-                      style={{ color: 'rgba(255,255,255,0.55)' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.55)')}
+                      style={{ fontSize: 13, fontWeight: 500, color: 'rgba(238,240,248,0.48)', textDecoration: 'none', display: 'inline-block', transition: 'all 0.2s' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#F0A028'; (e.currentTarget as HTMLElement).style.transform = 'translateX(3px)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(238,240,248,0.48)'; (e.currentTarget as HTMLElement).style.transform = 'translateX(0)'; }}
                     >
                       {link.label}
                     </Link>
@@ -107,14 +91,11 @@ export default function LandingFooter() {
 
         {/* Bottom bar */}
         <AnimatedSection direction="up" delay={0.25}>
-          <div
-            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-8"
-            style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
-          >
-            <p className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.30)' }}>
-              &copy; 2026 EduTechEx Global &middot; V1.0 &middot; Hyderabad, India
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 24, borderTop: '1px solid rgba(255,255,255,0.06)' }} className="sm:flex-row sm:items-center sm:justify-between">
+            <p style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: 'rgba(238,240,248,0.22)', fontWeight: 500 }}>
+              © 2026 EduTechEx Global · V1.0 · Hyderabad, India
             </p>
-            <p className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.20)' }}>
+            <p style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: 'rgba(238,240,248,0.15)', fontWeight: 500 }}>
               Designed with passion in Hyderabad
             </p>
           </div>

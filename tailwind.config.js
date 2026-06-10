@@ -7,27 +7,27 @@ module.exports = {
     extend: {
       colors: {
         /* ── Core surfaces ───────────────────────────── */
-        background:      '#F2F0EC',
-        foreground:      '#1E2636',
-        surface:         '#ffffff',
-        'surface-muted': '#FAF8F5',
+        background:      '#04060E',
+        foreground:      '#EEF0F8',
+        surface:         '#0A1020',
+        'surface-muted': '#07090F',
 
         /* ── Text shades ─────────────────────────────── */
-        ink:         '#4A5578',
-        'ink-light': '#7C859E',
+        ink:         '#7A8BA8',
+        'ink-light': '#3D4E65',
 
-        /* ── Primary — Icy Blue ──────────────────────── */
+        /* ── Primary — Amber signal ─────────────────── */
         primary: {
-          DEFAULT:    '#3E4A89',
-          foreground: '#ffffff',
-          light:      '#9BA6D3',
-          dark:       '#2A3568',
+          DEFAULT:    '#F0A028',
+          foreground: '#04060E',
+          light:      '#FFB84D',
+          dark:       '#D88A1E',
         },
 
-        /* ── Secondary — Pure Frost ──────────────────── */
+        /* ── Secondary — Deep Chamber ───────────────── */
         secondary: {
-          DEFAULT:    '#FAF8F5',
-          foreground: '#1E2636',
+          DEFAULT:    '#07090F',
+          foreground: '#7A8BA8',
         },
 
         /* ── Accent — kept for feature-card variety ──── */
@@ -46,13 +46,13 @@ module.exports = {
           surface: '#f3f0ff',
         },
 
-        /* ── Blue scale ──────────────────────────────── */
+        /* ── Teal signal scale ───────────────────────── */
         green: {
-          DEFAULT: '#3E4A89',
-          light:   '#9BA6D3',
-          dark:    '#2A3568',
-          surface: '#EFF6FF',
-          pale:    '#F2F0EC',
+          DEFAULT: '#10D9A0',
+          light:   '#10D9A0',
+          dark:    '#0BAB7D',
+          surface: '#0A2018',
+          pale:    '#04060E',
         },
 
         /* ── Muted ───────────────────────────────────── */
@@ -72,15 +72,22 @@ module.exports = {
 
         /* ── Card ────────────────────────────────────── */
         card: {
-          DEFAULT:    '#ffffff',
-          foreground: '#1E2636',
-          border:     '#E0DDE8',
+          DEFAULT:    '#0A1020',
+          foreground: '#EEF0F8',
+          border:     '#162030',
         },
 
         /* ── Structural ──────────────────────────────── */
-        border: '#E0DDE8',
-        input:  '#E0DDE8',
-        ring:   '#3E4A89',
+        border: '#162030',
+        input:  '#162030',
+        ring:   '#6366F1',
+
+        /* ── Amber signal ────────────────────────────── */
+        amber: {
+          DEFAULT:    '#F0A028',
+          dim:        'rgba(240,160,40,0.12)',
+          glow:       'rgba(240,160,40,0.20)',
+        },
       },
 
       borderRadius: {

@@ -599,28 +599,28 @@ export default function AdminPage() {
       label: 'People in app',
       value: members.length,
       icon: Users,
-      color: 'from-primary to-green-light',
+      color: 'from-primary to-primary-light',
       bg: 'bg-primary/10',
     },
     {
       label: 'Online now',
       value: onlineMembers,
       icon: Activity,
-      color: 'from-[#10b981] to-[#059669]',
-      bg: 'bg-[#ecfdf5]',
+      color: 'from-green-light to-green-dark',
+      bg: 'bg-green-surface',
     },
     {
       label: 'Access requests',
       value: pendingRequests.length,
       icon: Mail,
-      color: 'from-[#f59e0b] to-[#d97706]',
-      bg: 'bg-[#fffbeb]',
+      color: 'from-primary to-primary-dark',
+      bg: 'bg-primary/10',
     },
     {
       label: 'Project channels',
       value: extraChannels.length,
       icon: Hash,
-      color: 'from-ink to-ink-light',
+      color: 'from-[#6366F1] to-[#4F46E5]',
       bg: 'bg-secondary',
     },
   ];
@@ -642,14 +642,14 @@ export default function AdminPage() {
           <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-6 lg:px-8">
             <div className="flex items-center gap-4">
               <Link href="/" className="flex items-center gap-2.5 no-underline">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-green-light flex items-center justify-center shadow-md shadow-primary/20">
-                  <Sparkles size={14} className="text-white" />
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center shadow-md" style={{ background: '#F0A028', boxShadow: '0 2px 10px rgba(240,160,40,0.25)' }}>
+                  <span style={{ fontSize: 9, fontWeight: 900, color: '#04060E' }}>EX</span>
                 </div>
                 <span className="font-display font-bold text-base tracking-[-0.02em] text-foreground">
                   EduTechEx<span className="text-primary">OS</span>
                 </span>
               </Link>
-              <span className="hidden rounded-lg bg-primary/10 border border-primary/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-primary sm:inline-flex">
+              <span className="hidden rounded-lg bg-primary/10 border border-primary/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-primary sm:inline-flex" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 Admin control
               </span>
             </div>
@@ -669,7 +669,7 @@ export default function AdminPage() {
                   <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#f59e0b] ring-2 ring-surface" />
                 )}
               </button>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-green-light text-xs font-bold text-white shadow-md">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold shadow-md" style={{ background: '#F0A028', color: '#04060E' }}>
                 {(adminUser?.name ?? 'Admin')
                   .split(' ')
                   .map((p) => p[0])
@@ -739,17 +739,17 @@ export default function AdminPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
                   activeTab === tab.id
-                    ? 'bg-primary text-white shadow-md shadow-primary/20'
+                    ? 'bg-primary shadow-md shadow-primary/20'
                     : 'text-ink-light hover:bg-surface-muted hover:text-foreground'
                 }`}
+                style={activeTab === tab.id ? { color: '#04060E' } : {}}
               >
                 <tab.Icon size={15} />
                 {tab.label}
                 {tab.badge > 0 && (
                   <span
-                    className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${
-                      activeTab === tab.id ? 'bg-white/25 text-white' : 'bg-primary text-white'
-                    }`}
+                    className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold`}
+                    style={activeTab === tab.id ? { background: 'rgba(4,6,14,0.25)', color: '#04060E' } : { background: '#F0A028', color: '#04060E' }}
                   >
                     {tab.badge}
                   </span>
@@ -772,7 +772,7 @@ export default function AdminPage() {
                     Grant one controlled channel per person.
                   </p>
                 </div>
-                <label className="flex h-10 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 md:w-80 focus-within:border-primary focus-within:shadow-[0_0_0_3px_rgba(62,74,137,0.12)] transition-all">
+                <label className="flex h-10 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 md:w-80 focus-within:border-primary focus-within:shadow-[0_0_0_3px_rgba(240,160,40,0.12)] transition-all">
                   <Search size={15} className="text-ink-light" />
                   <input
                     value={search}
@@ -889,7 +889,7 @@ export default function AdminPage() {
                                       </span>
                                     ))
                                   ) : (
-                                    <span className="rounded-lg bg-[#fffbeb] border border-[#f59e0b]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#d97706]">
+                                    <span className="rounded-lg bg-primary/10 border border-primary/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-primary">
                                       Needs assignment
                                     </span>
                                   )}
@@ -1006,7 +1006,7 @@ export default function AdminPage() {
                                   }
                                 }
                               }}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-light transition-all hover:bg-red-50 hover:text-[#f43f5e]"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-light transition-all hover:bg-[rgba(244,63,94,0.10)] hover:text-[#f43f5e]"
                               title="Remove user"
                             >
                               <Trash2 size={15} />
@@ -1032,12 +1032,12 @@ export default function AdminPage() {
                   {pendingRequests.map((request) => (
                     <div
                       key={request.id}
-                      className="card-premium rounded-2xl border border-[#f59e0b]/20 bg-[#fffbeb] p-5"
+                      className="card-premium rounded-2xl border border-primary/20 p-5"
                     >
                       <div className="mb-4 flex items-start justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f59e0b]/20">
-                            <span className="text-sm font-black text-[#d97706]">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15">
+                            <span className="text-sm font-black text-primary">
                               {request.name
                                 .split(' ')
                                 .map((p) => p[0])
@@ -1051,12 +1051,12 @@ export default function AdminPage() {
                               {request.name}
                             </p>
                             <p className="truncate text-xs text-ink-light">{request.email}</p>
-                            <p className="mt-1 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-[#d97706]">
+                            <p className="mt-1 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
                               {request.role} request
                             </p>
                           </div>
                         </div>
-                        <span className="shrink-0 rounded-lg border border-[#f59e0b]/20 bg-surface px-2.5 py-1 text-[10px] font-bold uppercase text-[#d97706]">
+                        <span className="shrink-0 rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase text-primary">
                           Pending
                         </span>
                       </div>
@@ -1065,7 +1065,7 @@ export default function AdminPage() {
                         onChange={(e) =>
                           setRequestChannelById((v) => ({ ...v, [request.id]: e.target.value }))
                         }
-                        className="mb-3 h-10 w-full rounded-xl border border-[#f59e0b]/20 bg-surface px-3 text-xs font-semibold text-foreground outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(62,74,137,0.12)]"
+                        className="mb-3 h-10 w-full rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(240,160,40,0.12)]"
                       >
                         <option value="">General only</option>
                         {extraChannels.map((c) => (
@@ -1078,7 +1078,8 @@ export default function AdminPage() {
                         <button
                           type="button"
                           onClick={() => approveRequest(request)}
-                          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-xs font-bold uppercase tracking-[0.06em] text-white hover:bg-primary-dark transition-all"
+                          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-xs font-bold uppercase tracking-[0.06em] hover:bg-primary-dark transition-all"
+                          style={{ color: '#04060E' }}
                         >
                           <CheckCircle2 size={14} />
                           Approve
@@ -1086,7 +1087,7 @@ export default function AdminPage() {
                         <button
                           type="button"
                           onClick={() => rejectRequest(request.id)}
-                          className="h-9 rounded-xl border border-[#f59e0b]/20 bg-surface px-3 text-xs font-bold uppercase tracking-[0.06em] text-[#d97706] hover:bg-[#fff7ed] transition-all"
+                          className="h-9 rounded-xl border border-border bg-surface px-3 text-xs font-bold uppercase tracking-[0.06em] text-ink-light hover:border-primary/30 hover:text-primary transition-all"
                         >
                           Reject
                         </button>
@@ -1203,7 +1204,7 @@ export default function AdminPage() {
                                 key={`${channel.id}-${member.id}`}
                                 type="button"
                                 onClick={() => handleChannelToggle(member.id, channel.id, false)}
-                                className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.06em] text-ink transition-all hover:border-red-200 hover:bg-red-50 hover:text-[#f43f5e]"
+                                className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.06em] text-ink transition-all hover:border-[rgba(244,63,94,0.30)] hover:bg-[rgba(244,63,94,0.08)] hover:text-[#f43f5e]"
                                 title={`Remove ${member.name} from #${channel.name}`}
                               >
                                 <span
@@ -1229,7 +1230,7 @@ export default function AdminPage() {
                             if (!e.target.value) return;
                             handleChannelToggle(e.target.value, channel.id, true);
                           }}
-                          className="h-10 w-full rounded-xl border border-border bg-surface-muted px-3 text-xs font-semibold text-ink outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(62,74,137,0.12)]"
+                          className="h-10 w-full rounded-xl border border-border bg-surface-muted px-3 text-xs font-semibold text-ink outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(240,160,40,0.12)]"
                         >
                           <option value="">+ Grant access to a user</option>
                           {members
@@ -1279,7 +1280,7 @@ export default function AdminPage() {
                       onChange={(e) => setBroadcastSubject(e.target.value)}
                       placeholder="e.g. Team update — June 2026"
                       maxLength={150}
-                      className="h-11 w-full rounded-xl border border-border bg-surface px-3.5 text-sm font-medium text-foreground placeholder-slate-300 outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(62,74,137,0.12)]"
+                      className="h-11 w-full rounded-xl border border-border bg-surface px-3.5 text-sm font-medium text-foreground placeholder-slate-300 outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(240,160,40,0.12)]"
                     />
                   </div>
 
@@ -1293,7 +1294,7 @@ export default function AdminPage() {
                       placeholder="Write your message here. Plain text — line breaks are preserved."
                       rows={7}
                       maxLength={2000}
-                      className="w-full resize-none rounded-xl border border-border bg-surface px-3.5 py-3 text-sm font-medium text-foreground placeholder-slate-300 outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(62,74,137,0.12)]"
+                      className="w-full resize-none rounded-xl border border-border bg-surface px-3.5 py-3 text-sm font-medium text-foreground placeholder-slate-300 outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(240,160,40,0.12)]"
                     />
                     <p className="mt-1 text-right text-[10px] text-ink-light">
                       {broadcastMessage.length}/2000
@@ -1329,7 +1330,7 @@ export default function AdminPage() {
                   </div>
 
                   {broadcastLastSent && (
-                    <div className="rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-xs font-medium text-green-700">
+                    <div className="rounded-xl border border-green-light/20 bg-green-surface px-4 py-3 text-xs font-medium text-green-light">
                       ✓ Last sent at {broadcastLastSent.at} · &ldquo;{broadcastLastSent.subject}
                       &rdquo; → {broadcastLastSent.count} members
                     </div>
@@ -1341,7 +1342,8 @@ export default function AdminPage() {
                     disabled={
                       broadcastSending || !broadcastSubject.trim() || !broadcastMessage.trim()
                     }
-                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white transition-all hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold transition-all hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{ color: '#04060E' }}
                   >
                     {broadcastSending ? (
                       <>
@@ -1474,9 +1476,9 @@ export default function AdminPage() {
                               <span
                                 className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
                                   member?.status === 'online'
-                                    ? 'bg-emerald-50 text-emerald-600'
+                                    ? 'bg-green-surface text-green-light'
                                     : member?.status === 'away'
-                                      ? 'bg-amber-50 text-amber-600'
+                                      ? 'bg-primary/10 text-primary'
                                       : 'bg-secondary text-ink-light'
                                 }`}
                               >
@@ -1546,23 +1548,23 @@ export default function AdminPage() {
           {activeTab === 'attendance' && (
             <div>
               {/* Dark hero banner */}
-              <div className="mb-6 overflow-hidden rounded-2xl bg-slate-950 px-7 py-6">
+              <div className="mb-6 overflow-hidden rounded-2xl px-7 py-6" style={{ background: '#07090F', border: '1px solid rgba(240,160,40,0.12)' }}>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-indigo-400">
+                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
                       Admin · Real-time tracking
                     </p>
-                    <h2 className="mt-1 text-2xl font-black tracking-tight text-white">
+                    <h2 className="mt-1 text-2xl font-black tracking-tight text-foreground" style={{ fontFamily: "'Cabinet Grotesk', 'Inter', sans-serif" }}>
                       Attendance Command Center
                     </h2>
-                    <p className="mt-1 text-sm font-medium text-slate-400">
+                    <p className="mt-1 text-sm font-medium text-ink-light">
                       Review daily login patterns, manage check-ins, and track streaks per team
                       member.
                     </p>
                   </div>
                   {/* Today's quick presence dots */}
-                  <div className="shrink-0 rounded-2xl border border-white/10 bg-white/5 px-5 py-4">
-                    <p className="mb-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                  <div className="shrink-0 rounded-2xl px-5 py-4" style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+                    <p className="mb-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-ink-light">
                       Present today
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -1585,8 +1587,8 @@ export default function AdminPage() {
                         </div>
                       ))}
                     </div>
-                    <p className="mt-2.5 text-xs font-semibold text-slate-500">
-                      <span className="text-emerald-400 font-bold">
+                    <p className="mt-2.5 text-xs font-semibold text-ink-light">
+                      <span className="text-green-light font-bold">
                         {members.filter((m) => m.status === 'online').length}
                       </span>{' '}
                       / {members.length} online now
