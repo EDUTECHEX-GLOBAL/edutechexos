@@ -1793,8 +1793,8 @@ export default function EduTechExOSDashboard() {
             whileTap={{ scale: 0.94 }}
             className="rail-logo-wrap"
             style={{
-              background: 'linear-gradient(135deg,#3E4A89 0%,#4f52a0 100%)',
-              boxShadow: '0 2px 8px rgba(98,100,167,0.40)',
+              background: 'linear-gradient(135deg,#4A5ADF 0%,#3547C8 100%)',
+              boxShadow: '0 2px 10px rgba(74,90,223,0.40)',
             }}
           >
             <AppLogo size={18} />
@@ -1869,41 +1869,24 @@ export default function EduTechExOSDashboard() {
             {settings.avatarEmoji || (currentUser?.initials ?? 'G')}
           </motion.button>
 
-          {/* Notifications circle button */}
-          <div style={{ marginTop: '8px' }}>
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setNotificationsOpen(true)}
-              className="relative flex items-center justify-center"
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                background:
-                  unreadNotifications > 0
-                    ? 'linear-gradient(135deg,#ef4444,#f97316)'
-                    : 'linear-gradient(135deg,#64748b,#94a3b8)',
-                boxShadow:
-                  unreadNotifications > 0
-                    ? '0 0 0 3px rgba(239,68,68,0.30), 0 6px 20px rgba(239,68,68,0.45)'
-                    : '0 4px 14px rgba(0,0,0,0.30)',
-                color: '#fff',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <Bell size={17} strokeWidth={2} />
-              {unreadNotifications > 0 && (
-                <span
-                  className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[9px] font-black text-white"
-                  style={{ background: '#fff', color: '#ef4444', border: '1.5px solid #ef4444' }}
-                >
-                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
-                </span>
-              )}
-            </motion.button>
-          </div>
+          {/* Notifications rail button */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setNotificationsOpen(true)}
+            className="rail-btn relative"
+            style={unreadNotifications > 0 ? { color: '#ef4444' } : {}}
+          >
+            <Bell size={18} strokeWidth={2} />
+            <span className="rail-label">Alerts</span>
+            {unreadNotifications > 0 && (
+              <span
+                className="badge-pulse absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[8px] font-black text-white"
+                style={{ background: '#ef4444' }}
+              >
+                {unreadNotifications > 9 ? '9+' : unreadNotifications}
+              </span>
+            )}
+          </motion.button>
         </div>
       </nav>
 
@@ -1911,8 +1894,13 @@ export default function EduTechExOSDashboard() {
       <aside className="workspace-sidebar">
         {/* ── Workspace header + search ─────────────────── */}
         <div className="sidebar-search-bar">
-          <div className="mb-2 flex items-center justify-between px-1">
-            <span className="text-[13px] font-semibold text-white truncate">EduTechExOS</span>
+          <div className="mb-2.5 flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ background: 'linear-gradient(135deg,#4A5ADF,#3547C8)' }}>
+                <span className="text-[10px] font-black text-white">E</span>
+              </div>
+              <span className="text-[13.5px] font-bold text-white tracking-[-0.01em] truncate">EduTechExOS</span>
+            </div>
             {unreadNotifications > 0 && (
               <motion.button
                 whileTap={{ scale: 0.88 }}
@@ -3459,35 +3447,20 @@ export default function EduTechExOSDashboard() {
           <span className="rail-label">Saved</span>
         </motion.button>
 
-        {/* Bottom: Copilot circle button */}
-        <div style={{ marginTop: 'auto', paddingBottom: '10px' }}>
+        {/* Bottom: Copilot button */}
+        <div style={{ marginTop: 'auto' }}>
           <motion.button
-            whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => {
               const next = rightPanel === 'ai' ? 'closed' : 'ai';
               if (next === 'ai') trackEvent('ai_copilot_opened', { channel: channel?.name });
               setRightPanel(next);
             }}
-            className="relative flex items-center justify-center"
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: '50%',
-              background:
-                rightPanel === 'ai'
-                  ? 'linear-gradient(135deg,#3E4A89,#7c3aed)'
-                  : 'linear-gradient(135deg,#3E4A89,#9BA6D3)',
-              boxShadow:
-                rightPanel === 'ai'
-                  ? '0 0 0 3px rgba(62,74,137,0.35), 0 6px 20px rgba(62,74,137,0.5)'
-                  : '0 4px 14px rgba(62,74,137,0.40)',
-              color: '#fff',
-              border: 'none',
-              cursor: 'pointer',
-            }}
+            className={`rail-btn${rightPanel === 'ai' ? ' active' : ''}`}
+            style={rightPanel === 'ai' ? { color: '#7c3aed', background: 'rgba(124,58,237,0.12)' } : {}}
           >
             <Bot size={18} strokeWidth={2} />
+            <span className="rail-label">Copilot</span>
           </motion.button>
         </div>
       </nav>

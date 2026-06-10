@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
@@ -92,6 +92,9 @@ export default function AdminPage() {
     count: number;
     at: string;
   } | null>(null);
+  const [activeTab, setActiveTab] = useState<
+    'people' | 'requests' | 'channels' | 'broadcast' | 'activity'
+  >('people');
 
   useEffect(() => {
     const authData = localStorage.getItem('edutechex_token');
@@ -606,24 +609,33 @@ export default function AdminPage() {
       bg: 'bg-[#ecfdf5]',
     },
     {
+      label: 'Access requests',
+      value: pendingRequests.length,
+      icon: Mail,
+      color: 'from-[#f59e0b] to-[#d97706]',
+      bg: 'bg-[#fffbeb]',
+    },
+    {
       label: 'Project channels',
       value: extraChannels.length,
       icon: Hash,
       color: 'from-ink to-ink-light',
       bg: 'bg-secondary',
     },
-    {
-      label: 'Extra grants',
-      value: `${assignedExtraUsers}/${members.length}`,
-      icon: ShieldCheck,
-      color: 'from-[#f59e0b] to-[#d97706]',
-      bg: 'bg-[#fffbeb]',
-    },
+  ];
+
+  const TABS = [
+    { id: 'people' as const, Icon: Users, label: 'People', badge: 0 },
+    { id: 'requests' as const, Icon: UserPlus, label: 'Requests', badge: pendingRequests.length },
+    { id: 'channels' as const, Icon: Hash, label: 'Channels', badge: 0 },
+    { id: 'broadcast' as const, Icon: Send, label: 'Broadcast', badge: 0 },
+    { id: 'activity' as const, Icon: Activity, label: 'Activity', badge: 0 },
   ];
 
   return (
     <AdminGuard>
       <div className="min-h-screen bg-background">
+        {/* ── Header ──────────────────────────────────────────────────────── */}
         <header className="sticky top-0 z-30 glass-nav">
           <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-6 lg:px-8">
             <div className="flex items-center gap-4">
@@ -651,7 +663,9 @@ export default function AdminPage() {
                 title="Admin alerts"
               >
                 <Bell size={17} />
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary ring-2 ring-surface" />
+                {pendingRequests.length > 0 && (
+                  <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#f59e0b] ring-2 ring-surface" />
+                )}
               </button>
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-green-light text-xs font-bold text-white shadow-md">
                 {(adminUser?.name ?? 'Admin')
@@ -666,17 +680,18 @@ export default function AdminPage() {
         </header>
 
         <main className="mx-auto max-w-[1500px] px-6 py-10 lg:px-8">
+          {/* ── Page hero ───────────────────────────────────────────────── */}
           <section className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-primary">
                 Admin-only dashboard
               </p>
               <h1 className="font-display font-bold text-3xl md:text-4xl tracking-[-0.03em] text-foreground">
-                People and channel access
+                Workspace Control Center
               </h1>
               <p className="mt-2 max-w-3xl text-sm text-ink-light leading-relaxed">
-                Admin has full application access. Every user gets #general automatically, and admin
-                can grant exactly one extra project channel.
+                Manage people, channel access, broadcast emails, and monitor team activity — all in
+                one place.
               </p>
             </div>
             <button
@@ -689,8 +704,9 @@ export default function AdminPage() {
             </button>
           </section>
 
-          <section className="mb-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {statCards.map(({ label, value, icon: Icon, color, bg }) => (
+          {/* ── Stat cards ──────────────────────────────────────────────── */}
+          <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {statCards.map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="card-premium p-5">
                 <div className="mb-4 flex items-center justify-between">
                   <div
@@ -712,14 +728,47 @@ export default function AdminPage() {
             ))}
           </section>
 
-          <section className="grid gap-6 xl:grid-cols-[1fr_420px]">
+          {/* ── Tab navigation ──────────────────────────────────────────── */}
+          <div className="mb-6 flex gap-1 overflow-x-auto rounded-2xl border border-border bg-surface p-1.5">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-primary text-white shadow-md shadow-primary/20'
+                    : 'text-ink-light hover:bg-surface-muted hover:text-foreground'
+                }`}
+              >
+                <tab.Icon size={15} />
+                {tab.label}
+                {tab.badge > 0 && (
+                  <span
+                    className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${
+                      activeTab === tab.id ? 'bg-white/25 text-white' : 'bg-primary text-white'
+                    }`}
+                  >
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* ════════════════════════════════════════════════════════════
+              TAB: PEOPLE
+          ════════════════════════════════════════════════════════════ */}
+          {activeTab === 'people' && (
             <div className="card-premium overflow-hidden">
               <div className="flex flex-col gap-4 border-b border-border p-5 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="font-display font-bold text-lg tracking-[-0.02em] text-foreground">
                     Users
                   </h2>
-                  <p className="text-sm text-ink-light">Grant one controlled channel per person.</p>
+                  <p className="text-sm text-ink-light">
+                    Grant one controlled channel per person.
+                  </p>
                 </div>
                 <label className="flex h-10 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 md:w-80 focus-within:border-primary focus-within:shadow-[0_0_0_3px_rgba(62,74,137,0.12)] transition-all">
                   <Search size={15} className="text-ink-light" />
@@ -892,9 +941,6 @@ export default function AdminPage() {
                                   )
                                 )
                                   return;
-                                // Only update local state AFTER the backend confirms deletion.
-                                // If we optimistically remove first and the DELETE fails, the user
-                                // reappears on the next page refresh (still in the DB).
                                 const mongoId = member.id.startsWith('member-')
                                   ? member.id.slice(7)
                                   : null;
@@ -906,14 +952,13 @@ export default function AdminPage() {
                                       `${API_BASE}/api/access-requests/${mongoId}`,
                                       {
                                         method: 'DELETE',
-                                        headers: token ? { Authorization: `Bearer ${token}` } : {},
+                                        headers: token
+                                          ? { Authorization: `Bearer ${token}` }
+                                          : {},
                                       }
                                     );
                                     const body = await res.json().catch(() => ({}));
                                     if (res.ok && body.success) {
-                                      // Backend confirmed deletion — update local state then
-                                      // resync from DB so any in-flight loadLocalMembers calls
-                                      // that raced with the delete get corrected immediately.
                                       removeMember(member.id);
                                       toast.success(
                                         `${member.name} was removed from the workspace.`
@@ -928,7 +973,6 @@ export default function AdminPage() {
                                     toast.error('Could not reach the server. Please try again.');
                                   }
                                 } else {
-                                  // Hardcoded / system member — call backend so removal persists across refreshes
                                   try {
                                     const authData = localStorage.getItem('edutechex_token');
                                     const token = authData ? JSON.parse(authData).token : null;
@@ -938,15 +982,22 @@ export default function AdminPage() {
                                         'Content-Type': 'application/json',
                                         ...(token ? { Authorization: `Bearer ${token}` } : {}),
                                       },
-                                      body: JSON.stringify({ email: member.email, memberId: member.id }),
+                                      body: JSON.stringify({
+                                        email: member.email,
+                                        memberId: member.id,
+                                      }),
                                     });
                                     const body = await res.json().catch(() => ({}));
                                     if (res.ok && body.success) {
                                       removeMember(member.id);
-                                      toast.success(`${member.name} was removed from the workspace.`);
+                                      toast.success(
+                                        `${member.name} was removed from the workspace.`
+                                      );
                                       loadLocalMembers?.();
                                     } else {
-                                      toast.error(`Could not remove ${member.name}: ${body.error ?? res.status}`);
+                                      toast.error(
+                                        `Could not remove ${member.name}: ${body.error ?? res.status}`
+                                      );
                                     }
                                   } catch {
                                     toast.error('Could not reach the server. Please try again.');
@@ -966,30 +1017,33 @@ export default function AdminPage() {
                 </table>
               </div>
             </div>
+          )}
 
-            <aside className="space-y-6">
-              <div className="card-premium p-5">
-                <div className="mb-5 flex items-start justify-between">
-                  <div>
-                    <h2 className="font-display font-bold text-lg tracking-[-0.02em] text-foreground">
-                      New account requests
-                    </h2>
-                    <p className="text-sm text-ink-light">
-                      Approve users separately, then grant a channel.
-                    </p>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Mail size={17} className="text-primary" />
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {pendingRequests.length ? (
-                    pendingRequests.map((request) => (
-                      <div
-                        key={request.id}
-                        className="rounded-xl border border-[#f59e0b]/15 bg-[#fffbeb] p-4"
-                      >
-                        <div className="mb-3 flex items-start justify-between gap-3">
+          {/* ════════════════════════════════════════════════════════════
+              TAB: REQUESTS
+          ════════════════════════════════════════════════════════════ */}
+          {activeTab === 'requests' && (
+            <div className="space-y-6">
+              {/* Pending requests grid */}
+              {pendingRequests.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {pendingRequests.map((request) => (
+                    <div
+                      key={request.id}
+                      className="card-premium rounded-2xl border border-[#f59e0b]/20 bg-[#fffbeb] p-5"
+                    >
+                      <div className="mb-4 flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f59e0b]/20">
+                            <span className="text-sm font-black text-[#d97706]">
+                              {request.name
+                                .split(' ')
+                                .map((p) => p[0])
+                                .join('')
+                                .slice(0, 2)
+                                .toUpperCase()}
+                            </span>
+                          </div>
                           <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-foreground">
                               {request.name}
@@ -999,124 +1053,164 @@ export default function AdminPage() {
                               {request.role} request
                             </p>
                           </div>
-                          <span className="rounded-lg bg-surface border border-[#f59e0b]/20 px-2.5 py-1 text-[10px] font-bold uppercase text-[#d97706]">
-                            Pending
-                          </span>
                         </div>
-                        <select
-                          value={requestChannelById[request.id] ?? ''}
-                          onChange={(e) =>
-                            setRequestChannelById((v) => ({ ...v, [request.id]: e.target.value }))
-                          }
-                          className="mb-3 h-10 w-full rounded-xl border border-[#f59e0b]/15 bg-surface px-3 text-xs font-semibold text-foreground outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(62,74,137,0.12)]"
-                        >
-                          <option value="">General only</option>
-                          {extraChannels.map((c) => (
-                            <option key={`req-${request.id}-${c.id}`} value={c.id}>
-                              #{c.name}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => approveRequest(request)}
-                            className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-xs font-bold uppercase tracking-[0.06em] text-white hover:bg-primary-dark transition-all"
-                          >
-                            <CheckCircle2 size={14} />
-                            Approve
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => rejectRequest(request.id)}
-                            className="h-9 rounded-xl border border-[#f59e0b]/15 bg-surface px-3 text-xs font-bold uppercase tracking-[0.06em] text-[#d97706] hover:bg-[#fffbeb] transition-all"
-                          >
-                            Remove
-                          </button>
-                        </div>
+                        <span className="shrink-0 rounded-lg border border-[#f59e0b]/20 bg-surface px-2.5 py-1 text-[10px] font-bold uppercase text-[#d97706]">
+                          Pending
+                        </span>
                       </div>
-                    ))
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-border bg-surface-muted p-6 text-center text-sm font-medium text-ink-light">
-                      No new account requests.
-                    </div>
-                  )}
-                  {approvedRequests.length > 0 && (
-                    <div className="rounded-xl border border-border bg-surface-muted p-4">
-                      <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-light">
-                        Approved users
-                      </p>
-                      <div className="space-y-2">
-                        {approvedRequests.slice(0, 4).map((request) => (
-                          <div
-                            key={`approved-${request.id}`}
-                            className="flex items-center justify-between gap-3 text-xs font-medium text-ink"
-                          >
-                            <span className="truncate">{request.email}</span>
-                            <span className="text-green-light">Ready to sign in</span>
-                          </div>
+                      <select
+                        value={requestChannelById[request.id] ?? ''}
+                        onChange={(e) =>
+                          setRequestChannelById((v) => ({ ...v, [request.id]: e.target.value }))
+                        }
+                        className="mb-3 h-10 w-full rounded-xl border border-[#f59e0b]/20 bg-surface px-3 text-xs font-semibold text-foreground outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(62,74,137,0.12)]"
+                      >
+                        <option value="">General only</option>
+                        {extraChannels.map((c) => (
+                          <option key={`req-${request.id}-${c.id}`} value={c.id}>
+                            #{c.name}
+                          </option>
                         ))}
+                      </select>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => approveRequest(request)}
+                          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-xs font-bold uppercase tracking-[0.06em] text-white hover:bg-primary-dark transition-all"
+                        >
+                          <CheckCircle2 size={14} />
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => rejectRequest(request.id)}
+                          className="h-9 rounded-xl border border-[#f59e0b]/20 bg-surface px-3 text-xs font-bold uppercase tracking-[0.06em] text-[#d97706] hover:bg-[#fff7ed] transition-all"
+                        >
+                          Reject
+                        </button>
                       </div>
                     </div>
-                  )}
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-border bg-surface-muted p-14 text-center">
+                  <UserPlus size={28} className="mx-auto mb-3 text-ink-light opacity-30" />
+                  <p className="text-sm font-semibold text-ink-light">No pending access requests</p>
+                  <p className="mt-1 text-xs text-ink-light opacity-60">
+                    New sign-up requests will appear here for review.
+                  </p>
+                </div>
+              )}
+
+              {/* Approved users */}
+              {approvedRequests.length > 0 && (
+                <div className="card-premium p-5">
+                  <h3 className="mb-4 flex items-center gap-2 font-display font-bold text-base tracking-[-0.02em] text-foreground">
+                    <CheckCircle2 size={16} className="text-green-light" />
+                    Approved users
+                    <span className="ml-auto rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary">
+                      {approvedRequests.length}
+                    </span>
+                  </h3>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {approvedRequests.map((request) => (
+                      <div
+                        key={`approved-${request.id}`}
+                        className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3"
+                      >
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-light/10">
+                          <CheckCircle2 size={14} className="text-green-light" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-foreground">
+                            {request.name}
+                          </p>
+                          <p className="truncate text-xs text-ink-light">{request.email}</p>
+                        </div>
+                        <span className="ml-auto shrink-0 text-[10px] font-bold text-green-light">
+                          Active
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════
+              TAB: CHANNELS
+          ════════════════════════════════════════════════════════════ */}
+          {activeTab === 'channels' && (
+            <div className="space-y-4">
+              {/* General channel */}
+              <div className="card-premium p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
+                      <Hash size={16} className="text-ink-light" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">#general</p>
+                      <p className="text-xs text-ink-light">
+                        Default channel — every user is automatically added.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-bold text-ink-light">
+                    {getChannelMembers('general').length} members
+                  </span>
                 </div>
               </div>
 
-              <div className="card-premium p-5">
-                <div className="mb-5 flex items-start justify-between">
-                  <div>
-                    <h2 className="font-display font-bold text-lg tracking-[-0.02em] text-foreground">
-                      Channel control
-                    </h2>
-                    <p className="text-sm text-ink-light">Move a user into a project channel.</p>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
-                    <Settings size={17} className="text-ink-light" />
-                  </div>
+              {extraChannels.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-border bg-surface-muted p-14 text-center">
+                  <Hash size={28} className="mx-auto mb-3 text-ink-light opacity-30" />
+                  <p className="text-sm font-semibold text-ink-light">No project channels yet.</p>
                 </div>
-                <div className="space-y-4">
-                  <div className="rounded-xl border border-border bg-surface-muted p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">#general</p>
-                        <p className="text-xs text-ink-light">Default channel for every user.</p>
-                      </div>
-                      <span className="text-xs font-semibold text-ink-light">
-                        {getChannelMembers('general').length}
-                      </span>
-                    </div>
-                  </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {extraChannels.map((channel) => {
                     const channelMembers = getChannelMembers(channel.id);
                     return (
-                      <div
-                        key={channel.id}
-                        className="rounded-xl border border-border bg-surface p-4"
-                      >
-                        <div className="mb-3 flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-foreground">
-                              #{channel.name}
-                            </p>
-                            <p className="mt-1 line-clamp-2 text-xs leading-5 text-ink-light">
-                              {channel.description}
-                            </p>
+                      <div key={channel.id} className="card-premium p-5">
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                              <Hash size={16} className="text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-bold text-foreground">
+                                #{channel.name}
+                              </p>
+                              <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-ink-light">
+                                {channel.description}
+                              </p>
+                            </div>
                           </div>
-                          <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase text-primary">
+                          <span className="shrink-0 rounded-lg bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase text-primary">
                             {channelMembers.length} users
                           </span>
                         </div>
-                        <div className="mb-3 flex flex-wrap gap-1.5">
+
+                        {/* Member chips */}
+                        <div className="mb-3 flex min-h-[28px] flex-wrap gap-1.5">
                           {channelMembers.length ? (
                             channelMembers.map((member) => (
                               <button
                                 key={`${channel.id}-${member.id}`}
                                 type="button"
                                 onClick={() => handleChannelToggle(member.id, channel.id, false)}
-                                className="rounded-lg border border-border bg-surface px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.06em] text-ink hover:border-red-200 hover:bg-red-50 hover:text-[#f43f5e] transition-all"
+                                className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.06em] text-ink transition-all hover:border-red-200 hover:bg-red-50 hover:text-[#f43f5e]"
                                 title={`Remove ${member.name} from #${channel.name}`}
                               >
-                                {member.initials}
+                                <span
+                                  className="flex h-4 w-4 items-center justify-center rounded-md text-[8px] font-black text-white"
+                                  style={{ backgroundColor: member.color }}
+                                >
+                                  {member.initials?.[0]}
+                                </span>
+                                {member.name.split(' ')[0]}
                               </button>
                             ))
                           ) : (
@@ -1125,6 +1219,8 @@ export default function AdminPage() {
                             </span>
                           )}
                         </div>
+
+                        {/* Grant access */}
                         <select
                           value=""
                           onChange={(e) => {
@@ -1133,7 +1229,7 @@ export default function AdminPage() {
                           }}
                           className="h-10 w-full rounded-xl border border-border bg-surface-muted px-3 text-xs font-semibold text-ink outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(62,74,137,0.12)]"
                         >
-                          <option value="">Grant this channel to user</option>
+                          <option value="">+ Grant access to a user</option>
                           {members
                             .filter((m) => m.role !== 'Admin')
                             .map((m) => (
@@ -1146,24 +1242,31 @@ export default function AdminPage() {
                     );
                   })}
                 </div>
-              </div>
-              {/* ── Broadcast Email ──────────────────────────────────────── */}
-              <div className="card-premium p-5">
-                <div className="mb-5 flex items-start justify-between">
+              )}
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════
+              TAB: BROADCAST
+          ════════════════════════════════════════════════════════════ */}
+          {activeTab === 'broadcast' && (
+            <div className="mx-auto max-w-2xl">
+              <div className="card-premium p-6">
+                <div className="mb-6 flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+                    <Send size={20} className="text-primary" />
+                  </div>
                   <div>
-                    <h2 className="font-display font-bold text-lg tracking-[-0.02em] text-foreground">
+                    <h2 className="font-display font-bold text-xl tracking-[-0.02em] text-foreground">
                       Broadcast Email
                     </h2>
-                    <p className="text-sm text-ink-light">
-                      Send one email to all {members.length} workspace members at once.
+                    <p className="mt-1 text-sm text-ink-light">
+                      Send one message to all {members.length} workspace members at once.
                     </p>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <Send size={16} className="text-primary" />
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div>
                     <label className="mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-light">
                       Subject
@@ -1174,7 +1277,7 @@ export default function AdminPage() {
                       onChange={(e) => setBroadcastSubject(e.target.value)}
                       placeholder="e.g. Team update — June 2026"
                       maxLength={150}
-                      className="h-10 w-full rounded-xl border border-border bg-surface px-3 text-sm font-medium text-foreground placeholder-slate-300 outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(62,74,137,0.12)]"
+                      className="h-11 w-full rounded-xl border border-border bg-surface px-3.5 text-sm font-medium text-foreground placeholder-slate-300 outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(62,74,137,0.12)]"
                     />
                   </div>
 
@@ -1186,17 +1289,45 @@ export default function AdminPage() {
                       value={broadcastMessage}
                       onChange={(e) => setBroadcastMessage(e.target.value)}
                       placeholder="Write your message here. Plain text — line breaks are preserved."
-                      rows={5}
+                      rows={7}
                       maxLength={2000}
-                      className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2.5 text-sm font-medium text-foreground placeholder-slate-300 outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(62,74,137,0.12)]"
+                      className="w-full resize-none rounded-xl border border-border bg-surface px-3.5 py-3 text-sm font-medium text-foreground placeholder-slate-300 outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(62,74,137,0.12)]"
                     />
                     <p className="mt-1 text-right text-[10px] text-ink-light">
                       {broadcastMessage.length}/2000
                     </p>
                   </div>
 
+                  {/* Recipients preview */}
+                  <div className="rounded-xl border border-border bg-surface-muted p-4">
+                    <p className="mb-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-light">
+                      Will be sent to {members.length} members
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {members.slice(0, 10).map((m) => (
+                        <span
+                          key={m.id}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-ink"
+                        >
+                          <span
+                            className="flex h-4 w-4 items-center justify-center rounded-md text-[8px] font-black text-white"
+                            style={{ backgroundColor: m.color }}
+                          >
+                            {m.initials?.[0]}
+                          </span>
+                          {m.name.split(' ')[0]}
+                        </span>
+                      ))}
+                      {members.length > 10 && (
+                        <span className="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-ink-light">
+                          +{members.length - 10} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
                   {broadcastLastSent && (
-                    <div className="rounded-xl border border-green-100 bg-green-50 px-3 py-2.5 text-xs font-medium text-green-700">
+                    <div className="rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-xs font-medium text-green-700">
                       ✓ Last sent at {broadcastLastSent.at} · &ldquo;{broadcastLastSent.subject}
                       &rdquo; → {broadcastLastSent.count} members
                     </div>
@@ -1208,198 +1339,204 @@ export default function AdminPage() {
                     disabled={
                       broadcastSending || !broadcastSubject.trim() || !broadcastMessage.trim()
                     }
-                    className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white transition-all hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white transition-all hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {broadcastSending ? (
                       <>
-                        <RefreshCw size={14} className="animate-spin" /> Sending…
+                        <RefreshCw size={15} className="animate-spin" /> Sending…
                       </>
                     ) : (
                       <>
-                        <Send size={14} /> Send to All {members.length} Members
+                        <Send size={15} /> Send to All {members.length} Members
                       </>
                     )}
                   </button>
                 </div>
               </div>
-            </aside>
-          </section>
-
-          <section className="mt-10">
-            <LoginTrackerCalendar />
-          </section>
-
-          {/* ── Activity Monitoring Dashboard ──────────────────────────────── */}
-          <section className="mt-10">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <p className="mb-1 font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-primary">
-                  Last 7 days · With user permission
-                </p>
-                <h2 className="font-display font-bold text-2xl tracking-[-0.02em] text-foreground flex items-center gap-2">
-                  <Eye size={20} className="text-primary" />
-                  Activity Monitoring
-                </h2>
-                <p className="mt-1 text-sm text-ink-light">
-                  In-app session time, messages sent, and engagement per team member. Users can see
-                  exactly what is tracked in Settings → Privacy.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const authData = localStorage.getItem('edutechex_token');
-                  if (!authData) return;
-                  let token: string | null = null;
-                  try {
-                    token = JSON.parse(authData).token;
-                  } catch {
-                    return;
-                  }
-                  if (!token) return;
-                  setActivityLoading(true);
-                  fetch(`${API_BASE}/api/activity/stats`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                  })
-                    .then((r) => (r.ok ? r.json() : null))
-                    .then((data: { success: boolean; stats?: ActivityStat[] } | null) => {
-                      if (data?.success && Array.isArray(data.stats)) setActivityStats(data.stats);
-                    })
-                    .catch(() => {})
-                    .finally(() => setActivityLoading(false));
-                }}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-surface text-xs font-semibold text-ink hover:border-primary/20 hover:text-primary transition-all"
-              >
-                <RefreshCw size={13} className={activityLoading ? 'animate-spin' : ''} />
-                Refresh
-              </button>
             </div>
+          )}
 
-            {activityLoading ? (
-              <div className="flex items-center justify-center py-16 text-ink-light text-sm">
-                <RefreshCw size={16} className="animate-spin mr-2" /> Loading activity data…
-              </div>
-            ) : activityStats.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-surface-muted p-10 text-center text-sm text-ink-light">
-                No activity data yet. Data appears once users open the dashboard.
-              </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {activityStats
-                  .sort((a, b) => (b.totalMinutes ?? 0) - (a.totalMinutes ?? 0))
-                  .map((stat) => {
-                    const hrs = Math.floor((stat.totalMinutes ?? 0) / 60);
-                    const mins = (stat.totalMinutes ?? 0) % 60;
-                    const timeLabel = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
-                    const lastSeenLabel = stat.lastSeen
-                      ? new Date(stat.lastSeen).toLocaleString('en-IN', {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
+          {/* ════════════════════════════════════════════════════════════
+              TAB: ACTIVITY
+          ════════════════════════════════════════════════════════════ */}
+          {activeTab === 'activity' && (
+            <div className="space-y-8">
+              {/* Login tracker calendar */}
+              <LoginTrackerCalendar />
+
+              {/* Activity monitoring */}
+              <div>
+                <div className="mb-6 flex items-center justify-between">
+                  <div>
+                    <p className="mb-1 font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-primary">
+                      Last 7 days · With user permission
+                    </p>
+                    <h2 className="flex items-center gap-2 font-display font-bold text-2xl tracking-[-0.02em] text-foreground">
+                      <Eye size={20} className="text-primary" />
+                      Activity Monitoring
+                    </h2>
+                    <p className="mt-1 text-sm text-ink-light">
+                      In-app session time, messages sent, and engagement per team member. Users can
+                      see exactly what is tracked in Settings → Privacy.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const authData = localStorage.getItem('edutechex_token');
+                      if (!authData) return;
+                      let token: string | null = null;
+                      try {
+                        token = JSON.parse(authData).token;
+                      } catch {
+                        return;
+                      }
+                      if (!token) return;
+                      setActivityLoading(true);
+                      fetch(`${API_BASE}/api/activity/stats`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                      })
+                        .then((r) => (r.ok ? r.json() : null))
+                        .then((data: { success: boolean; stats?: ActivityStat[] } | null) => {
+                          if (data?.success && Array.isArray(data.stats))
+                            setActivityStats(data.stats);
                         })
-                      : 'Never';
-                    const member = members.find(
-                      (m) => m.email.toLowerCase() === stat.email.toLowerCase()
-                    );
-                    const initials =
-                      member?.initials ??
-                      (stat.name
-                        .split(' ')
-                        .map((p) => p[0])
-                        .join('')
-                        .toUpperCase()
-                        .slice(0, 2) ||
-                        '??');
-                    const color = member?.color ?? '#64748b';
-                    const engagementPct = Math.min(
-                      100,
-                      Math.round(((stat.totalMinutes ?? 0) / (7 * 8 * 60)) * 100)
-                    );
+                        .catch(() => {})
+                        .finally(() => setActivityLoading(false));
+                    }}
+                    className="flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-xs font-semibold text-ink hover:border-primary/20 hover:text-primary transition-all"
+                  >
+                    <RefreshCw size={13} className={activityLoading ? 'animate-spin' : ''} />
+                    Refresh
+                  </button>
+                </div>
 
-                    return (
-                      <div key={stat.email} className="card-premium p-5 flex flex-col gap-3">
-                        {/* Header */}
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-black text-white"
-                            style={{ backgroundColor: color }}
-                          >
-                            {initials}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate font-bold text-sm text-foreground">
-                              {stat.name || stat.email}
+                {activityLoading ? (
+                  <div className="flex items-center justify-center py-16 text-sm text-ink-light">
+                    <RefreshCw size={16} className="mr-2 animate-spin" /> Loading activity data…
+                  </div>
+                ) : activityStats.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border bg-surface-muted p-10 text-center text-sm text-ink-light">
+                    No activity data yet. Data appears once users open the dashboard.
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {activityStats
+                      .sort((a, b) => (b.totalMinutes ?? 0) - (a.totalMinutes ?? 0))
+                      .map((stat) => {
+                        const hrs = Math.floor((stat.totalMinutes ?? 0) / 60);
+                        const mins = (stat.totalMinutes ?? 0) % 60;
+                        const timeLabel = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+                        const lastSeenLabel = stat.lastSeen
+                          ? new Date(stat.lastSeen).toLocaleString('en-IN', {
+                              dateStyle: 'medium',
+                              timeStyle: 'short',
+                            })
+                          : 'Never';
+                        const member = members.find(
+                          (m) => m.email.toLowerCase() === stat.email.toLowerCase()
+                        );
+                        const initials =
+                          member?.initials ??
+                          (stat.name
+                            .split(' ')
+                            .map((p) => p[0])
+                            .join('')
+                            .toUpperCase()
+                            .slice(0, 2) ||
+                            '??');
+                        const color = member?.color ?? '#64748b';
+                        const engagementPct = Math.min(
+                          100,
+                          Math.round(((stat.totalMinutes ?? 0) / (7 * 8 * 60)) * 100)
+                        );
+
+                        return (
+                          <div key={stat.email} className="card-premium flex flex-col gap-3 p-5">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-black text-white"
+                                style={{ backgroundColor: color }}
+                              >
+                                {initials}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-bold text-foreground">
+                                  {stat.name || stat.email}
+                                </p>
+                                <p className="truncate text-[11px] text-ink-light">{stat.email}</p>
+                              </div>
+                              <span
+                                className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                  member?.status === 'online'
+                                    ? 'bg-emerald-50 text-emerald-600'
+                                    : member?.status === 'away'
+                                      ? 'bg-amber-50 text-amber-600'
+                                      : 'bg-secondary text-ink-light'
+                                }`}
+                              >
+                                {member?.status ?? 'offline'}
+                              </span>
+                            </div>
+
+                            <div>
+                              <div className="mb-1 flex justify-between text-[10px] font-semibold text-ink-light">
+                                <span>Engagement this week</span>
+                                <span>{engagementPct}%</span>
+                              </div>
+                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                                <div
+                                  className="h-full rounded-full bg-gradient-to-r from-primary to-green-light transition-all"
+                                  style={{ width: `${engagementPct}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="flex flex-col items-center rounded-xl bg-surface-muted px-1 py-2.5">
+                                <Clock size={12} className="mb-1 text-primary" />
+                                <span className="text-sm font-black text-foreground">
+                                  {timeLabel}
+                                </span>
+                                <span className="text-[9px] uppercase tracking-wide text-ink-light">
+                                  Session
+                                </span>
+                              </div>
+                              <div className="flex flex-col items-center rounded-xl bg-surface-muted px-1 py-2.5">
+                                <MessageSquare size={12} className="mb-1 text-primary" />
+                                <span className="text-sm font-black text-foreground">
+                                  {stat.messageCount ?? 0}
+                                </span>
+                                <span className="text-[9px] uppercase tracking-wide text-ink-light">
+                                  Messages
+                                </span>
+                              </div>
+                              <div className="flex flex-col items-center rounded-xl bg-surface-muted px-1 py-2.5">
+                                <Activity size={12} className="mb-1 text-primary" />
+                                <span className="text-sm font-black text-foreground">
+                                  {stat.activeDays ?? 0}
+                                </span>
+                                <span className="text-[9px] uppercase tracking-wide text-ink-light">
+                                  Days
+                                </span>
+                              </div>
+                            </div>
+
+                            <p className="border-t border-border pt-2 text-[11px] text-ink-light">
+                              <span className="font-semibold text-foreground">Last active:</span>{' '}
+                              {lastSeenLabel}
                             </p>
-                            <p className="truncate text-[11px] text-ink-light">{stat.email}</p>
                           </div>
-                          <span
-                            className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                              member?.status === 'online'
-                                ? 'bg-emerald-50 text-emerald-600'
-                                : member?.status === 'away'
-                                  ? 'bg-amber-50 text-amber-600'
-                                  : 'bg-secondary text-ink-light'
-                            }`}
-                          >
-                            {member?.status ?? 'offline'}
-                          </span>
-                        </div>
-
-                        {/* Engagement bar */}
-                        <div>
-                          <div className="mb-1 flex justify-between text-[10px] font-semibold text-ink-light">
-                            <span>Engagement this week</span>
-                            <span>{engagementPct}%</span>
-                          </div>
-                          <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-gradient-to-r from-primary to-green-light transition-all"
-                              style={{ width: `${engagementPct}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Stats row */}
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="flex flex-col items-center rounded-xl bg-surface-muted py-2.5 px-1">
-                            <Clock size={12} className="mb-1 text-primary" />
-                            <span className="text-sm font-black text-foreground">{timeLabel}</span>
-                            <span className="text-[9px] text-ink-light uppercase tracking-wide">
-                              Session
-                            </span>
-                          </div>
-                          <div className="flex flex-col items-center rounded-xl bg-surface-muted py-2.5 px-1">
-                            <MessageSquare size={12} className="mb-1 text-primary" />
-                            <span className="text-sm font-black text-foreground">
-                              {stat.messageCount ?? 0}
-                            </span>
-                            <span className="text-[9px] text-ink-light uppercase tracking-wide">
-                              Messages
-                            </span>
-                          </div>
-                          <div className="flex flex-col items-center rounded-xl bg-surface-muted py-2.5 px-1">
-                            <Activity size={12} className="mb-1 text-primary" />
-                            <span className="text-sm font-black text-foreground">
-                              {stat.activeDays ?? 0}
-                            </span>
-                            <span className="text-[9px] text-ink-light uppercase tracking-wide">
-                              Days
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Last seen */}
-                        <p className="text-[11px] text-ink-light border-t border-border pt-2">
-                          <span className="font-semibold text-foreground">Last active:</span>{' '}
-                          {lastSeenLabel}
-                        </p>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                  </div>
+                )}
               </div>
-            )}
-          </section>
+            </div>
+          )}
         </main>
 
+        {/* ── Add user modal ───────────────────────────────────────────── */}
         {showAddModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/30 p-4 backdrop-blur-sm animate-fade-in">
             <form
