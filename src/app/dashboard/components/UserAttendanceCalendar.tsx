@@ -1,24 +1,17 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { CalendarDays, ChevronDown, ChevronUp } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
-const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTH_NAMES = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
 ];
+const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 function toIST(date: Date): string {
-  const offset = 5.5 * 60 * 60 * 1000;
-  return new Date(date.getTime() + offset).toISOString().slice(0, 10);
-}
-
-function isWeekend(year: number, month: number, day: number): boolean {
-  const d = new Date(year, month, day).getDay();
-  return d === 0 || d === 6;
+  return new Date(date.getTime() + 5.5 * 3600000).toISOString().slice(0, 10);
 }
 
 export default function UserAttendanceCalendar() {
@@ -29,34 +22,25 @@ export default function UserAttendanceCalendar() {
   const today = new Date();
   const todayStr = toIST(today);
   const year = today.getFullYear();
-  const month = today.getMonth(); // 0-indexed
+  const month = today.getMonth();
+  const todayDay = today.getDate();
 
   useEffect(() => {
     setMounted(true);
-    const authData = localStorage.getItem('edutechex_token');
-    if (!authData) return;
+    const raw = localStorage.getItem('edutechex_token');
     let token: string | null = null;
-    try { token = JSON.parse(authData).token; } catch { return; }
+    try { token = JSON.parse(raw!).token; } catch { return; }
     if (!token) return;
 
-    fetch(`${API_BASE}/api/my-attendance`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.ok ? r.json() : null)
+    fetch(`${API_BASE}/api/my-attendance`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
       .then((data: { success: boolean; dates?: string[] } | null) => {
-        if (data?.success && Array.isArray(data.dates)) {
-          setLoginDates(data.dates);
-        }
+        if (data?.success && Array.isArray(data.dates)) setLoginDates(data.dates);
       })
       .catch(() => {
-        // fallback: try localStorage
-        const authRaw = localStorage.getItem('edutechex_token');
-        if (!authRaw) return;
         try {
-          const email = JSON.parse(authRaw)?.user?.email;
-          if (!email) return;
-          const key = `edutechex_logins_${email}`;
-          const stored = JSON.parse(localStorage.getItem(key) || '[]');
+          const email = JSON.parse(raw!).user?.email;
+          const stored = JSON.parse(localStorage.getItem(`edutechex_logins_${email}`) || '[]');
           if (Array.isArray(stored)) setLoginDates(stored);
         } catch { /* ignore */ }
       });
@@ -64,159 +48,215 @@ export default function UserAttendanceCalendar() {
 
   if (!mounted) return null;
 
-  // Calendar grid for current month
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0=Sun
+  const firstDay = new Date(year, month, 1).getDay();
+  const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
 
-  // Stats for this month
-  const thisMonthDates = loginDates.filter((d) => {
-    const [y, m] = d.split('-').map(Number);
-    return y === year && m === month + 1;
-  });
+  const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const thisMonthDates = loginDates.filter(d => d.startsWith(prefix));
   const presentCount = thisMonthDates.length;
 
-  // Working days so far this month (Mon–Fri, up to today or end of month)
-  const todayDay = today.getDate();
-  let workingDaysSoFar = 0;
+  let workingDays = 0;
   for (let d = 1; d <= Math.min(daysInMonth, todayDay); d++) {
-    if (!isWeekend(year, month, d)) workingDaysSoFar++;
+    const dow = new Date(year, month, d).getDay();
+    if (dow !== 0 && dow !== 6) workingDays++;
   }
-  const leaveCount = Math.max(0, workingDaysSoFar - presentCount);
-
-  const totalCells = Math.ceil((firstDayOfWeek + daysInMonth) / 7) * 7;
+  const leaveCount = Math.max(0, workingDays - presentCount);
+  const rate = workingDays > 0 ? Math.round((presentCount / workingDays) * 100) : 0;
 
   return (
-    <div className="mb-2">
-      {/* Toggle bar */}
+    <div style={{ marginBottom: '6px' }}>
+
+      {/* ── Toggle bar ── */}
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 transition-colors hover:bg-white/5"
-        style={{ color: 'rgba(180,188,210,0.85)' }}
+        onClick={() => setOpen(v => !v)}
+        style={{
+          display: 'flex',
+          width: '100%',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '7px 8px',
+          borderRadius: '8px',
+          border: open ? '1px solid rgba(74,90,223,0.25)' : '1px solid transparent',
+          background: open ? 'rgba(74,90,223,0.1)' : 'rgba(255,255,255,0.03)',
+          cursor: 'pointer',
+          transition: 'all 0.15s',
+        }}
       >
-        <span className="flex items-center gap-1.5">
-          <CalendarDays size={12} style={{ color: '#4A5ADF' }} />
-          <span className="text-[10px] font-semibold tracking-wide">
-            {MONTH_NAMES[month]} Attendance
+        <span style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+          {/* calendar icon via CSS */}
+          <span style={{
+            width: '14px', height: '14px', borderRadius: '3px',
+            border: '1.5px solid rgba(74,90,223,0.7)',
+            flexShrink: 0, position: 'relative', display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{ fontSize: '7px', fontWeight: 900, color: '#818CF8', lineHeight: 1 }}>
+              {todayDay}
+            </span>
+          </span>
+          <span style={{ fontSize: '10.5px', fontWeight: 700, color: 'rgba(185,194,215,0.9)', letterSpacing: '0.01em' }}>
+            {MONTH_NAMES[month].slice(0, 3)} Attendance
           </span>
         </span>
-        <span className="flex items-center gap-2">
-          <span
-            className="text-[10px] font-bold"
-            style={{ color: '#4ade80' }}
-          >
+
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{
+            fontSize: '9px', fontWeight: 800, color: '#4ade80',
+            background: 'rgba(74,222,128,0.12)', padding: '1px 5px', borderRadius: '4px',
+          }}>
             {presentCount}P
           </span>
-          <span
-            className="text-[10px] font-bold"
-            style={{ color: leaveCount > 0 ? '#f87171' : 'rgba(124,133,158,0.6)' }}
-          >
+          <span style={{
+            fontSize: '9px', fontWeight: 800,
+            color: leaveCount > 0 ? '#f87171' : 'rgba(100,115,145,0.5)',
+            background: leaveCount > 0 ? 'rgba(248,113,113,0.1)' : 'rgba(255,255,255,0.04)',
+            padding: '1px 5px', borderRadius: '4px',
+          }}>
             {leaveCount}L
           </span>
-          {open
-            ? <ChevronUp size={10} />
-            : <ChevronDown size={10} />}
+          <span style={{ fontSize: '8px', color: 'rgba(100,115,145,0.5)', marginLeft: '1px' }}>
+            {open ? '▲' : '▼'}
+          </span>
         </span>
       </button>
 
-      {/* Expanded calendar grid */}
+      {/* ── Expanded panel ── */}
       {open && (
-        <div
-          className="mt-1 rounded-xl px-2 pb-2.5 pt-2"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-        >
-          {/* Weekday headers */}
-          <div className="mb-1.5 grid grid-cols-7 gap-0.5">
-            {WEEKDAY_LABELS.map((l, i) => (
-              <div
-                key={i}
-                className="text-center text-[8px] font-bold uppercase"
-                style={{ color: 'rgba(124,133,158,0.55)' }}
-              >
-                {l}
-              </div>
-            ))}
+        <div style={{
+          marginTop: '4px',
+          borderRadius: '10px',
+          border: '1px solid rgba(255,255,255,0.08)',
+          background: 'rgba(15,20,38,0.6)',
+          overflow: 'hidden',
+        }}>
+
+          {/* Month header */}
+          <div style={{
+            padding: '8px 10px 6px',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <span style={{ fontSize: '10px', fontWeight: 800, color: 'rgba(185,194,215,0.95)', letterSpacing: '0.05em' }}>
+              {MONTH_NAMES[month].toUpperCase()} {year}
+            </span>
+            <span style={{
+              fontSize: '9px', fontWeight: 700,
+              color: rate >= 80 ? '#4ade80' : rate >= 60 ? '#fbbf24' : '#f87171',
+              background: rate >= 80 ? 'rgba(74,222,128,0.1)' : rate >= 60 ? 'rgba(251,191,36,0.1)' : 'rgba(248,113,113,0.1)',
+              padding: '2px 6px', borderRadius: '4px',
+            }}>
+              {rate}% rate
+            </span>
           </div>
 
-          {/* Day cells */}
-          <div className="grid grid-cols-7 gap-0.5">
-            {Array.from({ length: totalCells }).map((_, idx) => {
-              const dayNum = idx - firstDayOfWeek + 1;
-
-              if (dayNum < 1 || dayNum > daysInMonth) {
-                return <div key={idx} className="aspect-square" />;
-              }
-
-              const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-              const isToday = dateStr === todayStr;
-              const isPresent = loginDates.includes(dateStr);
-              const isFuture = dateStr > todayStr;
-              const weekend = isWeekend(year, month, dayNum);
-
-              let bg = 'rgba(255,255,255,0.04)';
-              let textColor = 'rgba(124,133,158,0.35)';
-              let ring = 'none';
-
-              if (isFuture) {
-                bg = 'transparent';
-                textColor = 'rgba(124,133,158,0.2)';
-              } else if (isPresent) {
-                bg = 'rgba(74,222,128,0.22)';
-                textColor = '#4ade80';
-              } else if (weekend) {
-                bg = 'rgba(255,255,255,0.03)';
-                textColor = 'rgba(124,133,158,0.25)';
-              } else {
-                // Weekday absent
-                bg = 'rgba(248,113,113,0.1)';
-                textColor = 'rgba(248,113,113,0.55)';
-              }
-
-              if (isToday) {
-                ring = '1.5px solid #f59e0b';
-              }
-
-              return (
-                <div
-                  key={idx}
-                  className="aspect-square flex items-center justify-center rounded-sm text-[8px] font-bold"
-                  style={{
-                    background: bg,
-                    color: textColor,
-                    outline: ring,
-                    outlineOffset: '-1px',
-                  }}
-                  title={isPresent ? `${dateStr} — Present` : isFuture ? '' : weekend ? `${dateStr} — Weekend` : `${dateStr} — Absent`}
-                >
-                  {dayNum}
+          <div style={{ padding: '8px 8px 4px' }}>
+            {/* Day labels */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '4px' }}>
+              {DAY_LABELS.map((l, i) => (
+                <div key={i} style={{
+                  textAlign: 'center', fontSize: '7.5px', fontWeight: 800,
+                  color: (i === 0 || i === 6) ? 'rgba(100,115,145,0.4)' : 'rgba(100,115,145,0.55)',
+                  textTransform: 'uppercase', letterSpacing: '0.05em',
+                }}>
+                  {l}
                 </div>
-              );
-            })}
+              ))}
+            </div>
+
+            {/* Day cells */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
+              {Array.from({ length: totalCells }).map((_, idx) => {
+                const day = idx - firstDay + 1;
+                if (day < 1 || day > daysInMonth) return <div key={idx} style={{ aspectRatio: '1' }} />;
+
+                const dateStr = `${prefix}-${String(day).padStart(2, '0')}`;
+                const isToday = dateStr === todayStr;
+                const isPresent = loginDates.includes(dateStr);
+                const isFuture = dateStr > todayStr;
+                const dow = new Date(year, month, day).getDay();
+                const isWeekend = dow === 0 || dow === 6;
+
+                let bg = 'rgba(255,255,255,0.03)';
+                let textColor = 'rgba(100,115,145,0.4)';
+                let dotColor = 'transparent';
+
+                if (isPresent) {
+                  bg = 'rgba(74,222,128,0.15)';
+                  textColor = 'rgba(134,239,172,0.95)';
+                  dotColor = '#4ade80';
+                } else if (isFuture) {
+                  bg = 'transparent';
+                  textColor = 'rgba(100,115,145,0.2)';
+                } else if (isWeekend) {
+                  bg = 'transparent';
+                  textColor = 'rgba(100,115,145,0.25)';
+                } else {
+                  bg = 'rgba(248,113,113,0.07)';
+                  textColor = 'rgba(248,113,113,0.4)';
+                  dotColor = 'rgba(248,113,113,0.35)';
+                }
+
+                return (
+                  <div
+                    key={idx}
+                    title={isPresent ? 'Present' : isFuture ? '' : isWeekend ? 'Weekend' : 'Absent'}
+                    style={{
+                      aspectRatio: '1',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '5px',
+                      background: bg,
+                      position: 'relative',
+                      outline: isToday ? '1.5px solid rgba(251,191,36,0.7)' : 'none',
+                      outlineOffset: '-1px',
+                    }}
+                  >
+                    <span style={{ fontSize: '8.5px', fontWeight: 700, color: textColor, lineHeight: 1 }}>
+                      {day}
+                    </span>
+                    {dotColor !== 'transparent' && (
+                      <span style={{
+                        position: 'absolute', bottom: '2px',
+                        width: '3px', height: '3px', borderRadius: '50%',
+                        background: dotColor,
+                      }} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Summary row */}
-          <div
-            className="mt-2 flex items-center justify-between rounded-lg px-2 py-1.5"
-            style={{ background: 'rgba(255,255,255,0.04)' }}
-          >
-            <span className="flex items-center gap-1 text-[9px] font-bold" style={{ color: '#4ade80' }}>
-              <span
-                className="inline-block h-2 w-2 rounded-sm"
-                style={{ background: 'rgba(74,222,128,0.4)' }}
-              />
-              {presentCount} Present
+          {/* Footer summary */}
+          <div style={{
+            margin: '4px 8px 8px',
+            padding: '6px 8px',
+            borderRadius: '7px',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9px', fontWeight: 700, color: '#4ade80' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '2px', background: 'rgba(74,222,128,0.5)', display: 'inline-block' }} />
+              {presentCount} present
             </span>
-            <span className="flex items-center gap-1 text-[9px] font-bold" style={{ color: leaveCount > 0 ? '#f87171' : 'rgba(124,133,158,0.4)' }}>
-              <span
-                className="inline-block h-2 w-2 rounded-sm"
-                style={{ background: leaveCount > 0 ? 'rgba(248,113,113,0.3)' : 'rgba(124,133,158,0.1)' }}
-              />
-              {leaveCount} Leave
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9px', fontWeight: 700, color: leaveCount > 0 ? '#f87171' : 'rgba(100,115,145,0.4)' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '2px', background: leaveCount > 0 ? 'rgba(248,113,113,0.4)' : 'rgba(100,115,145,0.15)', display: 'inline-block' }} />
+              {leaveCount} leave
             </span>
-            <span className="text-[9px] font-semibold" style={{ color: 'rgba(124,133,158,0.5)' }}>
-              {workingDaysSoFar} working days
+            <span style={{ fontSize: '9px', color: 'rgba(100,115,145,0.45)', fontWeight: 600 }}>
+              {workingDays} work days
             </span>
           </div>
+
         </div>
       )}
     </div>
