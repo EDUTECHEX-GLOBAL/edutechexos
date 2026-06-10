@@ -1379,6 +1379,12 @@ export default function AdminPage() {
                       In-app session time, messages sent, and engagement per team member. Users can
                       see exactly what is tracked in Settings → Privacy.
                     </p>
+                    <Link
+                      href="/admin/activity"
+                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                    >
+                      View full activity report →
+                    </Link>
                   </div>
                   <button
                     type="button"
