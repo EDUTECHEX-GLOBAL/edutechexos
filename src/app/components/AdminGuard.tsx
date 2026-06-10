@@ -33,8 +33,8 @@ export default function AdminGuard({ children }: AdminGuardProps) {
 
   if (isAuthorized === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
+      <div className="min-h-screen flex items-center justify-center bg-background" suppressHydrationWarning>
+        <div className="flex flex-col items-center gap-4" suppressHydrationWarning>
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-sm text-ink-light font-medium">Verifying credentials...</p>
         </div>
@@ -44,8 +44,8 @@ export default function AdminGuard({ children }: AdminGuardProps) {
 
   if (isAuthorized === false) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6 text-center">
-        <div className="max-w-md w-full p-8 rounded-3xl border border-border bg-surface shadow-2xl animate-fade-in-up">
+      <div className="min-h-screen flex items-center justify-center bg-background p-6 text-center" suppressHydrationWarning>
+        <div className="max-w-md w-full p-8 rounded-3xl border border-border bg-surface shadow-2xl animate-fade-in-up" suppressHydrationWarning>
           <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <ShieldAlert className="h-8 w-8 text-red-500" />
           </div>
