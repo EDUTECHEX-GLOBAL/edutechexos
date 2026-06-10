@@ -1701,7 +1701,7 @@ export default function EduTechExOSDashboard() {
               </div>
               <span
                 className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 ${settings.status === 'online' ? 'bg-emerald-400' : settings.status === 'away' ? 'bg-amber-400' : 'bg-[#7C859E]'}`}
-                style={{ borderColor: '#191E2F' }}
+                style={{ borderColor: '#0E1120' }}
               />
             </div>
             <div className="min-w-0 flex-1">
@@ -1898,10 +1898,10 @@ export default function EduTechExOSDashboard() {
         <div className="sidebar-search-bar">
           <div className="mb-2.5 flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-md flex-shrink-0" style={{ background: 'linear-gradient(135deg,#4A5ADF,#3547C8)' }}>
-                <span className="text-[10px] font-black text-white">E</span>
+              <div className="flex h-7 w-7 items-center justify-center rounded-[8px] flex-shrink-0" style={{ background: 'linear-gradient(135deg,#6C7BF5,#5055E8)', boxShadow: '0 2px 8px rgba(108,123,245,0.4)' }}>
+                <span className="text-[11px] font-black text-white">E</span>
               </div>
-              <span className="text-[13.5px] font-bold text-white tracking-[-0.01em] truncate">EduTechExOS</span>
+              <span className="text-[13px] font-bold text-white tracking-[-0.01em] truncate">EduTechExOS</span>
             </div>
             {unreadNotifications > 0 && (
               <motion.button
@@ -1983,8 +1983,8 @@ export default function EduTechExOSDashboard() {
                         {isActive && (
                           <motion.span
                             layoutId="active-channel-bar"
-                            className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full"
-                            style={{ background: '#3E4A89' }}
+                            className="absolute left-0 top-1.5 bottom-1.5 w-[2.5px] rounded-full"
+                            style={{ background: 'linear-gradient(180deg,#818CF8,#6C7BF5)', boxShadow: '0 0 8px rgba(108,123,245,0.6)' }}
                             transition={{ type: 'spring', stiffness: 600, damping: 32 }}
                           />
                         )}
@@ -1996,7 +1996,7 @@ export default function EduTechExOSDashboard() {
                             animate={{ scale: 1 }}
                             transition={{ type: 'spring', stiffness: 600, damping: 20 }}
                             className="rounded-full px-1.5 py-0.5 text-[10px] font-black"
-                            style={{ background: '#3E4A89', color: '#ffffff' }}
+                            style={{ background: '#6C7BF5', color: '#ffffff' }}
                           >
                             {item.unread}
                           </motion.span>
@@ -2015,13 +2015,13 @@ export default function EduTechExOSDashboard() {
             <div className="space-y-0.5">
               {people.map((member, i) => {
                 const avatarColors = [
-                  '#191E2F',
-                  '#3E4A89',
-                  '#0d7490',
-                  '#3E4A89',
-                  '#b45309',
-                  '#2A3568',
-                  '#1d4ed8',
+                  '#4338ca',
+                  '#0891b2',
+                  '#7c3aed',
+                  '#059669',
+                  '#d97706',
+                  '#dc2626',
+                  '#2563eb',
                 ];
                 const avatarBg = avatarColors[i % avatarColors.length];
                 return (
@@ -2062,7 +2062,7 @@ export default function EduTechExOSDashboard() {
                                       ? 'bg-red-400'
                                       : 'bg-[#7C859E]'
                               }`}
-                              style={{ boxShadow: '0 0 0 2px #292827' }}
+                              style={{ boxShadow: '0 0 0 2px #0E1120' }}
                             />
                           );
                         })()}
@@ -2098,15 +2098,17 @@ export default function EduTechExOSDashboard() {
             <div className="mt-6 space-y-2">
               <Link
                 href="/admin"
-                className="flex h-10 w-full items-center justify-center gap-2 rounded-lg text-xs font-bold uppercase tracking-[0.10em] transition-all duration-200 hover:brightness-110"
+                className="flex h-9 w-full items-center justify-center gap-2 rounded-lg text-[11px] font-bold uppercase tracking-[0.08em] transition-all duration-200"
                 style={{
-                  background: 'rgba(98,100,167,0.14)',
-                  color: '#a5a6f6',
-                  border: '1px solid rgba(98,100,167,0.22)',
+                  background: 'rgba(108,123,245,0.12)',
+                  color: '#818CF8',
+                  border: '1px solid rgba(108,123,245,0.22)',
                 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(108,123,245,0.2)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(108,123,245,0.12)'; }}
               >
-                <ShieldCheck size={14} strokeWidth={2.5} />
-                Admin dashboard
+                <ShieldCheck size={13} strokeWidth={2.5} />
+                Admin Control
               </Link>
               <motion.button
                 whileHover={{ borderColor: 'rgba(62,74,137,0.30)' }}
@@ -2139,7 +2141,7 @@ export default function EduTechExOSDashboard() {
               </div>
               <span
                 className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 ${settings.status === 'online' ? 'bg-emerald-400' : settings.status === 'away' ? 'bg-amber-400' : settings.status === 'busy' ? 'bg-red-400' : 'bg-[#7C859E]'}`}
-                style={{ borderColor: '#292827' }}
+                style={{ borderColor: '#0E1120' }}
               />
             </div>
             <div className="min-w-0 flex-1">
@@ -2194,55 +2196,24 @@ export default function EduTechExOSDashboard() {
         <header className="chat-header">
           {/* Channel name box */}
           <div className="min-w-0 relative">
-            <div
-              className="inline-flex items-center gap-2.5 rounded-2xl px-4 py-2.5 relative overflow-hidden"
-              style={{
-                background: 'rgba(25,30,47,0.92)',
-                border: '1px solid rgba(155,166,211,0.35)',
-                boxShadow: '0 0 20px rgba(62,74,137,0.14), 0 2px 12px rgba(0,0,0,0.50)',
-              }}
-            >
-              {/* Gold top shimmer */}
+            <div className="inline-flex items-center gap-2.5">
+              {/* Hash badge */}
               <span
-                className="absolute top-0 left-0 right-0 h-[2px]"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white text-[14px] font-black"
                 style={{
-                  background:
-                    'linear-gradient(90deg, transparent, #3E4A89, #9BA6D3, #3E4A89, transparent)',
-                }}
-              />
-
-              {/* Gold hash badge */}
-              <span
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white text-[13px] font-black"
-                style={{
-                  background: 'linear-gradient(135deg, #3E4A89, #2A3568)',
-                  boxShadow: '0 0 10px rgba(62,74,137,0.45)',
+                  background: 'linear-gradient(135deg, #6C7BF5, #5055E8)',
+                  boxShadow: '0 2px 12px rgba(108,123,245,0.40)',
                 }}
               >
                 #
               </span>
-
-              {/* Gold gradient channel name */}
+              {/* Channel name */}
               <span
-                className="truncate text-[22px] font-black leading-tight max-w-[140px] sm:max-w-[260px]"
-                style={{
-                  background: 'linear-gradient(135deg, #FFFFFF 0%, #EEF2F8 55%, #C4CAE0 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
+                className="truncate text-[20px] font-black leading-tight max-w-[140px] sm:max-w-[260px]"
+                style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
               >
                 {channel?.id.startsWith('member-') ? channel.name : channel?.name}
               </span>
-
-              {/* Gold bottom shimmer */}
-              <span
-                className="absolute bottom-0 left-0 right-0 h-px"
-                style={{
-                  background:
-                    'linear-gradient(90deg, transparent, rgba(155,166,211,0.35), transparent)',
-                }}
-              />
             </div>
 
             {channel?.description && (
@@ -2259,23 +2230,27 @@ export default function EduTechExOSDashboard() {
             <button
               title="View channel members"
               onClick={() => setMembersOpen(true)}
-              className="hidden h-9 items-center gap-2 rounded-lg px-3 text-sm font-bold md:flex transition-all hover:scale-105"
+              className="hidden h-8 items-center gap-1.5 rounded-lg px-3 text-[12px] font-semibold md:flex transition-all"
               style={{
-                background: 'rgba(62,74,137,0.10)',
-                color: '#7C859E',
-                border: '1px solid rgba(62,74,137,0.20)',
+                background: 'rgba(108,123,245,0.08)',
+                color: '#6C7BF5',
+                border: '1px solid rgba(108,123,245,0.16)',
               }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(108,123,245,0.14)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(108,123,245,0.08)'; }}
             >
-              <Users size={16} />
+              <Users size={14} strokeWidth={2} />
               {channel?.id.startsWith('member-') ? 2 : activeChannelMembers.length}
             </button>
             <button
               title="Search messages"
               onClick={() => setGlobalSearchOpen(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg transition-all hover:scale-105"
-              style={{ color: '#7C859E', background: 'rgba(62,74,137,0.08)' }}
+              className="flex h-8 w-8 items-center justify-center rounded-lg transition-all"
+              style={{ color: '#9CA3AF', background: 'rgba(108,123,245,0.06)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(108,123,245,0.12)'; (e.currentTarget as HTMLButtonElement).style.color = '#6C7BF5'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(108,123,245,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF'; }}
             >
-              <Search size={18} />
+              <Search size={16} />
             </button>
 
             <div className="relative">
@@ -2287,8 +2262,8 @@ export default function EduTechExOSDashboard() {
                 style={
                   meetingButtonState.link
                     ? {
-                        background: 'linear-gradient(135deg, #3E4A89, #2A3568)',
-                        boxShadow: '0 0 14px rgba(62,74,137,0.35)',
+                        background: 'linear-gradient(135deg, #6C7BF5, #5055E8)',
+                        boxShadow: '0 2px 12px rgba(108,123,245,0.35)',
                       }
                     : undefined
                 }
