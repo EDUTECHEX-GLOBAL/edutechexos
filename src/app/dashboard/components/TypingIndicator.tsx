@@ -10,7 +10,7 @@ interface TypingIndicatorProps {
 
 export default function TypingIndicator({ channelId }: TypingIndicatorProps) {
   const typingUsers = useDashboardStore((s) => s.typingUsers[channelId] ?? []);
-  const members     = useDashboardStore((s) => s.members);
+  const members = useDashboardStore((s) => s.members);
 
   /* reserve height so layout never jumps when indicator appears/disappears */
   if (typingUsers.length === 0) {
@@ -27,12 +27,11 @@ export default function TypingIndicator({ channelId }: TypingIndicatorProps) {
     typingUsers.length === 1
       ? `${typingUsers[0]} is typing`
       : typingUsers.length === 2
-      ? `${typingUsers[0]} & ${typingUsers[1]} are typing`
-      : `${typingUsers[0]} and ${typingUsers.length - 1} others are typing`;
+        ? `${typingUsers[0]} & ${typingUsers[1]} are typing`
+        : `${typingUsers[0]} and ${typingUsers.length - 1} others are typing`;
 
   return (
     <div className="typing-indicator-wrapper flex items-center gap-2 px-5 py-1">
-
       {/* ── Avatar stack ─────────────────────────────────────────────── */}
       <div className="flex -space-x-1.5">
         {typingMembers.map((member, i) => (
@@ -49,9 +48,11 @@ export default function TypingIndicator({ channelId }: TypingIndicatorProps) {
 
       {/* ── Bubble with MessageLoading SVG ──────────────────────────── */}
       <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm bg-white dark:bg-slate-800 border border-[rgba(62,74,137,0.12)] px-3 py-1.5 shadow-sm">
-
         {/* The animated SVG dots — sized down to match the bubble */}
-        <span className="flex items-center text-[#7C859E] dark:text-slate-400" style={{ width: 20, height: 20 }}>
+        <span
+          className="flex items-center text-[#7C859E] dark:text-slate-400"
+          style={{ width: 20, height: 20 }}
+        >
           <MessageLoading />
         </span>
 

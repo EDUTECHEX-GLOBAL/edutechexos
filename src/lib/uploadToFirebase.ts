@@ -28,9 +28,9 @@ export async function uploadToFirebase(
 
   try {
     const folder = options?.folder ?? 'files';
-    const name   = file instanceof File ? file.name : `blob-${Date.now()}`;
+    const name = file instanceof File ? file.name : `blob-${Date.now()}`;
     const safeName = name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
-    const path   = `${folder}/${Date.now()}-${safeName}`;
+    const path = `${folder}/${Date.now()}-${safeName}`;
 
     const storageRef = ref(storage, path);
     const uploadTask = uploadBytesResumable(storageRef, file, {
@@ -42,9 +42,7 @@ export async function uploadToFirebase(
         'state_changed',
         (snapshot) => {
           if (options?.onProgress) {
-            const pct = Math.round(
-              (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-            );
+            const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
             options.onProgress(pct);
           }
         },

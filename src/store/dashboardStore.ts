@@ -53,7 +53,9 @@ async function apiFetch(url: string, options: RequestInit = {}): Promise<Respons
           parsed.userEmail = email;
           options = { ...options, body: JSON.stringify(parsed) };
         }
-      } catch { /* not JSON — skip */ }
+      } catch {
+        /* not JSON — skip */
+      }
     }
   }
 
@@ -109,7 +111,7 @@ export type KanbanTask = {
   text: string;
   assignee: string;
   assigneeInitials: string;
-  assigneeEmail?: string;   // used to show the task only to the assigned person
+  assigneeEmail?: string; // used to show the task only to the assigned person
   sourceChannel: string;
   status: 'todo' | 'inprogress' | 'done';
   createdAt: string;
@@ -174,7 +176,10 @@ type DashboardState = {
   loadPinnedMessages: () => Promise<void>;
 
   bookmarkedMessageIds: string[];
-  toggleBookmark: (messageId: string, message?: { channelId?: string; text?: string; sender?: string; timestamp?: string }) => void;
+  toggleBookmark: (
+    messageId: string,
+    message?: { channelId?: string; text?: string; sender?: string; timestamp?: string }
+  ) => void;
   loadLocalBookmarkedIds: () => Promise<void>;
 
   activeThreadId: string | null;
@@ -197,7 +202,11 @@ type DashboardState = {
 
   wikiPages: Record<string, WikiPage[]>;
   addWikiPage: (channelId: string, data: { title: string; content: string }) => void;
-  updateWikiPage: (channelId: string, pageId: string, data: Partial<Pick<WikiPage, 'title' | 'content'>>) => void;
+  updateWikiPage: (
+    channelId: string,
+    pageId: string,
+    data: Partial<Pick<WikiPage, 'title' | 'content'>>
+  ) => void;
   deleteWikiPage: (channelId: string, pageId: string) => void;
   loadLocalWikiPages: () => Promise<void>;
 
@@ -234,22 +243,85 @@ const isWS = (id: string) => !isDM(id);
 const isExtraWS = (id: string) => isWS(id) && id !== 'general';
 const withM = (ids: string[] = [], id: string) => (ids.includes(id) ? ids : [...ids, id]);
 const withoutM = (ids: string[] = [], id: string) => ids.filter((x) => x !== id);
-const syncCount = (ch: Channel): Channel => ({ ...ch, memberCount: ch.memberIds?.length ?? ch.memberCount });
+const syncCount = (ch: Channel): Channel => ({
+  ...ch,
+  memberCount: ch.memberIds?.length ?? ch.memberCount,
+});
 
 const INITIAL_MEMBERS: Member[] = [
-  { id: 'member-ac', initials: 'AC', name: 'Aditya Cherikuri', email: 'aditya@edutechex.in', role: 'Manager', status: 'online', color: '#2563eb' },
-  { id: 'member-rk', initials: 'RK', name: 'Ram K Aluru', email: 'dev.rk@edutechex.in', role: 'Developer', status: 'online', color: '#7c3aed' },
-  { id: 'member-sa', initials: 'SA', name: 'Sneha Agarwal', email: 'design.sa@edutechex.in', role: 'Designer', status: 'away', color: '#0891b2' },
-  { id: 'member-tm', initials: 'TM', name: 'Tarun Mehta', email: 'tarun@edutechex.in', role: 'Lead', status: 'offline', color: '#059669' },
-  { id: 'member-mk', initials: 'MK', name: 'Mohan Kumar', email: 'mohan.kumar@edutechex.in', role: 'Developer', status: 'online', color: '#dc2626' },
-  { id: 'member-mr', initials: 'MR', name: 'Mohan Reddy', email: 'mohan.reddy@edutechex.in', role: 'Developer', status: 'online', color: '#eab308' },
-  { id: 'member-ms', initials: 'MS', name: 'Mohan Sen', email: 'mohan.sen@edutechex.in', role: 'Developer', status: 'online', color: '#0891b2' },
+  {
+    id: 'member-ac',
+    initials: 'AC',
+    name: 'Aditya Cherikuri',
+    email: 'aditya@edutechex.in',
+    role: 'Manager',
+    status: 'online',
+    color: '#2563eb',
+  },
+  {
+    id: 'member-rk',
+    initials: 'RK',
+    name: 'Ram K Aluru',
+    email: 'dev.rk@edutechex.in',
+    role: 'Developer',
+    status: 'online',
+    color: '#7c3aed',
+  },
+  {
+    id: 'member-sa',
+    initials: 'SA',
+    name: 'Sneha Agarwal',
+    email: 'design.sa@edutechex.in',
+    role: 'Designer',
+    status: 'away',
+    color: '#0891b2',
+  },
+  {
+    id: 'member-tm',
+    initials: 'TM',
+    name: 'Tarun Mehta',
+    email: 'tarun@edutechex.in',
+    role: 'Lead',
+    status: 'offline',
+    color: '#059669',
+  },
+  {
+    id: 'member-mk',
+    initials: 'MK',
+    name: 'Mohan Kumar',
+    email: 'mohan.kumar@edutechex.in',
+    role: 'Developer',
+    status: 'online',
+    color: '#dc2626',
+  },
+  {
+    id: 'member-mr',
+    initials: 'MR',
+    name: 'Mohan Reddy',
+    email: 'mohan.reddy@edutechex.in',
+    role: 'Developer',
+    status: 'online',
+    color: '#eab308',
+  },
+  {
+    id: 'member-ms',
+    initials: 'MS',
+    name: 'Mohan Sen',
+    email: 'mohan.sen@edutechex.in',
+    role: 'Developer',
+    status: 'online',
+    color: '#0891b2',
+  },
 ];
 
 const EXTRA_CH: Record<string, string> = {
-  'member-ac': 'edutechex', 'member-rk': 'skillnaav', 'member-sa': 'skillnaav',
-  'member-tm': 'edutechexassessa', 'member-mk': 'skillnaav',
-  'member-mr': 'edutechexassessa', 'member-ms': 'edutechex',
+  'member-ac': 'edutechex',
+  'member-rk': 'skillnaav',
+  'member-sa': 'skillnaav',
+  'member-tm': 'edutechexassessa',
+  'member-mk': 'skillnaav',
+  'member-mr': 'edutechexassessa',
+  'member-ms': 'edutechex',
 };
 
 const INITIAL_CHANNELS: Channel[] = CHANNELS.map((ch) => {
@@ -276,7 +348,9 @@ export const useDashboardStore = create<DashboardState>()(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...message, channelId }),
-        }).catch(() => { /* backend unavailable — message saved locally */ });
+        }).catch(() => {
+          /* backend unavailable — message saved locally */
+        });
 
         set((s) => ({
           messages: { ...s.messages, [channelId]: [...(s.messages[channelId] ?? []), message] },
@@ -327,14 +401,25 @@ export const useDashboardStore = create<DashboardState>()(
         // Soft-delete: message stays in DB, UI shows a placeholder (WhatsApp style)
         apiFetch(`${API_BASE}/api/messages/${messageId}`, {
           method: 'DELETE',
-        }).catch(() => { /* backend unavailable — optimistic soft-delete applied */ });
+        }).catch(() => {
+          /* backend unavailable — optimistic soft-delete applied */
+        });
 
         set((s) => ({
           messages: {
             ...s.messages,
             [channelId]: (s.messages[channelId] ?? []).map((m) =>
               m.id === messageId
-                ? { ...m, isDeleted: true, text: '', audioUrl: undefined, videoUrl: undefined, files: undefined, poll: undefined, reactions: undefined }
+                ? {
+                    ...m,
+                    isDeleted: true,
+                    text: '',
+                    audioUrl: undefined,
+                    videoUrl: undefined,
+                    files: undefined,
+                    poll: undefined,
+                    reactions: undefined,
+                  }
                 : m
             ),
           },
@@ -348,7 +433,16 @@ export const useDashboardStore = create<DashboardState>()(
             ...s.messages,
             [channelId]: (s.messages[channelId] ?? []).map((m) =>
               m.id === messageId
-                ? { ...m, isDeleted: true, text: '', audioUrl: undefined, videoUrl: undefined, files: undefined, poll: undefined, reactions: undefined }
+                ? {
+                    ...m,
+                    isDeleted: true,
+                    text: '',
+                    audioUrl: undefined,
+                    videoUrl: undefined,
+                    files: undefined,
+                    poll: undefined,
+                    reactions: undefined,
+                  }
                 : m
             ),
           },
@@ -362,7 +456,9 @@ export const useDashboardStore = create<DashboardState>()(
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: newText, editedAt }),
-        }).catch(() => { /* backend unavailable */ });
+        }).catch(() => {
+          /* backend unavailable */
+        });
 
         set((s) => ({
           messages: {
@@ -418,7 +514,9 @@ export const useDashboardStore = create<DashboardState>()(
           });
 
           set({ messages: merged, hasMoreMessages: data.hasMore ?? {} });
-        } catch { /* backend unavailable — keep current state */ }
+        } catch {
+          /* backend unavailable — keep current state */
+        }
       },
 
       loadMoreMessages: async (channelId) => {
@@ -438,13 +536,10 @@ export const useDashboardStore = create<DashboardState>()(
           set((s) => ({
             messages: {
               ...s.messages,
-              [channelId]: [
-                ...older,
-                ...(s.messages[channelId] ?? []),
-              ],
+              [channelId]: [...older, ...(s.messages[channelId] ?? [])],
             },
             hasMoreMessages: { ...s.hasMoreMessages, [channelId]: data.hasMore },
-            isLoadingMore:   { ...s.isLoadingMore,   [channelId]: false },
+            isLoadingMore: { ...s.isLoadingMore, [channelId]: false },
           }));
         } catch {
           set((s) => ({ isLoadingMore: { ...s.isLoadingMore, [channelId]: false } }));
@@ -468,7 +563,9 @@ export const useDashboardStore = create<DashboardState>()(
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reactions }),
-        }).catch(() => { /* backend unavailable */ });
+        }).catch(() => {
+          /* backend unavailable */
+        });
 
         set((s) => ({
           messages: {
@@ -487,7 +584,10 @@ export const useDashboardStore = create<DashboardState>()(
         const options = current.poll.options.map((opt, i) => {
           const hasVote = opt.votes.includes(userEmail);
           if (i === optionIdx)
-            return { ...opt, votes: hasVote ? opt.votes.filter((v) => v !== userEmail) : [...opt.votes, userEmail] };
+            return {
+              ...opt,
+              votes: hasVote ? opt.votes.filter((v) => v !== userEmail) : [...opt.votes, userEmail],
+            };
           return { ...opt, votes: opt.votes.filter((v) => v !== userEmail) };
         });
         const poll = { ...current.poll, options };
@@ -497,7 +597,9 @@ export const useDashboardStore = create<DashboardState>()(
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ poll }),
-        }).catch(() => { /* backend unavailable */ });
+        }).catch(() => {
+          /* backend unavailable */
+        });
 
         set((s) => ({
           messages: {
@@ -546,11 +648,16 @@ export const useDashboardStore = create<DashboardState>()(
           if (data.success && data.pinnedMessageIds) {
             set({ pinnedMessageIds: data.pinnedMessageIds });
           }
-        } catch { /* backend unavailable — keep local state */ }
+        } catch {
+          /* backend unavailable — keep local state */
+        }
       },
 
       bookmarkedMessageIds: [],
-      toggleBookmark: (messageId, message?: { channelId?: string; text?: string; sender?: string; timestamp?: string }) => {
+      toggleBookmark: (
+        messageId,
+        message?: { channelId?: string; text?: string; sender?: string; timestamp?: string }
+      ) => {
         // Local optimistic toggle
         set((s) => ({
           bookmarkedMessageIds: s.bookmarkedMessageIds.includes(messageId)
@@ -572,7 +679,9 @@ export const useDashboardStore = create<DashboardState>()(
           if (data.success && data.bookmarks) {
             set({ bookmarkedMessageIds: data.bookmarks.map((b: any) => b.messageId) });
           }
-        } catch { /* backend unavailable — keep local state */ }
+        } catch {
+          /* backend unavailable — keep local state */
+        }
       },
 
       activeThreadId: null,
@@ -585,7 +694,9 @@ export const useDashboardStore = create<DashboardState>()(
           return {
             typingUsers: {
               ...s.typingUsers,
-              [channelId]: isTyping ? [...new Set([...cur, userName])] : cur.filter((n) => n !== userName),
+              [channelId]: isTyping
+                ? [...new Set([...cur, userName])]
+                : cur.filter((n) => n !== userName),
             },
           };
         }),
@@ -594,7 +705,8 @@ export const useDashboardStore = create<DashboardState>()(
       toggleDarkMode: () =>
         set((s) => {
           const next = !s.darkMode;
-          if (typeof document !== 'undefined') document.documentElement.classList.toggle('dark', next);
+          if (typeof document !== 'undefined')
+            document.documentElement.classList.toggle('dark', next);
           return { darkMode: next };
         }),
 
@@ -610,7 +722,9 @@ export const useDashboardStore = create<DashboardState>()(
           const data = await res.json();
           if (!data.success || !data.tasks) return;
           set({ kanbanTasks: data.tasks as KanbanTask[] });
-        } catch { /* backend unavailable */ }
+        } catch {
+          /* backend unavailable */
+        }
       },
 
       addKanbanTask: (task) => {
@@ -631,30 +745,45 @@ export const useDashboardStore = create<DashboardState>()(
               }));
             }
           })
-          .catch(() => { /* backend unavailable — task is saved locally */ });
+          .catch(() => {
+            /* backend unavailable — task is saved locally */
+          });
       },
 
       updateKanbanTaskStatus: (taskId, status) => {
-        set((s) => ({ kanbanTasks: s.kanbanTasks.map((t) => (t.id === taskId ? { ...t, status } : t)) }));
+        set((s) => ({
+          kanbanTasks: s.kanbanTasks.map((t) => (t.id === taskId ? { ...t, status } : t)),
+        }));
         apiFetch(`${API_BASE}/api/kanban/${taskId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status }),
-        }).catch(() => { /* backend unavailable */ });
+        }).catch(() => {
+          /* backend unavailable */
+        });
       },
 
       deleteKanbanTask: (taskId) => {
         set((s) => ({ kanbanTasks: s.kanbanTasks.filter((t) => t.id !== taskId) }));
         apiFetch(`${API_BASE}/api/kanban/${taskId}`, {
           method: 'DELETE',
-        }).catch(() => { /* backend unavailable */ });
+        }).catch(() => {
+          /* backend unavailable */
+        });
       },
 
       wikiPages: {},
       addWikiPage: (channelId, data) => {
         const tempId = `wiki-${Date.now()}`;
-        const page: WikiPage = { id: tempId, ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-        set((s) => ({ wikiPages: { ...s.wikiPages, [channelId]: [...(s.wikiPages[channelId] ?? []), page] } }));
+        const page: WikiPage = {
+          id: tempId,
+          ...data,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        set((s) => ({
+          wikiPages: { ...s.wikiPages, [channelId]: [...(s.wikiPages[channelId] ?? []), page] },
+        }));
 
         apiFetch(`${API_BASE}/api/wikipages`, {
           method: 'POST',
@@ -667,12 +796,16 @@ export const useDashboardStore = create<DashboardState>()(
               set((s) => ({
                 wikiPages: {
                   ...s.wikiPages,
-                  [channelId]: (s.wikiPages[channelId] ?? []).map((p) => p.id === tempId ? res.page : p) as WikiPage[],
-                }
+                  [channelId]: (s.wikiPages[channelId] ?? []).map((p) =>
+                    p.id === tempId ? res.page : p
+                  ) as WikiPage[],
+                },
               }));
             }
           })
-          .catch(() => { /* backend unavailable */ });
+          .catch(() => {
+            /* backend unavailable */
+          });
       },
       updateWikiPage: (channelId, pageId, data) => {
         set((s) => ({
@@ -693,17 +826,26 @@ export const useDashboardStore = create<DashboardState>()(
               id: pageId,
               channelId,
               title: currentPage.title,
-              content: currentPage.content
+              content: currentPage.content,
             }),
-          }).catch(() => { /* backend unavailable */ });
+          }).catch(() => {
+            /* backend unavailable */
+          });
         }
       },
       deleteWikiPage: (channelId, pageId) => {
         apiFetch(`${API_BASE}/api/wikipages/${pageId}`, {
           method: 'DELETE',
-        }).catch(() => { /* backend unavailable */ });
+        }).catch(() => {
+          /* backend unavailable */
+        });
 
-        set((s) => ({ wikiPages: { ...s.wikiPages, [channelId]: (s.wikiPages[channelId] ?? []).filter((p) => p.id !== pageId) } }));
+        set((s) => ({
+          wikiPages: {
+            ...s.wikiPages,
+            [channelId]: (s.wikiPages[channelId] ?? []).filter((p) => p.id !== pageId),
+          },
+        }));
       },
       loadLocalWikiPages: async () => {
         try {
@@ -719,13 +861,20 @@ export const useDashboardStore = create<DashboardState>()(
             grouped[chId].push(p);
           });
           set({ wikiPages: grouped });
-        } catch { /* backend unavailable — keep current wiki state */ }
+        } catch {
+          /* backend unavailable — keep current wiki state */
+        }
       },
 
       notifications: [],
       addNotification: (notif) => {
         const localId = `notif-${Date.now()}`;
-        const newNotif = { ...notif, id: localId, timestamp: new Date().toISOString(), read: false };
+        const newNotif = {
+          ...notif,
+          id: localId,
+          timestamp: new Date().toISOString(),
+          read: false,
+        };
         set((s) => ({ notifications: [newNotif, ...s.notifications] }));
         // POST to backend so other users can receive it; swap local temp-id for real MongoDB id
         apiFetch(`${API_BASE}/api/notifications`, {
@@ -759,15 +908,20 @@ export const useDashboardStore = create<DashboardState>()(
             const raw: Array<Omit<Notification, 'read'> & { id: string }> = data.notifications;
             const incoming: Notification[] = raw
               .filter((n) => !localIds.has(n.id))
-              .map((n) => ({ ...n, read: false } as Notification));
+              .map((n) => ({ ...n, read: false }) as Notification);
             if (!incoming.length) return s;
             return { notifications: [...incoming, ...s.notifications] };
           });
-        } catch { /* backend unavailable */ }
+        } catch {
+          /* backend unavailable */
+        }
       },
-      markAllNotificationsRead: () => set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
+      markAllNotificationsRead: () =>
+        set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
       markNotificationRead: (id) =>
-        set((s) => ({ notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) })),
+        set((s) => ({
+          notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
+        })),
       dismissNotification: (id) =>
         set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) })),
 
@@ -778,10 +932,17 @@ export const useDashboardStore = create<DashboardState>()(
       channels: INITIAL_CHANNELS,
       addChannel: (channel) =>
         set((s) => {
-          const memberIds = channel.id === 'general' ? s.members.map((m) => m.id)
-            : isDM(channel.id) ? (channel.memberIds ?? [channel.id]) : [];
+          const memberIds =
+            channel.id === 'general'
+              ? s.members.map((m) => m.id)
+              : isDM(channel.id)
+                ? (channel.memberIds ?? [channel.id])
+                : [];
           const next = syncCount({ ...channel, memberIds });
-          return { channels: [...s.channels, next], messages: { ...s.messages, [channel.id]: s.messages[channel.id] || [] } };
+          return {
+            channels: [...s.channels, next],
+            messages: { ...s.messages, [channel.id]: s.messages[channel.id] || [] },
+          };
         }),
       loadWorkspaceChannels: async () => {
         try {
@@ -800,7 +961,12 @@ export const useDashboardStore = create<DashboardState>()(
             });
 
             const updatedWorkspaceChannels = dbChannels.map((ch) =>
-              syncCount({ ...ch, memberIds: existingMemberIds[ch.id] ?? (ch.id === 'general' ? s.members.map((m) => m.id) : []) })
+              syncCount({
+                ...ch,
+                memberIds:
+                  existingMemberIds[ch.id] ??
+                  (ch.id === 'general' ? s.members.map((m) => m.id) : []),
+              })
             );
 
             // Ensure messages map has an entry for any new channel
@@ -814,7 +980,9 @@ export const useDashboardStore = create<DashboardState>()(
               messages: { ...s.messages, ...newMsgEntries },
             };
           });
-        } catch { /* backend unavailable — keep hardcoded channels */ }
+        } catch {
+          /* backend unavailable — keep hardcoded channels */
+        }
       },
 
       members: INITIAL_MEMBERS,
@@ -824,7 +992,9 @@ export const useDashboardStore = create<DashboardState>()(
           if (!res.ok) {
             // 401 = token expired or not logged in yet; 5xx = backend waking up
             const retryDelay = res.status === 401 ? 5_000 : 10_000;
-            console.warn(`[members] /api/members returned ${res.status} — retrying in ${retryDelay / 1000}s…`);
+            console.warn(
+              `[members] /api/members returned ${res.status} — retrying in ${retryDelay / 1000}s…`
+            );
             setTimeout(() => useDashboardStore.getState().loadLocalMembers?.(), retryDelay);
             return;
           }
@@ -862,17 +1032,31 @@ export const useDashboardStore = create<DashboardState>()(
               channels: [...newChannels, ...dmChannelsToAdd],
               messages: {
                 ...s.messages,
-                ...Object.fromEntries(dmChannelsToAdd.map((ch) => [ch.id, s.messages[ch.id] ?? []])),
+                ...Object.fromEntries(
+                  dmChannelsToAdd.map((ch) => [ch.id, s.messages[ch.id] ?? []])
+                ),
               },
             };
           });
         } catch (err) {
-          console.warn('[members] Backend unreachable — Render may be cold-starting. Retrying in 15s…', err);
+          console.warn(
+            '[members] Backend unreachable — Render may be cold-starting. Retrying in 15s…',
+            err
+          );
           setTimeout(() => useDashboardStore.getState().loadLocalMembers?.(), 15_000);
         }
       },
       addMember: (member) => {
-        const isSystem = ['admin@edutechex.in', 'aditya@edutechex.in', 'dev.rk@edutechex.in', 'design.sa@edutechex.in', 'tarun@edutechex.in', 'mohan.kumar@edutechex.in', 'mohan.reddy@edutechex.in', 'mohan.sen@edutechex.in'].includes(member.email.toLowerCase());
+        const isSystem = [
+          'admin@edutechex.in',
+          'aditya@edutechex.in',
+          'dev.rk@edutechex.in',
+          'design.sa@edutechex.in',
+          'tarun@edutechex.in',
+          'mohan.kumar@edutechex.in',
+          'mohan.reddy@edutechex.in',
+          'mohan.sen@edutechex.in',
+        ].includes(member.email.toLowerCase());
         if (!isSystem) {
           apiFetch(`${API_BASE}/api/members`, {
             method: 'POST',
@@ -883,18 +1067,24 @@ export const useDashboardStore = create<DashboardState>()(
               channelId: null,
             }),
           })
-          .then((r) => r.json())
-          .then((data) => {
-            if (data.success && data.member) {
-              get().loadLocalMembers();
-            }
-          })
-          .catch(() => {});
+            .then((r) => r.json())
+            .then((data) => {
+              if (data.success && data.member) {
+                get().loadLocalMembers();
+              }
+            })
+            .catch(() => {});
         }
 
         set((s) => ({
-          members: s.members.some((m) => m.email.toLowerCase() === member.email.toLowerCase()) ? s.members : [...s.members, member],
-          channels: s.channels.map((ch) => ch.id !== 'general' ? ch : syncCount({ ...ch, memberIds: withM(ch.memberIds, member.id) })),
+          members: s.members.some((m) => m.email.toLowerCase() === member.email.toLowerCase())
+            ? s.members
+            : [...s.members, member],
+          channels: s.channels.map((ch) =>
+            ch.id !== 'general'
+              ? ch
+              : syncCount({ ...ch, memberIds: withM(ch.memberIds, member.id) })
+          ),
           messages: { ...s.messages, [member.id]: [] },
         }));
       },
@@ -905,95 +1095,163 @@ export const useDashboardStore = create<DashboardState>()(
         // from the DB whenever the DELETE failed or raced with other requests.)
         set((s) => ({
           members: s.members.filter((m) => m.id !== memberId),
-          channels: s.channels.map((ch) => syncCount({ ...ch, memberIds: withoutM(ch.memberIds, memberId) })),
+          channels: s.channels.map((ch) =>
+            syncCount({ ...ch, memberIds: withoutM(ch.memberIds, memberId) })
+          ),
         }));
       },
       // Only removes from local state — used by socket handlers to avoid re-calling the DELETE API
       removeMemberLocally: (memberId) => {
         set((s) => ({
           members: s.members.filter((m) => m.id !== memberId),
-          channels: s.channels.map((ch) => syncCount({ ...ch, memberIds: withoutM(ch.memberIds, memberId) })),
+          channels: s.channels.map((ch) =>
+            syncCount({ ...ch, memberIds: withoutM(ch.memberIds, memberId) })
+          ),
         }));
       },
       addMemberToChannel: (channelId, memberId) =>
         set((s) => {
           if (channelId === 'general') {
-            return { channels: s.channels.map((ch) => ch.id === 'general' ? syncCount({ ...ch, memberIds: withM(ch.memberIds, memberId) }) : ch) };
+            return {
+              channels: s.channels.map((ch) =>
+                ch.id === 'general'
+                  ? syncCount({ ...ch, memberIds: withM(ch.memberIds, memberId) })
+                  : ch
+              ),
+            };
           }
           if (isExtraWS(channelId)) {
             return {
               channels: s.channels.map((ch) => {
                 if (!isWS(ch.id)) return ch;
-                if (ch.id === 'general') return syncCount({ ...ch, memberIds: withM(ch.memberIds, memberId) });
-                return syncCount({ ...ch, memberIds: ch.id === channelId ? withM(ch.memberIds, memberId) : withoutM(ch.memberIds, memberId) });
+                if (ch.id === 'general')
+                  return syncCount({ ...ch, memberIds: withM(ch.memberIds, memberId) });
+                return syncCount({
+                  ...ch,
+                  memberIds:
+                    ch.id === channelId
+                      ? withM(ch.memberIds, memberId)
+                      : withoutM(ch.memberIds, memberId),
+                });
               }),
             };
           }
-          return { channels: s.channels.map((ch) => ch.id === channelId ? syncCount({ ...ch, memberIds: withM(ch.memberIds, memberId) }) : ch) };
+          return {
+            channels: s.channels.map((ch) =>
+              ch.id === channelId
+                ? syncCount({ ...ch, memberIds: withM(ch.memberIds, memberId) })
+                : ch
+            ),
+          };
         }),
       removeMemberFromChannel: (channelId, memberId) =>
         set((s) => {
           if (channelId === 'general') return { channels: s.channels };
-          return { channels: s.channels.map((ch) => ch.id === channelId ? syncCount({ ...ch, memberIds: withoutM(ch.memberIds, memberId) }) : ch) };
+          return {
+            channels: s.channels.map((ch) =>
+              ch.id === channelId
+                ? syncCount({ ...ch, memberIds: withoutM(ch.memberIds, memberId) })
+                : ch
+            ),
+          };
         }),
       setMemberWorkspaceChannel: (memberId, channelId) => {
-        const isSystemId = ['member-ac', 'member-rk', 'member-sa', 'member-tm', 'member-mk', 'member-mr', 'member-ms'].includes(memberId);
+        const isSystemId = [
+          'member-ac',
+          'member-rk',
+          'member-sa',
+          'member-tm',
+          'member-mk',
+          'member-mr',
+          'member-ms',
+        ].includes(memberId);
         if (!isSystemId) {
           const dbId = memberId.replace('member-', '');
           apiFetch(`${API_BASE}/api/access-requests/${dbId}`, {
             method: 'PATCH',
             body: JSON.stringify({ channelId: channelId || null }),
           })
-          .then(() => {
-            get().loadLocalMembers();
-          })
-          .catch(() => {});
+            .then(() => {
+              get().loadLocalMembers();
+            })
+            .catch(() => {});
         }
 
         set((s) => ({
           channels: s.channels.map((ch) => {
             if (!isWS(ch.id)) return ch;
-            if (ch.id === 'general') return syncCount({ ...ch, memberIds: withM(ch.memberIds, memberId) });
-            return syncCount({ ...ch, memberIds: ch.id === channelId ? withM(ch.memberIds, memberId) : withoutM(ch.memberIds, memberId) });
+            if (ch.id === 'general')
+              return syncCount({ ...ch, memberIds: withM(ch.memberIds, memberId) });
+            return syncCount({
+              ...ch,
+              memberIds:
+                ch.id === channelId
+                  ? withM(ch.memberIds, memberId)
+                  : withoutM(ch.memberIds, memberId),
+            });
           }),
         }));
       },
       setMemberWorkspaceChannels: (memberId, channelIds) => {
-        const isSystemId = ['member-ac', 'member-rk', 'member-sa', 'member-tm', 'member-mk', 'member-mr', 'member-ms'].includes(memberId);
+        const isSystemId = [
+          'member-ac',
+          'member-rk',
+          'member-sa',
+          'member-tm',
+          'member-mk',
+          'member-mr',
+          'member-ms',
+        ].includes(memberId);
         if (!isSystemId) {
           const dbId = memberId.replace('member-', '');
           apiFetch(`${API_BASE}/api/access-requests/${dbId}`, {
             method: 'PATCH',
             body: JSON.stringify({ channelIds }),
           })
-          .then(() => { get().loadLocalMembers(); })
-          .catch(() => {});
+            .then(() => {
+              get().loadLocalMembers();
+            })
+            .catch(() => {});
         }
 
         set((s) => ({
           channels: s.channels.map((ch) => {
             if (!isWS(ch.id)) return ch;
-            if (ch.id === 'general') return syncCount({ ...ch, memberIds: withM(ch.memberIds, memberId) });
-            return syncCount({ ...ch, memberIds: channelIds.includes(ch.id) ? withM(ch.memberIds, memberId) : withoutM(ch.memberIds, memberId) });
+            if (ch.id === 'general')
+              return syncCount({ ...ch, memberIds: withM(ch.memberIds, memberId) });
+            return syncCount({
+              ...ch,
+              memberIds: channelIds.includes(ch.id)
+                ? withM(ch.memberIds, memberId)
+                : withoutM(ch.memberIds, memberId),
+            });
           }),
         }));
       },
       setMemberRole: (memberId, role) => {
-        const isSystemId = ['member-ac', 'member-rk', 'member-sa', 'member-tm', 'member-mk', 'member-mr', 'member-ms'].includes(memberId);
+        const isSystemId = [
+          'member-ac',
+          'member-rk',
+          'member-sa',
+          'member-tm',
+          'member-mk',
+          'member-mr',
+          'member-ms',
+        ].includes(memberId);
         if (!isSystemId) {
           const dbId = memberId.replace('member-', '');
           apiFetch(`${API_BASE}/api/access-requests/${dbId}`, {
             method: 'PATCH',
             body: JSON.stringify({ role }),
           })
-          .then(() => {
-            get().loadLocalMembers();
-          })
-          .catch(() => {});
+            .then(() => {
+              get().loadLocalMembers();
+            })
+            .catch(() => {});
         }
 
         set((s) => ({
-          members: s.members.map((m) => m.id === memberId ? { ...m, role } : m),
+          members: s.members.map((m) => (m.id === memberId ? { ...m, role } : m)),
         }));
       },
     }),

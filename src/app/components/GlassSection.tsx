@@ -9,7 +9,10 @@ interface GlassSectionProps {
 }
 
 export default function GlassSection({
-  children, className = '', maxWidth = 'max-w-6xl', padding = 'p-10 md:p-14 lg:p-16',
+  children,
+  className = '',
+  maxWidth = 'max-w-6xl',
+  padding = 'p-10 md:p-14 lg:p-16',
 }: GlassSectionProps) {
   return (
     <div
@@ -28,9 +31,13 @@ export default function GlassSection({
 }
 
 export function GlassCard({
-  children, className = '', padding = 'p-8',
+  children,
+  className = '',
+  padding = 'p-8',
 }: {
-  children: React.ReactNode; className?: string; padding?: string;
+  children: React.ReactNode;
+  className?: string;
+  padding?: string;
 }) {
   return (
     <div

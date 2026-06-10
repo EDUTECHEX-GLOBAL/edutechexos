@@ -17,7 +17,7 @@ Format lists with plain dashes, not markdown bullets. Never use headers.`;
 
 export async function POST(req: NextRequest) {
   try {
-    const { question, history = [] } = await req.json() as {
+    const { question, history = [] } = (await req.json()) as {
       question: string;
       history: Array<{ role: string; text: string }>;
     };

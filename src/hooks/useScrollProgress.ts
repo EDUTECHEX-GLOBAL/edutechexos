@@ -14,7 +14,7 @@ export function useScrollProgress() {
       const max = document.documentElement.scrollHeight - window.innerHeight;
       setScrollY(y);
       setProgress(max > 0 ? Math.min(y / max, 1) : 0);
-      setDirection(y > lastY.current + 2 ? 'down' : y < lastY.current - 2 ? 'up' : prev => prev);
+      setDirection(y > lastY.current + 2 ? 'down' : y < lastY.current - 2 ? 'up' : (prev) => prev);
       lastY.current = y;
     };
     window.addEventListener('scroll', handler, { passive: true });

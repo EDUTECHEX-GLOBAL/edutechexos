@@ -69,7 +69,11 @@ export default function WidgetPage() {
       } catch {
         setMessages((p) => [
           ...p,
-          { id: `err-${Date.now()}`, role: 'bot', text: "Sorry, I couldn't connect. Please try again." },
+          {
+            id: `err-${Date.now()}`,
+            role: 'bot',
+            text: "Sorry, I couldn't connect. Please try again.",
+          },
         ]);
       } finally {
         setThinking(false);
@@ -152,14 +156,21 @@ export default function WidgetPage() {
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'radial-gradient(ellipse at 80% 50%, rgba(155,166,211,0.12) 0%, transparent 65%)',
+              background:
+                'radial-gradient(ellipse at 80% 50%, rgba(155,166,211,0.12) 0%, transparent 65%)',
               pointerEvents: 'none',
             }}
           />
 
           {/* Bot avatar */}
           <motion.div
-            animate={{ boxShadow: ['0 0 0 0px rgba(62,74,137,0)', '0 0 0 8px rgba(62,74,137,0.20)', '0 0 0 0px rgba(62,74,137,0)'] }}
+            animate={{
+              boxShadow: [
+                '0 0 0 0px rgba(62,74,137,0)',
+                '0 0 0 8px rgba(62,74,137,0.20)',
+                '0 0 0 0px rgba(62,74,137,0)',
+              ],
+            }}
             transition={{ repeat: Infinity, duration: 2.8, ease: 'easeInOut' }}
             style={{
               width: 42,
@@ -186,7 +197,13 @@ export default function WidgetPage() {
               <motion.div
                 animate={{ opacity: [1, 0.4, 1] }}
                 transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-                style={{ width: 6, height: 6, borderRadius: '50%', background: '#9BA6D3', flexShrink: 0 }}
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: '#9BA6D3',
+                  flexShrink: 0,
+                }}
               />
               <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: 500 }}>
                 AI Powered · Always online
@@ -266,10 +283,7 @@ export default function WidgetPage() {
                   style={{
                     maxWidth: '76%',
                     padding: '10px 13px',
-                    borderRadius:
-                      msg.role === 'user'
-                        ? '16px 16px 3px 16px'
-                        : '16px 16px 16px 3px',
+                    borderRadius: msg.role === 'user' ? '16px 16px 3px 16px' : '16px 16px 16px 3px',
                     background: msg.role === 'user' ? '#191E2F' : '#ffffff',
                     color: msg.role === 'user' ? '#ffffff' : '#191919',
                     fontSize: 13.5,
@@ -283,9 +297,7 @@ export default function WidgetPage() {
                 >
                   {msg.role === 'bot' ? (
                     <div className="prose-widget">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {msg.text}
-                      </ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
                     </div>
                   ) : (
                     msg.text
@@ -391,8 +403,12 @@ export default function WidgetPage() {
                       fontFamily: 'inherit',
                       transition: 'border-color 0.15s',
                     }}
-                    onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.borderColor = '#3E4A89')}
-                    onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.borderColor = '#E0DDE8')}
+                    onMouseEnter={(e) =>
+                      ((e.currentTarget as HTMLButtonElement).style.borderColor = '#3E4A89')
+                    }
+                    onMouseLeave={(e) =>
+                      ((e.currentTarget as HTMLButtonElement).style.borderColor = '#E0DDE8')
+                    }
                   >
                     <Icon size={12} />
                     {label}
@@ -451,7 +467,7 @@ export default function WidgetPage() {
             type="submit"
             disabled={!input.trim() || thinking}
             whileHover={input.trim() && !thinking ? { scale: 1.08 } : {}}
-            whileTap={input.trim() && !thinking ? { scale: 0.90 } : {}}
+            whileTap={input.trim() && !thinking ? { scale: 0.9 } : {}}
             style={{
               width: 40,
               height: 40,

@@ -24,7 +24,12 @@ async function sendBrevoEmail(opts: {
       console.error('[email-relay] failed:', res.status, body);
       // Try to parse JSON error from relay
       let errorMsg = `relay ${res.status}: ${body}`;
-      try { const j = JSON.parse(body); if (j.error) errorMsg = j.error; } catch { /* raw text */ }
+      try {
+        const j = JSON.parse(body);
+        if (j.error) errorMsg = j.error;
+      } catch {
+        /* raw text */
+      }
       return { success: false, error: errorMsg };
     }
     return { success: true };
@@ -60,7 +65,7 @@ async function ensureDbExists() {
     const count = await Message.countDocuments();
     if (count === 0) {
       console.log('Seeding initial mock data into MongoDB...');
-      const { MESSAGES_BY_CHANNEL } = require('../../data/mockData');
+      const { MESSAGES_BY_CHANNEL } = await import('../../data/mockData');
       const msgsToInsert = [];
 
       for (const [channelId, messages] of Object.entries(MESSAGES_BY_CHANNEL)) {
@@ -86,7 +91,7 @@ export async function getLocalMessages() {
   const dbOk = await ensureDbExists();
   if (!dbOk) {
     try {
-      const { MESSAGES_BY_CHANNEL } = require('../../data/mockData');
+      const { MESSAGES_BY_CHANNEL } = await import('../../data/mockData');
       return MESSAGES_BY_CHANNEL;
     } catch (e) {
       console.error('Failed to load mock data fallback:', e);
@@ -123,7 +128,7 @@ export async function getLocalMessages() {
     console.error('Failed to get messages from MongoDB:', err);
     // Fallback to mock data so UI does not crash when DB is unavailable
     try {
-      const { MESSAGES_BY_CHANNEL } = require('../../data/mockData');
+      const { MESSAGES_BY_CHANNEL } = await import('../../data/mockData');
       return MESSAGES_BY_CHANNEL;
     } catch (e) {
       console.error('Failed to load mock data fallback:', e);
@@ -161,7 +166,7 @@ export async function uploadLocalFile(formData: FormData) {
     // NOTE: Firebase Storage uploads happen client-side in the browser.
     // This server-side path is only used as a last resort in dev.
     await fs.mkdir(UPLOADS_DIR, { recursive: true });
-    const ext      = path.extname(file.name) || '.bin';
+    const ext = path.extname(file.name) || '.bin';
     const baseName = path.basename(file.name, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
     const fileName = `${Date.now()}-${baseName}${ext}`;
     await fs.writeFile(path.join(UPLOADS_DIR, fileName), buffer);
@@ -302,7 +307,6 @@ export async function sendMentionEmailNotification(
     htmlContent,
   });
 }
-
 
 // Note CRUD functions moved to src/app/actions/noteActions.ts
 /**

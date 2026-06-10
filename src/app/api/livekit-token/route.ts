@@ -9,7 +9,10 @@ export async function POST(req: NextRequest) {
 
   if (!apiKey || !apiSecret) {
     return NextResponse.json(
-      { error: 'LiveKit API credentials not configured. Add LIVEKIT_API_KEY and LIVEKIT_API_SECRET to your .env.' },
+      {
+        error:
+          'LiveKit API credentials not configured. Add LIVEKIT_API_KEY and LIVEKIT_API_SECRET to your .env.',
+      },
       { status: 503 }
     );
   }

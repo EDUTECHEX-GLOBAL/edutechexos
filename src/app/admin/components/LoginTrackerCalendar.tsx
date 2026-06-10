@@ -76,7 +76,9 @@ export default function LoginTrackerCalendar() {
       if (data.success && data.history) {
         setUserLogins(data.history);
       }
-    } catch { /* backend unavailable — keep synthetic data */ }
+    } catch {
+      /* backend unavailable — keep synthetic data */
+    }
   }, []);
 
   useEffect(() => {
@@ -96,7 +98,11 @@ export default function LoginTrackerCalendar() {
           if (!merged[member.email] || merged[member.email].length === 0) {
             const key = `edutechex_logins_${member.email}`;
             let stored: string[] = [];
-            try { stored = JSON.parse(localStorage.getItem(key) || '[]'); } catch { /* */ }
+            try {
+              stored = JSON.parse(localStorage.getItem(key) || '[]');
+            } catch {
+              /* */
+            }
 
             if (stored.length === 0) {
               // Generate synthetic data only as fallback

@@ -7,18 +7,27 @@ import GlassSection from './GlassSection';
 
 const testimonials = [
   {
-    quote: 'EduTechExOS completely changed how our engineering team operates. We no longer lose track of decisions in endless chat threads. The AI agent surfaces context instantly.',
-    author: 'Sarah Jenkins', role: 'VP of Engineering, CloudScale', initials: 'SJ',
+    quote:
+      'EduTechExOS completely changed how our engineering team operates. We no longer lose track of decisions in endless chat threads. The AI agent surfaces context instantly.',
+    author: 'Sarah Jenkins',
+    role: 'VP of Engineering, CloudScale',
+    initials: 'SJ',
     gradient: 'from-primary to-green-light',
   },
   {
-    quote: 'The Daily Digest feature alone saves me an hour every morning. I wake up, read the digest, and know exactly what the team accomplished while I was offline.',
-    author: 'David Chen', role: 'Product Lead, InnovateTech', initials: 'DC',
+    quote:
+      'The Daily Digest feature alone saves me an hour every morning. I wake up, read the digest, and know exactly what the team accomplished while I was offline.',
+    author: 'David Chen',
+    role: 'Product Lead, InnovateTech',
+    initials: 'DC',
     gradient: 'from-lavender to-accent',
   },
   {
-    quote: "Onboarding used to take weeks. Now, new hires just ask the embedded AI about past projects, and they are up to speed in days.",
-    author: 'Elena Rodriguez', role: 'HR Director, EduFuture', initials: 'ER',
+    quote:
+      'Onboarding used to take weeks. Now, new hires just ask the embedded AI about past projects, and they are up to speed in days.',
+    author: 'Elena Rodriguez',
+    role: 'HR Director, EduFuture',
+    initials: 'ER',
     gradient: 'from-green-light to-primary',
   },
 ];
@@ -40,12 +49,23 @@ export default function LandingTestimonials() {
             <div className="max-w-3xl mx-auto text-center mb-14">
               <span className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-white/60 backdrop-blur-xl mb-8">
                 <span className="w-2 h-2 rounded-full bg-accent animate-neon-pulse" />
-                <span className="font-mono text-[11px] font-bold tracking-[0.2em] uppercase" style={{ color: colors.accent }}>User success</span>
+                <span
+                  className="font-mono text-[11px] font-bold tracking-[0.2em] uppercase"
+                  style={{ color: colors.accent }}
+                >
+                  User success
+                </span>
               </span>
-              <h2 className="font-display font-bold text-4xl md:text-5xl lg:text-6xl tracking-[-0.03em] mt-4 mb-4" style={{ color: colors.h1 }}>
+              <h2
+                className="font-display font-bold text-4xl md:text-5xl lg:text-6xl tracking-[-0.03em] mt-4 mb-4"
+                style={{ color: colors.h1 }}
+              >
                 Trusted by <span className="text-gradient-warm">industry leaders.</span>
               </h2>
-              <p className="text-lg font-semibold max-w-xl mx-auto leading-relaxed" style={{ color: colors.body }}>
+              <p
+                className="text-lg font-semibold max-w-xl mx-auto leading-relaxed"
+                style={{ color: colors.body }}
+              >
                 See how forward-thinking teams are evolving with EduTechExOS.
               </p>
             </div>
@@ -65,21 +85,43 @@ export default function LandingTestimonials() {
                 >
                   <div
                     className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                    style={{ background: 'linear-gradient(135deg, rgba(62,74,137,0.04), rgba(196,181,253,0.03))' }}
+                    style={{
+                      background:
+                        'linear-gradient(135deg, rgba(62,74,137,0.04), rgba(196,181,253,0.03))',
+                    }}
                   />
                   <div className="relative mb-6">
-                    <Quote size={24} className="opacity-30 group-hover:opacity-50 transition-opacity duration-500" style={{ color: '#3E4A89' }} />
+                    <Quote
+                      size={24}
+                      className="opacity-30 group-hover:opacity-50 transition-opacity duration-500"
+                      style={{ color: '#3E4A89' }}
+                    />
                   </div>
-                  <p className="text-base font-semibold leading-relaxed mb-8 flex-1 relative" style={{ color: colors.body }}>
+                  <p
+                    className="text-base font-semibold leading-relaxed mb-8 flex-1 relative"
+                    style={{ color: colors.body }}
+                  >
                     &ldquo;{t.quote}&rdquo;
                   </p>
-                  <div className="relative flex items-center gap-4 pt-6" style={{ borderTop: '1px solid rgba(0,0,0,0.04)' }}>
-                    <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${t.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-500`}>
+                  <div
+                    className="relative flex items-center gap-4 pt-6"
+                    style={{ borderTop: '1px solid rgba(0,0,0,0.04)' }}
+                  >
+                    <div
+                      className={`w-12 h-12 rounded-full bg-gradient-to-br ${t.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-500`}
+                    >
                       <span className="text-sm font-bold text-white">{t.initials}</span>
                     </div>
                     <div>
-                      <p className="font-display font-bold text-sm group-hover:text-primary transition-colors duration-300" style={{ color: colors.h1 }}>{t.author}</p>
-                      <p className="text-xs font-semibold" style={{ color: colors.muted }}>{t.role}</p>
+                      <p
+                        className="font-display font-bold text-sm group-hover:text-primary transition-colors duration-300"
+                        style={{ color: colors.h1 }}
+                      >
+                        {t.author}
+                      </p>
+                      <p className="text-xs font-semibold" style={{ color: colors.muted }}>
+                        {t.role}
+                      </p>
                     </div>
                   </div>
                 </div>

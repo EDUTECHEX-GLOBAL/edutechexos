@@ -20,7 +20,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const page = await WikiPage.create(body);
     const { _id, __v, ...rest } = page.toObject();
-    return NextResponse.json({ success: true, page: { ...rest, id: _id.toString() } }, { status: 201 });
+    return NextResponse.json(
+      { success: true, page: { ...rest, id: _id.toString() } },
+      { status: 201 }
+    );
   } catch (err) {
     console.error('POST /api/wikipages error:', err);
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 });

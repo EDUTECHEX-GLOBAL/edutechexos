@@ -33,10 +33,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           rel="stylesheet"
         />
       </head>
-      <body className="m-0 p-0 h-full bg-background text-foreground antialiased" suppressHydrationWarning>
-        <PostHogProvider>
-          {children}
-        </PostHogProvider>
+      <body
+        className="m-0 p-0 h-full bg-background text-foreground antialiased"
+        suppressHydrationWarning
+      >
+        <PostHogProvider>{children}</PostHogProvider>
         <SonnerToaster
           position="bottom-right"
           richColors

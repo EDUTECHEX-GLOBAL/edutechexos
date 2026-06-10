@@ -16,7 +16,10 @@ export default function AuthCard({ darkMode = false }: { darkMode?: boolean }) {
       <div className="w-full animate-fade-up">
         {/* Tabs */}
         {!isAdminMode && (
-          <div className="flex mb-5 rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
+          <div
+            className="flex mb-5 rounded-xl overflow-hidden"
+            style={{ border: '1px solid rgba(255,255,255,0.10)' }}
+          >
             {(['login', 'signup'] as const).map((tab) => (
               <button
                 key={tab}
@@ -25,7 +28,10 @@ export default function AuthCard({ darkMode = false }: { darkMode?: boolean }) {
                 style={{
                   backgroundColor: activeTab === tab ? 'rgba(255,255,255,0.12)' : 'transparent',
                   color: activeTab === tab ? '#ffffff' : 'rgba(180,200,255,0.55)',
-                  borderBottom: activeTab === tab ? '2px solid rgba(180,210,255,0.60)' : '2px solid transparent',
+                  borderBottom:
+                    activeTab === tab
+                      ? '2px solid rgba(180,210,255,0.60)'
+                      : '2px solid transparent',
                 }}
               >
                 {tab === 'login' ? 'Sign in' : 'Create account'}

@@ -2,9 +2,18 @@
 import React from 'react';
 
 const items = [
-  'Channels', 'AI Agent', 'Task Extraction', 'Daily Digest',
-  'Wiki', 'Team Hub', 'Access Control', 'AI Copilot',
-  'Morning Digest', 'Org Memory', 'Real-time Sync', 'Knowledge Base',
+  'Channels',
+  'AI Agent',
+  'Task Extraction',
+  'Daily Digest',
+  'Wiki',
+  'Team Hub',
+  'Access Control',
+  'AI Copilot',
+  'Morning Digest',
+  'Org Memory',
+  'Real-time Sync',
+  'Knowledge Base',
 ];
 
 function Track({ reverse = false }: { reverse?: boolean }) {
@@ -35,7 +44,11 @@ export default function LandingMarquee() {
   return (
     <div
       className="relative overflow-hidden py-5"
-      style={{ background: '#191E2F', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      style={{
+        background: '#191E2F',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+      }}
     >
       <div className="flex flex-col gap-3">
         <Track />
@@ -43,12 +56,18 @@ export default function LandingMarquee() {
       </div>
 
       {/* Edge fade masks */}
-      <div className="absolute inset-y-0 left-0 w-24 pointer-events-none" style={{
-        background: 'linear-gradient(to right, #191E2F, transparent)',
-      }} />
-      <div className="absolute inset-y-0 right-0 w-24 pointer-events-none" style={{
-        background: 'linear-gradient(to left, #191E2F, transparent)',
-      }} />
+      <div
+        className="absolute inset-y-0 left-0 w-24 pointer-events-none"
+        style={{
+          background: 'linear-gradient(to right, #191E2F, transparent)',
+        }}
+      />
+      <div
+        className="absolute inset-y-0 right-0 w-24 pointer-events-none"
+        style={{
+          background: 'linear-gradient(to left, #191E2F, transparent)',
+        }}
+      />
 
       <style>{`
         @keyframes marquee {

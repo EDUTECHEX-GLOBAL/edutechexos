@@ -1,7 +1,21 @@
 ﻿'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Users, Search, Video, Bot, FileText, Activity, Pin, X, MessageSquare, LayoutGrid, BookOpen, BarChart2, Bookmark } from 'lucide-react';
+import {
+  Users,
+  Search,
+  Video,
+  Bot,
+  FileText,
+  Activity,
+  Pin,
+  X,
+  MessageSquare,
+  LayoutGrid,
+  BookOpen,
+  BarChart2,
+  Bookmark,
+} from 'lucide-react';
 import MessageFeed from './MessageFeed';
 import MessageInput from './MessageInput';
 import TypingIndicator from './TypingIndicator';
@@ -27,19 +41,54 @@ interface ChannelMainProps {
 }
 
 function getMeetingState(now = new Date()) {
-  const day = now.getDay(), hour = now.getHours();
-  if (day === 0 || day === 6) return { label: 'No meeting', link: null, message: 'No meeting on weekends.' };
-  if (day === 5) return { label: 'Friday meet', link: 'https://meet.google.com/eeq-maem-ztc', message: 'Friday meeting.' };
-  if (day === 4 && hour >= 14) return { label: 'Thursday PM', link: 'https://meet.google.com/dss-wmvy-cuq', message: 'Thursday afternoon.' };
-  return { label: 'Main meet', link: 'https://meet.google.com/uie-jxkt-vkx', message: 'Main meeting.' };
+  const day = now.getDay(),
+    hour = now.getHours();
+  if (day === 0 || day === 6)
+    return { label: 'No meeting', link: null, message: 'No meeting on weekends.' };
+  if (day === 5)
+    return {
+      label: 'Friday meet',
+      link: 'https://meet.google.com/eeq-maem-ztc',
+      message: 'Friday meeting.',
+    };
+  if (day === 4 && hour >= 14)
+    return {
+      label: 'Thursday PM',
+      link: 'https://meet.google.com/dss-wmvy-cuq',
+      message: 'Thursday afternoon.',
+    };
+  return {
+    label: 'Main meet',
+    link: 'https://meet.google.com/uie-jxkt-vkx',
+    message: 'Main meeting.',
+  };
 }
 
 export default function ChannelMain({
-  onToggleAI, aiPanelOpen, onToggleNotepad, notepadOpen,
-  onToggleActivity, activityPanelOpen = false,
-  onOpenSearch, onOpenKanban, onOpenWiki, onOpenAnalytics, onOpenBookmarks, onOpenVideoCall,
+  onToggleAI,
+  aiPanelOpen,
+  onToggleNotepad,
+  notepadOpen,
+  onToggleActivity,
+  activityPanelOpen = false,
+  onOpenSearch,
+  onOpenKanban,
+  onOpenWiki,
+  onOpenAnalytics,
+  onOpenBookmarks,
+  onOpenVideoCall,
 }: ChannelMainProps) {
-  const { activeChannel: activeChannelId, channels, members, messages, pinnedMessageIds, typingUsers, activeThreadId, setActiveThread, setTyping } = useDashboardStore();
+  const {
+    activeChannel: activeChannelId,
+    channels,
+    members,
+    messages,
+    pinnedMessageIds,
+    typingUsers,
+    activeThreadId,
+    setActiveThread,
+    setTyping,
+  } = useDashboardStore();
   const channel = channels.find((c) => c.id === activeChannelId) ?? channels[0];
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
@@ -77,7 +126,9 @@ export default function ChannelMain({
   }
 
   const filteredMembers = members.filter(
-    (m) => m.name.toLowerCase().includes(memberSearch.toLowerCase()) || m.email.toLowerCase().includes(memberSearch.toLowerCase())
+    (m) =>
+      m.name.toLowerCase().includes(memberSearch.toLowerCase()) ||
+      m.email.toLowerCase().includes(memberSearch.toLowerCase())
   );
 
   const isDM = channel.id.startsWith('member-');
@@ -92,7 +143,9 @@ export default function ChannelMain({
             {channel.name}
           </h1>
           {channel.description && (
-            <p className="mt-0.5 truncate text-[11px] text-[#7C859E] dark:text-[#7C859E]">{channel.description}</p>
+            <p className="mt-0.5 truncate text-[11px] text-[#7C859E] dark:text-[#7C859E]">
+              {channel.description}
+            </p>
           )}
         </div>
 
@@ -105,15 +158,23 @@ export default function ChannelMain({
           )}
 
           {!isDM && (
-            <button onClick={() => setShowMembersModal(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-[rgba(62,74,137,0.08)] dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-[#4A5578] dark:text-[#9BA6D3] hover:bg-slate-200 transition-colors">
-              <Users size={14} />{channel.memberCount}
+            <button
+              onClick={() => setShowMembersModal(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-[rgba(62,74,137,0.08)] dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-[#4A5578] dark:text-[#9BA6D3] hover:bg-slate-200 transition-colors"
+            >
+              <Users size={14} />
+              {channel.memberCount}
             </button>
           )}
 
-          <motion.button whileTap={{ scale: 0.88 }} whileHover={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            whileHover={{ scale: 1.1 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
             onClick={onOpenSearch}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#7C859E] dark:text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 transition-colors" title="Search messages">
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#7C859E] dark:text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 transition-colors"
+            title="Search messages"
+          >
             <Search size={16} />
           </motion.button>
 
@@ -123,52 +184,78 @@ export default function ChannelMain({
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors bg-[#3E4A89] hover:bg-[#2A3568]"
             title="Start or join a meeting"
           >
-            <Video size={14} />Meet
+            <Video size={14} />
+            Meet
           </button>
 
-          <motion.button whileTap={{ scale: 0.88 }} whileHover={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            whileHover={{ scale: 1.1 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
             onClick={onToggleAI}
-            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${aiPanelOpen ? 'bg-blue-600 text-white' : 'text-[#7C859E] dark:text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800'}`} title="AI Copilot">
+            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${aiPanelOpen ? 'bg-blue-600 text-white' : 'text-[#7C859E] dark:text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800'}`}
+            title="AI Copilot"
+          >
             <Bot size={16} />
           </motion.button>
 
-          <motion.button whileTap={{ scale: 0.88 }} whileHover={{ scale: 1.1 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            whileHover={{ scale: 1.1 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
             onClick={onToggleNotepad}
-            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${notepadOpen ? 'bg-[#3E4A89] text-white' : 'text-[#7C859E] dark:text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800'}`} title="Notepad">
+            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${notepadOpen ? 'bg-[#3E4A89] text-white' : 'text-[#7C859E] dark:text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800'}`}
+            title="Notepad"
+          >
             <FileText size={16} />
           </motion.button>
 
           {onOpenWiki && (
-            <button onClick={onOpenWiki}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-[#7C859E] dark:text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 hover:text-[#3E4A89] transition-colors" title="Wiki / Knowledge base">
+            <button
+              onClick={onOpenWiki}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-[#7C859E] dark:text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 hover:text-[#3E4A89] transition-colors"
+              title="Wiki / Knowledge base"
+            >
               <BookOpen size={16} />
             </button>
           )}
 
           {onOpenKanban && (
-            <button onClick={onOpenKanban}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-[#7C859E] dark:text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 hover:text-orange-600 transition-colors" title="Kanban board">
+            <button
+              onClick={onOpenKanban}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-[#7C859E] dark:text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 hover:text-orange-600 transition-colors"
+              title="Kanban board"
+            >
               <LayoutGrid size={16} />
             </button>
           )}
 
           {onToggleActivity && (
-            <button onClick={onToggleActivity}
-              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${activityPanelOpen ? 'bg-emerald-600 text-white' : 'text-[#7C859E] dark:text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800'}`} title="Activity">
+            <button
+              onClick={onToggleActivity}
+              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${activityPanelOpen ? 'bg-emerald-600 text-white' : 'text-[#7C859E] dark:text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800'}`}
+              title="Activity"
+            >
               <Activity size={16} />
             </button>
           )}
 
           {onOpenBookmarks && (
-            <button onClick={onOpenBookmarks}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-[#7C859E] dark:text-[#7C859E] hover:bg-amber-100 dark:hover:bg-amber-900/20 hover:text-amber-600 transition-colors" title="Saved messages">
+            <button
+              onClick={onOpenBookmarks}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-[#7C859E] dark:text-[#7C859E] hover:bg-amber-100 dark:hover:bg-amber-900/20 hover:text-amber-600 transition-colors"
+              title="Saved messages"
+            >
               <Bookmark size={16} />
             </button>
           )}
 
           {onOpenAnalytics && (
-            <button onClick={onOpenAnalytics}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-[#7C859E] dark:text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 hover:text-emerald-600 transition-colors" title="Analytics">
+            <button
+              onClick={onOpenAnalytics}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-[#7C859E] dark:text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 hover:text-emerald-600 transition-colors"
+              title="Analytics"
+            >
               <BarChart2 size={16} />
             </button>
           )}
@@ -180,10 +267,14 @@ export default function ChannelMain({
         <div className="border-b border-amber-100 bg-amber-50/60 dark:bg-amber-900/10 dark:border-amber-800/30 px-4 py-2">
           <div className="flex items-center gap-2 text-[11px] text-amber-700 dark:text-[#7C859E]">
             <Pin size={11} />
-            <span className="font-bold">{pinnedIds.length} pinned message{pinnedIds.length > 1 ? 's' : ''}</span>
+            <span className="font-bold">
+              {pinnedIds.length} pinned message{pinnedIds.length > 1 ? 's' : ''}
+            </span>
             <span className="text-amber-500">·</span>
             <span className="truncate">
-              {allMessages.find((m) => m.id === pinnedIds[pinnedIds.length - 1])?.text?.slice(0, 60) ?? ''}
+              {allMessages
+                .find((m) => m.id === pinnedIds[pinnedIds.length - 1])
+                ?.text?.slice(0, 60) ?? ''}
             </span>
           </div>
         </div>
@@ -218,8 +309,10 @@ export default function ChannelMain({
                 <MessageSquare size={15} className="text-indigo-500" />
                 <span className="text-sm font-bold text-[#1E2636]">Thread</span>
               </div>
-              <button onClick={() => setActiveThread(null)}
-                className="rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 hover:text-[#4A5578]">
+              <button
+                onClick={() => setActiveThread(null)}
+                className="rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 hover:text-[#4A5578]"
+              >
                 <X size={16} />
               </button>
             </div>
@@ -227,7 +320,11 @@ export default function ChannelMain({
               <MessageFeed channelId={channel.id} parentId={activeThreadId} />
             </div>
             <div className="shrink-0 border-t border-[rgba(62,74,137,0.12)]  p-3">
-              <MessageInput channelId={channel.id} channelName={channel.name} replyToId={activeThreadId} />
+              <MessageInput
+                channelId={channel.id}
+                channelName={channel.name}
+                replyToId={activeThreadId}
+              />
             </div>
           </div>
         )}
@@ -242,29 +339,49 @@ export default function ChannelMain({
               <p className="mt-0.5 text-xs text-[#9BA6D3]">{channel.memberCount} members</p>
             </div>
             <div className="border-b border-[rgba(62,74,137,0.12)]  px-4 py-3">
-              <input type="text" placeholder="Search members…" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)}
-                className="w-full rounded-xl border border-[rgba(62,74,137,0.12)]  bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+              <input
+                type="text"
+                placeholder="Search members…"
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                className="w-full rounded-xl border border-[rgba(62,74,137,0.12)]  bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              />
             </div>
             <div className="flex-1 overflow-y-auto p-2">
               {filteredMembers.map((member) => (
-                <div key={member.id} className="flex items-center gap-3 rounded-xl p-3 hover:bg-[rgba(62,74,137,0.06)] dark:hover:bg-slate-800">
-                  <div className="relative flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-white" style={{ backgroundColor: member.color }}>
+                <div
+                  key={member.id}
+                  className="flex items-center gap-3 rounded-xl p-3 hover:bg-[rgba(62,74,137,0.06)] dark:hover:bg-slate-800"
+                >
+                  <div
+                    className="relative flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-white"
+                    style={{ backgroundColor: member.color }}
+                  >
                     {member.initials}
-                    <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-slate-900 ${member.status === 'online' ? 'bg-emerald-500' : member.status === 'away' ? 'bg-amber-400' : 'bg-slate-300'}`} />
+                    <span
+                      className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-slate-900 ${member.status === 'online' ? 'bg-emerald-500' : member.status === 'away' ? 'bg-amber-400' : 'bg-slate-300'}`}
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-[#1E2636]">{member.name}</p>
                     <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">{member.role}</p>
                   </div>
-                  <span className={`text-[10px] font-bold capitalize ${member.status === 'online' ? 'text-emerald-600' : member.status === 'away' ? 'text-amber-500' : 'text-[#7C859E]'}`}>
+                  <span
+                    className={`text-[10px] font-bold capitalize ${member.status === 'online' ? 'text-emerald-600' : member.status === 'away' ? 'text-amber-500' : 'text-[#7C859E]'}`}
+                  >
                     {member.status}
                   </span>
                 </div>
               ))}
             </div>
             <div className="border-t border-[rgba(62,74,137,0.12)]  bg-[#FAF8F5] dark:bg-slate-800 px-4 py-3">
-              <button onClick={() => { setShowMembersModal(false); setMemberSearch(''); }}
-                className="w-full rounded-xl bg-[#191E2F] dark:bg-[#3E4A89] py-2 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-[#2A3568] transition-colors">
+              <button
+                onClick={() => {
+                  setShowMembersModal(false);
+                  setMemberSearch('');
+                }}
+                className="w-full rounded-xl bg-[#191E2F] dark:bg-[#3E4A89] py-2 text-sm font-bold text-white hover:bg-slate-800 dark:hover:bg-[#2A3568] transition-colors"
+              >
                 Close
               </button>
             </div>
@@ -282,10 +399,14 @@ export default function ChannelMain({
             if (meetingState.link) window.open(meetingState.link, '_blank');
             else toast.info(meetingState.message);
           }}
-          onStartVideoCall={onOpenVideoCall ? () => {
-            setStartMeetOpen(false);
-            onOpenVideoCall!();
-          } : undefined}
+          onStartVideoCall={
+            onOpenVideoCall
+              ? () => {
+                  setStartMeetOpen(false);
+                  onOpenVideoCall!();
+                }
+              : undefined
+          }
           participants={members.slice(0, 4).map((m) => ({
             name: m.name,
             initials: m.initials,

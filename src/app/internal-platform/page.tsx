@@ -26,8 +26,12 @@ export default function InternalPlatform() {
         </ul>
       </section>
       <div style={styles.actions}>
-        <a href="#" style={styles.button}>Open the platform</a>
-        <a href="#" style={styles.buttonSecondary}>Sign in to your account</a>
+        <a href="#" style={styles.button}>
+          Open the platform
+        </a>
+        <a href="#" style={styles.buttonSecondary}>
+          Sign in to your account
+        </a>
       </div>
     </main>
   );
@@ -38,7 +42,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     maxWidth: '960px',
     margin: '0 auto',
     padding: '2rem',
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif",
+    fontFamily:
+      "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif",
     color: '#1F2937',
     background: 'linear-gradient(135deg, #fafbff 0%, #e0e7ff 100%)',
     borderRadius: '12px',

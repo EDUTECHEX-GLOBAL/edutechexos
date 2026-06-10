@@ -24,13 +24,28 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend
 
 // Hardcoded fallback for when backend is unreachable
 const VALID_ACCOUNTS = [
-  { email: 'admin@edutechex.in',     password: 'Admin@2026',    name: 'Admin',            role: 'Admin'    },
-  { email: 'aditya@edutechex.in',    password: 'TeamOS@2026',   name: 'Aditya Cherikuri', role: 'Manager'  },
-  { email: 'dev.rk@edutechex.in',    password: 'DevAccess#26',  name: 'Developer RK',     role: 'Developer'},
-  { email: 'design.sa@edutechex.in', password: 'Design$2026',   name: 'Designer SA',      role: 'Designer' },
-  { email: 'mohan.kumar@edutechex.in',  password: 'MohanK@2026', name: 'Mohan K.', role: 'Member' },
-  { email: 'mohan.reddy@edutechex.in',  password: 'MohanR@2026', name: 'Mohan R.', role: 'Member' },
-  { email: 'mohan.sen@edutechex.in',    password: 'MohanS@2026', name: 'Mohan S.', role: 'Member' },
+  { email: 'admin@edutechex.in', password: 'Admin@2026', name: 'Admin', role: 'Admin' },
+  {
+    email: 'aditya@edutechex.in',
+    password: 'TeamOS@2026',
+    name: 'Aditya Cherikuri',
+    role: 'Manager',
+  },
+  {
+    email: 'dev.rk@edutechex.in',
+    password: 'DevAccess#26',
+    name: 'Developer RK',
+    role: 'Developer',
+  },
+  {
+    email: 'design.sa@edutechex.in',
+    password: 'Design$2026',
+    name: 'Designer SA',
+    role: 'Designer',
+  },
+  { email: 'mohan.kumar@edutechex.in', password: 'MohanK@2026', name: 'Mohan K.', role: 'Member' },
+  { email: 'mohan.reddy@edutechex.in', password: 'MohanR@2026', name: 'Mohan R.', role: 'Member' },
+  { email: 'mohan.sen@edutechex.in', password: 'MohanS@2026', name: 'Mohan S.', role: 'Member' },
 ];
 
 export default function LoginForm({
@@ -77,7 +92,10 @@ export default function LoginForm({
     return () => window.removeEventListener('demo-autofill', handler);
   }, [setValue]);
 
-  function finishLogin(loginAccount: { name: string; email: string; role: string }, jwtToken?: string) {
+  function finishLogin(
+    loginAccount: { name: string; email: string; role: string },
+    jwtToken?: string
+  ) {
     if (authMode === 'admin' && loginAccount.role !== 'Admin') {
       setIsLoading(false);
       setError('email', { message: 'Only the admin account can sign in from the Admin button.' });
@@ -98,13 +116,12 @@ export default function LoginForm({
           localStorage.removeItem('edutechex_dashboard_settings');
         }
       }
-    } catch { /* ignore parse errors */ }
+    } catch {
+      /* ignore parse errors */
+    }
 
     const token = jwtToken || `mock-jwt-${Date.now()}`;
-    localStorage.setItem(
-      'edutechex_token',
-      JSON.stringify({ user: loginAccount, token })
-    );
+    localStorage.setItem('edutechex_token', JSON.stringify({ user: loginAccount, token }));
 
     const today = new Date().toISOString().split('T')[0];
     const trackKey = `edutechex_logins_${loginAccount.email}`;
@@ -206,7 +223,6 @@ export default function LoginForm({
       `}</style>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
-        
         {/* Email */}
         <div className="space-y-2.5">
           <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">
@@ -219,14 +235,22 @@ export default function LoginForm({
               autoComplete="email"
               placeholder="email@institution.edu"
               className={`input-ivy w-full pl-12 pr-4 py-4 text-sm text-[#0A1128] font-medium placeholder:text-[#0A1128]/20 ${errors.email ? 'border-red-300 bg-red-50/30' : ''}`}
-              style={{ ...inputIvyStyle, borderColor: errors.email ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)' }}
+              style={{
+                ...inputIvyStyle,
+                borderColor: errors.email ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)',
+              }}
               {...register('email', {
                 required: 'Email is required',
-                pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email address' },
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                  message: 'Enter a valid email address',
+                },
               })}
             />
           </div>
-          {errors.email && <p className="text-xs font-medium text-red-600 ml-1">{errors.email.message}</p>}
+          {errors.email && (
+            <p className="text-xs font-medium text-red-600 ml-1">{errors.email.message}</p>
+          )}
         </div>
 
         {/* Password */}
@@ -235,9 +259,14 @@ export default function LoginForm({
             <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80">
               Security Key
             </label>
-            <button 
-              type="button" 
-              onClick={() => { setForgotOpen(true); setForgotStep(1); setForgotError(''); setForgotEmail(''); }}
+            <button
+              type="button"
+              onClick={() => {
+                setForgotOpen(true);
+                setForgotStep(1);
+                setForgotError('');
+                setForgotEmail('');
+              }}
               className="text-[10px] font-bold text-[#D4AF37] hover:underline transition-all"
             >
               Forgot Key?
@@ -250,7 +279,10 @@ export default function LoginForm({
               autoComplete="current-password"
               placeholder="••••••••••••"
               className={`input-ivy w-full pl-12 pr-12 py-4 text-sm text-[#0A1128] font-medium placeholder:text-[#0A1128]/20 ${errors.password ? 'border-red-300 bg-red-50/30' : ''}`}
-              style={{ ...inputIvyStyle, borderColor: errors.password ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)' }}
+              style={{
+                ...inputIvyStyle,
+                borderColor: errors.password ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)',
+              }}
               {...register('password', {
                 required: 'Password is required',
                 minLength: { value: 6, message: 'Password must be at least 6 characters' },
@@ -284,7 +316,13 @@ export default function LoginForm({
                   Authenticating...
                 </>
               ) : (
-                <>Enter System <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" /></>
+                <>
+                  Enter System{' '}
+                  <ArrowRight
+                    size={14}
+                    className="group-hover:translate-x-1 transition-transform"
+                  />
+                </>
               )}
             </span>
             {/* Gold shimmer sweep on hover */}
@@ -295,7 +333,7 @@ export default function LoginForm({
         {authMode === 'user' && (
           <div className="text-center pt-4">
             <p className="text-xs text-[#0A1128]/40">
-              New to the institution? 
+              New to the institution?
               <button
                 type="button"
                 onClick={onSwitchToSignup}
@@ -327,7 +365,6 @@ export default function LoginForm({
               </button>
             </div>
 
-
             <div className="px-8 py-8">
               {forgotError && (
                 <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-600">
@@ -336,32 +373,40 @@ export default function LoginForm({
               )}
 
               {forgotStep === 1 ? (
-                <form onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (!forgotEmail.trim()) { setForgotError('Enter your email address.'); return; }
-                  setForgotLoading(true);
-                  setForgotError('');
-                  try {
-                    const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
-                    });
-                    const data = await res.json();
-                    if (!res.ok || !data.success) {
-                      setForgotError(data.error ?? 'Failed to send reset code.');
-                    } else {
-                      if (data.previewUrl) setForgotPreviewUrl(data.previewUrl);
-                      setForgotStep(2);
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!forgotEmail.trim()) {
+                      setForgotError('Enter your email address.');
+                      return;
                     }
-                  } catch {
-                    setForgotError('Network error. Please try again.');
-                  } finally {
-                    setForgotLoading(false);
-                  }
-                }} className="space-y-6">
+                    setForgotLoading(true);
+                    setForgotError('');
+                    try {
+                      const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok || !data.success) {
+                        setForgotError(data.error ?? 'Failed to send reset code.');
+                      } else {
+                        if (data.previewUrl) setForgotPreviewUrl(data.previewUrl);
+                        setForgotStep(2);
+                      }
+                    } catch {
+                      setForgotError('Network error. Please try again.');
+                    } finally {
+                      setForgotLoading(false);
+                    }
+                  }}
+                  className="space-y-6"
+                >
                   <div className="space-y-2.5">
-                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">Email address</label>
+                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">
+                      Email address
+                    </label>
                     <input
                       type="email"
                       value={forgotEmail}
@@ -381,55 +426,73 @@ export default function LoginForm({
                       <span className="flex items-center justify-center gap-2">
                         <Loader2 size={14} className="animate-spin" /> Sending...
                       </span>
-                    ) : 'Send Reset Code'}
+                    ) : (
+                      'Send Reset Code'
+                    )}
                   </button>
                 </form>
               ) : (
-                <form onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (!forgotCode.trim()) { setForgotError('Enter the 6-digit code.'); return; }
-                  if (forgotNewPass.length < 6) { setForgotError('Password must be at least 6 characters.'); return; }
-                  setForgotLoading(true);
-                  setForgotError('');
-                  try {
-                    const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        email: forgotEmail.trim().toLowerCase(),
-                        code: forgotCode.trim(),
-                        newPassword: forgotNewPass,
-                      }),
-                    });
-                    const data = await res.json();
-                    if (!res.ok || !data.success) {
-                      setForgotError(data.error ?? 'Failed to reset password.');
-                    } else {
-                      toast.success('Security key reset! Sign in with your new key.');
-                      setForgotOpen(false);
-                      setForgotStep(1);
-                      setForgotEmail('');
-                      setForgotCode('');
-                      setForgotNewPass('');
-                      setForgotError('');
-                      setForgotPreviewUrl('');
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!forgotCode.trim()) {
+                      setForgotError('Enter the 6-digit code.');
+                      return;
                     }
-                  } catch {
-                    setForgotError('Network error. Please try again.');
-                  } finally {
-                    setForgotLoading(false);
-                  }
-                }} className="space-y-6">
+                    if (forgotNewPass.length < 6) {
+                      setForgotError('Password must be at least 6 characters.');
+                      return;
+                    }
+                    setForgotLoading(true);
+                    setForgotError('');
+                    try {
+                      const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          email: forgotEmail.trim().toLowerCase(),
+                          code: forgotCode.trim(),
+                          newPassword: forgotNewPass,
+                        }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok || !data.success) {
+                        setForgotError(data.error ?? 'Failed to reset password.');
+                      } else {
+                        toast.success('Security key reset! Sign in with your new key.');
+                        setForgotOpen(false);
+                        setForgotStep(1);
+                        setForgotEmail('');
+                        setForgotCode('');
+                        setForgotNewPass('');
+                        setForgotError('');
+                        setForgotPreviewUrl('');
+                      }
+                    } catch {
+                      setForgotError('Network error. Please try again.');
+                    } finally {
+                      setForgotLoading(false);
+                    }
+                  }}
+                  className="space-y-6"
+                >
                   {forgotPreviewUrl && (
                     <div className="rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/5 px-4 py-2.5 text-xs text-[#0A1128]">
                       <span className="font-semibold text-[#D4AF37]">Dev mode:</span>{' '}
-                      <a href={forgotPreviewUrl} target="_blank" rel="noreferrer" className="underline text-[#D4AF37]">
+                      <a
+                        href={forgotPreviewUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline text-[#D4AF37]"
+                      >
                         Preview email →
                       </a>
                     </div>
                   )}
                   <div className="space-y-2.5">
-                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">6-Digit Code</label>
+                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">
+                      6-Digit Code
+                    </label>
                     <input
                       type="text"
                       inputMode="numeric"
@@ -443,7 +506,9 @@ export default function LoginForm({
                     />
                   </div>
                   <div className="space-y-2.5">
-                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">New Security Key</label>
+                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">
+                      New Security Key
+                    </label>
                     <div className="relative">
                       <input
                         type={forgotShowPass ? 'text' : 'password'}
@@ -465,7 +530,10 @@ export default function LoginForm({
                   <div className="flex gap-4 pt-2">
                     <button
                       type="button"
-                      onClick={() => { setForgotStep(1); setForgotError(''); }}
+                      onClick={() => {
+                        setForgotStep(1);
+                        setForgotError('');
+                      }}
                       className="flex-1 bg-transparent border border-[#0A1128]/10 text-[#0A1128] py-4 font-black uppercase tracking-[0.2em] text-[10px] rounded-sm hover:bg-[#0A1128]/5 transition-all"
                     >
                       ← Back
@@ -475,12 +543,13 @@ export default function LoginForm({
                       disabled={forgotLoading}
                       className="flex-1 bg-[#0A1128] text-white py-4 font-black uppercase tracking-[0.2em] text-[10px] rounded-sm transition-all hover:bg-[#D4AF37] hover:text-[#0A1128]"
                     >
-
                       {forgotLoading ? (
                         <span className="flex items-center justify-center gap-2">
                           <Loader2 size={14} className="animate-spin" /> Verifying...
                         </span>
-                      ) : 'Reset Key'}
+                      ) : (
+                        'Reset Key'
+                      )}
                     </button>
                   </div>
                 </form>

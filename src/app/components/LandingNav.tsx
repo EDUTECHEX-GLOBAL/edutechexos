@@ -13,9 +13,9 @@ export default function LandingNav() {
   }, []);
 
   const navLinks = [
-    { label: 'Features',     href: '#features'     },
-    { label: 'How It Works', href: '#how-it-works'  },
-    { label: 'Testimonials', href: '#testimonials'  },
+    { label: 'Features', href: '#features' },
+    { label: 'How It Works', href: '#how-it-works' },
+    { label: 'Testimonials', href: '#testimonials' },
   ];
 
   return (
@@ -45,7 +45,6 @@ export default function LandingNav() {
         }}
       >
         <div className="max-w-screen-xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
-
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 no-underline group">
             <div

@@ -72,10 +72,9 @@ function makeTools(channelId: string, userToken: string | null) {
       }),
       execute: async ({ query }) => {
         try {
-          const res = await fetch(
-            `${BACKEND}/api/search?q=${encodeURIComponent(query)}&limit=8`,
-            { headers: authHeader }
-          );
+          const res = await fetch(`${BACKEND}/api/search?q=${encodeURIComponent(query)}&limit=8`, {
+            headers: authHeader,
+          });
           if (!res.ok) return { success: false, results: [] };
           const data = await res.json();
           return {
@@ -117,7 +116,9 @@ function makeTools(channelId: string, userToken: string | null) {
           if (assignee) {
             const needle = assignee.toLowerCase();
             tasks = tasks.filter((t) =>
-              String(t.assignee ?? '').toLowerCase().includes(needle)
+              String(t.assignee ?? '')
+                .toLowerCase()
+                .includes(needle)
             );
           }
           return {
@@ -163,14 +164,8 @@ function makeTools(channelId: string, userToken: string | null) {
 }
 
 export async function POST(req: Request) {
-  const {
-    uiMessages,
-    channelName,
-    channelId,
-    channelTranscript,
-    accessibleChannels,
-    userToken,
-  } = await req.json();
+  const { uiMessages, channelName, channelId, channelTranscript, accessibleChannels, userToken } =
+    await req.json();
 
   const model = getModel();
   if (!model) {
@@ -181,8 +176,7 @@ export async function POST(req: Request) {
   }
 
   const channelList =
-    (accessibleChannels || []).map((c: string) => `#${c}`).join(', ') ||
-    `#${channelName}`;
+    (accessibleChannels || []).map((c: string) => `#${c}`).join(', ') || `#${channelName}`;
 
   const transcriptContext = channelTranscript
     ? `\n\nRecent channel messages:\n${channelTranscript}`

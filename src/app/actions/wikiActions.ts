@@ -32,20 +32,23 @@ export async function getWikiPagesAction() {
   }
 }
 
-export async function saveWikiPageAction(channelId: string, page: { id: string; title: string; content: string }) {
+export async function saveWikiPageAction(
+  channelId: string,
+  page: { id: string; title: string; content: string }
+) {
   try {
     await ensureDb();
     const updated = await WikiPage.findOneAndUpdate(
       { _id: page.id },
-      { 
-        channelId, 
-        title: page.title, 
+      {
+        channelId,
+        title: page.title,
         content: page.content,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     ).lean();
-    
+
     const { _id, ...rest } = updated as any;
     return {
       success: true,
@@ -54,7 +57,7 @@ export async function saveWikiPageAction(channelId: string, page: { id: string; 
         id: _id,
         createdAt: updated.createdAt ? updated.createdAt.toISOString() : new Date().toISOString(),
         updatedAt: updated.updatedAt ? updated.updatedAt.toISOString() : new Date().toISOString(),
-      }
+      },
     };
   } catch (err) {
     console.error('Failed to save wiki page to MongoDB:', err);

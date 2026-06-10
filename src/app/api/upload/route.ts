@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const CLOUD_NAME   = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? '';
+const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? '';
 const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? '';
 
 // Cloudinary uses "video" resource type for both video and audio files
@@ -45,10 +45,10 @@ export async function POST(req: NextRequest) {
     cloudForm.append('folder', 'edutechexos/audio');
 
     const type = resourceType(file.type || 'audio/webm');
-    const cloudRes = await fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${type}/upload`,
-      { method: 'POST', body: cloudForm }
-    );
+    const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${type}/upload`, {
+      method: 'POST',
+      body: cloudForm,
+    });
 
     if (!cloudRes.ok) {
       const errText = await cloudRes.text();

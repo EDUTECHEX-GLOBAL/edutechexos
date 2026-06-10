@@ -77,17 +77,18 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
             0,
             0,
             canvas.width,
-            canvas.height,
+            canvas.height
           );
           // Webcam overlay (bottomâ€‘right corner, 20% of width)
           const overlayW = canvas.width * 0.2;
-          const overlayH = (overlayW * (webcamVideo.videoHeight ?? 1)) / (webcamVideo.videoWidth ?? 1);
+          const overlayH =
+            (overlayW * (webcamVideo.videoHeight ?? 1)) / (webcamVideo.videoWidth ?? 1);
           ctx.drawImage(
             webcamVideo,
             canvas.width - overlayW - 10,
             canvas.height - overlayH - 10,
             overlayW,
-            overlayH,
+            overlayH
           );
           requestAnimationFrame(draw);
         };
@@ -158,7 +159,9 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
       {previewUrl && (
         <div className="mt-4">
           <video src={previewUrl} controls className="w-full rounded" />
-          <p className="text-sm text-gray-600 mt-1">Preview â€“ send will happen automatically after stop.</p>
+          <p className="text-sm text-gray-600 mt-1">
+            Preview â€“ send will happen automatically after stop.
+          </p>
         </div>
       )}
     </div>
@@ -166,6 +169,3 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
 };
 
 export default ScreenRecorder;
-
-
-

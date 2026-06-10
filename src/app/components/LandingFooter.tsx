@@ -7,7 +7,7 @@ const footerGroups = [
   {
     title: 'Product',
     links: [
-      { label: 'Features',    href: '#features'     },
+      { label: 'Features', href: '#features' },
       { label: 'How it works', href: '#how-it-works' },
       { label: 'Testimonials', href: '#testimonials' },
     ],
@@ -15,16 +15,16 @@ const footerGroups = [
   {
     title: 'Access',
     links: [
-      { label: 'Sign in',    href: '/sign-up-login-screen'                        },
-      { label: 'Get access', href: '/sign-up-login-screen'                        },
-      { label: 'Admin',      href: '/sign-up-login-screen?mode=admin&redirect=/admin' },
+      { label: 'Sign in', href: '/sign-up-login-screen' },
+      { label: 'Get access', href: '/sign-up-login-screen' },
+      { label: 'Admin', href: '/sign-up-login-screen?mode=admin&redirect=/admin' },
     ],
   },
   {
     title: 'Legal',
     links: [
       { label: 'Privacy', href: '#' },
-      { label: 'Terms',   href: '#' },
+      { label: 'Terms', href: '#' },
     ],
   },
 ];
@@ -49,13 +49,15 @@ export default function LandingFooter() {
 
       <div className="relative max-w-screen-xl mx-auto px-6 lg:px-10 py-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-16">
-
           {/* Brand column */}
           <AnimatedSection direction="up" className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2.5 no-underline group mb-5">
               <div
                 className="w-8 h-8 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-105"
-                style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.15)' }}
+                style={{
+                  background: 'rgba(255,255,255,0.12)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                }}
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <circle cx="5" cy="8" r="2.5" fill="white" />
@@ -67,7 +69,10 @@ export default function LandingFooter() {
                 EduTechEx<span style={{ color: '#9BA6D3' }}>OS</span>
               </span>
             </Link>
-            <p className="text-sm leading-relaxed max-w-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            <p
+              className="text-sm leading-relaxed max-w-xs"
+              style={{ color: 'rgba(255,255,255,0.45)' }}
+            >
               Internal operating system for the EduTechEx team. Built in Hyderabad.
             </p>
           </AnimatedSection>

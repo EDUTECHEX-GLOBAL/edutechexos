@@ -1,8 +1,18 @@
 ﻿'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Mic, MicOff, Video, VideoOff, PhoneOff, Users,
-  Camera, Monitor, MonitorOff, Wifi, WifiOff, Settings,
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  PhoneOff,
+  Users,
+  Camera,
+  Monitor,
+  MonitorOff,
+  Wifi,
+  WifiOff,
+  Settings,
 } from 'lucide-react';
 import {
   LiveKitRoom,
@@ -42,7 +52,10 @@ function LocalOnlyCall({ channelName, onClose }: { channelName: string; onClose:
     (async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
         streamRef.current = stream;
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       } catch {
@@ -57,7 +70,8 @@ function LocalOnlyCall({ channelName, onClose }: { channelName: string; onClose:
     };
   }, [stopStream]);
 
-  const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  const fmt = (s: number) =>
+    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   return (
     <div className="fixed inset-0 z-[300] flex flex-col bg-[#191E2F]">
@@ -89,13 +103,16 @@ function LocalOnlyCall({ channelName, onClose }: { channelName: string; onClose:
               </p>
             </div>
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-[#C4CAE0] max-w-xs">
-              <strong>Tip:</strong> Add <code>LIVEKIT_API_KEY</code> and <code>LIVEKIT_API_SECRET</code> to enable multi-participant calls via LiveKit.
+              <strong>Tip:</strong> Add <code>LIVEKIT_API_KEY</code> and{' '}
+              <code>LIVEKIT_API_SECRET</code> to enable multi-participant calls via LiveKit.
             </div>
           </div>
         ) : (
           <video
             ref={localVideoRef}
-            autoPlay muted playsInline
+            autoPlay
+            muted
+            playsInline
             className={`w-full h-full object-cover transition-opacity ${cameraEnabled ? 'opacity-100' : 'opacity-0'}`}
             style={{ transform: 'scaleX(-1)' }}
           />
@@ -116,7 +133,9 @@ function LocalOnlyCall({ channelName, onClose }: { channelName: string; onClose:
       <div className="flex items-center justify-center gap-4 py-6 bg-[rgba(25,30,47,0.60)] backdrop-blur-sm shrink-0">
         <button
           onClick={() => {
-            streamRef.current?.getAudioTracks().forEach((t) => { t.enabled = !micEnabled; });
+            streamRef.current?.getAudioTracks().forEach((t) => {
+              t.enabled = !micEnabled;
+            });
             setMicEnabled((v) => !v);
           }}
           className={`h-14 w-14 rounded-full flex items-center justify-center transition-all shadow-lg ${micEnabled ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/20 text-red-400 ring-1 ring-red-500/50'}`}
@@ -124,20 +143,29 @@ function LocalOnlyCall({ channelName, onClose }: { channelName: string; onClose:
           {micEnabled ? <Mic size={22} strokeWidth={2} /> : <MicOff size={22} strokeWidth={2} />}
         </button>
         <button
-          onClick={() => { stopStream(); onClose(); }}
+          onClick={() => {
+            stopStream();
+            onClose();
+          }}
           className="h-16 w-16 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center shadow-xl shadow-red-900/50"
         >
           <PhoneOff size={24} className="text-white" strokeWidth={2.5} />
         </button>
         <button
           onClick={() => {
-            streamRef.current?.getVideoTracks().forEach((t) => { t.enabled = !cameraEnabled; });
+            streamRef.current?.getVideoTracks().forEach((t) => {
+              t.enabled = !cameraEnabled;
+            });
             setCameraEnabled((v) => !v);
           }}
           disabled={cameraPermissionDenied}
           className={`h-14 w-14 rounded-full flex items-center justify-center transition-all shadow-lg disabled:opacity-40 ${cameraEnabled ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-red-500/20 text-red-400 ring-1 ring-red-500/50'}`}
         >
-          {cameraEnabled ? <Video size={22} strokeWidth={2} /> : <VideoOff size={22} strokeWidth={2} />}
+          {cameraEnabled ? (
+            <Video size={22} strokeWidth={2} />
+          ) : (
+            <VideoOff size={22} strokeWidth={2} />
+          )}
         </button>
       </div>
     </div>
@@ -145,7 +173,12 @@ function LocalOnlyCall({ channelName, onClose }: { channelName: string; onClose:
 }
 
 // â”€â”€ LiveKit-powered multi-participant call â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function LiveKitCall({ token, serverUrl, channelName, onClose }: {
+function LiveKitCall({
+  token,
+  serverUrl,
+  channelName,
+  onClose,
+}: {
   token: string;
   serverUrl: string;
   channelName: string;
@@ -188,7 +221,11 @@ function LiveKitCall({ token, serverUrl, channelName, onClose }: {
 }
 
 // â”€â”€ Main component â€” detects LiveKit credentials, falls back gracefully â”€â”€â”€â”€â”€â”€â”€â”€
-export default function VideoCallModal({ channelName, onClose, currentUserName }: VideoCallModalProps) {
+export default function VideoCallModal({
+  channelName,
+  onClose,
+  currentUserName,
+}: VideoCallModalProps) {
   const [liveKitToken, setLiveKitToken] = useState<string | null>(null);
   const [liveKitError, setLiveKitError] = useState(false);
   const [isConnecting, setIsConnecting] = useState(true);
@@ -231,11 +268,15 @@ export default function VideoCallModal({ channelName, onClose, currentUserName }
   }
 
   if (liveKitToken && serverUrl) {
-    return <LiveKitCall token={liveKitToken} serverUrl={serverUrl} channelName={channelName} onClose={onClose} />;
+    return (
+      <LiveKitCall
+        token={liveKitToken}
+        serverUrl={serverUrl}
+        channelName={channelName}
+        onClose={onClose}
+      />
+    );
   }
 
   return <LocalOnlyCall channelName={channelName} onClose={onClose} />;
 }
-
-
-

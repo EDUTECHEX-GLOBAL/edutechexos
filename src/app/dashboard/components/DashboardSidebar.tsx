@@ -201,7 +201,9 @@ export default function DashboardSidebar({
       if (data.success && Array.isArray(data.loggedInEmails)) {
         setLoggedInTodayEmails(new Set(data.loggedInEmails.map((e: string) => e.toLowerCase())));
       }
-    } catch { /* backend unavailable */ }
+    } catch {
+      /* backend unavailable */
+    }
   }, []);
 
   useEffect(() => {
@@ -237,7 +239,9 @@ export default function DashboardSidebar({
               setCurrentUser((prev) => ({ ...prev, role }));
             }
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     };
     const handleMemberRemoved = ({ memberId }: { memberId: string }) => {
@@ -425,7 +429,11 @@ export default function DashboardSidebar({
                               ? 'bg-emerald-500'
                               : 'bg-red-400'
                           }`}
-                          title={loggedInTodayEmails.has(member.email.toLowerCase()) ? 'Logged in today' : 'Not logged in today'}
+                          title={
+                            loggedInTodayEmails.has(member.email.toLowerCase())
+                              ? 'Logged in today'
+                              : 'Not logged in today'
+                          }
                         />
                       </span>
                       <span className="min-w-0 flex-1 truncate">{member.name}</span>
@@ -521,11 +529,7 @@ export default function DashboardSidebar({
               className="flex-1 flex justify-center items-center py-1.5 rounded-lg text-[#7C859E] hover:bg-white hover:text-amber-500 hover:shadow-sm transition-all"
               title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >
-              {darkMode ? (
-                <Sun size={14} strokeWidth={2} />
-              ) : (
-                <Moon size={14} strokeWidth={2} />
-              )}
+              {darkMode ? <Sun size={14} strokeWidth={2} /> : <Moon size={14} strokeWidth={2} />}
             </button>
             <Link
               href="/sign-up-login-screen"
@@ -730,6 +734,3 @@ export default function DashboardSidebar({
     </>
   );
 }
-
-
-

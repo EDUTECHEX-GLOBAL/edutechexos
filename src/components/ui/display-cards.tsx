@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { cn } from "@/lib/utils";
-import { Sparkles } from "lucide-react";
+import { cn } from '@/lib/utils';
+import { Sparkles } from 'lucide-react';
 
 interface DisplayCardProps {
   className?: string;
@@ -16,11 +16,11 @@ interface DisplayCardProps {
 function DisplayCard({
   className,
   icon = <Sparkles className="size-4 text-blue-300" />,
-  title = "Featured",
-  description = "Discover amazing content",
-  date = "Just now",
-  iconClassName = "text-blue-500",
-  titleClassName = "text-blue-500",
+  title = 'Featured',
+  description = 'Discover amazing content',
+  date = 'Just now',
+  iconClassName = 'text-blue-500',
+  titleClassName = 'text-blue-500',
 }: DisplayCardProps) {
   return (
     <div
@@ -30,10 +30,8 @@ function DisplayCard({
       )}
     >
       <div>
-        <span className="relative inline-block rounded-full bg-blue-800 p-1">
-          {icon}
-        </span>
-        <p className={cn("text-lg font-medium", titleClassName)}>{title}</p>
+        <span className="relative inline-block rounded-full bg-blue-800 p-1">{icon}</span>
+        <p className={cn('text-lg font-medium', titleClassName)}>{title}</p>
       </div>
       <p className="whitespace-nowrap text-lg">{description}</p>
       <p className="text-muted-foreground">{date}</p>
@@ -57,7 +55,7 @@ export default function DisplayCards({ cards }: DisplayCardsProps) {
     },
     {
       className:
-        "[grid-area:stack] translate-x-16 translate-y-10 sm:translate-x-32 sm:translate-y-20 hover:translate-y-10",
+        '[grid-area:stack] translate-x-16 translate-y-10 sm:translate-x-32 sm:translate-y-20 hover:translate-y-10',
     },
   ];
 

@@ -58,12 +58,20 @@ const systemEmails = [
   'tarun@edutechex.in',
   'mohan.kumar@edutechex.in',
   'mohan.reddy@edutechex.in',
-  'mohan.sen@edutechex.in'
+  'mohan.sen@edutechex.in',
 ];
 
 export default function AdminPage() {
-  const { members, addMember, removeMember, channels, setMemberWorkspaceChannel, setMemberWorkspaceChannels, setMemberRole, loadLocalMembers } =
-    useDashboardStore();
+  const {
+    members,
+    addMember,
+    removeMember,
+    channels,
+    setMemberWorkspaceChannel,
+    setMemberWorkspaceChannels,
+    setMemberRole,
+    loadLocalMembers,
+  } = useDashboardStore();
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [search, setSearch] = useState('');
@@ -79,7 +87,11 @@ export default function AdminPage() {
   const [broadcastSubject, setBroadcastSubject] = useState('');
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [broadcastSending, setBroadcastSending] = useState(false);
-  const [broadcastLastSent, setBroadcastLastSent] = useState<{ subject: string; count: number; at: string } | null>(null);
+  const [broadcastLastSent, setBroadcastLastSent] = useState<{
+    subject: string;
+    count: number;
+    at: string;
+  } | null>(null);
 
   useEffect(() => {
     const authData = localStorage.getItem('edutechex_token');
@@ -97,7 +109,9 @@ export default function AdminPage() {
   // while on this page is immediately logged out.
   useEffect(() => {
     const socket = getSocket();
-    const onMemberUpdated = () => { loadLocalMembers?.(); };
+    const onMemberUpdated = () => {
+      loadLocalMembers?.();
+    };
     const onMemberRemoved = ({ memberId }: { memberId: string }) => {
       useDashboardStore.getState().removeMemberLocally(memberId);
     };
@@ -109,9 +123,13 @@ export default function AdminPage() {
         if (me && me === email.toLowerCase()) {
           localStorage.removeItem('edutechex_token');
           toast.error('Your account has been removed by the admin.');
-          setTimeout(() => { window.location.replace('/sign-up-login-screen'); }, 800);
+          setTimeout(() => {
+            window.location.replace('/sign-up-login-screen');
+          }, 800);
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     };
     socket.on('member_updated', onMemberUpdated);
     socket.on('member_removed', onMemberRemoved);
@@ -125,8 +143,11 @@ export default function AdminPage() {
 
   // Helper — read the stored JWT token once
   function getAdminToken(): string | null {
-    try { return JSON.parse(localStorage.getItem('edutechex_token') ?? '').token ?? null; }
-    catch { return null; }
+    try {
+      return JSON.parse(localStorage.getItem('edutechex_token') ?? '').token ?? null;
+    } catch {
+      return null;
+    }
   }
 
   useEffect(() => {
@@ -142,7 +163,7 @@ export default function AdminPage() {
 
     fetch(`${API_BASE}/api/access-requests`, {
       signal: controller.signal,
-      headers: { Authorization: `Bearer ${token}` },  // ← was missing (caused 403)
+      headers: { Authorization: `Bearer ${token}` }, // ← was missing (caused 403)
     })
       .then((r) => r.json())
       .then((data: { success: boolean; requests?: AccessRequest[] }) => {
@@ -158,7 +179,11 @@ export default function AdminPage() {
         // Fallback: use localStorage if backend unreachable / timed out
         const cached = localStorage.getItem(ACCESS_REQUESTS_KEY);
         if (cached) {
-          try { setAccessRequests(JSON.parse(cached)); } catch { /* ignore */ }
+          try {
+            setAccessRequests(JSON.parse(cached));
+          } catch {
+            /* ignore */
+          }
         }
         // Retry once after 15 seconds (backend may still be waking up)
         setTimeout(() => {
@@ -173,7 +198,9 @@ export default function AdminPage() {
                 localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify(data.requests));
               }
             })
-            .catch(() => { /* silent — already showing cached */ });
+            .catch(() => {
+              /* silent — already showing cached */
+            });
         }, 15_000);
       });
   }, []);
@@ -183,18 +210,24 @@ export default function AdminPage() {
     const authData = localStorage.getItem('edutechex_token');
     if (!authData) return;
     let token: string | null = null;
-    try { token = JSON.parse(authData).token; } catch { return; }
+    try {
+      token = JSON.parse(authData).token;
+    } catch {
+      return;
+    }
     if (!token) return;
 
     setActivityLoading(true);
     fetch(`${API_BASE}/api/activity/stats`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => r.ok ? r.json() : null)   // 404 before backend deploys → null
+      .then((r) => (r.ok ? r.json() : null)) // 404 before backend deploys → null
       .then((data: { success: boolean; stats?: ActivityStat[] } | null) => {
         if (data?.success && Array.isArray(data.stats)) setActivityStats(data.stats);
       })
-      .catch(() => { /* non-critical — section shows empty state */ })
+      .catch(() => {
+        /* non-critical — section shows empty state */
+      })
       .finally(() => setActivityLoading(false));
   }, []);
 
@@ -228,7 +261,8 @@ export default function AdminPage() {
       toast.error(`Maximum ${MAX_ADMINS} admins allowed. Remove an existing admin first.`);
       return;
     }
-    if (!confirm(`Make ${member.name} an Admin? (${adminCount}/${MAX_ADMINS} admin slots used)`)) return;
+    if (!confirm(`Make ${member.name} an Admin? (${adminCount}/${MAX_ADMINS} admin slots used)`))
+      return;
     setPromoteLoadingId(member.id);
     try {
       const authData = localStorage.getItem('edutechex_token');
@@ -236,7 +270,10 @@ export default function AdminPage() {
       const dbId = member.id.replace('member-', '');
       const res = await fetch(`${API_BASE}/api/members/${dbId}/promote-admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -268,10 +305,15 @@ export default function AdminPage() {
         const token = getAdminToken();
         await fetch(`${API_BASE}/api/access-requests/${rawId}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({ role: newRoleVal }),
         });
-      } catch { /* non-critical — local update already applied */ }
+      } catch {
+        /* non-critical — local update already applied */
+      }
     }
     toast.success(`Role updated to ${newRoleVal} for ${memberName}`);
   }
@@ -286,7 +328,9 @@ export default function AdminPage() {
 
   async function handleChannelToggle(memberId: string, channelId: string, checked: boolean) {
     const current = getExtraChannels(memberId).map((c) => c.id);
-    const next = checked ? [...new Set([...current, channelId])] : current.filter((id) => id !== channelId);
+    const next = checked
+      ? [...new Set([...current, channelId])]
+      : current.filter((id) => id !== channelId);
     // Optimistic local update
     setMemberWorkspaceChannels(memberId, next);
 
@@ -297,10 +341,15 @@ export default function AdminPage() {
         const token = getAdminToken();
         await fetch(`${API_BASE}/api/access-requests/${rawId}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({ channelIds: next }),
         });
-      } catch { /* non-critical — local update already applied */ }
+      } catch {
+        /* non-critical — local update already applied */
+      }
     }
 
     const member = members.find((m) => m.id === memberId);
@@ -324,7 +373,12 @@ export default function AdminPage() {
     }
 
     const cleanName = newName.trim();
-    const initials = cleanName.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2);
+    const initials = cleanName
+      .split(' ')
+      .map((p) => p[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
     const colors = ['#3E4A89', '#9BA6D3', '#7c3aed', '#a78bfa', '#2A3568', '#c4b5fd'];
     const color = colors[Math.floor(Math.random() * colors.length)];
 
@@ -337,7 +391,12 @@ export default function AdminPage() {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ name: cleanName, email: emailClean, role: newRole, channelId: newExtraChannel || null }),
+        body: JSON.stringify({
+          name: cleanName,
+          email: emailClean,
+          role: newRole,
+          channelId: newExtraChannel || null,
+        }),
       });
       const data = await res.json();
       if (res.ok && data.success && data.member) {
@@ -352,9 +411,21 @@ export default function AdminPage() {
       }
     } catch {
       // Backend unreachable — add locally only (temporary, won't persist)
-      const tempId = `member-${cleanName.toLowerCase().replace(/[^a-z]/g, '').slice(0, 4)}${Math.floor(Math.random() * 1000)}`;
-      addMember({ id: tempId, initials, name: cleanName, email: emailClean, role: newRole, status: 'online', color });
-      if (newRole !== 'Admin' && newExtraChannel) setMemberWorkspaceChannel(tempId, newExtraChannel);
+      const tempId = `member-${cleanName
+        .toLowerCase()
+        .replace(/[^a-z]/g, '')
+        .slice(0, 4)}${Math.floor(Math.random() * 1000)}`;
+      addMember({
+        id: tempId,
+        initials,
+        name: cleanName,
+        email: emailClean,
+        role: newRole,
+        status: 'online',
+        color,
+      });
+      if (newRole !== 'Admin' && newExtraChannel)
+        setMemberWorkspaceChannel(tempId, newExtraChannel);
       toast.warning(`${cleanName} added locally — backend unreachable, won't persist.`);
     }
 
@@ -382,13 +453,19 @@ export default function AdminPage() {
 
     // Build member object up-front — used in both online and offline paths
     const MEMBER_COLORS = ['#3E4A89', '#9BA6D3', '#7c3aed', '#a78bfa', '#2A3568', '#c4b5fd'];
-    const initials = request.name.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2);
+    const initials = request.name
+      .split(' ')
+      .map((p) => p[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
     // Use the DB id so the member-id matches what loadLocalMembers returns later
     const memberId = `member-${request.id}`;
-    const color = MEMBER_COLORS[
-      Math.abs(request.email.split('').reduce((h, c) => (c.charCodeAt(0) + ((h << 5) - h)), 0))
-      % MEMBER_COLORS.length
-    ];
+    const color =
+      MEMBER_COLORS[
+        Math.abs(request.email.split('').reduce((h, c) => c.charCodeAt(0) + ((h << 5) - h), 0)) %
+          MEMBER_COLORS.length
+      ];
 
     // ── Persist approval to backend (cross-device) ──────────────────────────
     try {
@@ -410,14 +487,30 @@ export default function AdminPage() {
       }
 
       // ✅ Immediately add to local store so the people list updates right away
-      addMember({ id: memberId, initials, name: request.name, email: request.email, role: request.role, status: 'online', color });
+      addMember({
+        id: memberId,
+        initials,
+        name: request.name,
+        email: request.email,
+        role: request.role,
+        status: 'online',
+        color,
+      });
       if (selectedChannel) setMemberWorkspaceChannel(memberId, selectedChannel);
 
       // Sync from backend in background (don't await — keep UI snappy)
       loadLocalMembers?.();
     } catch {
       // Backend unreachable — still approve locally so the list updates
-      addMember({ id: makeMemberId(request.name), initials, name: request.name, email: request.email, role: request.role, status: 'online', color });
+      addMember({
+        id: makeMemberId(request.name),
+        initials,
+        name: request.name,
+        email: request.email,
+        role: request.role,
+        status: 'online',
+        color,
+      });
       if (selectedChannel) setMemberWorkspaceChannel(makeMemberId(request.name), selectedChannel);
     }
 
@@ -436,7 +529,7 @@ export default function AdminPage() {
       const token = getAdminToken();
       await fetch(`${API_BASE}/api/access-requests/${requestId}`, {
         method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},  // ← was missing (caused 403)
+        headers: token ? { Authorization: `Bearer ${token}` } : {}, // ← was missing (caused 403)
       });
     } catch {
       // Backend unreachable — still remove locally
@@ -449,20 +542,41 @@ export default function AdminPage() {
   }
 
   async function handleBroadcast() {
-    if (!broadcastSubject.trim()) { toast.error('Please enter a subject.'); return; }
-    if (!broadcastMessage.trim()) { toast.error('Please enter a message.'); return; }
-    if (!confirm(`Send this email to all ${members.length} workspace members?\n\nSubject: ${broadcastSubject}`)) return;
+    if (!broadcastSubject.trim()) {
+      toast.error('Please enter a subject.');
+      return;
+    }
+    if (!broadcastMessage.trim()) {
+      toast.error('Please enter a message.');
+      return;
+    }
+    if (
+      !confirm(
+        `Send this email to all ${members.length} workspace members?\n\nSubject: ${broadcastSubject}`
+      )
+    )
+      return;
     setBroadcastSending(true);
     try {
       const token = getAdminToken();
       const res = await fetch(`${API_BASE}/api/admin/broadcast-email`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ subject: broadcastSubject.trim(), message: broadcastMessage.trim() }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          subject: broadcastSubject.trim(),
+          message: broadcastMessage.trim(),
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
-        setBroadcastLastSent({ subject: broadcastSubject.trim(), count: data.sentTo, at: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) });
+        setBroadcastLastSent({
+          subject: broadcastSubject.trim(),
+          count: data.sentTo,
+          at: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        });
         setBroadcastSubject('');
         setBroadcastMessage('');
         toast.success(`Email sent to ${data.sentTo} members.`);
@@ -669,7 +783,9 @@ export default function AdminPage() {
                               <div className="flex flex-col gap-1.5">
                                 <select
                                   value={member.role}
-                                  onChange={(e) => handleRoleChange(member.id, member.name, e.target.value)}
+                                  onChange={(e) =>
+                                    handleRoleChange(member.id, member.name, e.target.value)
+                                  }
                                   className="h-9 rounded-xl border border-border bg-surface px-2 text-xs font-semibold text-foreground outline-none focus:border-primary"
                                 >
                                   <option value="Developer">Developer</option>
@@ -714,7 +830,10 @@ export default function AdminPage() {
                                   </span>
                                   {memberExtraChannels.length > 0 ? (
                                     memberExtraChannels.map((ec) => (
-                                      <span key={ec.id} className="rounded-lg bg-primary/10 border border-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-primary">
+                                      <span
+                                        key={ec.id}
+                                        className="rounded-lg bg-primary/10 border border-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-primary"
+                                      >
                                         #{ec.name}
                                       </span>
                                     ))
@@ -735,21 +854,30 @@ export default function AdminPage() {
                                 {extraChannels.map((c) => {
                                   const checked = memberExtraChannels.some((ec) => ec.id === c.id);
                                   return (
-                                    <label key={c.id} className="flex items-center gap-2 cursor-pointer select-none group">
+                                    <label
+                                      key={c.id}
+                                      className="flex items-center gap-2 cursor-pointer select-none group"
+                                    >
                                       <input
                                         type="checkbox"
                                         checked={checked}
-                                        onChange={(e) => handleChannelToggle(member.id, c.id, e.target.checked)}
+                                        onChange={(e) =>
+                                          handleChannelToggle(member.id, c.id, e.target.checked)
+                                        }
                                         className="h-3.5 w-3.5 rounded border-border accent-primary cursor-pointer"
                                       />
-                                      <span className={`text-xs font-semibold transition-colors ${checked ? 'text-primary' : 'text-ink-light group-hover:text-foreground'}`}>
+                                      <span
+                                        className={`text-xs font-semibold transition-colors ${checked ? 'text-primary' : 'text-ink-light group-hover:text-foreground'}`}
+                                      >
                                         #{c.name}
                                       </span>
                                     </label>
                                   );
                                 })}
                                 {extraChannels.length === 0 && (
-                                  <span className="text-xs text-ink-light italic">No extra channels</span>
+                                  <span className="text-xs text-ink-light italic">
+                                    No extra channels
+                                  </span>
                                 )}
                               </div>
                             )}
@@ -758,29 +886,43 @@ export default function AdminPage() {
                             <button
                               type="button"
                               onClick={async () => {
-                                if (!confirm(`Remove ${member.name} from the workspace?\n\nThey will be logged out immediately if they are currently online.`)) return;
+                                if (
+                                  !confirm(
+                                    `Remove ${member.name} from the workspace?\n\nThey will be logged out immediately if they are currently online.`
+                                  )
+                                )
+                                  return;
                                 // Only update local state AFTER the backend confirms deletion.
                                 // If we optimistically remove first and the DELETE fails, the user
                                 // reappears on the next page refresh (still in the DB).
-                                const mongoId = member.id.startsWith('member-') ? member.id.slice(7) : null;
+                                const mongoId = member.id.startsWith('member-')
+                                  ? member.id.slice(7)
+                                  : null;
                                 if (mongoId && mongoId.length === 24) {
                                   try {
                                     const authData = localStorage.getItem('edutechex_token');
                                     const token = authData ? JSON.parse(authData).token : null;
-                                    const res = await fetch(`${API_BASE}/api/access-requests/${mongoId}`, {
-                                      method: 'DELETE',
-                                      headers: token ? { Authorization: `Bearer ${token}` } : {},
-                                    });
+                                    const res = await fetch(
+                                      `${API_BASE}/api/access-requests/${mongoId}`,
+                                      {
+                                        method: 'DELETE',
+                                        headers: token ? { Authorization: `Bearer ${token}` } : {},
+                                      }
+                                    );
                                     const body = await res.json().catch(() => ({}));
                                     if (res.ok && body.success) {
                                       // Backend confirmed deletion — update local state then
                                       // resync from DB so any in-flight loadLocalMembers calls
                                       // that raced with the delete get corrected immediately.
                                       removeMember(member.id);
-                                      toast.success(`${member.name} was removed from the workspace.`);
+                                      toast.success(
+                                        `${member.name} was removed from the workspace.`
+                                      );
                                       loadLocalMembers?.();
                                     } else {
-                                      toast.error(`Could not remove ${member.name}: ${body.error ?? res.status}`);
+                                      toast.error(
+                                        `Could not remove ${member.name}: ${body.error ?? res.status}`
+                                      );
                                     }
                                   } catch {
                                     toast.error('Could not reach the server. Please try again.');
@@ -1035,20 +1177,27 @@ export default function AdminPage() {
 
                   {broadcastLastSent && (
                     <div className="rounded-xl border border-green-100 bg-green-50 px-3 py-2.5 text-xs font-medium text-green-700">
-                      ✓ Last sent at {broadcastLastSent.at} · &ldquo;{broadcastLastSent.subject}&rdquo; → {broadcastLastSent.count} members
+                      ✓ Last sent at {broadcastLastSent.at} · &ldquo;{broadcastLastSent.subject}
+                      &rdquo; → {broadcastLastSent.count} members
                     </div>
                   )}
 
                   <button
                     type="button"
                     onClick={handleBroadcast}
-                    disabled={broadcastSending || !broadcastSubject.trim() || !broadcastMessage.trim()}
+                    disabled={
+                      broadcastSending || !broadcastSubject.trim() || !broadcastMessage.trim()
+                    }
                     className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white transition-all hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {broadcastSending ? (
-                      <><RefreshCw size={14} className="animate-spin" /> Sending…</>
+                      <>
+                        <RefreshCw size={14} className="animate-spin" /> Sending…
+                      </>
                     ) : (
-                      <><Send size={14} /> Send to All {members.length} Members</>
+                      <>
+                        <Send size={14} /> Send to All {members.length} Members
+                      </>
                     )}
                   </button>
                 </div>
@@ -1072,7 +1221,8 @@ export default function AdminPage() {
                   Activity Monitoring
                 </h2>
                 <p className="mt-1 text-sm text-ink-light">
-                  In-app session time, messages sent, and engagement per team member. Users can see exactly what is tracked in Settings → Privacy.
+                  In-app session time, messages sent, and engagement per team member. Users can see
+                  exactly what is tracked in Settings → Privacy.
                 </p>
               </div>
               <button
@@ -1081,11 +1231,17 @@ export default function AdminPage() {
                   const authData = localStorage.getItem('edutechex_token');
                   if (!authData) return;
                   let token: string | null = null;
-                  try { token = JSON.parse(authData).token; } catch { return; }
+                  try {
+                    token = JSON.parse(authData).token;
+                  } catch {
+                    return;
+                  }
                   if (!token) return;
                   setActivityLoading(true);
-                  fetch(`${API_BASE}/api/activity/stats`, { headers: { Authorization: `Bearer ${token}` } })
-                    .then((r) => r.ok ? r.json() : null)
+                  fetch(`${API_BASE}/api/activity/stats`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                  })
+                    .then((r) => (r.ok ? r.json() : null))
                     .then((data: { success: boolean; stats?: ActivityStat[] } | null) => {
                       if (data?.success && Array.isArray(data.stats)) setActivityStats(data.stats);
                     })
@@ -1116,30 +1272,54 @@ export default function AdminPage() {
                     const mins = (stat.totalMinutes ?? 0) % 60;
                     const timeLabel = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
                     const lastSeenLabel = stat.lastSeen
-                      ? new Date(stat.lastSeen).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+                      ? new Date(stat.lastSeen).toLocaleString('en-IN', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })
                       : 'Never';
-                    const member = members.find((m) => m.email.toLowerCase() === stat.email.toLowerCase());
-                    const initials = member?.initials ?? (stat.name.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2) || '??');
+                    const member = members.find(
+                      (m) => m.email.toLowerCase() === stat.email.toLowerCase()
+                    );
+                    const initials =
+                      member?.initials ??
+                      (stat.name
+                        .split(' ')
+                        .map((p) => p[0])
+                        .join('')
+                        .toUpperCase()
+                        .slice(0, 2) ||
+                        '??');
                     const color = member?.color ?? '#64748b';
-                    const engagementPct = Math.min(100, Math.round(((stat.totalMinutes ?? 0) / (7 * 8 * 60)) * 100));
+                    const engagementPct = Math.min(
+                      100,
+                      Math.round(((stat.totalMinutes ?? 0) / (7 * 8 * 60)) * 100)
+                    );
 
                     return (
                       <div key={stat.email} className="card-premium p-5 flex flex-col gap-3">
                         {/* Header */}
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-black text-white"
-                            style={{ backgroundColor: color }}>
+                          <div
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-black text-white"
+                            style={{ backgroundColor: color }}
+                          >
                             {initials}
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate font-bold text-sm text-foreground">{stat.name || stat.email}</p>
+                            <p className="truncate font-bold text-sm text-foreground">
+                              {stat.name || stat.email}
+                            </p>
                             <p className="truncate text-[11px] text-ink-light">{stat.email}</p>
                           </div>
-                          <span className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                            member?.status === 'online' ? 'bg-emerald-50 text-emerald-600' :
-                            member?.status === 'away'   ? 'bg-amber-50 text-amber-600' :
-                            'bg-secondary text-ink-light'
-                          }`}>
+                          <span
+                            className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              member?.status === 'online'
+                                ? 'bg-emerald-50 text-emerald-600'
+                                : member?.status === 'away'
+                                  ? 'bg-amber-50 text-amber-600'
+                                  : 'bg-secondary text-ink-light'
+                            }`}
+                          >
                             {member?.status ?? 'offline'}
                           </span>
                         </div>
@@ -1151,8 +1331,10 @@ export default function AdminPage() {
                             <span>{engagementPct}%</span>
                           </div>
                           <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-                            <div className="h-full rounded-full bg-gradient-to-r from-primary to-green-light transition-all"
-                              style={{ width: `${engagementPct}%` }} />
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-primary to-green-light transition-all"
+                              style={{ width: `${engagementPct}%` }}
+                            />
                           </div>
                         </div>
 
@@ -1161,23 +1343,34 @@ export default function AdminPage() {
                           <div className="flex flex-col items-center rounded-xl bg-surface-muted py-2.5 px-1">
                             <Clock size={12} className="mb-1 text-primary" />
                             <span className="text-sm font-black text-foreground">{timeLabel}</span>
-                            <span className="text-[9px] text-ink-light uppercase tracking-wide">Session</span>
+                            <span className="text-[9px] text-ink-light uppercase tracking-wide">
+                              Session
+                            </span>
                           </div>
                           <div className="flex flex-col items-center rounded-xl bg-surface-muted py-2.5 px-1">
                             <MessageSquare size={12} className="mb-1 text-primary" />
-                            <span className="text-sm font-black text-foreground">{stat.messageCount ?? 0}</span>
-                            <span className="text-[9px] text-ink-light uppercase tracking-wide">Messages</span>
+                            <span className="text-sm font-black text-foreground">
+                              {stat.messageCount ?? 0}
+                            </span>
+                            <span className="text-[9px] text-ink-light uppercase tracking-wide">
+                              Messages
+                            </span>
                           </div>
                           <div className="flex flex-col items-center rounded-xl bg-surface-muted py-2.5 px-1">
                             <Activity size={12} className="mb-1 text-primary" />
-                            <span className="text-sm font-black text-foreground">{stat.activeDays ?? 0}</span>
-                            <span className="text-[9px] text-ink-light uppercase tracking-wide">Days</span>
+                            <span className="text-sm font-black text-foreground">
+                              {stat.activeDays ?? 0}
+                            </span>
+                            <span className="text-[9px] text-ink-light uppercase tracking-wide">
+                              Days
+                            </span>
                           </div>
                         </div>
 
                         {/* Last seen */}
                         <p className="text-[11px] text-ink-light border-t border-border pt-2">
-                          <span className="font-semibold text-foreground">Last active:</span> {lastSeenLabel}
+                          <span className="font-semibold text-foreground">Last active:</span>{' '}
+                          {lastSeenLabel}
                         </p>
                       </div>
                     );

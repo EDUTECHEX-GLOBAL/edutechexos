@@ -27,7 +27,13 @@ const FloatingActionMenu = ({ options, className }: FloatingActionMenuProps) => 
       >
         <motion.div
           animate={{ rotate: isOpen ? 45 : 0 }}
-          transition={{ duration: 0.3, ease: 'easeInOut', type: 'spring', stiffness: 300, damping: 20 }}
+          transition={{
+            duration: 0.3,
+            ease: 'easeInOut',
+            type: 'spring',
+            stiffness: 300,
+            damping: 20,
+          }}
         >
           <Plus className="w-6 h-6" />
         </motion.div>
@@ -53,7 +59,10 @@ const FloatingActionMenu = ({ options, className }: FloatingActionMenuProps) => 
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                 >
                   <Button
-                    onClick={() => { option.onClick(); setIsOpen(false); }}
+                    onClick={() => {
+                      option.onClick();
+                      setIsOpen(false);
+                    }}
                     size="sm"
                     className="flex items-center gap-2 bg-[#11111198] hover:bg-[#111111d1] shadow-[0_0_20px_rgba(0,0,0,0.2)] border-none rounded-xl backdrop-blur-sm"
                   >

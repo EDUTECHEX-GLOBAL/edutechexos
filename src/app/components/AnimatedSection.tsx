@@ -54,11 +54,15 @@ export default function AnimatedSection({
   }, [parallax]);
 
   const hiddenTransform =
-    direction === 'up' ? `translateY(${distance}px)`
-    : direction === 'down' ? `translateY(${-distance}px)`
-    : direction === 'left' ? `translateX(${distance}px)`
-    : direction === 'right' ? `translateX(${-distance}px)`
-    : 'none';
+    direction === 'up'
+      ? `translateY(${distance}px)`
+      : direction === 'down'
+        ? `translateY(${-distance}px)`
+        : direction === 'left'
+          ? `translateX(${distance}px)`
+          : direction === 'right'
+            ? `translateX(${-distance}px)`
+            : 'none';
 
   return (
     <div
@@ -68,7 +72,9 @@ export default function AnimatedSection({
       style={{
         opacity: isVisible ? 1 : 0,
         transform: isVisible
-          ? parallax !== 0 ? `translateY(${(scrollY * parallax * 0.05)}px)` : 'none'
+          ? parallax !== 0
+            ? `translateY(${scrollY * parallax * 0.05}px)`
+            : 'none'
           : hiddenTransform,
         transition: `opacity ${duration}s cubic-bezier(0.22, 1, 0.36, 1), transform ${duration}s cubic-bezier(0.22, 1, 0.36, 1)`,
         transitionDelay: `${isVisible ? 0 : delay}s`,

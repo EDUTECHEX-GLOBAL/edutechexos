@@ -1,48 +1,51 @@
-"use client"
+'use client';
 
-import React, { useEffect, useState } from "react"
-import { motion } from "framer-motion"
-import { LucideIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface NavItem {
-  name: string
-  icon: LucideIcon
-  action: () => void
+  name: string;
+  icon: LucideIcon;
+  action: () => void;
 }
 
 interface NavBarProps {
-  items: NavItem[]
-  className?: string
-  defaultActive?: string
+  items: NavItem[];
+  className?: string;
+  defaultActive?: string;
 }
 
 export function NavBar({ items, className, defaultActive }: NavBarProps) {
-  const [activeTab, setActiveTab] = useState(defaultActive ?? items[0]?.name)
-  const [isMobile, setIsMobile] = useState(false)
+  const [activeTab, setActiveTab] = useState(defaultActive ?? items[0]?.name);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768)
-    handleResize()
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [])
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
-    <div className={cn("flex items-center gap-1", className)}>
+    <div className={cn('flex items-center gap-1', className)}>
       <div className="flex items-center gap-1 bg-white/80 border border-slate-200 backdrop-blur-lg py-1 px-1 rounded-full shadow-md">
         {items.map((item) => {
-          const Icon = item.icon
-          const isActive = activeTab === item.name
+          const Icon = item.icon;
+          const isActive = activeTab === item.name;
 
           return (
             <button
               key={item.name}
-              onClick={() => { setActiveTab(item.name); item.action(); }}
+              onClick={() => {
+                setActiveTab(item.name);
+                item.action();
+              }}
               className={cn(
-                "relative cursor-pointer text-xs font-semibold px-4 py-2 rounded-full transition-colors whitespace-nowrap",
-                "text-slate-500 hover:text-slate-900",
-                isActive && "text-slate-900",
+                'relative cursor-pointer text-xs font-semibold px-4 py-2 rounded-full transition-colors whitespace-nowrap',
+                'text-slate-500 hover:text-slate-900',
+                isActive && 'text-slate-900'
               )}
             >
               <span className="hidden md:flex items-center gap-1.5">
@@ -58,7 +61,7 @@ export function NavBar({ items, className, defaultActive }: NavBarProps) {
                   layoutId="tubelight-lamp"
                   className="absolute inset-0 w-full bg-slate-100 rounded-full -z-10"
                   initial={false}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 >
                   {/* Lamp glow above active tab */}
                   <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-indigo-500 rounded-t-full">
@@ -69,9 +72,9 @@ export function NavBar({ items, className, defaultActive }: NavBarProps) {
                 </motion.div>
               )}
             </button>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }

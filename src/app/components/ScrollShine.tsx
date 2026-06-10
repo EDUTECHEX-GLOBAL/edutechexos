@@ -2,7 +2,12 @@
 import React from 'react';
 import { useScrollProgress } from '@/hooks/useScrollProgress';
 
-export function ShineButton({ children, className = '', href, onClick }: {
+export function ShineButton({
+  children,
+  className = '',
+  href,
+  onClick,
+}: {
   children: React.ReactNode;
   className?: string;
   href?: string;
@@ -14,11 +19,7 @@ export function ShineButton({ children, className = '', href, onClick }: {
   const Tag = href ? 'a' : 'button';
 
   return (
-    <Tag
-      href={href}
-      onClick={onClick}
-      className={`relative overflow-hidden group ${className}`}
-    >
+    <Tag href={href} onClick={onClick} className={`relative overflow-hidden group ${className}`}>
       <span className="relative z-10">{children}</span>
       <div
         className="absolute inset-0 z-0 transition-opacity duration-300"
@@ -38,7 +39,12 @@ export function ShineButton({ children, className = '', href, onClick }: {
   );
 }
 
-export function GlassButton({ children, className = '', href, onClick }: {
+export function GlassButton({
+  children,
+  className = '',
+  href,
+  onClick,
+}: {
   children: React.ReactNode;
   className?: string;
   href?: string;

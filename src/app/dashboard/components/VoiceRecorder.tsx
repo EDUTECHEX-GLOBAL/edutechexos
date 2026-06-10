@@ -23,7 +23,9 @@ function useVoiceNote(onSend: (url: string) => void) {
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         setPreviewUrl(URL.createObjectURL(blob));
@@ -55,9 +57,16 @@ function useVoiceNote(onSend: (url: string) => void) {
       const uploadRes = await fetch('/api/upload', { method: 'POST', body: form });
       if (uploadRes.ok) {
         const { url } = await uploadRes.json();
-        if (url) { onSend(url); setPreviewUrl(null); setDuration(0); return; }
+        if (url) {
+          onSend(url);
+          setPreviewUrl(null);
+          setDuration(0);
+          return;
+        }
       }
-    } catch { /* fall through to browser-direct upload */ }
+    } catch {
+      /* fall through to browser-direct upload */
+    }
     try {
       // Browser-direct Cloudinary upload (no server hop) — also free & permanent
       const file = new File([blob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
@@ -108,23 +117,26 @@ function useAIVoice() {
       });
 
       // Configure session: EdTech tutor persona, voice output enabled
-      ws.send(JSON.stringify({
-        type: 'session.update',
-        session: {
-          modalities: ['text', 'audio'],
-          instructions: 'You are an expert EdTech AI tutor. Help students and educators with learning, curriculum design, and educational technology questions. Be concise, encouraging, and pedagogically sound.',
-          voice: 'alloy',
-          input_audio_format: 'pcm16',
-          output_audio_format: 'pcm16',
-          input_audio_transcription: { model: 'whisper-1' },
-          turn_detection: {
-            type: 'server_vad',
-            threshold: 0.5,
-            prefix_padding_ms: 300,
-            silence_duration_ms: 700,
+      ws.send(
+        JSON.stringify({
+          type: 'session.update',
+          session: {
+            modalities: ['text', 'audio'],
+            instructions:
+              'You are an expert EdTech AI tutor. Help students and educators with learning, curriculum design, and educational technology questions. Be concise, encouraging, and pedagogically sound.',
+            voice: 'alloy',
+            input_audio_format: 'pcm16',
+            output_audio_format: 'pcm16',
+            input_audio_transcription: { model: 'whisper-1' },
+            turn_detection: {
+              type: 'server_vad',
+              threshold: 0.5,
+              prefix_padding_ms: 300,
+              silence_duration_ms: 700,
+            },
           },
-        },
-      }));
+        })
+      );
 
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
@@ -153,18 +165,25 @@ function useAIVoice() {
       const buf = new ArrayBuffer(raw.length * 2);
       const view = new DataView(buf);
       for (let i = 0; i < raw.length; i++) view.setInt16(i * 2, raw.charCodeAt(i) - 128, true);
-      ctx.decodeAudioData(buf).then((decoded) => {
-        const source = ctx.createBufferSource();
-        source.buffer = decoded;
-        source.connect(ctx.destination);
-        source.start();
-      }).catch(() => {});
-    } catch { /* audio playback error */ }
+      ctx
+        .decodeAudioData(buf)
+        .then((decoded) => {
+          const source = ctx.createBufferSource();
+          source.buffer = decoded;
+          source.connect(ctx.destination);
+          source.start();
+        })
+        .catch(() => {});
+    } catch {
+      /* audio playback error */
+    }
   };
 
   const startListening = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 24000, channelCount: 1 } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { sampleRate: 24000, channelCount: 1 },
+      });
       streamRef.current = stream;
       const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       mediaRecorderRef.current = recorder;
@@ -207,7 +226,8 @@ export default function VoiceRecorder({ onSend }: VoiceRecorderProps) {
 
   const hasOpenAIKey = !!process.env.NEXT_PUBLIC_OPENAI_API_KEY;
 
-  const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  const fmt = (s: number) =>
+    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   // Classic recording
   const handleStartRecording = async () => {
@@ -278,7 +298,9 @@ export default function VoiceRecorder({ onSend }: VoiceRecorderProps) {
         <div className="flex flex-col items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
-            <span className="font-mono text-sm font-bold text-[#4A5578]">{fmt(voiceNote.duration)}</span>
+            <span className="font-mono text-sm font-bold text-[#4A5578]">
+              {fmt(voiceNote.duration)}
+            </span>
           </div>
           <div className="flex gap-2">
             <button
@@ -343,14 +365,16 @@ export default function VoiceRecorder({ onSend }: VoiceRecorderProps) {
           </div>
           {aiVoice.transcript && (
             <p className="text-[11px] text-[#7C859E] italic max-w-[220px] text-center leading-relaxed">
-              "{aiVoice.transcript}"
+              &quot;{aiVoice.transcript}&quot;
             </p>
           )}
           {aiVoice.aiResponse && (
             <div className="rounded-xl bg-[rgba(62,74,137,0.08)] border border-[rgba(62,74,137,0.10)] p-3 max-w-[220px]">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Volume2 size={11} className="text-indigo-500" />
-                <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500">AI Response</span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500">
+                  AI Response
+                </span>
               </div>
               <p className="text-[11px] text-indigo-800 leading-relaxed">{aiVoice.aiResponse}</p>
             </div>
@@ -368,12 +392,11 @@ export default function VoiceRecorder({ onSend }: VoiceRecorderProps) {
       {/* No OpenAI key hint */}
       {mode === 'idle' && !hasOpenAIKey && (
         <p className="text-[9px] text-[#7C859E] text-center leading-relaxed">
-          Add <code className="bg-[rgba(62,74,137,0.08)] px-1 rounded">NEXT_PUBLIC_OPENAI_API_KEY</code> to unlock AI Tutor voice mode
+          Add{' '}
+          <code className="bg-[rgba(62,74,137,0.08)] px-1 rounded">NEXT_PUBLIC_OPENAI_API_KEY</code>{' '}
+          to unlock AI Tutor voice mode
         </p>
       )}
     </div>
   );
 }
-
-
-

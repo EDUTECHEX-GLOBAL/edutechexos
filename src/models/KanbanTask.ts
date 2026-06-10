@@ -12,18 +12,17 @@ export interface IKanbanTask extends Document {
 
 const KanbanTaskSchema: Schema = new Schema(
   {
-    text:              { type: String, required: true },
-    assignee:          { type: String, required: true },
-    assigneeInitials:  { type: String, required: true },
-    assigneeEmail:     { type: String },
-    sourceChannel:     { type: String, required: true },
-    status:            { type: String, enum: ['todo', 'inprogress', 'done'], default: 'todo' },
+    text: { type: String, required: true },
+    assignee: { type: String, required: true },
+    assigneeInitials: { type: String, required: true },
+    assigneeEmail: { type: String },
+    sourceChannel: { type: String, required: true },
+    status: { type: String, enum: ['todo', 'inprogress', 'done'], default: 'todo' },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
 const KanbanTask =
-  mongoose.models.KanbanTask ||
-  mongoose.model<IKanbanTask>('KanbanTask', KanbanTaskSchema);
+  mongoose.models.KanbanTask || mongoose.model<IKanbanTask>('KanbanTask', KanbanTaskSchema);
 
 export default KanbanTask;

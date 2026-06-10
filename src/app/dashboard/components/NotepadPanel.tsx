@@ -1,16 +1,23 @@
 ﻿'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Trash2, Share2, Bold, Italic, Code, List, Check, Pencil, FileText, Hash } from 'lucide-react';
+import {
+  X,
+  Trash2,
+  Share2,
+  Bold,
+  Italic,
+  Code,
+  List,
+  Check,
+  Pencil,
+  FileText,
+  Hash,
+} from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { toast } from 'sonner';
 import { getNoteAction, saveNoteAction } from '@/app/actions/dbActions';
 // Server actions for note persistence
-
-
-
-
-
 
 interface NotepadPanelProps {
   onClose: () => void;
@@ -62,24 +69,24 @@ export default function NotepadPanel({ onClose, activeChannel }: NotepadPanelPro
   );
 
   const recomputeSavedPads = React.useCallback(() => {
-  if (typeof window === 'undefined') return [] as SavedPad[];
-  return channels
-    .map((ch) => {
-      const stored = localStorage.getItem(getNoteKey(ch.id)) || '';
-      if (!getPreview(stored)) return null;
-      const updatedRaw = localStorage.getItem(getTimestampKey(ch.id));
-      return {
-        id: ch.id,
-        name: ch.name,
-        note: stored,
-        updatedAt: updatedRaw ? Number(updatedRaw) : 0,
-      } as SavedPad;
-    })
-    .filter((p): p is SavedPad => Boolean(p))
-    .sort((a, b) => b.updatedAt - a.updatedAt);
-}, [channels]);
+    if (typeof window === 'undefined') return [] as SavedPad[];
+    return channels
+      .map((ch) => {
+        const stored = localStorage.getItem(getNoteKey(ch.id)) || '';
+        if (!getPreview(stored)) return null;
+        const updatedRaw = localStorage.getItem(getTimestampKey(ch.id));
+        return {
+          id: ch.id,
+          name: ch.name,
+          note: stored,
+          updatedAt: updatedRaw ? Number(updatedRaw) : 0,
+        } as SavedPad;
+      })
+      .filter((p): p is SavedPad => Boolean(p))
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  }, [channels]);
 
-const savedPads = React.useMemo(() => recomputeSavedPads(), [channels]);
+  const savedPads = React.useMemo(() => recomputeSavedPads(), [channels]);
 
   const selectedName = channelNameById.get(selectedPadId) ?? 'Direct Message';
 
@@ -87,41 +94,41 @@ const savedPads = React.useMemo(() => recomputeSavedPads(), [channels]);
     setSelectedPadId(activeChannel);
   }, [activeChannel]);
 
-useEffect(() => {
-  const loadNote = async () => {
-    // Try fetching note from MongoDB
-    const dbNote = await getNoteAction(selectedPadId);
-    if (dbNote && dbNote.content) {
-      setNote(dbNote.content);
-    } else {
-      const local = localStorage.getItem(getNoteKey(selectedPadId)) || '';
-      setNote(local);
-    }
-    setSaveStatus('idle');
-  };
-  loadNote();
-}, [selectedPadId]);
+  useEffect(() => {
+    const loadNote = async () => {
+      // Try fetching note from MongoDB
+      const dbNote = await getNoteAction(selectedPadId);
+      if (dbNote && dbNote.content) {
+        setNote(dbNote.content);
+      } else {
+        const local = localStorage.getItem(getNoteKey(selectedPadId)) || '';
+        setNote(local);
+      }
+      setSaveStatus('idle');
+    };
+    loadNote();
+  }, [selectedPadId]);
 
   useEffect(() => {
-  if (!note.trim()) {
-    setIsSaving(false);
+    if (!note.trim()) {
+      setIsSaving(false);
+      setSaveStatus('idle');
+      localStorage.removeItem(getNoteKey(selectedPadId));
+      localStorage.removeItem(getTimestampKey(selectedPadId));
+      void saveNoteAction(selectedPadId, '');
+      return;
+    }
+    setIsSaving(true);
     setSaveStatus('idle');
-    localStorage.removeItem(getNoteKey(selectedPadId));
-    localStorage.removeItem(getTimestampKey(selectedPadId));
-    void saveNoteAction(selectedPadId, '');
-    return;
-  }
-  setIsSaving(true);
-  setSaveStatus('idle');
-  const timer = setTimeout(async () => {
-    localStorage.setItem(getNoteKey(selectedPadId), note);
-    localStorage.setItem(getTimestampKey(selectedPadId), String(Date.now()));
-    await saveNoteAction(selectedPadId, note);
-    setIsSaving(false);
-    setSaveStatus('saved');
-  }, 500);
-  return () => clearTimeout(timer);
-}, [note, selectedPadId]);
+    const timer = setTimeout(async () => {
+      localStorage.setItem(getNoteKey(selectedPadId), note);
+      localStorage.setItem(getTimestampKey(selectedPadId), String(Date.now()));
+      await saveNoteAction(selectedPadId, note);
+      setIsSaving(false);
+      setSaveStatus('saved');
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [note, selectedPadId]);
 
   const wordCount = note.trim() ? note.trim().split(/\s+/).length : 0;
   const charCount = note.length;
@@ -453,9 +460,7 @@ useEffect(() => {
                 disabled={!note.trim()}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-[11px] font-black uppercase tracking-[0.1em] text-white transition-all disabled:cursor-not-allowed disabled:opacity-40"
                 style={{
-                  background: note.trim()
-                    ? 'linear-gradient(135deg, #3E4A89, #7c3aed)'
-                    : '#94a3b8',
+                  background: note.trim() ? 'linear-gradient(135deg, #3E4A89, #7c3aed)' : '#94a3b8',
                 }}
               >
                 <Share2 size={12} strokeWidth={2.5} />
@@ -468,7 +473,3 @@ useEffect(() => {
     </div>
   );
 }
-
-
-
-

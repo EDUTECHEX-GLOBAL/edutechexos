@@ -69,10 +69,7 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
             status: 'pending',
             requestedAt: new Date().toISOString(),
           };
-          localStorage.setItem(
-            ACCESS_REQUESTS_KEY,
-            JSON.stringify([localEntry, ...localRequests])
-          );
+          localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify([localEntry, ...localRequests]));
         }
         toast.success('Account request submitted. You can sign in after admin approval.');
         reset();
@@ -104,10 +101,7 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
         status: 'pending',
         requestedAt: new Date().toISOString(),
       };
-      localStorage.setItem(
-        ACCESS_REQUESTS_KEY,
-        JSON.stringify([nextRequest, ...requests])
-      );
+      localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify([nextRequest, ...requests]));
       toast.success('Account request submitted (offline mode). Admin will review it.');
       reset();
       onSwitchToLogin();
@@ -128,7 +122,6 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
       `}</style>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
-
         {/* Full Name */}
         <div className="space-y-2.5">
           <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">
@@ -141,11 +134,19 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
               autoComplete="name"
               placeholder="Your full name"
               className={`input-ivy w-full pl-12 pr-4 py-4 text-sm text-[#0A1128] font-medium placeholder:text-[#0A1128]/20 ${errors.name ? 'border-red-300 bg-red-50/30' : ''}`}
-              style={{ ...inputIvyStyle, borderColor: errors.name ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)' }}
-              {...register('name', { required: 'Name is required', minLength: { value: 2, message: 'Min 2 characters' } })}
+              style={{
+                ...inputIvyStyle,
+                borderColor: errors.name ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)',
+              }}
+              {...register('name', {
+                required: 'Name is required',
+                minLength: { value: 2, message: 'Min 2 characters' },
+              })}
             />
           </div>
-          {errors.name && <p className="text-xs font-medium text-red-600 ml-1">{errors.name.message}</p>}
+          {errors.name && (
+            <p className="text-xs font-medium text-red-600 ml-1">{errors.name.message}</p>
+          )}
         </div>
 
         {/* Email */}
@@ -160,14 +161,22 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
               autoComplete="email"
               placeholder="you@edutechex.in"
               className={`input-ivy w-full pl-12 pr-4 py-4 text-sm text-[#0A1128] font-medium placeholder:text-[#0A1128]/20 ${errors.email ? 'border-red-300 bg-red-50/30' : ''}`}
-              style={{ ...inputIvyStyle, borderColor: errors.email ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)' }}
+              style={{
+                ...inputIvyStyle,
+                borderColor: errors.email ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)',
+              }}
               {...register('email', {
                 required: 'Email is required',
-                pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email address' },
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                  message: 'Enter a valid email address',
+                },
               })}
             />
           </div>
-          {errors.email && <p className="text-xs font-medium text-red-600 ml-1">{errors.email.message}</p>}
+          {errors.email && (
+            <p className="text-xs font-medium text-red-600 ml-1">{errors.email.message}</p>
+          )}
         </div>
 
         {/* Password */}
@@ -182,11 +191,17 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
               autoComplete="new-password"
               placeholder="Min. 8 characters"
               className={`input-ivy w-full pl-12 pr-12 py-4 text-sm text-[#0A1128] font-medium placeholder:text-[#0A1128]/20 ${errors.password ? 'border-red-300 bg-red-50/30' : ''}`}
-              style={{ ...inputIvyStyle, borderColor: errors.password ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)' }}
+              style={{
+                ...inputIvyStyle,
+                borderColor: errors.password ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)',
+              }}
               {...register('password', {
                 required: 'Password is required',
                 minLength: { value: 8, message: 'Min 8 characters' },
-                pattern: { value: /^(?=.*[a-zA-Z])(?=.*\d)/, message: 'Include a letter and number' },
+                pattern: {
+                  value: /^(?=.*[a-zA-Z])(?=.*\d)/,
+                  message: 'Include a letter and number',
+                },
               })}
             />
             <button
@@ -198,7 +213,9 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          {errors.password && <p className="text-xs font-medium text-red-600 ml-1">{errors.password.message}</p>}
+          {errors.password && (
+            <p className="text-xs font-medium text-red-600 ml-1">{errors.password.message}</p>
+          )}
         </div>
 
         {/* Role */}
@@ -210,15 +227,26 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
             <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0A1128]/30 group-focus-within:text-[#D4AF37] transition-colors pointer-events-none" />
             <select
               className={`input-ivy w-full pl-12 pr-4 py-4 text-sm text-[#0A1128] font-medium appearance-none cursor-pointer ${errors.role ? 'border-red-300 bg-red-50/30' : ''}`}
-              style={{ ...inputIvyStyle, borderColor: errors.role ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)' }}
+              style={{
+                ...inputIvyStyle,
+                borderColor: errors.role ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)',
+              }}
               {...register('role', { required: 'Role is required' })}
               defaultValue=""
             >
-              <option value="" disabled>Select your role…</option>
-              {roles.map((role) => <option key={role} value={role}>{role}</option>)}
+              <option value="" disabled>
+                Select your role…
+              </option>
+              {roles.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
             </select>
           </div>
-          {errors.role && <p className="text-xs font-medium text-red-600 ml-1">{errors.role.message}</p>}
+          {errors.role && (
+            <p className="text-xs font-medium text-red-600 ml-1">{errors.role.message}</p>
+          )}
         </div>
 
         {/* Submit */}
@@ -235,7 +263,13 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
                   Submitting…
                 </>
               ) : (
-                <>Request Access <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" /></>
+                <>
+                  Request Access{' '}
+                  <ArrowRight
+                    size={14}
+                    className="group-hover:translate-x-1 transition-transform"
+                  />
+                </>
               )}
             </span>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#D4AF37]/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />

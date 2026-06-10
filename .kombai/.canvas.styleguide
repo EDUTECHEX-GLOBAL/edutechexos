@@ -1,0 +1,41 @@
+{
+  "guides": [
+    {
+      "id": "style_90afde815bf4",
+      "name": "Premium Ivy-League (Navy & Gold)",
+      "tokens": {
+        "colors": {
+          "primary": "#0A1128",
+          "secondary": "#F9F8F6",
+          "accent": "#D4AF37",
+          "text-on-primary": "#FFFFFF",
+          "text-on-secondary": "#1E2636",
+          "muted": "rgba(10, 17, 40, 0.6)"
+        },
+        "typography": {
+          "h1": {
+            "family": "Playfair Display",
+            "size": "4.5rem",
+            "url": "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap"
+          },
+          "body": {
+            "family": "Inter",
+            "size": "1rem",
+            "url": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+          }
+        },
+        "spacing": {
+          "gutter": "2rem",
+          "section": "6rem"
+        },
+        "radius": {
+          "card": "1rem",
+          "button": "0.125rem"
+        }
+      },
+      "designInstructions": "# Design Language: Premium Ivy-League Academic\nThe visual language should feel like an elite academic institution—prestigious, trustworthy, yet technically advanced.\n\n## Layout & Structure\n- **Asymmetry & Contrast:** Use sharp diagonal splits (clip-paths) to separate Deep Navy (#0A1128) and Soft Cream (#F9F8F6) sections. This creates a dynamic, high-end editorial feel.\n- **Glass-morphism:** Use premium glass cards with a subtle 1px white border, heavy backdrop-blur (16px+), and soft shadows (0 20px 50px rgba(10, 17, 40, 0.12)).\n- **Whitespace:** Use generous margins and airy spacing to maintain a sense of prestige.\n\n## Colors & Motifs\n- **Primary Palette:** Deep Navy base with Gold (#D4AF37) accents for highlights, rules, and primary actions.\n- **Accents:** Use thin rules, dot-grid overlays (opacity 0.03), and subtle radial glows to add depth to dark sections.\n- **Trusted Ticker:** Always include a horizontal scrolling ticker for social proof, using muted gold university-style emblems.\n\n## Components\n- **Typography:** Headlines must use 'Playfair Display' (Serif), occasionally in italics for emphasis. Body text and UI elements use 'Inter' (Sans-serif) for clarity.\n- **Buttons:** Sharp, rectangular (near-zero radius) buttons for a formal look. Gold buttons with navy text for primary CTAs.\n- **Animations:** Subtle floating animations for cards and reveal-up animations for text sections. Use cubic-bezier(0.19, 1, 0.22, 1) for a \"high-end\" snap.\n\n## Dashboard Specifics\n- **Navigation:** Deep Navy sidebar with gold active indicators.\n- **Content:** Information displayed on cascading glass-morphic cards against the Soft Cream background.",
+      "created": "2026-06-07T07:54:14.232707+00:00",
+      "modified": "2026-06-07T07:54:14.232707+00:00"
+    }
+  ]
+}

@@ -52,9 +52,7 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
     () =>
       member
         ? channels.filter(
-            (ch) =>
-              !ch.id.startsWith('member-') &&
-              (ch.memberIds?.includes(member.id) ?? false)
+            (ch) => !ch.id.startsWith('member-') && (ch.memberIds?.includes(member.id) ?? false)
           )
         : [],
     [channels, member]
@@ -74,15 +72,10 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
     Object.entries(messages).forEach(([channelId, msgs]) => {
       const ch = channels.find((c) => c.id === channelId);
       msgs.forEach((msg) => {
-        if (
-          msg.sender === member.name ||
-          msg.initials === member.initials
-        ) {
+        if (msg.sender === member.name || msg.initials === member.initials) {
           found.push({
             channelId,
-            channelName: channelId.startsWith('member-')
-              ? 'DM'
-              : `#${ch?.name ?? channelId}`,
+            channelName: channelId.startsWith('member-') ? 'DM' : `#${ch?.name ?? channelId}`,
             text: msg.text,
             timestamp: msg.timestamp,
           });
@@ -115,10 +108,7 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onClick={onClose}>
       {/* Backdrop */}
       <div className="absolute inset-0 bg-[rgba(25,30,47,0.60)] backdrop-blur-sm" />
 
@@ -255,6 +245,3 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
     </div>
   );
 }
-
-
-

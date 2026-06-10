@@ -122,7 +122,7 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
         editor.commands.setContent(page.content || '', { emitUpdate: false });
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPageId]);
 
   useEffect(() => {
@@ -186,10 +186,17 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
         const { user } = JSON.parse(auth);
         if (user) {
           sender = user.name || 'You';
-          initials = sender.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2);
+          initials = sender
+            .split(' ')
+            .map((n: string) => n[0])
+            .join('')
+            .toUpperCase()
+            .substring(0, 2);
         }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     addMessage(activeChannel, {
       id: `msg-wiki-${Date.now()}`,
       sender,
@@ -214,10 +221,11 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
       >
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-green-500/25 bg-[#1E2538]">
-            {isPersonal
-              ? <Lock size={16} className="text-[#C4CAE0]" strokeWidth={2.5} />
-              : <Book size={16} className="text-[#C4CAE0]" strokeWidth={2.5} />
-            }
+            {isPersonal ? (
+              <Lock size={16} className="text-[#C4CAE0]" strokeWidth={2.5} />
+            ) : (
+              <Book size={16} className="text-[#C4CAE0]" strokeWidth={2.5} />
+            )}
           </div>
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#7C859E]">
@@ -248,7 +256,10 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
       {/* Body: sidebar + editor */}
       <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: '200px 1fr' }}>
         {/* Sidebar */}
-        <aside className="flex flex-col overflow-hidden border-r border-[rgba(62,74,137,0.12)]" style={{ background: '#191E2F' }}>
+        <aside
+          className="flex flex-col overflow-hidden border-r border-[rgba(62,74,137,0.12)]"
+          style={{ background: '#191E2F' }}
+        >
           <div className="shrink-0 p-3">
             <button
               type="button"
@@ -276,13 +287,19 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
                       type="button"
                       onClick={() => setSelectedPageId(page.id)}
                       className={`w-full rounded-xl p-2.5 text-left transition-all ${
-                        isSelected ? 'bg-[#9BA6D3] shadow-lg shadow-amber-900/50' : 'hover:bg-[rgba(62,74,137,0.08)]'
+                        isSelected
+                          ? 'bg-[#9BA6D3] shadow-lg shadow-amber-900/50'
+                          : 'hover:bg-[rgba(62,74,137,0.08)]'
                       }`}
                     >
-                      <p className={`truncate text-sm font-bold ${isSelected ? 'text-white' : 'text-slate-200'}`}>
+                      <p
+                        className={`truncate text-sm font-bold ${isSelected ? 'text-white' : 'text-slate-200'}`}
+                      >
                         {page.title || 'Untitled'}
                       </p>
-                      <div className={`mt-1 flex items-center gap-1 text-[10px] ${isSelected ? 'text-[#C4CAE0]' : 'text-[#7C859E]'}`}>
+                      <div
+                        className={`mt-1 flex items-center gap-1 text-[10px] ${isSelected ? 'text-[#C4CAE0]' : 'text-[#7C859E]'}`}
+                      >
                         <Clock size={9} />
                         <span>{formatRelativeTime(page.updatedAt)}</span>
                       </div>
@@ -299,10 +316,11 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
           {!selectedPage ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[rgba(62,74,137,0.08)]">
-                {isPersonal
-                  ? <Lock size={28} className="text-[#C4CAE0]" strokeWidth={1.5} />
-                  : <Book size={28} className="text-[#C4CAE0]" strokeWidth={1.5} />
-                }
+                {isPersonal ? (
+                  <Lock size={28} className="text-[#C4CAE0]" strokeWidth={1.5} />
+                ) : (
+                  <Book size={28} className="text-[#C4CAE0]" strokeWidth={1.5} />
+                )}
               </div>
               <div>
                 <p className="text-sm font-bold text-[#4A5578]">
@@ -472,8 +490,3 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
     </div>
   );
 }
-
-
-
-
-

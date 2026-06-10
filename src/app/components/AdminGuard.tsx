@@ -51,7 +51,7 @@ export default function AdminGuard({ children }: AdminGuardProps) {
           </div>
           <h2 className="text-2xl font-bold text-foreground mb-2">Access Denied</h2>
           <p className="text-ink-light mb-8">
-            You don't have the required administrative permissions to view this page.
+            You don&apos;t have the required administrative permissions to view this page.
           </p>
           <div className="flex flex-col gap-3">
             <button

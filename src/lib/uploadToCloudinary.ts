@@ -12,11 +12,9 @@
  *   Set Signing mode = "Unsigned" → Save → copy the preset name
  */
 
-export const CLOUDINARY_CLOUD_NAME =
-  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? '';
+export const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? '';
 
-export const CLOUDINARY_UPLOAD_PRESET =
-  process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? '';
+export const CLOUDINARY_UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? '';
 
 /** True only when both required env vars are present */
 export const cloudinaryConfigured =
@@ -51,7 +49,7 @@ export async function uploadToCloudinary(
   if (!cloudinaryConfigured) {
     console.warn(
       '[cloudinary] Not configured — set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ' +
-      'and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET in .env.local'
+        'and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET in .env.local'
     );
     return null;
   }

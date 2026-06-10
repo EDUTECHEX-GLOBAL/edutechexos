@@ -51,7 +51,9 @@ export function getSocket(): Socket {
       if (connectErrorCount <= 3) {
         console.warn('[socket] connect_error:', err.message);
       } else if (connectErrorCount === 4) {
-        console.warn('[socket] Backend unreachable — suppressing further connect_error logs. Real-time features are offline.');
+        console.warn(
+          '[socket] Backend unreachable — suppressing further connect_error logs. Real-time features are offline.'
+        );
       }
     });
   }

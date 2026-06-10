@@ -3,7 +3,11 @@ import React, { useMemo } from 'react';
 import { useScrollProgress } from '@/hooks/useScrollProgress';
 
 interface ColorPalette {
-  h1: string; h2: string; body: string; accent: string; muted: string;
+  h1: string;
+  h2: string;
+  body: string;
+  accent: string;
+  muted: string;
 }
 
 const palettes: ColorPalette[] = [
@@ -18,8 +22,12 @@ const palettes: ColorPalette[] = [
 function lerpColor(a: string, b: string, t: number): string {
   const pa = parseInt(a.slice(1), 16);
   const pb = parseInt(b.slice(1), 16);
-  const ar = (pa >> 16) & 255, ag = (pa >> 8) & 255, ab = pa & 255;
-  const br = (pb >> 16) & 255, bg = (pb >> 8) & 255, bb = pb & 255;
+  const ar = (pa >> 16) & 255,
+    ag = (pa >> 8) & 255,
+    ab = pa & 255;
+  const br = (pb >> 16) & 255,
+    bg = (pb >> 8) & 255,
+    bb = pb & 255;
   const r = Math.round(ar + (br - ar) * t);
   const g = Math.round(ag + (bg - ag) * t);
   const b_ = Math.round(ab + (bb - ab) * t);
@@ -47,10 +55,16 @@ export function useScrollColors() {
 }
 
 export function ScrollColorText({
-  children, as: Tag = 'span', className = '', style = {},
+  children,
+  as: Tag = 'span',
+  className = '',
+  style = {},
   colorVar = 'h1',
 }: {
-  children: React.ReactNode; as?: React.ElementType; className?: string; style?: React.CSSProperties;
+  children: React.ReactNode;
+  as?: React.ElementType;
+  className?: string;
+  style?: React.CSSProperties;
   colorVar?: keyof ColorPalette;
 }) {
   const colors = useScrollColors();

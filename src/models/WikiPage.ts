@@ -8,14 +8,17 @@ export interface IWikiPage extends Document {
   updatedAt: Date;
 }
 
-const WikiPageSchema: Schema = new Schema({
-  _id: { type: String, required: true },
-  channelId: { type: String, required: true, index: true },
-  title: { type: String, required: true },
-  content: { type: String, required: true },
-}, {
-  timestamps: true
-});
+const WikiPageSchema: Schema = new Schema(
+  {
+    _id: { type: String, required: true },
+    channelId: { type: String, required: true, index: true },
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+  },
+  {
+    timestamps: true,
+  }
+);
 
 const WikiPage = mongoose.models.WikiPage || mongoose.model<IWikiPage>('WikiPage', WikiPageSchema);
 

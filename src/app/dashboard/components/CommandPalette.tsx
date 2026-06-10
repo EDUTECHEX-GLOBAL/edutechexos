@@ -106,8 +106,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
   const q = query.trim().toLowerCase();
   const filtered = q
     ? allResults.filter(
-        (r) =>
-          r.label.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)
+        (r) => r.label.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)
       )
     : allResults;
 
@@ -117,11 +116,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
     grouped[r.type].push(r);
   });
 
-  const flat = [
-    ...(grouped.channel ?? []),
-    ...(grouped.member ?? []),
-    ...(grouped.action ?? []),
-  ];
+  const flat = [...(grouped.channel ?? []), ...(grouped.member ?? []), ...(grouped.action ?? [])];
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -162,10 +157,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[200] flex items-start justify-center pt-24"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-[200] flex items-start justify-center pt-24" onClick={onClose}>
       {/* Backdrop */}
       <div className="absolute inset-0 bg-[rgba(25,30,47,0.70)] backdrop-blur-sm" />
 
@@ -278,6 +270,3 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
     </div>
   );
 }
-
-
-

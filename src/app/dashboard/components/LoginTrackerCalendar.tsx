@@ -11,7 +11,7 @@ function toDateStr(date: Date) {
 function calcStreak(loginDates: string[], todayStr: string): number {
   let streak = 0;
   const sorted = [...loginDates].sort().reverse();
-  let check = new Date(todayStr);
+  const check = new Date(todayStr);
   for (let i = 0; i < 365; i++) {
     const d = check.toISOString().split('T')[0];
     if (sorted.includes(d)) {
@@ -115,7 +115,7 @@ export default function LoginTrackerCalendar() {
         <div className="flex items-center gap-4 bg-[#FAF8F5] border border-[rgba(62,74,137,0.08)] rounded-2xl p-3 shrink-0">
           <div className="flex flex-col">
             <span className="text-[9px] font-black text-[#7C859E] uppercase tracking-widest">
-              Today's Attendance
+              Today&apos;s Attendance
             </span>
             <span className="text-sm font-black text-[#1E2636]">
               {loggedInTodayCount} of {totalUsers} Active
@@ -136,7 +136,7 @@ export default function LoginTrackerCalendar() {
           <thead>
             <tr className="bg-[rgba(242,240,236,0.30)] text-[#7C859E] text-[10px] font-black uppercase tracking-[0.15em] border-b border-slate-50">
               <th className="px-8 py-4">Team Colleague</th>
-              <th className="px-8 py-4">Today's Status</th>
+              <th className="px-8 py-4">Today&apos;s Status</th>
               <th className="px-8 py-4">Current Streak</th>
               <th className="px-8 py-4">Total Logins</th>
               <th className="px-8 py-4 text-right">Quick Action</th>
@@ -240,6 +240,3 @@ export default function LoginTrackerCalendar() {
     </div>
   );
 }
-
-
-

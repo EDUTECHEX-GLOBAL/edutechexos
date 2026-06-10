@@ -20,7 +20,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const task = await KanbanTask.create(body);
     const { _id, __v, ...rest } = task.toObject();
-    return NextResponse.json({ success: true, task: { ...rest, id: _id.toString() } }, { status: 201 });
+    return NextResponse.json(
+      { success: true, task: { ...rest, id: _id.toString() } },
+      { status: 201 }
+    );
   } catch (err) {
     console.error('POST /api/kanban error:', err);
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 });

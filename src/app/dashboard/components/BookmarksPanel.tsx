@@ -1,12 +1,7 @@
 ﻿'use client';
 
 import React, { useMemo } from 'react';
-import {
-  X,
-  Bookmark,
-  Hash,
-  ArrowRight,
-} from 'lucide-react';
+import { X, Bookmark, Hash, ArrowRight } from 'lucide-react';
 import { useDashboardStore, Message } from '@/store/dashboardStore';
 
 interface BookmarksPanelProps {
@@ -38,9 +33,7 @@ type BookmarkedItem = {
 export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
   const messages = useDashboardStore((s) => s.messages);
   const channels = useDashboardStore((s) => s.channels);
-  const bookmarkedMessageIds = useDashboardStore(
-    (s) => s.bookmarkedMessageIds
-  );
+  const bookmarkedMessageIds = useDashboardStore((s) => s.bookmarkedMessageIds);
   const toggleBookmark = useDashboardStore((s) => s.toggleBookmark);
   const setActiveChannel = useDashboardStore((s) => s.setActiveChannel);
 
@@ -69,16 +62,11 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
 
     // Sort most recent first
     items.sort(
-      (a, b) =>
-        new Date(b.message.timestamp).getTime() -
-        new Date(a.message.timestamp).getTime()
+      (a, b) => new Date(b.message.timestamp).getTime() - new Date(a.message.timestamp).getTime()
     );
 
     // Group by channel
-    const groupedMap: Record<
-      string,
-      { channelName: string; items: BookmarkedItem[] }
-    > = {};
+    const groupedMap: Record<string, { channelName: string; items: BookmarkedItem[] }> = {};
     items.forEach((item) => {
       if (!groupedMap[item.channelId]) {
         groupedMap[item.channelId] = {
@@ -108,19 +96,13 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
       >
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-green-500/25 bg-[#1E2538]">
-            <Bookmark
-              size={16}
-              className="text-[#C4CAE0]"
-              strokeWidth={2.5}
-            />
+            <Bookmark size={16} className="text-[#C4CAE0]" strokeWidth={2.5} />
           </div>
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#7C859E]">
               Pinned for later
             </p>
-            <p className="text-sm font-black leading-none text-white">
-              Saved Messages
-            </p>
+            <p className="text-sm font-black leading-none text-white">Saved Messages</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -146,19 +128,13 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
           /* Empty state */
           <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[rgba(62,74,137,0.08)]">
-              <Bookmark
-                size={28}
-                className="text-[#9BA6D3]"
-                strokeWidth={1.5}
-              />
+              <Bookmark size={28} className="text-[#9BA6D3]" strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-sm font-bold text-[#4A5578]">
-                No saved messages yet
-              </p>
+              <p className="text-sm font-bold text-[#4A5578]">No saved messages yet</p>
               <p className="mt-1 text-sm leading-relaxed text-[#7C859E]">
-                Bookmark any message to find it here later. Click the bookmark
-                icon on any message to save it.
+                Bookmark any message to find it here later. Click the bookmark icon on any message
+                to save it.
               </p>
             </div>
           </div>
@@ -169,11 +145,7 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
               <div key={channelId}>
                 {/* Channel group header */}
                 <div className="flex items-center gap-2 bg-[#FAF8F5] px-5 py-2.5 border-b border-[rgba(62,74,137,0.08)]">
-                  <Hash
-                    size={12}
-                    className="shrink-0 text-indigo-500"
-                    strokeWidth={2.5}
-                  />
+                  <Hash size={12} className="shrink-0 text-indigo-500" strokeWidth={2.5} />
                   <span className="text-[11px] font-black uppercase tracking-widest text-[#3E4A89]">
                     {group.channelName}
                   </span>
@@ -192,9 +164,7 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
 
                 {/* Messages in group */}
                 {group.items.map((item) => {
-                  const isBookmarked = bookmarkedMessageIds.includes(
-                    item.message.id
-                  );
+                  const isBookmarked = bookmarkedMessageIds.includes(item.message.id);
                   return (
                     <div
                       key={item.message.id}
@@ -246,11 +216,7 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
                             type="button"
                             onClick={() => toggleBookmark(item.message.id)}
                             className="flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-600 transition-colors hover:bg-amber-100"
-                            title={
-                              isBookmarked
-                                ? 'Remove bookmark'
-                                : 'Add bookmark'
-                            }
+                            title={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
                           >
                             <Bookmark
                               size={10}
@@ -272,7 +238,3 @@ export default function BookmarksPanel({ onClose }: BookmarksPanelProps) {
     </div>
   );
 }
-
-
-
-

@@ -9,7 +9,7 @@ export interface INote extends Document {
 const NoteSchema: Schema = new Schema({
   channelId: { type: String, required: true, unique: true, index: true },
   content: { type: String, required: true },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: { type: Date, default: Date.now },
 });
 
 // Avoid OverwriteModelError during hot reloading

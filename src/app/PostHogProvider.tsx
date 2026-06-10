@@ -40,13 +40,11 @@ export function resetUser() {
 }
 
 export default function PostHogProvider({ children }: { children: React.ReactNode }) {
-  useEffect(() => { initPostHog(); }, []);
+  useEffect(() => {
+    initPostHog();
+  }, []);
 
   if (!POSTHOG_KEY) return <>{children}</>;
 
-  return (
-    <PHProvider client={posthog}>
-      {children}
-    </PHProvider>
-  );
+  return <PHProvider client={posthog}>{children}</PHProvider>;
 }

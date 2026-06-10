@@ -1,15 +1,7 @@
 ﻿'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  X,
-  LayoutGrid,
-  Plus,
-  ChevronRight,
-  ChevronLeft,
-  Trash2,
-  Hash,
-} from 'lucide-react';
+import { X, LayoutGrid, Plus, ChevronRight, ChevronLeft, Trash2, Hash } from 'lucide-react';
 import { useDashboardStore, KanbanTask } from '@/store/dashboardStore';
 
 interface KanbanBoardProps {
@@ -74,15 +66,7 @@ function getInitials(name: string): string {
     .substring(0, 2);
 }
 
-const AVATAR_COLORS = [
-  '#3E4A89',
-  '#0891b2',
-  '#059669',
-  '#dc2626',
-  '#7c3aed',
-  '#d97706',
-  '#db2777',
-];
+const AVATAR_COLORS = ['#3E4A89', '#0891b2', '#059669', '#dc2626', '#7c3aed', '#d97706', '#db2777'];
 
 function stringToColor(s: string): string {
   let hash = 0;
@@ -129,9 +113,7 @@ function TaskCard({
       )}
 
       {/* Task text */}
-      <p className="pr-6 text-sm font-medium leading-snug text-[#1E2636]">
-        {task.text}
-      </p>
+      <p className="pr-6 text-sm font-medium leading-snug text-[#1E2636]">{task.text}</p>
 
       {/* Meta */}
       <div className="mt-2.5 flex items-center justify-between gap-2">
@@ -186,9 +168,7 @@ function TaskCard({
 export default function KanbanBoard({ onClose }: KanbanBoardProps) {
   const allKanbanTasks = useDashboardStore((s) => s.kanbanTasks);
   const addKanbanTask = useDashboardStore((s) => s.addKanbanTask);
-  const updateKanbanTaskStatus = useDashboardStore(
-    (s) => s.updateKanbanTaskStatus
-  );
+  const updateKanbanTaskStatus = useDashboardStore((s) => s.updateKanbanTaskStatus);
   const deleteKanbanTask = useDashboardStore((s) => s.deleteKanbanTask);
   const activeChannel = useDashboardStore((s) => s.activeChannel);
   const channels = useDashboardStore((s) => s.channels);
@@ -204,14 +184,15 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
         setCurrentUserEmail((user?.email ?? '').toLowerCase());
         setCurrentUserName((user?.name ?? '').toLowerCase());
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const [newTaskText, setNewTaskText] = useState('');
   const [newTaskAssignee, setNewTaskAssignee] = useState('');
 
-  const channelName =
-    channels.find((c) => c.id === activeChannel)?.name ?? activeChannel;
+  const channelName = channels.find((c) => c.id === activeChannel)?.name ?? activeChannel;
 
   // Only show tasks that belong to the current user
   const kanbanTasks = allKanbanTasks.filter((t) => {
@@ -219,8 +200,7 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
     return t.assignee.toLowerCase() === currentUserName;
   });
 
-  const tasksByStatus = (status: Status) =>
-    kanbanTasks.filter((t) => t.status === status);
+  const tasksByStatus = (status: Status) => kanbanTasks.filter((t) => t.status === status);
 
   const handleAddTask = () => {
     if (!newTaskText.trim()) return;
@@ -257,19 +237,13 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
       >
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-green-500/25 bg-[#1E2538]">
-            <LayoutGrid
-              size={16}
-              className="text-[#C4CAE0]"
-              strokeWidth={2.5}
-            />
+            <LayoutGrid size={16} className="text-[#C4CAE0]" strokeWidth={2.5} />
           </div>
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#7C859E]">
               Task Management
             </p>
-            <p className="text-sm font-black leading-none text-white">
-              Kanban Board
-            </p>
+            <p className="text-sm font-black leading-none text-white">Kanban Board</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -297,12 +271,8 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
               className="flex w-72 shrink-0 flex-col overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-white shadow-sm"
             >
               {/* Column header */}
-              <div
-                className={`flex items-center justify-between px-4 py-3 ${col.headerBg}`}
-              >
-                <span className="text-sm font-black text-white">
-                  {col.label}
-                </span>
+              <div className={`flex items-center justify-between px-4 py-3 ${col.headerBg}`}>
+                <span className="text-sm font-black text-white">{col.label}</span>
                 <span
                   className={`flex h-6 min-w-[24px] items-center justify-center rounded-full px-2 text-[11px] font-black text-white ${col.countBg}`}
                 >
@@ -314,9 +284,7 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
               <div className="flex-1 space-y-2.5 overflow-y-auto p-3">
                 {tasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[rgba(62,74,137,0.12)] py-8 text-center">
-                    <p className="text-xs font-semibold text-[#7C859E]">
-                      {col.emptyText}
-                    </p>
+                    <p className="text-xs font-semibold text-[#7C859E]">{col.emptyText}</p>
                   </div>
                 ) : (
                   tasks.map((task) => (
@@ -378,8 +346,3 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
     </div>
   );
 }
-
-
-
-
-

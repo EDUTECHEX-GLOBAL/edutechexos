@@ -1,82 +1,82 @@
-"use client"
+'use client';
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef } from 'react';
 
 interface RippleGridProps {
-  size?: number
-  filledCells?: Array<{ row: number; col: number }>
-  cellSize?: number
-  cellColor?: string
-  filledCellColor?: string
-  pulseColor?: string
-  borderColor?: string
-  borderWidth?: number
-  pulseScale?: number
-  pulseDuration?: number
-  rippleDelay?: number
+  size?: number;
+  filledCells?: Array<{ row: number; col: number }>;
+  cellSize?: number;
+  cellColor?: string;
+  filledCellColor?: string;
+  pulseColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  pulseScale?: number;
+  pulseDuration?: number;
+  rippleDelay?: number;
 }
 
 export function RippleGrid({
   size = 5,
   filledCells = [],
   cellSize = 50,
-  cellColor = "#fff",
-  filledCellColor = "#000",
-  pulseColor = "#76cefa",
-  borderColor = "#000",
+  cellColor = '#fff',
+  filledCellColor = '#000',
+  pulseColor = '#76cefa',
+  borderColor = '#000',
   borderWidth = 1,
   pulseScale = 1.1,
   pulseDuration = 300,
   rippleDelay = 100,
 }: RippleGridProps) {
-  const gridRef = useRef<HTMLDivElement>(null)
+  const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const gridContainer = gridRef.current
-    if (!gridContainer) return
+    const gridContainer = gridRef.current;
+    if (!gridContainer) return;
 
     const handleClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement
-      if (!target.classList.contains("rg-cell")) return
+      const target = event.target as HTMLElement;
+      if (!target.classList.contains('rg-cell')) return;
 
-      const clickedRow = Number.parseInt(target.dataset.row || "0")
-      const clickedCol = Number.parseInt(target.dataset.col || "0")
+      const clickedRow = Number.parseInt(target.dataset.row || '0');
+      const clickedCol = Number.parseInt(target.dataset.col || '0');
 
-      const cells = gridContainer.querySelectorAll(".rg-cell")
+      const cells = gridContainer.querySelectorAll('.rg-cell');
 
       cells.forEach((cell) => {
-        const htmlCell = cell as HTMLElement
-        const row = Number.parseInt(htmlCell.dataset.row || "0")
-        const col = Number.parseInt(htmlCell.dataset.col || "0")
-        const distance = Math.abs(row - clickedRow) + Math.abs(col - clickedCol)
+        const htmlCell = cell as HTMLElement;
+        const row = Number.parseInt(htmlCell.dataset.row || '0');
+        const col = Number.parseInt(htmlCell.dataset.col || '0');
+        const distance = Math.abs(row - clickedRow) + Math.abs(col - clickedCol);
 
         setTimeout(() => {
-          htmlCell.classList.add("rg-pulse")
+          htmlCell.classList.add('rg-pulse');
           setTimeout(() => {
-            htmlCell.classList.remove("rg-pulse")
-          }, pulseDuration + 200)
-        }, distance * rippleDelay)
-      })
-    }
+            htmlCell.classList.remove('rg-pulse');
+          }, pulseDuration + 200);
+        }, distance * rippleDelay);
+      });
+    };
 
-    gridContainer.addEventListener("click", handleClick)
-    return () => gridContainer.removeEventListener("click", handleClick)
-  }, [pulseDuration, rippleDelay])
+    gridContainer.addEventListener('click', handleClick);
+    return () => gridContainer.removeEventListener('click', handleClick);
+  }, [pulseDuration, rippleDelay]);
 
   const isFilled = (row: number, col: number) =>
-    filledCells.some((cell) => cell.row === row && cell.col === col)
+    filledCells.some((cell) => cell.row === row && cell.col === col);
 
-  const cells = []
+  const cells = [];
   for (let row = 0; row < size; row++) {
     for (let col = 0; col < size; col++) {
       cells.push(
         <div
           key={`${row}-${col}`}
-          className={`rg-cell${isFilled(row, col) ? " rg-filled" : ""}`}
+          className={`rg-cell${isFilled(row, col) ? ' rg-filled' : ''}`}
           data-row={row}
           data-col={col}
         />
-      )
+      );
     }
   }
 
@@ -116,5 +116,5 @@ export function RippleGrid({
         {cells}
       </div>
     </>
-  )
+  );
 }
