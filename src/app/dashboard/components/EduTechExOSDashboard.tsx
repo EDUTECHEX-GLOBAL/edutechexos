@@ -24,6 +24,7 @@ import WikiPanel from './WikiPanel';
 import KanbanBoard from './KanbanBoard';
 import AnalyticsPanel from './AnalyticsPanel';
 import BookmarksPanel from './BookmarksPanel';
+import UserAttendanceCalendar from './UserAttendanceCalendar';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
@@ -1684,6 +1685,7 @@ export default function EduTechExOSDashboard() {
         </div>
 
         <div className="sidebar-footer">
+          <UserAttendanceCalendar />
           <div className="flex items-center gap-2">
             <div className="relative">
               <div
@@ -2126,6 +2128,7 @@ export default function EduTechExOSDashboard() {
 
         {/* ── Footer / User panel ─────────────────────────── */}
         <div className="sidebar-footer">
+          <UserAttendanceCalendar />
           <div className="flex items-center gap-2">
             <div className="relative shrink-0">
               <div

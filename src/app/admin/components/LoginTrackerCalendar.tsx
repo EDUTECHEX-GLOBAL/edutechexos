@@ -336,14 +336,45 @@ export default function LoginTrackerCalendar() {
                     </button>
                   </div>
 
-                  <div className="mt-3 flex items-center justify-between text-[11px] font-black">
-                    <span className={isSelected ? 'text-slate-500' : 'text-slate-400'}>
-                      {member.logins.length} total active days
-                    </span>
-                    <span className={isSelected ? 'text-indigo-600' : 'text-indigo-300'}>
-                      {member.streak} day streak
-                    </span>
-                  </div>
+                  {(() => {
+                    // Working days in past 30 days (Mon–Fri only)
+                    const today30 = new Date();
+                    let workDays = 0;
+                    for (let i = 0; i < 30; i++) {
+                      const d = new Date(today30);
+                      d.setDate(today30.getDate() - i);
+                      const dow = d.getDay();
+                      if (dow !== 0 && dow !== 6) workDays++;
+                    }
+                    const attended = member.logins.length;
+                    const leave = Math.max(0, workDays - attended);
+                    return (
+                      <div className="mt-3 space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px] font-black">
+                          <span className="flex items-center gap-1">
+                            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                            <span className={isSelected ? 'text-emerald-700' : 'text-emerald-400'}>
+                              {attended} present
+                            </span>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className={`h-2 w-2 rounded-full ${leave > 0 ? 'bg-red-400' : 'bg-slate-600'}`} />
+                            <span className={isSelected ? (leave > 0 ? 'text-red-600' : 'text-slate-400') : (leave > 0 ? 'text-red-400' : 'text-slate-500')}>
+                              {leave} leave
+                            </span>
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] font-semibold">
+                          <span className={isSelected ? 'text-slate-400' : 'text-slate-500'}>
+                            {Math.round((attended / Math.max(workDays, 1)) * 100)}% attendance rate
+                          </span>
+                          <span className={isSelected ? 'text-indigo-600' : 'text-indigo-300'}>
+                            🔥 {member.streak}d streak
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })}
@@ -385,37 +416,63 @@ export default function LoginTrackerCalendar() {
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
-            <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                Month coverage
-              </p>
-              <p className="mt-2 text-2xl font-black text-slate-950">{monthCoverage}%</p>
-              <p className="mt-1 text-sm font-semibold text-slate-500">
-                {activeDaysThisMonth} active day{activeDaysThisMonth === 1 ? '' : 's'} in this month
-              </p>
-            </div>
-            <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                Current streak
-              </p>
-              <p className="mt-2 text-2xl font-black text-slate-950">
-                {selectedMember ? calcStreak(selectedLogins, todayStr) : 0} days
-              </p>
-              <p className="mt-1 text-sm font-semibold text-slate-500">
-                Consecutive active days including today when present
-              </p>
-            </div>
-            <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                Quick tip
-              </p>
-              <div className="mt-2 flex items-start gap-2 text-sm font-semibold text-slate-500">
-                <Sparkles size={16} className="mt-0.5 shrink-0 text-indigo-500" />
-                Click any calendar day to toggle that member&apos;s attendance.
+          {(() => {
+            // Working days so far this month (Mon–Fri, up to today)
+            const todayDay = today.getDate();
+            let workingDaysThisMonth = 0;
+            for (let d = 1; d <= Math.min(daysInMonth, todayDay); d++) {
+              const dow = new Date(viewYear, viewMonth, d).getDay();
+              if (dow !== 0 && dow !== 6) workingDaysThisMonth++;
+            }
+            const leaveThisMonth = Math.max(0, workingDaysThisMonth - activeDaysThisMonth);
+            const attendanceRate = workingDaysThisMonth > 0
+              ? Math.round((activeDaysThisMonth / workingDaysThisMonth) * 100)
+              : 0;
+            return (
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+                <div className="rounded-[1.5rem] border border-emerald-100 bg-emerald-50 p-4 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-500">
+                    Days present
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-emerald-700">{activeDaysThisMonth}</p>
+                  <p className="mt-1 text-xs font-semibold text-emerald-500">
+                    this month so far
+                  </p>
+                </div>
+                <div className={`rounded-[1.5rem] border p-4 shadow-sm ${leaveThisMonth > 0 ? 'border-red-100 bg-red-50' : 'border-slate-200 bg-white'}`}>
+                  <p className={`text-[10px] font-black uppercase tracking-[0.14em] ${leaveThisMonth > 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                    Days on leave
+                  </p>
+                  <p className={`mt-2 text-2xl font-black ${leaveThisMonth > 0 ? 'text-red-600' : 'text-slate-400'}`}>{leaveThisMonth}</p>
+                  <p className={`mt-1 text-xs font-semibold ${leaveThisMonth > 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                    working days missed
+                  </p>
+                </div>
+                <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                    Attendance rate
+                  </p>
+                  <p className={`mt-2 text-2xl font-black ${attendanceRate >= 80 ? 'text-emerald-600' : attendanceRate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
+                    {attendanceRate}%
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    of {workingDaysThisMonth} working days
+                  </p>
+                </div>
+                <div className="rounded-[1.5rem] border border-indigo-100 bg-indigo-50 p-4 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-indigo-400">
+                    Current streak
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-indigo-700">
+                    {selectedMember ? calcStreak(selectedLogins, todayStr) : 0}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-indigo-400">
+                    🔥 consecutive days
+                  </p>
+                </div>
               </div>
-            </div>
-          </div>
+            );
+          })()}
 
           <div className="mt-6 overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
             <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50 px-3 py-3">

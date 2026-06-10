@@ -1051,6 +1051,21 @@ app.get('/api/login-status', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/my-attendance — returns current user's own login dates (last 90 days)
+app.get('/api/my-attendance', authMiddleware, async (req, res) => {
+  try {
+    const email = req.user?.email?.toLowerCase();
+    if (!email) return res.status(401).json({ success: false });
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const events = await LoginEvent.find({ email, loginAt: { $gte: ninetyDaysAgo } }).lean();
+    const dates = [...new Set(events.map((e) => e.dateStr))].sort();
+    res.json({ success: true, dates });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
 // GET /api/login-history — returns 30-day login history per user (for calendar heatmap)
 app.get('/api/login-history', authMiddleware, async (req, res) => {
   try {
