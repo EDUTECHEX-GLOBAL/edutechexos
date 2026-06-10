@@ -144,6 +144,16 @@ function getToken(): string | null {
   }
 }
 
+function getUserEmail(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const raw = localStorage.getItem('edutechex_token');
+    return raw ? (JSON.parse(raw).user?.email ?? '') : '';
+  } catch {
+    return '';
+  }
+}
+
 export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
   const [activeTab, setActiveTab] = useState<'chat' | 'tasks'>('chat');
   const [tasks, setTasks] = useState(MOCK_TASKS);
@@ -183,6 +193,7 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
             channelId: contextRef.current.channelId,
             channelTranscript: transcriptRef.current,
             userToken: getToken(),
+            userEmail: getUserEmail(),
           },
         }),
       }),

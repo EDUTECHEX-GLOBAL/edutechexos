@@ -1,5 +1,5 @@
 import { ToolLoopAgent, createAgentUIStreamResponse, stepCountIs, tool } from 'ai';
-import { google } from '@ai-sdk/google';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 
@@ -8,7 +8,10 @@ export const runtime = 'edge';
 const BACKEND = process.env.BACKEND_URL ?? 'https://edutechexos-backend.onrender.com';
 
 function getModel() {
-  if (process.env.GEMINI_API_KEY) return google('gemini-2.5-flash');
+  if (process.env.GEMINI_API_KEY) {
+    const googleAI = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+    return googleAI('gemini-2.5-flash');
+  }
   if (process.env.OPENAI_API_KEY) return openai('gpt-4o-mini');
   return null;
 }
@@ -19,8 +22,9 @@ function buildHeaders(userToken: string | null): Record<string, string> {
   return h;
 }
 
-function makeTools(channelId: string, userToken: string | null) {
+function makeTools(channelId: string, userToken: string | null, userEmail: string) {
   const authHeader = buildHeaders(userToken);
+  const emailParam = userEmail ? `&userEmail=${encodeURIComponent(userEmail)}` : '';
 
   return {
     create_task: tool({
@@ -39,7 +43,7 @@ function makeTools(channelId: string, userToken: string | null) {
             .join('')
             .toUpperCase()
             .slice(0, 2);
-          const res = await fetch(`${BACKEND}/api/kanban`, {
+          const res = await fetch(`${BACKEND}/api/kanban?userEmail=${encodeURIComponent(userEmail)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...authHeader },
             body: JSON.stringify({
@@ -72,7 +76,7 @@ function makeTools(channelId: string, userToken: string | null) {
       }),
       execute: async ({ query }) => {
         try {
-          const res = await fetch(`${BACKEND}/api/search?q=${encodeURIComponent(query)}&limit=8`, {
+          const res = await fetch(`${BACKEND}/api/search?q=${encodeURIComponent(query)}&limit=8${emailParam}`, {
             headers: authHeader,
           });
           if (!res.ok) return { success: false, results: [] };
@@ -106,7 +110,7 @@ function makeTools(channelId: string, userToken: string | null) {
       }),
       execute: async ({ status, assignee }) => {
         try {
-          const res = await fetch(`${BACKEND}/api/kanban?channelId=${channelId}`, {
+          const res = await fetch(`${BACKEND}/api/kanban?channelId=${channelId}${emailParam}`, {
             headers: authHeader,
           });
           if (!res.ok) return { success: false, tasks: [] };
@@ -143,7 +147,7 @@ function makeTools(channelId: string, userToken: string | null) {
       inputSchema: z.object({}),
       execute: async () => {
         try {
-          const res = await fetch(`${BACKEND}/api/members`, { headers: authHeader });
+          const res = await fetch(`${BACKEND}/api/members?userEmail=${encodeURIComponent(userEmail)}`, { headers: authHeader });
           if (!res.ok) return { success: false, members: [] };
           const data = await res.json();
           return {
@@ -164,7 +168,7 @@ function makeTools(channelId: string, userToken: string | null) {
 }
 
 export async function POST(req: Request) {
-  const { uiMessages, channelName, channelId, channelTranscript, accessibleChannels, userToken } =
+  const { uiMessages, channelName, channelId, channelTranscript, accessibleChannels, userToken, userEmail } =
     await req.json();
 
   const model = getModel();
@@ -199,7 +203,7 @@ When the user asks "find", "search", "where is" — use search_messages.
 When the user asks "what tasks", "what's in progress", "who owns" — use list_tasks.
 
 Always confirm what you did after using a tool. Be concise, direct, and professional. Use markdown for formatting.`,
-    tools: makeTools(channelId ?? channelName ?? 'general', userToken ?? null),
+    tools: makeTools(channelId ?? channelName ?? 'general', userToken ?? null, userEmail ?? ''),
     stopWhen: stepCountIs(5),
     maxOutputTokens: 1500,
   });

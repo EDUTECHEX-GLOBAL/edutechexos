@@ -1216,6 +1216,13 @@ app.post('/api/admin/broadcast-email', authMiddleware, async (req, res) => {
     });
 
     if (!r.ok) {
+      const brevoStatus = parseInt((r.brevoError || '').split(':')[0], 10);
+      if (brevoStatus === 401) {
+        return res.status(503).json({
+          success: false,
+          error: 'Email service rejected the request: the server IP address is not authorized. Go to Brevo → Security → Authorised IPs and add the current server IP.',
+        });
+      }
       return res.status(502).json({ success: false, error: `Email provider error: ${r.brevoError}` });
     }
 
