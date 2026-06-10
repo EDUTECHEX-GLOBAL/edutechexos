@@ -1,298 +1,254 @@
 'use client';
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import {
-  Users,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  TrendingUp,
-  Calendar,
-  Clock,
-  Flame,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { toast } from 'sonner';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS = ['S','M','T','W','T','F','S'];
 
-const MONTH_NAMES = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December',
-];
-const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function toDateStr(d: Date) { return d.toISOString().split('T')[0]; }
 
-function toDateStr(date: Date) {
-  return date.toISOString().split('T')[0];
-}
-
-function calcStreak(loginDates: string[], todayStr: string): number {
-  let streak = 0;
-  const sorted = [...loginDates].sort().reverse();
-  const check = new Date(todayStr);
+function calcStreak(dates: string[], todayStr: string): number {
+  let s = 0;
+  const sorted = [...dates].sort().reverse();
+  const cur = new Date(todayStr);
   for (let i = 0; i < 365; i++) {
-    const d = check.toISOString().split('T')[0];
-    if (sorted.includes(d)) {
-      streak++;
-      check.setDate(check.getDate() - 1);
-    } else if (i === 0) {
-      check.setDate(check.getDate() - 1);
-    } else {
-      break;
-    }
+    const ds = cur.toISOString().split('T')[0];
+    if (sorted.includes(ds)) { s++; cur.setDate(cur.getDate() - 1); }
+    else if (i === 0) { cur.setDate(cur.getDate() - 1); }
+    else break;
   }
-  return streak;
+  return s;
 }
 
 export default function LoginTrackerCalendar() {
   const { members } = useDashboardStore();
   const [mounted, setMounted] = useState(false);
   const [userLogins, setUserLogins] = useState<Record<string, string[]>>({});
-  const [selectedMemberId, setSelectedMemberId] = useState('');
-
+  const [selectedId, setSelectedId] = useState('');
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
 
-  const fetchRealLoginHistory = useCallback(async () => {
+  const fetchHistory = useCallback(async () => {
     try {
-      const authData = localStorage.getItem('edutechex_token');
-      const token = authData ? JSON.parse(authData).token : null;
+      const raw = localStorage.getItem('edutechex_token');
+      const token = raw ? JSON.parse(raw).token : null;
       if (!token) return;
-      const res = await fetch(`${API_BASE}/api/login-history`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`${API_BASE}/api/login-history`, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) return;
       const data = await res.json();
       if (data.success && data.history) setUserLogins(data.history);
-    } catch { /* backend unavailable */ }
+    } catch { /* offline */ }
   }, []);
 
   useEffect(() => {
     setMounted(true);
-    if (members.length > 0) setSelectedMemberId(members[0].id);
-    fetchRealLoginHistory().then(() => {
-      setUserLogins((prev) => {
-        const merged: Record<string, string[]> = { ...prev };
-        const current = new Date();
-        members.forEach((member) => {
-          if (!merged[member.email] || merged[member.email].length === 0) {
-            const key = `edutechex_logins_${member.email}`;
+    if (members.length > 0) setSelectedId(members[0].id);
+    fetchHistory().then(() => {
+      setUserLogins(prev => {
+        const merged = { ...prev };
+        members.forEach(m => {
+          if (!merged[m.email]?.length) {
+            const key = `edutechex_logins_${m.email}`;
             let stored: string[] = [];
-            try { stored = JSON.parse(localStorage.getItem(key) || '[]'); } catch { /* */ }
-            if (stored.length === 0) {
-              const generated: string[] = [];
+            try { stored = JSON.parse(localStorage.getItem(key) || '[]'); } catch { /**/ }
+            if (!stored.length) {
+              const gen: string[] = [];
               for (let i = 0; i < 30; i++) {
-                const date = new Date();
-                date.setDate(current.getDate() - i);
-                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                let prob = 0.85;
-                if (member.role === 'Manager') prob = 0.95;
-                if (member.role === 'Designer') prob = 0.75;
-                if (isWeekend) prob = 0.12;
-                if (Math.random() < prob) generated.push(date.toISOString().split('T')[0]);
+                const d = new Date(); d.setDate(d.getDate() - i);
+                const wd = d.getDay(); const isWe = wd===0||wd===6;
+                let p = m.role==='Manager' ? 0.95 : m.role==='Designer' ? 0.75 : 0.85;
+                if (isWe) p = 0.1;
+                if (Math.random() < p) gen.push(d.toISOString().split('T')[0]);
               }
-              localStorage.setItem(key, JSON.stringify(generated));
-              stored = generated;
+              localStorage.setItem(key, JSON.stringify(gen));
+              stored = gen;
             }
-            merged[member.email] = stored;
+            merged[m.email] = stored;
           }
         });
         return merged;
       });
     });
-  }, [members, fetchRealLoginHistory]);
+  }, [members, fetchHistory]);
 
   const todayStr = toDateStr(today);
-  const selectedMember = members.find(m => m.id === selectedMemberId) || members[0];
-  const selectedLogins = selectedMember ? userLogins[selectedMember.email] || [] : [];
-
-  const totalUsers = members.length;
-  const loggedInTodayCount = members.filter(m => (userLogins[m.email] || []).includes(todayStr)).length;
-  const attendancePercentage = totalUsers > 0 ? Math.round((loggedInTodayCount / totalUsers) * 100) : 0;
+  const sel = members.find(m => m.id === selectedId) || members[0];
+  const selLogins = sel ? userLogins[sel.email] || [] : [];
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const firstDayIndex = new Date(viewYear, viewMonth, 1).getDay();
-  const totalCells = Math.ceil((firstDayIndex + daysInMonth) / 7) * 7;
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
 
-  const activeDaysThisMonth = selectedLogins.filter(e => {
+  const presentThisMonth = selLogins.filter(e => {
     const d = new Date(e);
     return d.getFullYear() === viewYear && d.getMonth() === viewMonth;
   }).length;
 
-  // Working days so far this month
   const todayDay = today.getDate();
-  let workingDaysThisMonth = 0;
+  let workDays = 0;
   for (let d = 1; d <= Math.min(daysInMonth, todayDay); d++) {
     const dow = new Date(viewYear, viewMonth, d).getDay();
-    if (dow !== 0 && dow !== 6) workingDaysThisMonth++;
+    if (dow !== 0 && dow !== 6) workDays++;
   }
-  const leaveThisMonth = Math.max(0, workingDaysThisMonth - activeDaysThisMonth);
-  const attendanceRate = workingDaysThisMonth > 0
-    ? Math.round((activeDaysThisMonth / workingDaysThisMonth) * 100)
-    : 0;
-  const currentStreak = selectedMember ? calcStreak(selectedLogins, todayStr) : 0;
+  const leave = Math.max(0, workDays - presentThisMonth);
+  const rate = workDays > 0 ? Math.round((presentThisMonth / workDays) * 100) : 0;
+  const streak = sel ? calcStreak(selLogins, todayStr) : 0;
 
-  const teamInsights = useMemo(() =>
-    members.map(member => {
-      const logins = userLogins[member.email] || [];
-      let workDays = 0;
-      for (let i = 0; i < 30; i++) {
-        const d = new Date(today);
-        d.setDate(today.getDate() - i);
-        if (d.getDay() !== 0 && d.getDay() !== 6) workDays++;
-      }
-      const attended = logins.length;
-      const leave = Math.max(0, workDays - attended);
-      return {
-        ...member, logins,
-        loggedInToday: logins.includes(todayStr),
-        streak: calcStreak(logins, todayStr),
-        attended, leave, workDays,
-        rate: workDays > 0 ? Math.round((attended / workDays) * 100) : 0,
-      };
-    }),
-    [members, todayStr, userLogins] // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  const totalUsers = members.length;
+  const todayActive = members.filter(m => (userLogins[m.email] || []).includes(todayStr)).length;
 
-  const handleSimulateLoginDate = (email: string, dateStr: string) => {
-    const existing = userLogins[email] || [];
-    const updated = existing.includes(dateStr)
-      ? existing.filter(d => d !== dateStr)
-      : [...existing, dateStr];
-    const verb = existing.includes(dateStr) ? 'removed' : 'marked';
-    toast.success(`Attendance ${verb} for ${dateStr}`);
-    const key = `edutechex_logins_${email}`;
-    localStorage.setItem(key, JSON.stringify(updated));
-    setUserLogins(prev => ({ ...prev, [email]: updated }));
+  const roster = useMemo(() => members.map(m => {
+    const logins = userLogins[m.email] || [];
+    let wd = 0;
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      if (d.getDay() !== 0 && d.getDay() !== 6) wd++;
+    }
+    return {
+      ...m, logins,
+      present: logins.length,
+      leave: Math.max(0, wd - logins.length),
+      rate: wd > 0 ? Math.round((logins.length / wd) * 100) : 0,
+      inToday: logins.includes(todayStr),
+      streak: calcStreak(logins, todayStr),
+    };
+  }), [members, userLogins, todayStr]);
+
+  const toggleDate = (email: string, dateStr: string) => {
+    const cur = userLogins[email] || [];
+    const next = cur.includes(dateStr) ? cur.filter(d => d !== dateStr) : [...cur, dateStr];
+    toast.success(cur.includes(dateStr) ? `Removed ${dateStr}` : `Marked present ${dateStr}`);
+    localStorage.setItem(`edutechex_logins_${email}`, JSON.stringify(next));
+    setUserLogins(p => ({ ...p, [email]: next }));
   };
 
-  const handlePrevMonth = () => {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
-    else setViewMonth(m => m - 1);
-  };
-  const handleNextMonth = () => {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
-    else setViewMonth(m => m + 1);
-  };
+  const prevMonth = () => { if (viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1); };
+  const nextMonth = () => { if (viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1); };
 
-  if (!mounted) {
-    return (
-      <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8', fontSize: '13px', fontWeight: 600 }}>
-        Loading attendance…
-      </div>
-    );
-  }
+  if (!mounted) return <div style={{padding:32,textAlign:'center',color:'#94a3b8',fontSize:13}}>Loading…</div>;
 
-  const rateColor = attendanceRate >= 80 ? '#16a34a' : attendanceRate >= 60 ? '#d97706' : '#dc2626';
-  const rateBg   = attendanceRate >= 80 ? '#f0fdf4' : attendanceRate >= 60 ? '#fffbeb' : '#fef2f2';
-  const rateBorder= attendanceRate >= 80 ? '#bbf7d0' : attendanceRate >= 60 ? '#fde68a' : '#fecaca';
+  const rateClr = rate>=80?'#10b981':rate>=60?'#f59e0b':'#ef4444';
 
   return (
     <div style={{
-      borderRadius: '16px',
-      border: '1px solid #e2e8f0',
-      background: '#ffffff',
-      boxShadow: '0 1px 3px rgba(15,23,42,0.06), 0 4px 16px rgba(15,23,42,0.04)',
+      borderRadius: 14,
+      border: '1px solid #e8edf5',
+      background: '#fff',
+      boxShadow: '0 2px 12px rgba(15,23,42,0.07)',
       overflow: 'hidden',
+      fontFamily: 'inherit',
     }}>
 
-      {/* ── Top header bar ── */}
+      {/* ═══ COMPACT TOP BAR ═══ */}
       <div style={{
-        padding: '20px 24px 18px',
-        borderBottom: '1px solid #f1f5f9',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '16px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 16px',
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)',
+        gap: 12,
       }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-            <Calendar size={15} color="#6366f1" strokeWidth={2.5} />
-            <span style={{ fontSize: '11px', fontWeight: 800, color: '#6366f1', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              Attendance Tracker
-            </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+            background: 'rgba(255,255,255,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
           </div>
-          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-            Team Attendance Calendar
-          </h2>
+          <div>
+            <p style={{margin:0, fontSize:10, fontWeight:700, color:'rgba(199,210,254,0.8)', letterSpacing:'0.1em', textTransform:'uppercase'}}>Attendance</p>
+            <p style={{margin:0, fontSize:14, fontWeight:800, color:'#fff', lineHeight:1.2}}>Team Calendar</p>
+          </div>
         </div>
 
-        {/* Global stat chips */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <Chip icon={<Users size={12} strokeWidth={2.5} />} label="Team" value={`${totalUsers}`} color="#6366f1" bg="#eef2ff" border="#c7d2fe" />
-          <Chip icon={<CheckCircle2 size={12} strokeWidth={2.5} />} label="In today" value={`${loggedInTodayCount}`} color="#16a34a" bg="#f0fdf4" border="#bbf7d0" />
-          <Chip icon={<TrendingUp size={12} strokeWidth={2.5} />} label="Rate" value={`${attendancePercentage}%`} color={attendancePercentage >= 75 ? '#16a34a' : '#d97706'} bg={attendancePercentage >= 75 ? '#f0fdf4' : '#fffbeb'} border={attendancePercentage >= 75 ? '#bbf7d0' : '#fde68a'} />
+        {/* Live pills */}
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'flex-end' }}>
+          {[
+            { label: `${totalUsers} members`, color:'rgba(165,180,252,0.9)', bg:'rgba(255,255,255,0.1)' },
+            { label: `${todayActive} today`, color:'#6ee7b7', bg:'rgba(16,185,129,0.18)' },
+            { label: `${Math.round((todayActive/Math.max(totalUsers,1))*100)}% rate`, color:'#fde68a', bg:'rgba(245,158,11,0.18)' },
+          ].map(p => (
+            <span key={p.label} style={{
+              fontSize:10.5, fontWeight:700, color:p.color, background:p.bg,
+              padding:'3px 9px', borderRadius:99,
+              border:'1px solid rgba(255,255,255,0.12)',
+            }}>{p.label}</span>
+          ))}
         </div>
       </div>
 
-      {/* ── Body: roster + calendar ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr' }}>
+      {/* ═══ BODY ═══ */}
+      <div style={{ display:'grid', gridTemplateColumns:'220px 1fr', minHeight:400 }}>
 
-        {/* Left: Team roster */}
+        {/* LEFT — roster */}
         <div style={{
-          borderRight: '1px solid #f1f5f9',
-          background: '#fafafa',
-          maxHeight: '540px',
-          overflowY: 'auto',
-          padding: '12px 10px',
+          borderRight:'1px solid #f1f5f9',
+          background:'#fafbfd',
+          display:'flex', flexDirection:'column',
+          overflowY:'auto', maxHeight:500,
         }}>
-          <p style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '0 6px 8px', margin: 0 }}>
-            Team Members
-          </p>
+          <div style={{
+            padding:'10px 12px 6px', fontSize:10, fontWeight:800,
+            color:'#94a3b8', letterSpacing:'0.1em', textTransform:'uppercase',
+            borderBottom:'1px solid #f1f5f9', flexShrink:0,
+          }}>
+            Members · {totalUsers}
+          </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            {teamInsights.map(member => {
-              const selected = member.id === selectedMemberId;
+          <div style={{ padding:'6px 8px', display:'flex', flexDirection:'column', gap:2 }}>
+            {roster.map(m => {
+              const isSel = m.id === selectedId;
               return (
                 <button
-                  key={member.id}
+                  key={m.id}
                   type="button"
-                  onClick={() => setSelectedMemberId(member.id)}
+                  onClick={() => setSelectedId(m.id)}
                   style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '10px 10px 9px',
-                    borderRadius: '10px',
-                    border: selected ? '1px solid #c7d2fe' : '1px solid transparent',
-                    background: selected ? '#eef2ff' : 'transparent',
-                    cursor: 'pointer',
-                    transition: 'all 0.12s',
+                    width:'100%', textAlign:'left',
+                    padding:'8px 9px', borderRadius:9,
+                    border: isSel ? '1px solid #c7d2fe' : '1px solid transparent',
+                    background: isSel ? '#eef2ff' : 'transparent',
+                    cursor:'pointer', transition:'all 0.1s',
                   }}
-                  onMouseEnter={e => { if (!selected) (e.currentTarget as HTMLButtonElement).style.background = '#f1f5f9'; }}
-                  onMouseLeave={e => { if (!selected) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+                  onMouseEnter={e => { if(!isSel)(e.currentTarget as HTMLButtonElement).style.background='#f1f5f9'; }}
+                  onMouseLeave={e => { if(!isSel)(e.currentTarget as HTMLButtonElement).style.background='transparent'; }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    {/* Avatar */}
                     <span style={{
-                      flexShrink: 0, width: '32px', height: '32px', borderRadius: '8px',
-                      background: selected ? member.color : `${member.color}22`,
-                      color: selected ? '#fff' : member.color,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '11px', fontWeight: 800,
-                    }}>
-                      {member.initials}
-                    </span>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: selected ? '#3730a3' : '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {member.name}
-                      </p>
-                      <p style={{ margin: 0, fontSize: '10px', color: selected ? '#6366f1' : '#94a3b8', fontWeight: 600 }}>
-                        {member.role}
-                      </p>
-                    </div>
-                  </div>
+                      width:28, height:28, borderRadius:7, flexShrink:0,
+                      background: isSel ? m.color : `${m.color}25`,
+                      color: isSel ? '#fff' : m.color,
+                      fontSize:10, fontWeight:800,
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                    }}>{m.initials}</span>
 
-                  {/* Present / Leave / Rate row */}
-                  <div style={{ marginTop: '7px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <span style={{ fontSize: '9.5px', fontWeight: 700, color: '#16a34a', background: '#f0fdf4', padding: '2px 6px', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
-                      {member.attended}P
-                    </span>
-                    <span style={{ fontSize: '9.5px', fontWeight: 700, color: member.leave > 0 ? '#dc2626' : '#94a3b8', background: member.leave > 0 ? '#fef2f2' : '#f8fafc', padding: '2px 6px', borderRadius: '4px', border: `1px solid ${member.leave > 0 ? '#fecaca' : '#e2e8f0'}` }}>
-                      {member.leave}L
-                    </span>
-                    <span style={{ marginLeft: 'auto', fontSize: '9.5px', fontWeight: 700, color: member.loggedInToday ? '#16a34a' : '#94a3b8' }}>
-                      {member.loggedInToday ? '● in' : '○ out'}
-                    </span>
+                    <div style={{ minWidth:0, flex:1 }}>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                        <p style={{margin:0, fontSize:11.5, fontWeight:700, color: isSel?'#3730a3':'#1e293b', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:80}}>{m.name.split(' ')[0]}</p>
+                        {/* in/out dot */}
+                        <span style={{
+                          fontSize:9, fontWeight:700,
+                          color: m.inToday ? '#10b981':'#94a3b8',
+                          display:'flex', alignItems:'center', gap:3,
+                        }}>
+                          <span style={{ width:5,height:5,borderRadius:'50%', background: m.inToday?'#10b981':'#cbd5e1', flexShrink:0 }} />
+                          {m.inToday ? 'in':'out'}
+                        </span>
+                      </div>
+                      {/* P / L / rate */}
+                      <div style={{ display:'flex', gap:4, marginTop:3 }}>
+                        <span style={{ fontSize:9, fontWeight:700, color:'#10b981', background:'#f0fdf4', padding:'1px 5px', borderRadius:4 }}>{m.present}P</span>
+                        <span style={{ fontSize:9, fontWeight:700, color: m.leave>0?'#ef4444':'#94a3b8', background: m.leave>0?'#fef2f2':'#f8fafc', padding:'1px 5px', borderRadius:4 }}>{m.leave}L</span>
+                        <span style={{ fontSize:9, fontWeight:600, color: m.rate>=80?'#059669':m.rate>=60?'#d97706':'#ef4444', marginLeft:'auto' }}>{m.rate}%</span>
+                      </div>
+                    </div>
                   </div>
                 </button>
               );
@@ -300,173 +256,114 @@ export default function LoginTrackerCalendar() {
           </div>
         </div>
 
-        {/* Right: calendar panel */}
-        <div style={{ padding: '20px 20px 20px', background: '#fff' }}>
+        {/* RIGHT — calendar */}
+        <div style={{ padding:'14px 16px', background:'#fff', display:'flex', flexDirection:'column', gap:12 }}>
 
-          {/* Member name + month nav */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Member header + nav */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:9 }}>
               <span style={{
-                width: '36px', height: '36px', borderRadius: '9px', flexShrink: 0,
-                background: selectedMember ? `${selectedMember.color}22` : '#f1f5f9',
-                color: selectedMember?.color ?? '#64748b',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '12px', fontWeight: 800,
-              }}>
-                {selectedMember?.initials ?? '?'}
-              </span>
+                width:34, height:34, borderRadius:8, flexShrink:0,
+                background: sel ? `${sel.color}20` : '#f1f5f9',
+                color: sel?.color ?? '#64748b',
+                fontSize:11, fontWeight:800,
+                display:'flex', alignItems:'center', justifyContent:'center',
+              }}>{sel?.initials ?? '?'}</span>
               <div>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>
-                  {selectedMember?.name ?? 'Select a member'}
-                </p>
-                <p style={{ margin: 0, fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
-                  {selectedMember?.role}
-                </p>
+                <p style={{margin:0, fontSize:13, fontWeight:800, color:'#0f172a'}}>{sel?.name ?? '—'}</p>
+                <p style={{margin:0, fontSize:10, color:'#94a3b8', fontWeight:600}}>{sel?.role}</p>
               </div>
             </div>
 
-            {/* Month navigator */}
+            {/* Month nav */}
             <div style={{
-              display: 'flex', alignItems: 'center', gap: '2px',
-              background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '3px',
+              display:'flex', alignItems:'center',
+              background:'#f8fafc', borderRadius:9,
+              border:'1px solid #e2e8f0', overflow:'hidden',
             }}>
-              <button onClick={handlePrevMonth} style={{ padding: '5px 7px', borderRadius: '7px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b', display: 'flex' }}>
-                <ChevronLeft size={14} strokeWidth={2.5} />
-              </button>
-              <span style={{ padding: '0 8px', fontSize: '12px', fontWeight: 800, color: '#1e293b', minWidth: '110px', textAlign: 'center' }}>
-                {MONTH_NAMES[viewMonth]} {viewYear}
-              </span>
-              <button onClick={handleNextMonth} style={{ padding: '5px 7px', borderRadius: '7px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b', display: 'flex' }}>
-                <ChevronRight size={14} strokeWidth={2.5} />
-              </button>
+              <button onClick={prevMonth} style={{padding:'5px 8px',border:'none',background:'transparent',cursor:'pointer',color:'#64748b',display:'flex',alignItems:'center'}}><ChevronLeft size={13} strokeWidth={2.5}/></button>
+              <span style={{padding:'0 8px',fontSize:11.5,fontWeight:800,color:'#1e293b',minWidth:108,textAlign:'center'}}>{MONTHS_FULL[viewMonth]} {viewYear}</span>
+              <button onClick={nextMonth} style={{padding:'5px 8px',border:'none',background:'transparent',cursor:'pointer',color:'#64748b',display:'flex',alignItems:'center'}}><ChevronRight size={13} strokeWidth={2.5}/></button>
             </div>
           </div>
 
-          {/* Stat cards row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
-            <StatCard
-              icon={<CheckCircle2 size={13} strokeWidth={2.5} color="#16a34a" />}
-              label="Present" value={String(activeDaysThisMonth)}
-              sub="days this month"
-              bg="#f0fdf4" border="#bbf7d0" valueColor="#16a34a"
-            />
-            <StatCard
-              icon={<Clock size={13} strokeWidth={2.5} color={leaveThisMonth > 0 ? '#dc2626' : '#94a3b8'} />}
-              label="On Leave" value={String(leaveThisMonth)}
-              sub="working days missed"
-              bg={leaveThisMonth > 0 ? '#fef2f2' : '#f8fafc'}
-              border={leaveThisMonth > 0 ? '#fecaca' : '#e2e8f0'}
-              valueColor={leaveThisMonth > 0 ? '#dc2626' : '#94a3b8'}
-            />
-            <StatCard
-              icon={<TrendingUp size={13} strokeWidth={2.5} color={rateColor} />}
-              label="Rate" value={`${attendanceRate}%`}
-              sub={`of ${workingDaysThisMonth} work days`}
-              bg={rateBg} border={rateBorder} valueColor={rateColor}
-            />
-            <StatCard
-              icon={<Flame size={13} strokeWidth={2.5} color="#f97316" />}
-              label="Streak" value={String(currentStreak)}
-              sub="consecutive days"
-              bg="#fff7ed" border="#fed7aa" valueColor="#ea580c"
-            />
+          {/* 4 compact metric pills */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6 }}>
+            {[
+              { label:'Present', val: presentThisMonth, color:'#059669', bg:'#ecfdf5', border:'#a7f3d0' },
+              { label:'Leave',   val: leave,            color: leave>0?'#dc2626':'#94a3b8', bg: leave>0?'#fef2f2':'#f8fafc', border: leave>0?'#fecaca':'#e2e8f0' },
+              { label:'Rate',    val: `${rate}%`,       color: rateClr, bg:'#f8fafc', border:'#e2e8f0' },
+              { label:'Streak',  val: `${streak}🔥`,   color:'#ea580c', bg:'#fff7ed', border:'#fed7aa' },
+            ].map(m => (
+              <div key={m.label} style={{
+                padding:'8px 10px', borderRadius:9,
+                background:m.bg, border:`1px solid ${m.border}`,
+                textAlign:'center',
+              }}>
+                <p style={{margin:0, fontSize:16, fontWeight:800, color:m.color, lineHeight:1}}>{m.val}</p>
+                <p style={{margin:'3px 0 0', fontSize:9, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.06em'}}>{m.label}</p>
+              </div>
+            ))}
           </div>
 
           {/* Calendar grid */}
-          <div style={{
-            borderRadius: '12px',
-            border: '1px solid #e2e8f0',
-            overflow: 'hidden',
-          }}>
-            {/* Weekday header */}
+          <div style={{ borderRadius:10, border:'1px solid #e8edf5', overflow:'hidden' }}>
+            {/* Day-of-week row */}
             <div style={{
-              display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
-              background: '#f8fafc', borderBottom: '1px solid #e2e8f0',
-              padding: '8px 4px',
+              display:'grid', gridTemplateColumns:'repeat(7,1fr)',
+              background:'#f8fafc', borderBottom:'1px solid #e8edf5',
+              padding:'6px 4px',
             }}>
-              {WEEKDAYS_SHORT.map((d, i) => (
-                <div key={d + i} style={{
-                  textAlign: 'center', fontSize: '10px', fontWeight: 800,
-                  color: (i === 0 || i === 6) ? '#cbd5e1' : '#94a3b8',
-                  letterSpacing: '0.08em', textTransform: 'uppercase',
-                }}>
-                  {d}
-                </div>
+              {DAYS.map((d,i) => (
+                <div key={i} style={{
+                  textAlign:'center', fontSize:9.5, fontWeight:800,
+                  color: i===0||i===6 ? '#cbd5e1':'#94a3b8',
+                  textTransform:'uppercase', letterSpacing:'0.06em',
+                }}>{d}</div>
               ))}
             </div>
 
             {/* Day cells */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px', padding: '6px' }}>
-              {Array.from({ length: totalCells }).map((_, index) => {
-                const dayNumber = index - firstDayIndex + 1;
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, padding:5 }}>
+              {Array.from({ length: totalCells }).map((_,idx) => {
+                const dn = idx - firstDay + 1;
+                if (dn < 1 || dn > daysInMonth) return <div key={idx} style={{aspectRatio:'1'}}/>;
 
-                if (dayNumber < 1 || dayNumber > daysInMonth) {
-                  return <div key={`e${index}`} style={{ aspectRatio: '1' }} />;
-                }
+                const ds = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(dn).padStart(2,'0')}`;
+                const logged = selLogins.includes(ds);
+                const isToday = ds === todayStr;
+                const future = ds > todayStr;
+                const dow = new Date(viewYear, viewMonth, dn).getDay();
+                const weekend = dow===0||dow===6;
 
-                const dateObj = new Date(viewYear, viewMonth, dayNumber);
-                const dateStr = toDateStr(dateObj);
-                const isLogged = selectedLogins.includes(dateStr);
-                const isTodayCell = dateStr === todayStr;
-                const dow = dateObj.getDay();
-                const isWeekend = dow === 0 || dow === 6;
-                const isFuture = dateStr > todayStr;
-
-                let bg = '#f8fafc';
-                let border = '1px solid #f1f5f9';
-                let numColor = '#94a3b8';
-                let statusColor = 'transparent';
-                let hoverBg = '#f1f5f9';
-
-                if (isLogged) {
-                  bg = '#eef2ff';
-                  border = '1px solid #c7d2fe';
-                  numColor = '#3730a3';
-                  statusColor = '#6366f1';
-                  hoverBg = '#e0e7ff';
-                } else if (isFuture || isWeekend) {
-                  bg = 'transparent';
-                  border = '1px solid transparent';
-                  numColor = '#cbd5e1';
-                  hoverBg = 'transparent';
-                } else {
-                  bg = '#fff';
-                  border = '1px solid #f1f5f9';
-                  numColor = '#475569';
-                  hoverBg = '#f8fafc';
-                }
+                let bg = '#fff', border = '1px solid #f1f5f9', clr = '#64748b';
+                if (logged) { bg='#eef2ff'; border='1px solid #a5b4fc'; clr='#4338ca'; }
+                else if (future||weekend) { bg='transparent'; border='1px solid transparent'; clr='#e2e8f0'; }
+                else { bg='#fff'; border='1px solid #f1f5f9'; clr='#94a3b8'; }
 
                 return (
                   <button
-                    key={`d${dayNumber}`}
+                    key={idx}
                     type="button"
-                    onClick={() => selectedMember && handleSimulateLoginDate(selectedMember.email, dateStr)}
-                    title={isLogged ? `${dateStr} — Present (click to remove)` : isFuture ? '' : `${dateStr} — Absent (click to mark present)`}
+                    onClick={() => sel && !future && toggleDate(sel.email, ds)}
+                    title={logged ? 'Present — click to remove' : future ? '' : 'Absent — click to mark'}
                     style={{
-                      aspectRatio: '1',
-                      borderRadius: '8px',
-                      border: isTodayCell ? '2px solid #f59e0b' : border,
-                      background: bg,
-                      cursor: isFuture ? 'default' : 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '3px',
-                      transition: 'all 0.1s',
-                      position: 'relative',
+                      aspectRatio:'1', borderRadius:7,
+                      border: isToday ? '2px solid #f59e0b' : border,
+                      background: bg, cursor: future?'default':'pointer',
+                      display:'flex', flexDirection:'column',
+                      alignItems:'center', justifyContent:'center',
+                      gap:2, transition:'background 0.08s', padding:0,
                     }}
-                    onMouseEnter={e => { if (!isFuture && !isWeekend) (e.currentTarget as HTMLButtonElement).style.background = hoverBg; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = bg; }}
+                    onMouseEnter={e => { if(!future&&!weekend&&!logged)(e.currentTarget as HTMLButtonElement).style.background='#f8fafc'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background=bg; }}
                   >
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: numColor, lineHeight: 1 }}>
-                      {dayNumber}
-                    </span>
-                    {!isFuture && !isWeekend && (
+                    <span style={{fontSize:10.5, fontWeight:700, color: isToday?'#92400e':clr, lineHeight:1}}>{dn}</span>
+                    {!future && !weekend && (
                       <span style={{
-                        width: '5px', height: '5px', borderRadius: '50%',
-                        background: isLogged ? statusColor : '#e2e8f0',
-                      }} />
+                        width:4, height:4, borderRadius:'50%',
+                        background: logged ? '#6366f1' : '#e2e8f0',
+                      }}/>
                     )}
                   </button>
                 );
@@ -475,69 +372,23 @@ export default function LoginTrackerCalendar() {
           </div>
 
           {/* Legend */}
-          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-            <LegendItem dot="#6366f1" bg="#eef2ff" border="#c7d2fe" label="Present" />
-            <LegendItem dot="#e2e8f0" bg="#fff" border="#f1f5f9" label="Absent" />
-            <LegendItem dot="transparent" bg="transparent" border="transparent" label="Weekend" textColor="#cbd5e1" />
-            <div style={{ marginLeft: 'auto', fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>
-              Click a day to toggle attendance
+          <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+            <div style={{display:'flex',alignItems:'center',gap:5}}>
+              <span style={{width:11,height:11,borderRadius:3,background:'#eef2ff',border:'1px solid #a5b4fc',display:'inline-block'}}/>
+              <span style={{fontSize:10,color:'#64748b',fontWeight:600}}>Present</span>
             </div>
+            <div style={{display:'flex',alignItems:'center',gap:5}}>
+              <span style={{width:11,height:11,borderRadius:3,background:'#fff',border:'1px solid #e2e8f0',display:'inline-block'}}/>
+              <span style={{fontSize:10,color:'#64748b',fontWeight:600}}>Absent</span>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:5}}>
+              <span style={{width:11,height:11,borderRadius:3,background:'transparent',display:'inline-block'}}/>
+              <span style={{fontSize:10,color:'#cbd5e1',fontWeight:600}}>Weekend</span>
+            </div>
+            <span style={{marginLeft:'auto',fontSize:10,color:'#94a3b8',fontWeight:500}}>Click to toggle · {workDays} working days</span>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ── Helper sub-components ── */
-
-function Chip({ icon, label, value, color, bg, border }: {
-  icon: React.ReactNode; label: string; value: string;
-  color: string; bg: string; border: string;
-}) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '6px',
-      padding: '6px 10px', borderRadius: '8px',
-      background: bg, border: `1px solid ${border}`,
-    }}>
-      <span style={{ color }}>{icon}</span>
-      <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748b' }}>{label}</span>
-      <span style={{ fontSize: '13px', fontWeight: 800, color }}>{value}</span>
-    </div>
-  );
-}
-
-function StatCard({ icon, label, value, sub, bg, border, valueColor }: {
-  icon: React.ReactNode; label: string; value: string; sub: string;
-  bg: string; border: string; valueColor: string;
-}) {
-  return (
-    <div style={{
-      padding: '10px 12px', borderRadius: '10px',
-      background: bg, border: `1px solid ${border}`,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '5px' }}>
-        {icon}
-        <span style={{ fontSize: '9.5px', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          {label}
-        </span>
-      </div>
-      <p style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: valueColor, lineHeight: 1 }}>{value}</p>
-      <p style={{ margin: '3px 0 0', fontSize: '9.5px', color: '#94a3b8', fontWeight: 600 }}>{sub}</p>
-    </div>
-  );
-}
-
-function LegendItem({ dot, bg, border, label, textColor }: {
-  dot: string; bg: string; border: string; label: string; textColor?: string;
-}) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-      <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: bg, border: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        {dot !== 'transparent' && <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: dot }} />}
-      </span>
-      <span style={{ fontSize: '10px', fontWeight: 600, color: textColor ?? '#64748b' }}>{label}</span>
     </div>
   );
 }
