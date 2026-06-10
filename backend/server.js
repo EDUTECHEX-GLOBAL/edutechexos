@@ -517,6 +517,13 @@ const MediaFileSchema = new mongoose.Schema({
 });
 const MediaFile = mongoose.model('MediaFile', MediaFileSchema);
 
+// ── RemovedMember schema — persists which hardcoded system members have been removed by admin ─
+const RemovedMemberSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  removedAt: { type: Date, default: Date.now },
+});
+const RemovedMember = mongoose.model('RemovedMember', RemovedMemberSchema);
+
 // ── UserSettings schema — stores per-user preferences synced across devices ─────
 const UserSettingsSchema = new mongoose.Schema({
   email:                { type: String, required: true, unique: true, index: true },
@@ -826,6 +833,53 @@ app.patch('/api/access-requests/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// DELETE /api/members/system — admin permanently removes a hardcoded system member
+// Stores the email in RemovedMember so they are filtered out of /api/members on every refresh.
+app.delete('/api/members/system', authMiddleware, async (req, res) => {
+  if (!req.user || req.user.role !== 'Admin') {
+    return res.status(403).json({ success: false, error: 'Admin access required.' });
+  }
+  try {
+    const { email, memberId } = req.body;
+    if (!email) return res.status(400).json({ success: false, error: 'email is required.' });
+
+    // Persist the removal so it survives server restarts
+    await RemovedMember.findOneAndUpdate(
+      { email: email.toLowerCase() },
+      { email: email.toLowerCase(), removedAt: new Date() },
+      { upsert: true, new: true }
+    );
+
+    // Revoke JWT so they are logged out immediately if online
+    revokedEmails.add(email.toLowerCase());
+
+    // Real-time: remove from every client's member list + force-logout the removed user
+    if (memberId) io.emit('member_removed', { memberId });
+    io.emit('user_forcefully_removed', { email: email.toLowerCase() });
+
+    res.json({ success: true, removedEmail: email });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// POST /api/members/system/restore — admin re-activates a previously removed system member
+app.post('/api/members/system/restore', authMiddleware, async (req, res) => {
+  if (!req.user || req.user.role !== 'Admin') {
+    return res.status(403).json({ success: false, error: 'Admin access required.' });
+  }
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, error: 'email is required.' });
+    await RemovedMember.deleteOne({ email: email.toLowerCase() });
+    // Also un-revoke the JWT (remove from in-memory set)
+    revokedEmails.delete(email.toLowerCase());
+    res.json({ success: true, restoredEmail: email });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
 // DELETE /api/access-requests/:id — admin removes a user
 app.delete('/api/access-requests/:id', authMiddleware, async (req, res) => {
   if (!req.user || req.user.role !== 'Admin') {
@@ -866,7 +920,7 @@ app.get('/api/members', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Unauthorized. Please log in first.' });
     }
 
-    const hardcoded = [
+    const allHardcoded = [
       { id: 'member-ac', name: 'Aditya Cherikuri', email: 'aditya@edutechex.in', role: 'Manager', initials: 'AC', status: 'online', color: '#2563eb' },
       { id: 'member-rk', name: 'Ram K Aluru', email: 'dev.rk@edutechex.in', role: 'Developer', initials: 'RK', status: 'online', color: '#7c3aed' },
       { id: 'member-sa', name: 'Sneha Agarwal', email: 'design.sa@edutechex.in', role: 'Designer', initials: 'SA', status: 'away', color: '#0891b2' },
@@ -875,6 +929,11 @@ app.get('/api/members', async (req, res) => {
       { id: 'member-mr', name: 'Mohan Reddy', email: 'mohan.reddy@edutechex.in', role: 'Developer', initials: 'MR', status: 'online', color: '#eab308' },
       { id: 'member-ms', name: 'Mohan Sen', email: 'mohan.sen@edutechex.in', role: 'Developer', initials: 'MS', status: 'online', color: '#0891b2' },
     ];
+
+    // Filter out any system members that an admin has permanently removed
+    const removedDocs = await RemovedMember.find({}).lean();
+    const removedEmailSet = new Set(removedDocs.map(r => r.email.toLowerCase()));
+    const hardcoded = allHardcoded.filter(m => !removedEmailSet.has(m.email.toLowerCase()));
 
     const approvedRequests = await AccessRequest.find({ status: 'approved' }).lean();
 
@@ -1181,8 +1240,11 @@ app.post('/api/admin/broadcast-email', authMiddleware, async (req, res) => {
     if (!message || !message.trim()) return res.status(400).json({ success: false, error: 'Message is required.' });
 
     const dbUsers = await AccessRequest.find({ status: 'approved' }).lean().catch(() => []);
+    const removedSystemEmails = new Set(
+      (await RemovedMember.find({}).lean().catch(() => [])).map(r => r.email.toLowerCase())
+    );
     const allEmails = [
-      ...VALID_ACCOUNTS.map((a) => a.email),
+      ...VALID_ACCOUNTS.filter(a => !removedSystemEmails.has(a.email.toLowerCase())).map((a) => a.email),
       ...dbUsers.map((u) => u.email),
     ];
 
@@ -1559,8 +1621,9 @@ app.post('/api/auth/login', async (req, res) => {
     }
     const emailClean = String(email).trim().toLowerCase();
 
-    // 1. Check hardcoded accounts first
-    const hardcoded = VALID_ACCOUNTS.find((a) => a.email === emailClean && a.password === password);
+    // 1. Check hardcoded accounts first (skip if admin has removed this system member)
+    const isSystemRemoved = await RemovedMember.exists({ email: emailClean });
+    const hardcoded = isSystemRemoved ? null : VALID_ACCOUNTS.find((a) => a.email === emailClean && a.password === password);
     if (hardcoded) {
       const token = jwt.sign(
         { email: hardcoded.email, name: hardcoded.name, role: hardcoded.role },

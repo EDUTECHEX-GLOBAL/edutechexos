@@ -928,9 +928,29 @@ export default function AdminPage() {
                                     toast.error('Could not reach the server. Please try again.');
                                   }
                                 } else {
-                                  // Hardcoded / system member — no DB record, just remove locally
-                                  removeMember(member.id);
-                                  toast.success(`${member.name} was removed from the workspace.`);
+                                  // Hardcoded / system member — call backend so removal persists across refreshes
+                                  try {
+                                    const authData = localStorage.getItem('edutechex_token');
+                                    const token = authData ? JSON.parse(authData).token : null;
+                                    const res = await fetch(`${API_BASE}/api/members/system`, {
+                                      method: 'DELETE',
+                                      headers: {
+                                        'Content-Type': 'application/json',
+                                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                                      },
+                                      body: JSON.stringify({ email: member.email, memberId: member.id }),
+                                    });
+                                    const body = await res.json().catch(() => ({}));
+                                    if (res.ok && body.success) {
+                                      removeMember(member.id);
+                                      toast.success(`${member.name} was removed from the workspace.`);
+                                      loadLocalMembers?.();
+                                    } else {
+                                      toast.error(`Could not remove ${member.name}: ${body.error ?? res.status}`);
+                                    }
+                                  } catch {
+                                    toast.error('Could not reach the server. Please try again.');
+                                  }
                                 }
                               }}
                               className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-light transition-all hover:bg-red-50 hover:text-[#f43f5e]"
