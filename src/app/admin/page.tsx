@@ -601,7 +601,7 @@ export default function AdminPage() {
       value: members.length,
       icon: Users,
       accent: '#5B4FDB',
-      accentBg: 'rgba(91,79,219,0.10)',
+      accentBg: 'rgba(26,27,58,0.15)',
       gradient: 'linear-gradient(135deg, #5B4FDB, #7B6FEB)',
     },
     {
@@ -631,7 +631,7 @@ export default function AdminPage() {
   ];
 
   const TABS = [
-    { id: 'people' as const,     Icon: Users,        label: 'People',     badge: 0,                      accent: '#5B4FDB', accentBg: 'rgba(91,79,219,0.10)',   accentBorder: 'rgba(91,79,219,0.22)',   animClass: 'click-slide-deck' },
+    { id: 'people' as const,     Icon: Users,        label: 'People',     badge: 0,                      accent: '#5B4FDB', accentBg: 'rgba(26,27,58,0.15)',   accentBorder: 'rgba(91,79,219,0.22)',   animClass: 'click-slide-deck' },
     { id: 'requests' as const,   Icon: UserPlus,     label: 'Requests',   badge: pendingRequests.length,  accent: '#EF476F', accentBg: 'rgba(239,71,111,0.10)',  accentBorder: 'rgba(239,71,111,0.22)',  animClass: 'click-bubble-pop' },
     { id: 'channels' as const,   Icon: Hash,         label: 'Channels',   badge: 0,                      accent: '#0DAFCE', accentBg: 'rgba(13,175,206,0.10)',  accentBorder: 'rgba(13,175,206,0.22)',  animClass: 'click-bubble-pop' },
     { id: 'broadcast' as const,  Icon: Send,         label: 'Broadcast',  badge: 0,                      accent: '#C026D3', accentBg: 'rgba(192,38,211,0.10)',  accentBorder: 'rgba(192,38,211,0.22)',  animClass: 'click-send-whoosh' },
@@ -643,13 +643,13 @@ export default function AdminPage() {
 
   return (
     <AdminGuard>
-      <div className="min-h-screen" style={{ background: '#F7F8FF', fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
+      <div className="min-h-screen" style={{ background: '#ECEAF8', fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
 
         {/* ── Spectrum bar ─────────────────────────────────────────────── */}
         <div className="spectrum-bar fixed top-0 left-0 right-0 z-50 pointer-events-none" />
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
-        <header className="sticky top-[3px] z-40" style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(91,79,219,0.08)', boxShadow: '0 2px 16px rgba(91,79,219,0.06)' }}>
+        <header className="sticky top-[3px] z-40" style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(26,27,58,0.14)', boxShadow: '0 2px 16px rgba(91,79,219,0.06)' }}>
           <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-6 lg:px-8">
             <div className="flex items-center gap-4">
               <Link href="/" className="flex items-center gap-2.5 no-underline">
@@ -670,20 +670,20 @@ export default function AdminPage() {
                 style={{ display: 'none' }}
                 className="md:inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all"
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.25)'; (e.currentTarget as HTMLElement).style.color = '#5B4FDB'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.10)'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(26,27,58,0.15)'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
               >
                 Workspace
               </Link>
-              <Link href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 20, border: '1.5px solid rgba(91,79,219,0.12)', background: '#FFFFFF', fontSize: 12, fontWeight: 600, color: '#5A5F80', textDecoration: 'none', transition: 'all .2s' }}
+              <Link href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 20, border: '1.5px solid rgba(26,27,58,0.18)', background: '#FFFFFF', fontSize: 12, fontWeight: 600, color: '#5A5F80', textDecoration: 'none', transition: 'all .2s' }}
                 className="hidden md:inline-flex"
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.28)'; (e.currentTarget as HTMLElement).style.color = '#5B4FDB'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.12)'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(26,27,58,0.18)'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
               >
                 Workspace
               </Link>
               <button
                 className="relative flex h-9 w-9 items-center justify-center rounded-xl transition-all"
-                style={{ color: '#9296B0', background: 'transparent', border: '1.5px solid rgba(91,79,219,0.10)' }}
+                style={{ color: '#9296B0', background: 'transparent', border: '1.5px solid rgba(26,27,58,0.15)' }}
                 title="Admin alerts"
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.06)'; (e.currentTarget as HTMLElement).style.color = '#EF476F'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#9296B0'; }}
@@ -760,7 +760,7 @@ export default function AdminPage() {
           </section>
 
           {/* ── Tab navigation ──────────────────────────────────────────── */}
-          <div className="mb-6 flex gap-2 overflow-x-auto rounded-2xl p-1.5" style={{ background: '#FFFFFF', border: '1.5px solid rgba(91,79,219,0.08)', boxShadow: '0 2px 8px rgba(91,79,219,0.04)' }}>
+          <div className="mb-6 flex gap-2 overflow-x-auto rounded-2xl p-1.5" style={{ background: '#FFFFFF', border: '1.5px solid rgba(26,27,58,0.14)', boxShadow: '0 2px 8px rgba(91,79,219,0.04)' }}>
             {TABS.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -815,10 +815,10 @@ export default function AdminPage() {
               TAB: PEOPLE
           ════════════════════════════════════════════════════════════ */}
           {activeTab === 'people' && (
-            <div className="overflow-hidden rounded-2xl" style={{ background: '#FFFFFF', border: '1.5px solid rgba(91,79,219,0.10)', boxShadow: '0 4px 16px rgba(91,79,219,0.06)', animation: 'slide-deck 0.4s cubic-bezier(0.22,1,0.36,1)' }}>
+            <div className="overflow-hidden rounded-2xl" style={{ background: '#FFFFFF', border: '1.5px solid rgba(26,27,58,0.15)', boxShadow: '0 4px 16px rgba(91,79,219,0.06)', animation: 'slide-deck 0.4s cubic-bezier(0.22,1,0.36,1)' }}>
               {/* People tab top accent */}
               <div style={{ height: 3, background: 'linear-gradient(90deg, #5B4FDB, #7B6FEB, #8B3FDB)', borderRadius: '8px 8px 0 0' }} />
-              <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between" style={{ borderBottom: '1px solid rgba(91,79,219,0.08)' }}>
+              <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between" style={{ borderBottom: '1px solid rgba(26,27,58,0.14)' }}>
                 <div>
                   <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 17, fontWeight: 700, color: '#1A1B3A', letterSpacing: '-0.02em', marginBottom: 2 }}>
                     Users
@@ -827,7 +827,7 @@ export default function AdminPage() {
                     Grant one controlled channel per person.
                   </p>
                 </div>
-                <label className="flex h-10 items-center gap-2 rounded-xl px-3.5 md:w-80 transition-all" style={{ border: '1.5px solid rgba(91,79,219,0.14)', background: '#F7F8FF' }}>
+                <label className="flex h-10 items-center gap-2 rounded-xl px-3.5 md:w-80 transition-all" style={{ border: '1.5px solid rgba(91,79,219,0.14)', background: '#ECEAF8' }}>
                   <Search size={15} style={{ color: '#9296B0' }} />
                   <input
                     value={search}
@@ -842,7 +842,7 @@ export default function AdminPage() {
               <div className="overflow-x-auto scrollbar-thin">
                 <table className="w-full min-w-[820px] text-left">
                   <thead>
-                    <tr style={{ borderBottom: '1px solid rgba(91,79,219,0.08)', background: 'rgba(91,79,219,0.02)' }}>
+                    <tr style={{ borderBottom: '1px solid rgba(26,27,58,0.14)', background: 'rgba(91,79,219,0.02)' }}>
                       {['User', 'Role', 'Status', 'Current access', 'Channel access', ''].map(
                         (h) => (
                           <th
@@ -882,7 +882,7 @@ export default function AdminPage() {
                           </td>
                           <td className="px-5 py-4">
                             {systemEmails.includes(member.email.toLowerCase()) ? (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', background: isAdminMember ? 'rgba(91,79,219,0.10)' : 'rgba(90,95,128,0.08)', color: isAdminMember ? '#5B4FDB' : '#5A5F80', border: `1px solid ${isAdminMember ? 'rgba(91,79,219,0.20)' : 'rgba(90,95,128,0.12)'}` }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', background: isAdminMember ? 'rgba(26,27,58,0.15)' : 'rgba(90,95,128,0.08)', color: isAdminMember ? '#5B4FDB' : '#5A5F80', border: `1px solid ${isAdminMember ? 'rgba(91,79,219,0.20)' : 'rgba(90,95,128,0.12)'}` }}>
                                 {member.role}
                               </span>
                             ) : (
@@ -890,7 +890,7 @@ export default function AdminPage() {
                                 <select
                                   value={member.role}
                                   onChange={(e) => handleRoleChange(member.id, member.name, e.target.value)}
-                                  style={{ height: 36, borderRadius: 10, border: '1.5px solid rgba(91,79,219,0.14)', background: '#F7F8FF', padding: '0 8px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', outline: 'none' }}
+                                  style={{ height: 36, borderRadius: 10, border: '1.5px solid rgba(91,79,219,0.14)', background: '#ECEAF8', padding: '0 8px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', outline: 'none' }}
                                 >
                                   <option value="Developer">Developer</option>
                                   <option value="Designer">Designer</option>
@@ -903,7 +903,7 @@ export default function AdminPage() {
                                     type="button"
                                     onClick={() => promoteToAdmin(member)}
                                     disabled={promoteLoadingId === member.id}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 8, background: 'rgba(91,79,219,0.08)', color: '#5B4FDB', fontSize: 10, fontWeight: 700, border: '1px solid rgba(91,79,219,0.16)', cursor: 'pointer', opacity: promoteLoadingId === member.id ? 0.5 : 1 }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 8, background: 'rgba(26,27,58,0.14)', color: '#5B4FDB', fontSize: 10, fontWeight: 700, border: '1px solid rgba(26,27,58,0.22)', cursor: 'pointer', opacity: promoteLoadingId === member.id ? 0.5 : 1 }}
                                     title={`Make Admin (${adminCount}/${MAX_ADMINS} slots used)`}
                                   >
                                     <ShieldCheck size={10} />
@@ -922,13 +922,13 @@ export default function AdminPage() {
                           <td className="px-5 py-4">
                             <div className="flex flex-wrap gap-1.5">
                               {isAdminMember ? (
-                                <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, letterSpacing: '.06em', background: 'rgba(91,79,219,0.08)', color: '#5B4FDB', border: '1px solid rgba(91,79,219,0.16)' }}>All channels</span>
+                                <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, letterSpacing: '.06em', background: 'rgba(26,27,58,0.14)', color: '#5B4FDB', border: '1px solid rgba(26,27,58,0.22)' }}>All channels</span>
                               ) : (
                                 <>
                                   <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'rgba(13,175,206,0.08)', color: '#0DAFCE', border: '1px solid rgba(13,175,206,0.18)' }}>#general</span>
                                   {memberExtraChannels.length > 0 ? (
                                     memberExtraChannels.map((ec) => (
-                                      <span key={ec.id} style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'rgba(91,79,219,0.08)', color: '#5B4FDB', border: '1px solid rgba(91,79,219,0.16)' }}>#{ec.name}</span>
+                                      <span key={ec.id} style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'rgba(26,27,58,0.14)', color: '#5B4FDB', border: '1px solid rgba(26,27,58,0.22)' }}>#{ec.name}</span>
                                     ))
                                   ) : (
                                     <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'rgba(245,158,11,0.08)', color: '#D48C00', border: '1px solid rgba(245,158,11,0.18)' }}>Needs assignment</span>
@@ -1100,7 +1100,7 @@ export default function AdminPage() {
                       </div>
                       {/* Multi-channel picker */}
                       {extraChannels.length > 0 && (
-                        <div style={{ marginBottom: 12, borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.14)', background: '#F7F8FF', padding: '10px 12px' }}>
+                        <div style={{ marginBottom: 12, borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.14)', background: '#ECEAF8', padding: '10px 12px' }}>
                           <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)', marginBottom: 8 }}>
                             Assign channels · #general is always included
                           </p>
@@ -1275,9 +1275,9 @@ export default function AdminPage() {
                                 key={`${channel.id}-${member.id}`}
                                 type="button"
                                 onClick={() => handleChannelToggle(member.id, channel.id, false)}
-                                style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 8, border: '1.5px solid rgba(91,79,219,0.12)', background: '#F7F8FF', padding: '3px 10px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: '#5A5F80', cursor: 'pointer', transition: 'all .15s' }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 8, border: '1.5px solid rgba(26,27,58,0.18)', background: '#ECEAF8', padding: '3px 10px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: '#5A5F80', cursor: 'pointer', transition: 'all .15s' }}
                                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.30)'; (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.06)'; (e.currentTarget as HTMLElement).style.color = '#EF476F'; }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.12)'; (e.currentTarget as HTMLElement).style.background = '#F7F8FF'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(26,27,58,0.18)'; (e.currentTarget as HTMLElement).style.background = '#ECEAF8'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
                                 title={`Remove ${member.name} from #${channel.name}`}
                               >
                                 <span
@@ -1354,7 +1354,7 @@ export default function AdminPage() {
                       onChange={(e) => setBroadcastSubject(e.target.value)}
                       placeholder="e.g. Team update — June 2026"
                       maxLength={150}
-                      style={{ height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.18)', background: '#F7F8FF', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
+                      style={{ height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.18)', background: '#ECEAF8', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
                       onFocus={e => { e.target.style.borderColor = 'rgba(192,38,211,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(192,38,211,0.10)'; }}
                       onBlur={e => { e.target.style.borderColor = 'rgba(192,38,211,0.18)'; e.target.style.boxShadow = 'none'; }}
                     />
@@ -1370,7 +1370,7 @@ export default function AdminPage() {
                       placeholder="Write your message here. Plain text — line breaks are preserved."
                       rows={7}
                       maxLength={2000}
-                      style={{ width: '100%', resize: 'none', borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.18)', background: '#F7F8FF', padding: '12px 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6, transition: 'border-color .2s, box-shadow .2s' }}
+                      style={{ width: '100%', resize: 'none', borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.18)', background: '#ECEAF8', padding: '12px 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6, transition: 'border-color .2s, box-shadow .2s' }}
                       onFocus={e => { e.target.style.borderColor = 'rgba(192,38,211,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(192,38,211,0.10)'; }}
                       onBlur={e => { e.target.style.borderColor = 'rgba(192,38,211,0.18)'; e.target.style.boxShadow = 'none'; }}
                     />
@@ -1388,7 +1388,7 @@ export default function AdminPage() {
                       {members.slice(0, 10).map((m) => (
                         <span
                           key={m.id}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 8, border: '1.5px solid rgba(91,79,219,0.10)', background: '#FFFFFF', padding: '4px 10px', fontSize: 11, fontWeight: 500, color: '#5A5F80' }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 8, border: '1.5px solid rgba(26,27,58,0.15)', background: '#FFFFFF', padding: '4px 10px', fontSize: 11, fontWeight: 500, color: '#5A5F80' }}
                         >
                           <span style={{ width: 16, height: 16, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 900, color: '#FFFFFF', backgroundColor: m.color }}>
                             {m.initials?.[0]}
@@ -1397,7 +1397,7 @@ export default function AdminPage() {
                         </span>
                       ))}
                       {members.length > 10 && (
-                        <span style={{ borderRadius: 8, border: '1.5px solid rgba(91,79,219,0.10)', background: '#FFFFFF', padding: '4px 10px', fontSize: 11, fontWeight: 500, color: 'rgba(90,95,128,0.60)' }}>
+                        <span style={{ borderRadius: 8, border: '1.5px solid rgba(26,27,58,0.15)', background: '#FFFFFF', padding: '4px 10px', fontSize: 11, fontWeight: 500, color: 'rgba(90,95,128,0.60)' }}>
                           +{members.length - 10} more
                         </span>
                       )}
@@ -1563,7 +1563,7 @@ export default function AdminPage() {
                                 <span>Engagement this week</span>
                                 <span>{engagementPct}%</span>
                               </div>
-                              <div style={{ height: 6, width: '100%', overflow: 'hidden', borderRadius: 3, background: 'rgba(91,79,219,0.08)' }}>
+                              <div style={{ height: 6, width: '100%', overflow: 'hidden', borderRadius: 3, background: 'rgba(26,27,58,0.14)' }}>
                                 <div style={{ height: '100%', borderRadius: 3, background: 'linear-gradient(90deg, #3B82F6, #0DAFCE)', transition: 'width .5s', width: `${engagementPct}%` }} />
                               </div>
                             </div>
@@ -1582,7 +1582,7 @@ export default function AdminPage() {
                               ))}
                             </div>
 
-                            <p style={{ borderTop: '1px solid rgba(91,79,219,0.08)', paddingTop: 8, fontSize: 11, color: 'rgba(90,95,128,0.65)' }}>
+                            <p style={{ borderTop: '1px solid rgba(26,27,58,0.14)', paddingTop: 8, fontSize: 11, color: 'rgba(90,95,128,0.65)' }}>
                               <span style={{ fontWeight: 600, color: '#1A1B3A' }}>Last active:</span>{' '}
                               {lastSeenLabel}
                             </p>
@@ -1662,11 +1662,11 @@ export default function AdminPage() {
             <form
               onSubmit={handleAddMember}
               className="w-full max-w-lg overflow-hidden"
-              style={{ borderRadius: 20, background: '#FFFFFF', border: '1.5px solid rgba(91,79,219,0.16)', boxShadow: '0 24px 64px rgba(91,79,219,0.18)' }}
+              style={{ borderRadius: 20, background: '#FFFFFF', border: '1.5px solid rgba(26,27,58,0.22)', boxShadow: '0 24px 64px rgba(26,27,58,0.24)' }}
             >
               {/* Modal top accent */}
               <div style={{ height: 3, background: 'linear-gradient(90deg, #5B4FDB, #8B3FDB, #C026D3)', borderRadius: '8px 8px 0 0' }} />
-              <div className="flex items-start justify-between gap-4 p-6" style={{ borderBottom: '1px solid rgba(91,79,219,0.08)' }}>
+              <div className="flex items-start justify-between gap-4 p-6" style={{ borderBottom: '1px solid rgba(26,27,58,0.14)' }}>
                 <div>
                   <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A' }}>
                     Add application user
@@ -1678,7 +1678,7 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  style={{ width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(90,95,128,0.60)', border: '1.5px solid rgba(91,79,219,0.10)', background: 'transparent', cursor: 'pointer', transition: 'all .15s' }}
+                  style={{ width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(90,95,128,0.60)', border: '1.5px solid rgba(26,27,58,0.15)', background: 'transparent', cursor: 'pointer', transition: 'all .15s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.08)'; (e.currentTarget as HTMLElement).style.color = '#EF476F'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(90,95,128,0.60)'; }}
                 >
@@ -1695,9 +1695,9 @@ export default function AdminPage() {
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder="Priya Nair"
-                    style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.18)', background: '#F7F8FF', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
-                    onFocus={e => { e.target.style.borderColor = 'rgba(91,79,219,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(91,79,219,0.10)'; }}
-                    onBlur={e => { e.target.style.borderColor = 'rgba(91,79,219,0.18)'; e.target.style.boxShadow = 'none'; }}
+                    style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: '#ECEAF8', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
+                    onFocus={e => { e.target.style.borderColor = 'rgba(91,79,219,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(26,27,58,0.15)'; }}
+                    onBlur={e => { e.target.style.borderColor = 'rgba(26,27,58,0.24)'; e.target.style.boxShadow = 'none'; }}
                   />
                 </label>
                 <label className="block">
@@ -1710,9 +1710,9 @@ export default function AdminPage() {
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     placeholder="priya@edutechex.in"
-                    style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.18)', background: '#F7F8FF', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
-                    onFocus={e => { e.target.style.borderColor = 'rgba(91,79,219,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(91,79,219,0.10)'; }}
-                    onBlur={e => { e.target.style.borderColor = 'rgba(91,79,219,0.18)'; e.target.style.boxShadow = 'none'; }}
+                    style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: '#ECEAF8', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
+                    onFocus={e => { e.target.style.borderColor = 'rgba(91,79,219,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(26,27,58,0.15)'; }}
+                    onBlur={e => { e.target.style.borderColor = 'rgba(26,27,58,0.24)'; e.target.style.boxShadow = 'none'; }}
                   />
                 </label>
                 <label className="block">
@@ -1722,7 +1722,7 @@ export default function AdminPage() {
                   <select
                     value={newRole}
                     onChange={(e) => setNewRole(e.target.value)}
-                    style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.18)', background: '#F7F8FF', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: '#ECEAF8', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box' }}
                   >
                     <option value="Developer">Developer</option>
                     <option value="Designer">Designer</option>
@@ -1736,15 +1736,15 @@ export default function AdminPage() {
                     Channel access
                   </span>
                   {newRole === 'Admin' ? (
-                    <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.12)', background: '#EEF2FF', padding: '12px 14px', fontSize: 12, fontWeight: 600, color: 'rgba(90,95,128,0.55)' }}>
+                    <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.18)', background: '#DDD8F6', padding: '12px 14px', fontSize: 12, fontWeight: 600, color: 'rgba(90,95,128,0.55)' }}>
                       Full access to all channels (Admin)
                     </div>
                   ) : extraChannels.length === 0 ? (
-                    <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.12)', background: '#F7F8FF', padding: '12px 14px', fontSize: 12, color: 'rgba(90,95,128,0.55)' }}>
+                    <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.18)', background: '#ECEAF8', padding: '12px 14px', fontSize: 12, color: 'rgba(90,95,128,0.55)' }}>
                       #general only — no project channels created yet
                     </div>
                   ) : (
-                    <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.18)', background: '#F7F8FF', padding: '12px 14px' }}>
+                    <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: '#ECEAF8', padding: '12px 14px' }}>
                       <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.55)', marginBottom: 10 }}>
                         #general is always included · pick up to 3 more
                       </p>
@@ -1790,13 +1790,13 @@ export default function AdminPage() {
                   )}
                 </div>
               </div>
-              <div className="flex justify-end gap-3 p-5" style={{ borderTop: '1px solid rgba(91,79,219,0.08)', background: 'rgba(91,79,219,0.02)' }}>
+              <div className="flex justify-end gap-3 p-5" style={{ borderTop: '1px solid rgba(26,27,58,0.14)', background: 'rgba(91,79,219,0.02)' }}>
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  style={{ padding: '10px 20px', borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.16)', background: '#FFFFFF', fontSize: 13, fontWeight: 600, color: '#5A5F80', cursor: 'pointer', transition: 'all .15s' }}
+                  style={{ padding: '10px 20px', borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.22)', background: '#FFFFFF', fontSize: 13, fontWeight: 600, color: '#5A5F80', cursor: 'pointer', transition: 'all .15s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.30)'; (e.currentTarget as HTMLElement).style.color = '#EF476F'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.16)'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(26,27,58,0.22)'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
                 >
                   Cancel
                 </button>

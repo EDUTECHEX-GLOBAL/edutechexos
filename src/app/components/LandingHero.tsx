@@ -9,7 +9,7 @@ function HeroDashboardMockup({ dotCount }: { dotCount: number }) {
     { init: 'MS', name: 'Mohan S.', text: "Scheduling walkthrough tomorrow.", time: '9:17', ai: false, color: '#0DAFCE' },
   ];
   const featureIcons = [
-    { icon: '≡', color: '#5B4FDB', bg: 'rgba(91,79,219,0.12)', active: true },
+    { icon: '≡', color: '#5B4FDB', bg: 'rgba(26,27,58,0.18)', active: true },
     { icon: '✓', color: '#10C98A', bg: 'rgba(16,201,138,0.10)', active: false },
     { icon: '✦', color: '#8B3FDB', bg: 'rgba(139,63,219,0.10)', active: false },
     { icon: '◎', color: '#F59E0B', bg: 'rgba(245,158,11,0.10)', active: false },
@@ -19,12 +19,12 @@ function HeroDashboardMockup({ dotCount }: { dotCount: number }) {
     <div style={{
       width: '100%', maxWidth: 460,
       borderRadius: 16, overflow: 'hidden',
-      border: '1.5px solid rgba(91,79,219,0.12)',
-      boxShadow: '0 32px 80px rgba(91,79,219,0.14), 0 8px 24px rgba(91,79,219,0.08), 0 2px 8px rgba(91,79,219,0.06)',
-      background: '#F7F8FF',
+      border: '1.5px solid rgba(26,27,58,0.18)',
+      boxShadow: '0 32px 80px rgba(91,79,219,0.14), 0 8px 24px rgba(26,27,58,0.14), 0 2px 8px rgba(91,79,219,0.06)',
+      background: '#ECEAF8',
     }}>
       {/* Browser chrome */}
-      <div style={{ height: 38, background: '#FFFFFF', borderBottom: '1px solid rgba(91,79,219,0.08)', display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px' }}>
+      <div style={{ height: 38, background: '#FFFFFF', borderBottom: '1px solid rgba(26,27,58,0.14)', display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px' }}>
         <div style={{ display: 'flex', gap: 5 }}>
           {['#FF5F57', '#FEBC2E', '#28C840'].map((c, i) => (
             <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: c }} />
@@ -50,10 +50,10 @@ function HeroDashboardMockup({ dotCount }: { dotCount: number }) {
         </div>
 
         {/* Sidebar */}
-        <div style={{ width: 130, background: '#FFFFFF', borderRight: '1px solid rgba(91,79,219,0.08)', padding: '12px 0' }}>
+        <div style={{ width: 130, background: '#FFFFFF', borderRight: '1px solid rgba(26,27,58,0.14)', padding: '12px 0' }}>
           <div style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: '.28em', textTransform: 'uppercase', color: 'rgba(91,79,219,0.45)', padding: '0 10px', marginBottom: 8, fontFamily: 'JetBrains Mono, monospace' }}>Channels</div>
           {['#general', '#curriculum', '#planning', '#ai-digest'].map((ch, i) => (
-            <div key={ch} style={{ padding: '6px 10px', fontSize: 10, fontWeight: i === 0 ? 700 : 500, color: i === 0 ? '#1A1B3A' : 'rgba(90,95,128,0.55)', background: i === 0 ? 'rgba(91,79,219,0.08)' : 'transparent', borderLeft: i === 0 ? '2.5px solid #5B4FDB' : '2.5px solid transparent' }}>
+            <div key={ch} style={{ padding: '6px 10px', fontSize: 10, fontWeight: i === 0 ? 700 : 500, color: i === 0 ? '#1A1B3A' : 'rgba(90,95,128,0.55)', background: i === 0 ? 'rgba(26,27,58,0.14)' : 'transparent', borderLeft: i === 0 ? '2.5px solid #5B4FDB' : '2.5px solid transparent' }}>
               {ch}
             </div>
           ))}
@@ -67,7 +67,7 @@ function HeroDashboardMockup({ dotCount }: { dotCount: number }) {
         </div>
 
         {/* Chat */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#F7F8FF' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#ECEAF8' }}>
           <div style={{ height: 40, borderBottom: '1px solid rgba(91,79,219,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px', background: '#FFFFFF' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 11.5, fontWeight: 700, color: '#1A1B3A' }}>#general</span>
@@ -102,7 +102,7 @@ function HeroDashboardMockup({ dotCount }: { dotCount: number }) {
             ))}
           </div>
 
-          <div style={{ margin: '0 8px 8px', display: 'flex', alignItems: 'center', gap: 7, padding: '6px 9px 6px 11px', background: '#FFFFFF', borderRadius: 8, border: '1px solid rgba(91,79,219,0.10)' }}>
+          <div style={{ margin: '0 8px 8px', display: 'flex', alignItems: 'center', gap: 7, padding: '6px 9px 6px 11px', background: '#FFFFFF', borderRadius: 8, border: '1px solid rgba(26,27,58,0.15)' }}>
             <span style={{ flex: 1, fontSize: 10, color: 'rgba(90,95,128,0.35)' }}>Message #general…</span>
             <div style={{ width: 22, height: 22, borderRadius: 6, background: 'linear-gradient(135deg, #5B4FDB, #7B6FEB)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#FFFFFF', fontWeight: 900 }}>↑</div>
           </div>
@@ -139,7 +139,7 @@ export default function LandingHero() {
   }, []);
 
   return (
-    <section className="relative w-full min-h-screen flex items-center overflow-hidden" style={{ background: '#F7F8FF' }}>
+    <section className="relative w-full min-h-screen flex items-center overflow-hidden" style={{ background: '#ECEAF8' }}>
       <style>{`
         @keyframes hero-in {
           from { opacity: 0; transform: translateY(28px); }
@@ -224,7 +224,7 @@ export default function LandingHero() {
       <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(91,79,219,0.07) 0%, transparent 70%)' }} />
 
       {/* ── Ambient orbs ── */}
-      <div className="absolute pointer-events-none" style={{ width: 700, height: 700, top: '-20%', left: '-15%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(91,79,219,0.10) 0%, transparent 60%)', filter: 'blur(80px)' }} />
+      <div className="absolute pointer-events-none" style={{ width: 700, height: 700, top: '-20%', left: '-15%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(26,27,58,0.15) 0%, transparent 60%)', filter: 'blur(80px)' }} />
       <div className="absolute pointer-events-none" style={{ width: 500, height: 500, bottom: '-10%', right: '5%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,63,219,0.08) 0%, transparent 60%)', filter: 'blur(64px)' }} />
       <div className="absolute pointer-events-none" style={{ width: 400, height: 400, top: '40%', left: '38%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(13,175,206,0.07) 0%, transparent 60%)', filter: 'blur(52px)' }} />
 
@@ -289,7 +289,7 @@ export default function LandingHero() {
                 <span style={{ fontSize: 9.5, fontWeight: 600, color: 'rgba(90,95,128,0.55)', letterSpacing: '.12em', textTransform: 'uppercase', marginTop: 2 }}>{label}</span>
               </div>
             ))}
-            <div style={{ height: 32, width: 1.5, background: 'rgba(91,79,219,0.12)' }} />
+            <div style={{ height: 32, width: 1.5, background: 'rgba(26,27,58,0.18)' }} />
             <span style={{ fontSize: 9.5, fontWeight: 600, color: 'rgba(90,95,128,0.45)', letterSpacing: '.10em', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace" }}>Live · Hyderabad, IN</span>
           </div>
         </div>
@@ -305,7 +305,7 @@ export default function LandingHero() {
           </div>
 
           {/* Glow behind mockup */}
-          <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(91,79,219,0.08) 0%, transparent 70%)', filter: 'blur(20px)' }} />
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(26,27,58,0.14) 0%, transparent 70%)', filter: 'blur(20px)' }} />
 
           <div className="mockup-float" style={{ position: 'relative', zIndex: 2, width: '100%' }}>
             <HeroDashboardMockup dotCount={dotCount} />

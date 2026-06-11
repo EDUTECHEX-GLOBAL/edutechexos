@@ -118,7 +118,7 @@ export default function LandingHowItWorks() {
         </AnimatedSection>
 
         {/* Steps */}
-        <div style={{ borderTop: '1.5px solid rgba(91,79,219,0.08)' }}>
+        <div style={{ borderTop: '1.5px solid rgba(26,27,58,0.14)' }}>
           {steps.map((step, i) => {
             const { Icon } = step;
             const isEven = i % 2 === 1;
@@ -126,14 +126,14 @@ export default function LandingHowItWorks() {
               <AnimatedSection key={step.id} direction="up" delay={i * 0.1}>
                 <div
                   className="grid grid-cols-1 lg:grid-cols-2 gap-0"
-                  style={{ borderBottom: '1.5px solid rgba(91,79,219,0.08)' }}
+                  style={{ borderBottom: '1.5px solid rgba(26,27,58,0.14)' }}
                 >
                   {/* Text side */}
                   <div
                     className={`relative flex flex-col justify-center px-8 lg:px-16 py-16 ${isEven ? 'lg:order-2' : 'lg:order-1'}`}
                     style={{
-                      borderRight: isEven ? 'none' : '1.5px solid rgba(91,79,219,0.08)',
-                      borderLeft: isEven ? '1.5px solid rgba(91,79,219,0.08)' : 'none',
+                      borderRight: isEven ? 'none' : '1.5px solid rgba(26,27,58,0.14)',
+                      borderLeft: isEven ? '1.5px solid rgba(26,27,58,0.14)' : 'none',
                     }}
                   >
                     {/* Big bg number */}

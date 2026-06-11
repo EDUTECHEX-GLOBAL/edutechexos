@@ -6,7 +6,7 @@ import AuthCard from './components/AuthCard';
 
 export default function AuthPage() {
   return (
-    <div className="w-full min-h-screen overflow-hidden" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif", background: '#F7F8FF' }}>
+    <div className="w-full min-h-screen overflow-hidden" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif", background: '#ECEAF8' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
 
@@ -51,7 +51,7 @@ export default function AuthPage() {
         [data-auth-theme="light"] input[type="password"],
         [data-auth-theme="light"] input[type="text"] {
           background: #FFFFFF !important;
-          border: 1.5px solid rgba(91,79,219,0.18) !important;
+          border: 1.5px solid rgba(26,27,58,0.24) !important;
           color: #1A1B3A !important;
           border-radius: 10px;
         }
@@ -60,7 +60,7 @@ export default function AuthPage() {
         }
         [data-auth-theme="light"] input:focus {
           border-color: rgba(91,79,219,0.50) !important;
-          box-shadow: 0 0 0 3px rgba(91,79,219,0.10) !important;
+          box-shadow: 0 0 0 3px rgba(26,27,58,0.15) !important;
           outline: none !important;
         }
         [data-auth-theme="light"] label {
@@ -194,9 +194,9 @@ export default function AuthPage() {
           <div className="absolute top-6 left-6 z-20">
             <Link
               href="/"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', background: 'rgba(91,79,219,0.05)', backdropFilter: 'blur(12px)', border: '1.5px solid rgba(91,79,219,0.12)', borderRadius: 8, fontSize: 9.5, fontWeight: 700, letterSpacing: '.20em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.65)', textDecoration: 'none', boxShadow: '0 2px 8px rgba(91,79,219,0.06)', transition: 'all .2s', fontFamily: "'JetBrains Mono', monospace' " }}
-              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#5B4FDB'; (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(91,79,219,0.30)'; (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(91,79,219,0.08)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(90,95,128,0.65)'; (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(91,79,219,0.12)'; (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(91,79,219,0.05)'; }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', background: 'rgba(91,79,219,0.05)', backdropFilter: 'blur(12px)', border: '1.5px solid rgba(26,27,58,0.18)', borderRadius: 8, fontSize: 9.5, fontWeight: 700, letterSpacing: '.20em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.65)', textDecoration: 'none', boxShadow: '0 2px 8px rgba(91,79,219,0.06)', transition: 'all .2s', fontFamily: "'JetBrains Mono', monospace' " }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#5B4FDB'; (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(91,79,219,0.30)'; (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(26,27,58,0.14)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(90,95,128,0.65)'; (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(26,27,58,0.18)'; (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(91,79,219,0.05)'; }}
             >
               <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden>
                 <path d="M13 8H3M7 4l-4 4 4 4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -213,9 +213,9 @@ export default function AuthPage() {
               style={{
                 maxWidth: 480,
                 background: '#FFFFFF',
-                border: '1.5px solid rgba(91,79,219,0.10)',
+                border: '1.5px solid rgba(26,27,58,0.15)',
                 borderRadius: 20,
-                boxShadow: '0 24px 72px rgba(91,79,219,0.10), 0 4px 16px rgba(91,79,219,0.06)',
+                boxShadow: '0 24px 72px rgba(26,27,58,0.15), 0 4px 16px rgba(91,79,219,0.06)',
                 padding: 'clamp(28px, 5vw, 44px)',
               }}
             >
@@ -238,7 +238,7 @@ export default function AuthPage() {
               <Suspense
                 fallback={
                   <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2.5px solid rgba(91,79,219,0.12)', borderTopColor: '#5B4FDB', margin: '0 auto 12px', animation: 'spin 0.8s linear infinite' }} />
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2.5px solid rgba(26,27,58,0.18)', borderTopColor: '#5B4FDB', margin: '0 auto 12px', animation: 'spin 0.8s linear infinite' }} />
                     <span style={{ fontSize: 10, color: 'rgba(90,95,128,0.45)', letterSpacing: '.18em', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace" }}>
                       Loading portal…
                     </span>

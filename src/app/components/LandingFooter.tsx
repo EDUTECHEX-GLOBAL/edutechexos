@@ -34,7 +34,7 @@ const footerGroups = [
 
 export default function LandingFooter() {
   return (
-    <footer className="relative" style={{ background: '#F7F8FF', borderTop: '1.5px solid rgba(91,79,219,0.08)' }}>
+    <footer className="relative" style={{ background: '#ECEAF8', borderTop: '1.5px solid rgba(26,27,58,0.14)' }}>
       {/* Spectrum bar top */}
       <div className="absolute top-0 left-0 right-0 spectrum-bar pointer-events-none" />
 
@@ -104,7 +104,7 @@ export default function LandingFooter() {
 
         {/* Bottom bar */}
         <AnimatedSection direction="up" delay={0.25}>
-          <div style={{ height: 1.5, background: 'linear-gradient(90deg, rgba(91,79,219,0.08), rgba(13,175,206,0.08), rgba(16,201,138,0.08))', borderRadius: 1, marginBottom: 20 }} />
+          <div style={{ height: 1.5, background: 'linear-gradient(90deg, rgba(26,27,58,0.14), rgba(13,175,206,0.08), rgba(16,201,138,0.08))', borderRadius: 1, marginBottom: 20 }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} className="sm:flex-row sm:items-center sm:justify-between">
             <p style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: 'rgba(90,95,128,0.50)', fontWeight: 500 }}>
               © 2026 EduTechEx Global · V1.0 · Hyderabad, India

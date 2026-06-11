@@ -295,7 +295,7 @@ export default function DashboardSidebar({
   return (
     <>
       <aside className="flex h-screen min-h-[100vh] w-56 shrink-0 flex-col glass-sidebar transition-all sm:w-60 z-10 justify-between">
-        <div className="flex items-center gap-3 border-b border-[rgba(62,74,137,0.12)] px-3 py-3.5 sm:px-4 shrink-0">
+        <div className="flex items-center gap-3 border-b border-[rgba(26,27,58,0.18)] px-3 py-3.5 sm:px-4 shrink-0">
           <AppLogo size={22} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-black tracking-tight text-[#1E2636] uppercase">
@@ -313,7 +313,7 @@ export default function DashboardSidebar({
           >
             <Bell size={16} strokeWidth={2} />
             {notifCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[#3E4A89] px-1 text-[9px] font-black text-white shadow-sm shadow-[rgba(62,74,137,0.12)] border border-white">
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[#3E4A89] px-1 text-[9px] font-black text-white shadow-sm shadow-[rgba(26,27,58,0.18)] border border-white">
                 {notifCount > 9 ? '9+' : notifCount}
               </span>
             )}
@@ -398,7 +398,7 @@ export default function DashboardSidebar({
                         </div>
                       )}
                       {ch.unread > 0 && (
-                        <span className="shrink-0 rounded-full bg-[#3E4A89] px-1.5 py-0.5 text-[9px] font-black text-white shadow-sm shadow-[rgba(62,74,137,0.12)]">
+                        <span className="shrink-0 rounded-full bg-[#3E4A89] px-1.5 py-0.5 text-[9px] font-black text-white shadow-sm shadow-[rgba(26,27,58,0.18)]">
                           {ch.unread}
                         </span>
                       )}
@@ -409,7 +409,7 @@ export default function DashboardSidebar({
             )}
           </div>
 
-          <div className="mx-3 border-t border-[rgba(62,74,137,0.12)] sm:mx-4" />
+          <div className="mx-3 border-t border-[rgba(26,27,58,0.18)] sm:mx-4" />
 
           <div>
             <div className="flex items-center justify-between px-3 sm:px-4 mb-1.5">
@@ -534,7 +534,7 @@ export default function DashboardSidebar({
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-1.5 bg-[rgba(62,74,137,0.08)]/40 rounded-xl p-1 border border-[rgba(62,74,137,0.12)]/40">
+          <div className="flex items-center justify-between gap-1.5 bg-[rgba(62,74,137,0.08)]/40 rounded-xl p-1 border border-[rgba(26,27,58,0.18)]/40">
             <button
               type="button"
               onClick={() => setShowActivityCalendar(true)}
@@ -600,7 +600,7 @@ export default function DashboardSidebar({
                   placeholder="e.g. research-and-dev"
                   value={newChannelName}
                   onChange={(e) => setNewChannelName(e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[rgba(242,240,236,0.50)] text-sm font-bold text-[#1E2636] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  className="w-full h-10 px-3.5 rounded-xl border border-[rgba(26,27,58,0.18)] bg-[rgba(242,240,236,0.50)] text-sm font-bold text-[#1E2636] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                 />
               </div>
 
@@ -613,7 +613,7 @@ export default function DashboardSidebar({
                   placeholder="e.g. Coordination on research milestones"
                   value={newChannelDesc}
                   onChange={(e) => setNewChannelDesc(e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[rgba(242,240,236,0.50)] text-sm font-bold text-[#1E2636] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  className="w-full h-10 px-3.5 rounded-xl border border-[rgba(26,27,58,0.18)] bg-[rgba(242,240,236,0.50)] text-sm font-bold text-[#1E2636] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                 />
               </div>
 
@@ -667,7 +667,7 @@ export default function DashboardSidebar({
                   placeholder="e.g. Priya Nair"
                   value={newMemberName}
                   onChange={(e) => setNewMemberName(e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[rgba(242,240,236,0.50)] text-sm font-bold text-[#1E2636] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  className="w-full h-10 px-3.5 rounded-xl border border-[rgba(26,27,58,0.18)] bg-[rgba(242,240,236,0.50)] text-sm font-bold text-[#1E2636] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                 />
               </div>
 
@@ -681,7 +681,7 @@ export default function DashboardSidebar({
                   placeholder="e.g. priya@edutechex.in"
                   value={newMemberEmail}
                   onChange={(e) => setNewMemberEmail(e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[rgba(242,240,236,0.50)] text-sm font-bold text-[#1E2636] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  className="w-full h-10 px-3.5 rounded-xl border border-[rgba(26,27,58,0.18)] bg-[rgba(242,240,236,0.50)] text-sm font-bold text-[#1E2636] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                 />
               </div>
 
@@ -692,7 +692,7 @@ export default function DashboardSidebar({
                 <select
                   value={newMemberRole}
                   onChange={(e) => setNewMemberRole(e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[rgba(242,240,236,0.50)] text-sm font-bold text-[#1E2636] focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none cursor-pointer"
+                  className="w-full h-10 px-3.5 rounded-xl border border-[rgba(26,27,58,0.18)] bg-[rgba(242,240,236,0.50)] text-sm font-bold text-[#1E2636] focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none cursor-pointer"
                 >
                   <option value="Developer">Developer</option>
                   <option value="Designer">Designer</option>
@@ -706,7 +706,7 @@ export default function DashboardSidebar({
                 <label className="block text-[11px] font-black text-[#7C859E] uppercase tracking-widest mb-1.5">
                   Channel Access Permissions
                 </label>
-                <div className="space-y-2 max-h-36 overflow-y-auto border border-[rgba(62,74,137,0.12)] rounded-xl p-3 bg-[rgba(242,240,236,0.50)]">
+                <div className="space-y-2 max-h-36 overflow-y-auto border border-[rgba(26,27,58,0.18)] rounded-xl p-3 bg-[rgba(242,240,236,0.50)]">
                   {channels
                     .filter((ch) => !ch.id.startsWith('member-'))
                     .map((ch) => (

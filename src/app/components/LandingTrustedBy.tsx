@@ -30,7 +30,7 @@ function CapabilityCard({ cap }: { cap: typeof capabilities[0] }) {
       ref={ref}
       onClick={handleClick}
       className="group flex flex-col items-center gap-3 text-center rounded-2xl p-5 cursor-pointer transition-all duration-300"
-      style={{ background: '#FFFFFF', border: '1.5px solid rgba(91,79,219,0.08)', boxShadow: '0 2px 12px rgba(91,79,219,0.06)' }}
+      style={{ background: '#FFFFFF', border: '1.5px solid rgba(26,27,58,0.14)', boxShadow: '0 2px 12px rgba(91,79,219,0.06)' }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement;
         el.style.borderColor = `${cap.accent}35`;
@@ -39,7 +39,7 @@ function CapabilityCard({ cap }: { cap: typeof capabilities[0] }) {
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLElement;
-        el.style.borderColor = 'rgba(91,79,219,0.08)';
+        el.style.borderColor = 'rgba(26,27,58,0.14)';
         el.style.transform = 'translateY(0)';
         el.style.boxShadow = '0 2px 12px rgba(91,79,219,0.06)';
       }}
@@ -65,7 +65,7 @@ function CapabilityCard({ cap }: { cap: typeof capabilities[0] }) {
 
 export default function LandingTrustedBy() {
   return (
-    <section id="trusted" className="relative py-24 px-6 lg:px-10 overflow-hidden" style={{ background: '#F7F8FF' }}>
+    <section id="trusted" className="relative py-24 px-6 lg:px-10 overflow-hidden" style={{ background: '#ECEAF8' }}>
       <div className="absolute inset-0 dot-grid pointer-events-none" />
 
       {/* Soft orbs */}
@@ -77,7 +77,7 @@ export default function LandingTrustedBy() {
         {/* Header */}
         <AnimatedSection direction="up">
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 16px', borderRadius: 20, background: 'rgba(91,79,219,0.08)', border: '1px solid rgba(91,79,219,0.16)', fontSize: 9.5, fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: '#5B4FDB', fontFamily: "'JetBrains Mono', monospace", marginBottom: 20 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 16px', borderRadius: 20, background: 'rgba(26,27,58,0.14)', border: '1px solid rgba(26,27,58,0.22)', fontSize: 9.5, fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: '#5B4FDB', fontFamily: "'JetBrains Mono', monospace", marginBottom: 20 }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#5B4FDB', boxShadow: '0 0 6px rgba(91,79,219,0.5)' }} />
               Capabilities
             </span>

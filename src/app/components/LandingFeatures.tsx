@@ -26,7 +26,7 @@ const features = [
     description: 'AI lives inside your workspace — answers cited from your actual channel history, not the internet. Your institutional memory, made searchable.',
     tag: 'AI · Context-aware',
     animClass: 'click-neural-pulse',
-    gradient: 'linear-gradient(135deg, rgba(139,63,219,0.08), rgba(91,79,219,0.08))',
+    gradient: 'linear-gradient(135deg, rgba(139,63,219,0.08), rgba(26,27,58,0.14))',
   },
   {
     Icon: CheckSquare,
@@ -98,7 +98,7 @@ const features = [
     description: 'Admin-level engagement dashboards: session time, message counts, active days, and weekly engagement rates per team member.',
     tag: 'Analytics · Admin',
     animClass: 'click-bar-rise',
-    gradient: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(91,79,219,0.08))',
+    gradient: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(26,27,58,0.14))',
   },
   {
     Icon: Users,
@@ -221,13 +221,13 @@ function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
 
 export default function LandingFeatures() {
   return (
-    <section id="features" className="relative py-28 px-6 lg:px-10 overflow-hidden" style={{ background: '#F7F8FF' }}>
+    <section id="features" className="relative py-28 px-6 lg:px-10 overflow-hidden" style={{ background: '#ECEAF8' }}>
       {/* Dot grid */}
       <div className="absolute inset-0 dot-grid pointer-events-none" />
 
       {/* Colorful orbs */}
       <div className="absolute pointer-events-none" style={{ width: 520, height: 520, top: '-12%', right: '-6%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(13,175,206,0.08) 0%, transparent 65%)', filter: 'blur(64px)' }} />
-      <div className="absolute pointer-events-none" style={{ width: 440, height: 440, bottom: '0%', left: '-6%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(91,79,219,0.08) 0%, transparent 65%)', filter: 'blur(56px)' }} />
+      <div className="absolute pointer-events-none" style={{ width: 440, height: 440, bottom: '0%', left: '-6%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(26,27,58,0.14) 0%, transparent 65%)', filter: 'blur(56px)' }} />
       <div className="absolute pointer-events-none" style={{ width: 360, height: 360, top: '40%', left: '40%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,201,138,0.06) 0%, transparent 65%)', filter: 'blur(48px)' }} />
 
       <div className="relative max-w-screen-xl mx-auto">

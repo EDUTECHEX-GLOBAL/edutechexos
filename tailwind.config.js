@@ -7,10 +7,10 @@ module.exports = {
     extend: {
       colors: {
         /* ── Core surfaces ───────────────────────────── */
-        background:      '#F7F8FF',
+        background:      '#ECEAF8',
         foreground:      '#1A1B3A',
         surface:         '#FFFFFF',
-        'surface-muted': '#EEF2FF',
+        'surface-muted': '#DDD8F6',
 
         /* ── Text shades ─────────────────────────────── */
         ink:         '#5A5F80',
@@ -80,7 +80,7 @@ module.exports = {
           DEFAULT:    '#1A1B3A',
           foreground: '#F7F8FF',
           muted:      '#5A5F80',
-          border:     '#E2E6F3',
+          border:     '#C4C0E4',
           surface:    '#F7F8FF',
         },
 
@@ -88,12 +88,12 @@ module.exports = {
         card: {
           DEFAULT:    '#FFFFFF',
           foreground: '#1A1B3A',
-          border:     '#E2E6F3',
+          border:     '#C4C0E4',
         },
 
         /* ── Structural ──────────────────────────────── */
-        border: '#E2E6F3',
-        input:  '#E2E6F3',
+        border: '#C4C0E4',
+        input:  '#C4C0E4',
         ring:   '#5B4FDB',
 
         /* ── Amber (kept for compatibility) ──────────── */

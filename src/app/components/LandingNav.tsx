@@ -43,7 +43,7 @@ export default function LandingNav() {
         .nav-cta-ghost {
           padding: 8px 18px; font-size: 9.5px; font-weight: 700; letter-spacing: .22em;
           text-transform: uppercase; font-family: 'JetBrains Mono', monospace;
-          color: #5A5F80; border: 1.5px solid rgba(91,79,219,0.18);
+          color: #5A5F80; border: 1.5px solid rgba(26,27,58,0.24);
           border-radius: 8px; text-decoration: none;
           background: transparent;
           transition: all .25s cubic-bezier(.22,1,.36,1);
@@ -77,8 +77,8 @@ export default function LandingNav() {
           backgroundColor: scrolled ? 'rgba(255,255,255,0.97)' : 'rgba(255,255,255,0.90)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          borderBottom: scrolled ? '1px solid rgba(91,79,219,0.10)' : '1px solid rgba(91,79,219,0.05)',
-          boxShadow: scrolled ? '0 4px 32px rgba(91,79,219,0.08)' : 'none',
+          borderBottom: scrolled ? '1px solid rgba(26,27,58,0.15)' : '1px solid rgba(91,79,219,0.05)',
+          boxShadow: scrolled ? '0 4px 32px rgba(26,27,58,0.14)' : 'none',
         }}
       >
         {/* Spectrum bar at very top */}
@@ -120,11 +120,11 @@ export default function LandingNav() {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-8">
-            <div style={{ height: 14, width: 1, background: 'rgba(91,79,219,0.12)' }} />
+            <div style={{ height: 14, width: 1, background: 'rgba(26,27,58,0.18)' }} />
             {navLinks.map(item => (
               <a key={item.label} href={item.href} className="nav-link-item">{item.label}</a>
             ))}
-            <div style={{ height: 14, width: 1, background: 'rgba(91,79,219,0.12)' }} />
+            <div style={{ height: 14, width: 1, background: 'rgba(26,27,58,0.18)' }} />
           </nav>
 
           {/* Right CTAs */}
@@ -173,7 +173,7 @@ export default function LandingNav() {
         {mobileOpen && (
           <div style={{
             background: 'rgba(255,255,255,0.98)',
-            borderTop: '1px solid rgba(91,79,219,0.08)',
+            borderTop: '1px solid rgba(26,27,58,0.14)',
             padding: '16px 24px 24px',
             display: 'flex', flexDirection: 'column', gap: 4,
           }}>
@@ -187,7 +187,7 @@ export default function LandingNav() {
                 {item.label}
               </a>
             ))}
-            <div style={{ height: 1, background: 'rgba(91,79,219,0.08)', margin: '8px 0' }} />
+            <div style={{ height: 1, background: 'rgba(26,27,58,0.14)', margin: '8px 0' }} />
             <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
               <Link
                 href="/sign-up-login-screen?mode=admin&redirect=/admin"
