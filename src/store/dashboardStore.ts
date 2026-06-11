@@ -1003,12 +1003,30 @@ export const useDashboardStore = create<DashboardState>()(
 
           const dbMembers: Member[] = data.members;
           set((s) => {
-            // Update workspace channels with correct member IDs
-            // All approved members get access to every workspace channel
+            // Build per-channel member lists honouring each member's channelIds assignment.
+            // Admins/Managers get access to every channel; regular members only get the
+            // channels an admin has explicitly assigned to them (+ #general for everyone).
             const allMemberIds = dbMembers.map((m) => m.id);
+            const privilegedIds = new Set(
+              dbMembers
+                .filter((m) => m.role === 'Admin' || m.role === 'Manager')
+                .map((m) => m.id)
+            );
             const newChannels = s.channels.map((ch) => {
               if (!isWS(ch.id)) return ch;
-              return syncCount({ ...ch, memberIds: allMemberIds });
+              if (ch.id === 'general') {
+                // Everyone is in #general
+                return syncCount({ ...ch, memberIds: allMemberIds });
+              }
+              // For extra channels: admins/managers + members whose channelIds includes this channel
+              const assigned = dbMembers
+                .filter((m) => {
+                  if (privilegedIds.has(m.id)) return true;
+                  const ids: string[] = (m as unknown as { channelIds?: string[] }).channelIds ?? [];
+                  return ids.includes(ch.id);
+                })
+                .map((m) => m.id);
+              return syncCount({ ...ch, memberIds: assigned });
             });
 
             // Ensure every member has a DM channel in the channels list
