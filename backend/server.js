@@ -1,3 +1,4 @@
+// ── v2025-06-11 ──────────────────────────────────────────────────────────────
 // ── Safety: if a stale cached express-rate-limit exists in node_modules,
 // delete it NOW before anything requires it so ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
 // can never be thrown. This handles Render's persistent node_modules cache.

@@ -996,6 +996,11 @@ export default function AdminPage() {
                                     removeMember(member.id);
                                     toast.success(`${member.name} was removed from the workspace.`);
                                     loadLocalMembers?.();
+                                  } else if (r.status === 404) {
+                                    // Backend route missing or DB record gone — remove from local state
+                                    removeMember(member.id);
+                                    toast.success(`${member.name} was removed from the workspace.`);
+                                    loadLocalMembers?.();
                                   } else {
                                     toast.error(`Could not remove ${member.name}: ${b.error ?? r.status}`);
                                   }
