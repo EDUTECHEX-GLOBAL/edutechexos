@@ -491,6 +491,22 @@ const LoginEventSchema = new mongoose.Schema({
 LoginEventSchema.index({ email: 1, dateStr: 1 });
 const LoginEvent = mongoose.model('LoginEvent', LoginEventSchema);
 
+// ── AWActivity schema — stores ActivityWatch desktop data synced by aw-sync.js ─
+const AWActivitySchema = new mongoose.Schema({
+  email:               { type: String, required: true, index: true },
+  name:                { type: String, default: '' },
+  dateStr:             { type: String, required: true, index: true }, // YYYY-MM-DD IST
+  currentApp:          { type: String, default: '' },
+  currentTitle:        { type: String, default: '' },
+  isAfk:               { type: Boolean, default: false },
+  totalActiveMinutes:  { type: Number, default: 0 },
+  totalAfkMinutes:     { type: Number, default: 0 },
+  appBreakdown:        [{ app: String, minutes: Number }], // top apps by usage time
+  lastSync:            { type: Date, default: Date.now },
+}, { timestamps: true });
+AWActivitySchema.index({ email: 1, dateStr: 1 }, { unique: true });
+const AWActivity = mongoose.model('AWActivity', AWActivitySchema);
+
 // ── ActivitySession schema — tracks app usage time per user per day ───────────
 // Heartbeat is sent every 60 s from the dashboard. Each ping adds up to 2 min
 // (capped so a forgotten tab doesn't inflate counts).
@@ -1186,6 +1202,59 @@ app.get('/api/activity/stats', authMiddleware, async (req, res) => {
     });
 
     res.json({ success: true, stats: Object.values(statsMap) });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// POST /api/activity/aw-sync — aw-sync.js script sends ActivityWatch data every 5 min
+app.post('/api/activity/aw-sync', authMiddleware, async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    const email = req.user.email.toLowerCase();
+    const name  = req.user.name || '';
+    const { currentApp, currentTitle, isAfk, totalActiveMinutes, totalAfkMinutes, appBreakdown } = req.body;
+
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const dateStr = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+
+    await AWActivity.findOneAndUpdate(
+      { email, dateStr },
+      {
+        $set: {
+          name,
+          currentApp:         currentApp         || '',
+          currentTitle:       currentTitle        || '',
+          isAfk:              isAfk               ?? false,
+          totalActiveMinutes: totalActiveMinutes  || 0,
+          totalAfkMinutes:    totalAfkMinutes     || 0,
+          appBreakdown:       Array.isArray(appBreakdown) ? appBreakdown.slice(0, 15) : [],
+          lastSync:           new Date(),
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    // Broadcast to admin in real-time so the dashboard updates instantly
+    io.emit('aw_sync', { email, currentApp: currentApp || '', isAfk: isAfk ?? false });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// GET /api/activity/aw — admin fetches all users' AW data for today
+app.get('/api/activity/aw', authMiddleware, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Admin only.' });
+    }
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const dateStr = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+
+    const records = await AWActivity.find({ dateStr }).lean();
+    res.json({ success: true, records });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }

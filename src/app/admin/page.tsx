@@ -12,6 +12,7 @@ import {
   Hash,
   Mail,
   MessageSquare,
+  Monitor,
   RefreshCw,
   Search,
   Send,
@@ -94,8 +95,15 @@ export default function AdminPage() {
     at: string;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<
-    'people' | 'requests' | 'channels' | 'broadcast' | 'activity' | 'attendance'
+    'people' | 'requests' | 'channels' | 'broadcast' | 'activity' | 'attendance' | 'desktop'
   >('people');
+  type AWRecord = {
+    email: string; name: string; currentApp: string; currentTitle: string;
+    isAfk: boolean; totalActiveMinutes: number; totalAfkMinutes: number;
+    appBreakdown: { app: string; minutes: number }[]; lastSync: string;
+  };
+  const [awRecords, setAwRecords] = useState<AWRecord[]>([]);
+  const [awLoading, setAwLoading] = useState(false);
 
   useEffect(() => {
     const authData = localStorage.getItem('edutechex_token');
@@ -234,6 +242,31 @@ export default function AdminPage() {
       })
       .finally(() => setActivityLoading(false));
   }, []);
+
+  const fetchAwData = useCallback(() => {
+    const token = getAdminToken();
+    if (!token) return;
+    setAwLoading(true);
+    fetch(`${API_BASE}/api/activity/aw`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data: { success: boolean; records?: AWRecord[] } | null) => {
+        if (data?.success && Array.isArray(data.records)) setAwRecords(data.records);
+      })
+      .catch(() => {})
+      .finally(() => setAwLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'desktop') fetchAwData();
+  }, [activeTab, fetchAwData]);
+
+  // Real-time AW updates via socket
+  useEffect(() => {
+    const socket = getSocket();
+    const handler = () => fetchAwData();
+    socket.on('aw_sync', handler);
+    return () => { socket.off('aw_sync', handler); };
+  }, [fetchAwData]);
 
   const workspaceChannels = useMemo(
     () => channels.filter((c) => !c.id.startsWith('member-')),
@@ -609,6 +642,7 @@ export default function AdminPage() {
     { id: 'broadcast' as const,  Icon: Send,         label: 'Broadcast',  badge: 0,                      accent: '#C026D3', accentBg: 'rgba(192,38,211,0.10)',  accentBorder: 'rgba(192,38,211,0.22)',  animClass: 'click-send-whoosh' },
     { id: 'activity' as const,   Icon: Activity,     label: 'Activity',   badge: 0,                      accent: '#3B82F6', accentBg: 'rgba(59,130,246,0.10)',  accentBorder: 'rgba(59,130,246,0.22)',  animClass: 'click-bar-rise' },
     { id: 'attendance' as const, Icon: CalendarDays, label: 'Attendance', badge: 0,                      accent: '#F59E0B', accentBg: 'rgba(245,158,11,0.10)',  accentBorder: 'rgba(245,158,11,0.22)',  animClass: 'click-cell-bloom' },
+    { id: 'desktop' as const,    Icon: Monitor,      label: 'Desktop',    badge: awRecords.length,       accent: '#10B981', accentBg: 'rgba(16,185,129,0.10)',  accentBorder: 'rgba(16,185,129,0.22)',  animClass: 'click-bar-rise' },
   ];
 
   const activeTabMeta = TABS.find(t => t.id === activeTab)!;
@@ -1643,6 +1677,155 @@ export default function AdminPage() {
 
               {/* Calendar component */}
               <LoginTrackerCalendar />
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════
+              TAB: DESKTOP ACTIVITY (ActivityWatch)
+          ════════════════════════════════════════════════════════════ */}
+          {activeTab === 'desktop' && (
+            <div className="space-y-6">
+              <div style={{ height: 3, background: 'linear-gradient(90deg, #10B981, #0DAFCE)', borderRadius: 3 }} />
+
+              {/* Header */}
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <p style={{ marginBottom: 4, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase', color: '#10B981' }}>
+                    Live · Today · Via ActivityWatch
+                  </p>
+                  <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A' }}>
+                    <Monitor size={20} style={{ color: '#10B981' }} /> Desktop Activity
+                  </h2>
+                  <p style={{ marginTop: 4, fontSize: 13, color: 'rgba(90,95,128,0.70)', lineHeight: 1.6, maxWidth: 520 }}>
+                    Real computer activity — which apps each team member is using right now. Requires <strong>ActivityWatch</strong> + <code style={{ fontSize: 11, background: 'rgba(16,185,129,0.08)', padding: '1px 6px', borderRadius: 4 }}>aw-sync.js</code> running on their machine.
+                  </p>
+                </div>
+                <button type="button" onClick={fetchAwData}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 12, border: '1.5px solid rgba(16,185,129,0.22)', background: '#FFFFFF', padding: '8px 16px', fontSize: 11, fontWeight: 600, color: '#10B981', cursor: 'pointer', transition: 'all .2s', whiteSpace: 'nowrap' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(16,185,129,0.06)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#FFFFFF'; }}
+                >
+                  <RefreshCw size={13} className={awLoading ? 'animate-spin' : ''} /> Refresh
+                </button>
+              </div>
+
+              {/* Setup instructions banner */}
+              <div style={{ borderRadius: 14, border: '1.5px solid rgba(16,185,129,0.18)', background: 'rgba(16,185,129,0.04)', padding: '14px 18px' }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#059669', marginBottom: 6 }}>Setup for each team member (one time)</p>
+                <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'rgba(90,95,128,0.80)', lineHeight: 2 }}>
+                  <li>Download &amp; install <strong>ActivityWatch</strong> from <code style={{ fontSize: 11, background: 'rgba(16,185,129,0.08)', padding: '1px 5px', borderRadius: 4 }}>activitywatch.net</code> — keep it running in system tray</li>
+                  <li>Open <code style={{ fontSize: 11, background: 'rgba(16,185,129,0.08)', padding: '1px 5px', borderRadius: 4 }}>aw-sync.js</code> (in project root) and paste their EduTechExOS token on line 20</li>
+                  <li>Run <code style={{ fontSize: 11, background: 'rgba(16,185,129,0.08)', padding: '1px 5px', borderRadius: 4 }}>node aw-sync.js</code> — it syncs every 5 minutes automatically</li>
+                </ol>
+              </div>
+
+              {/* Data table */}
+              {awLoading ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '64px 0', fontSize: 13, color: 'rgba(90,95,128,0.65)' }}>
+                  <RefreshCw size={16} style={{ marginRight: 8 }} className="animate-spin" /> Loading desktop activity…
+                </div>
+              ) : awRecords.length === 0 ? (
+                <div style={{ borderRadius: 16, border: '1.5px dashed rgba(16,185,129,0.22)', background: 'rgba(16,185,129,0.03)', padding: '56px 32px', textAlign: 'center' }}>
+                  <Monitor size={32} style={{ margin: '0 auto 12px', color: 'rgba(16,185,129,0.35)' }} />
+                  <p style={{ fontSize: 14, fontWeight: 600, color: 'rgba(90,95,128,0.70)', marginBottom: 4 }}>No desktop data yet today</p>
+                  <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.50)' }}>Data appears once a team member runs <code>aw-sync.js</code></p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {/* Live list */}
+                  {awRecords
+                    .sort((a, b) => (b.totalActiveMinutes ?? 0) - (a.totalActiveMinutes ?? 0))
+                    .map((rec) => {
+                      const member = members.find(m => m.email.toLowerCase() === rec.email.toLowerCase());
+                      const initials = member?.initials ?? rec.name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '??';
+                      const color = member?.color ?? '#64748b';
+                      const activeH = Math.floor((rec.totalActiveMinutes ?? 0) / 60);
+                      const activeM = (rec.totalActiveMinutes ?? 0) % 60;
+                      const activeLabel = activeH > 0 ? `${activeH}h ${activeM}m` : `${activeM}m`;
+                      const afkLabel   = `${rec.totalAfkMinutes ?? 0}m`;
+                      const lastSyncAgo = rec.lastSync
+                        ? (() => { const diff = Math.round((Date.now() - new Date(rec.lastSync).getTime()) / 60000); return diff < 2 ? 'just now' : `${diff}m ago`; })()
+                        : '—';
+                      const topApps = (rec.appBreakdown ?? []).slice(0, 5);
+                      const totalMinForBar = topApps.reduce((s, a) => s + a.minutes, 0) || 1;
+                      const isStale = rec.lastSync && (Date.now() - new Date(rec.lastSync).getTime()) > 10 * 60 * 1000;
+
+                      return (
+                        <div key={rec.email} style={{ borderRadius: 16, border: `1.5px solid ${rec.isAfk ? 'rgba(245,158,11,0.22)' : isStale ? 'rgba(26,27,58,0.12)' : 'rgba(16,185,129,0.18)'}`, background: '#FFFFFF', padding: '16px 20px', boxShadow: '0 2px 8px rgba(16,185,129,0.04)', transition: 'all .2s' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(16,185,129,0.10)'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(16,185,129,0.04)'; }}
+                        >
+                          {/* Top row */}
+                          <div className="flex items-center gap-3 flex-wrap" style={{ marginBottom: 12 }}>
+                            {/* Avatar */}
+                            <div style={{ width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#fff', backgroundColor: color, flexShrink: 0 }}>
+                              {initials}
+                            </div>
+                            {/* Name + email */}
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A' }}>{rec.name || rec.email}</p>
+                              <p style={{ fontSize: 11, color: 'rgba(90,95,128,0.60)' }}>{rec.email}</p>
+                            </div>
+                            {/* Status badge */}
+                            <span style={{ borderRadius: 20, padding: '3px 10px', fontSize: 10, fontWeight: 700, background: rec.isAfk ? 'rgba(245,158,11,0.12)' : isStale ? 'rgba(90,95,128,0.10)' : 'rgba(16,185,129,0.12)', color: rec.isAfk ? '#D97706' : isStale ? '#64748B' : '#059669' }}>
+                              {rec.isAfk ? '🟡 AFK' : isStale ? '⚫ Stale' : '🟢 Active'}
+                            </span>
+                            {/* Current app */}
+                            {rec.currentApp && !rec.isAfk && (
+                              <span style={{ borderRadius: 8, border: '1.5px solid rgba(16,185,129,0.18)', background: 'rgba(16,185,129,0.05)', padding: '3px 10px', fontSize: 11, fontWeight: 600, color: '#1A1B3A', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                📍 {rec.currentApp}
+                              </span>
+                            )}
+                            {/* Last sync */}
+                            <span style={{ fontSize: 10, color: 'rgba(90,95,128,0.50)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>synced {lastSyncAgo}</span>
+                          </div>
+
+                          {/* Stats row */}
+                          <div className="flex gap-4 flex-wrap" style={{ marginBottom: topApps.length > 0 ? 12 : 0 }}>
+                            <div style={{ borderRadius: 8, background: 'rgba(16,185,129,0.06)', padding: '6px 12px', fontSize: 11 }}>
+                              <span style={{ color: 'rgba(90,95,128,0.60)', marginRight: 4 }}>Active</span>
+                              <strong style={{ color: '#059669' }}>{activeLabel}</strong>
+                            </div>
+                            <div style={{ borderRadius: 8, background: 'rgba(245,158,11,0.06)', padding: '6px 12px', fontSize: 11 }}>
+                              <span style={{ color: 'rgba(90,95,128,0.60)', marginRight: 4 }}>AFK</span>
+                              <strong style={{ color: '#D97706' }}>{afkLabel}</strong>
+                            </div>
+                            {rec.currentTitle && (
+                              <div style={{ borderRadius: 8, background: 'rgba(26,27,58,0.04)', padding: '6px 12px', fontSize: 11, maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <span style={{ color: 'rgba(90,95,128,0.60)', marginRight: 4 }}>Window</span>
+                                <span style={{ color: '#1A1B3A' }}>{rec.currentTitle}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* App breakdown bars */}
+                          {topApps.length > 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                              <p style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.10em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.50)', marginBottom: 2 }}>Top apps today</p>
+                              {topApps.map(({ app, minutes }) => {
+                                const pct = Math.round((minutes / totalMinForBar) * 100);
+                                const isWork = !['YouTube', 'Netflix', 'Discord', 'Spotify', 'Instagram', 'Facebook', 'Twitter'].some(w => app.toLowerCase().includes(w.toLowerCase()));
+                                return (
+                                  <div key={app}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                                      <span style={{ fontSize: 11, color: isWork ? '#1A1B3A' : '#EF476F', fontWeight: isWork ? 500 : 700 }}>
+                                        {!isWork && '⚠️ '}{app}
+                                      </span>
+                                      <span style={{ fontSize: 10, color: 'rgba(90,95,128,0.60)' }}>{minutes >= 60 ? `${Math.floor(minutes / 60)}h ${Math.round(minutes % 60)}m` : `${Math.round(minutes)}m`} · {pct}%</span>
+                                    </div>
+                                    <div style={{ height: 4, width: '100%', borderRadius: 2, background: 'rgba(26,27,58,0.08)' }}>
+                                      <div style={{ height: '100%', borderRadius: 2, width: `${pct}%`, background: isWork ? 'linear-gradient(90deg,#10B981,#0DAFCE)' : 'linear-gradient(90deg,#EF476F,#F59E0B)', transition: 'width .4s' }} />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
             </div>
           )}
         </main>
