@@ -229,7 +229,7 @@ const globalLimiter = makeRateLimiter({
 });
 
 app.use('/api/auth/', authLimiter);
-app.use('/api/access-requests', authLimiter);
+app.use('/api/access-requests', apiLimiter);
 app.use('/api/messages', apiLimiter);
 app.use('/api/kanban', apiLimiter);
 app.use('/api/', globalLimiter);
