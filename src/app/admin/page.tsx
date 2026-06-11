@@ -339,11 +339,9 @@ export default function AdminPage() {
     const next = checked
       ? [...new Set([...current, channelId])]
       : current.filter((id) => id !== channelId);
-    // setMemberWorkspaceChannels handles both the optimistic update and the backend PATCH
-    setMemberWorkspaceChannels(memberId, next);
-
     const member = members.find((m) => m.id === memberId);
     const channel = extraChannels.find((c) => c.id === channelId);
+    setMemberWorkspaceChannels(memberId, next, (msg) => toast.error(msg));
     if (channel) {
       toast.success(
         checked
@@ -476,19 +474,7 @@ export default function AdminPage() {
         return;
       }
 
-      // ✅ Immediately add to local store so the people list updates right away
-      addMember({
-        id: memberId,
-        initials,
-        name: request.name,
-        email: request.email,
-        role: request.role,
-        status: 'online',
-        color,
-      });
-      if (selectedChannels.length > 0) setMemberWorkspaceChannels(memberId, selectedChannels);
-
-      // Sync from backend in background (don't await — keep UI snappy)
+      // Sync from backend — gets the newly approved member with correct channelIds
       loadLocalMembers?.();
     } catch {
       // Backend unreachable — still approve locally so the list updates

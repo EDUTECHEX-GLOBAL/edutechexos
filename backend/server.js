@@ -229,7 +229,8 @@ const globalLimiter = makeRateLimiter({
 });
 
 app.use('/api/auth/', authLimiter);
-app.use('/api/access-requests', apiLimiter);
+// globalLimiter covers GET/PATCH/DELETE on /api/access-requests (admin ops need headroom).
+// POST is the public signup form — keep strict limit to prevent spam.
 app.use('/api/messages', apiLimiter);
 app.use('/api/kanban', apiLimiter);
 app.use('/api/', globalLimiter);
@@ -628,7 +629,7 @@ app.use(/^\/api\/(?!auth\/|access-requests|digest|health).*/, authMiddleware);
 // ─── Auth Routes ──────────────────────────────────────────────────────────────
 
 // POST /api/access-requests — user submits signup request
-app.post('/api/access-requests', async (req, res) => {
+app.post('/api/access-requests', authLimiter, async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
     const emailClean = String(email).trim().toLowerCase();

@@ -233,7 +233,7 @@ type DashboardState = {
   addMemberToChannel: (channelId: string, memberId: string) => void;
   removeMemberFromChannel: (channelId: string, memberId: string) => void;
   setMemberWorkspaceChannel: (memberId: string, channelId: string | null) => void;
-  setMemberWorkspaceChannels: (memberId: string, channelIds: string[]) => void;
+  setMemberWorkspaceChannels: (memberId: string, channelIds: string[], onError?: (msg: string) => void) => void;
   setMemberRole: (memberId: string, role: string) => void;
 };
 
@@ -1210,7 +1210,7 @@ export const useDashboardStore = create<DashboardState>()(
           }),
         }));
       },
-      setMemberWorkspaceChannels: (memberId, channelIds) => {
+      setMemberWorkspaceChannels: (memberId, channelIds, onError) => {
         const isSystemId = [
           'member-ac',
           'member-rk',
@@ -1226,8 +1226,16 @@ export const useDashboardStore = create<DashboardState>()(
             method: 'PATCH',
             body: JSON.stringify({ channelIds }),
           })
-            .then(() => get().loadLocalMembers())
-            .catch(() => get().loadLocalMembers());
+            .then((res) => {
+              if (!res.ok) {
+                onError?.(`Channel save failed (${res.status}). Changes reverted.`);
+              }
+              get().loadLocalMembers();
+            })
+            .catch(() => {
+              onError?.('Could not reach the server. Changes reverted.');
+              get().loadLocalMembers();
+            });
         }
 
         set((s) => ({
