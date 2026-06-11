@@ -983,67 +983,60 @@ export default function AdminPage() {
                                   )
                                 )
                                   return;
+                                const authData = localStorage.getItem('edutechex_token');
+                                const token = authData ? JSON.parse(authData).token : null;
                                 const mongoId = member.id.startsWith('member-')
                                   ? member.id.slice(7)
                                   : null;
-                                if (mongoId && mongoId.length === 24) {
-                                  try {
-                                    const authData = localStorage.getItem('edutechex_token');
-                                    const token = authData ? JSON.parse(authData).token : null;
-                                    const res = await fetch(
-                                      `${API_BASE}/api/access-requests/${mongoId}`,
-                                      {
-                                        method: 'DELETE',
-                                        headers: token
-                                          ? { Authorization: `Bearer ${token}` }
-                                          : {},
-                                      }
-                                    );
-                                    const body = await res.json().catch(() => ({}));
-                                    if (res.ok && body.success) {
-                                      removeMember(member.id);
-                                      toast.success(
-                                        `${member.name} was removed from the workspace.`
-                                      );
-                                      loadLocalMembers?.();
-                                    } else {
-                                      toast.error(
-                                        `Could not remove ${member.name}: ${body.error ?? res.status}`
-                                      );
-                                    }
-                                  } catch {
-                                    toast.error('Could not reach the server. Please try again.');
+                                const isDbMember = mongoId !== null && mongoId.length === 24;
+
+                                const doSystemRemove = async () => {
+                                  const r = await fetch(`${API_BASE}/api/members/system`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                                    },
+                                    body: JSON.stringify({ email: member.email, memberId: member.id }),
+                                  });
+                                  const b = await r.json().catch(() => ({}));
+                                  if (r.ok && b.success) {
+                                    removeMember(member.id);
+                                    toast.success(`${member.name} was removed from the workspace.`);
+                                    loadLocalMembers?.();
+                                  } else {
+                                    toast.error(`Could not remove ${member.name}: ${b.error ?? r.status}`);
                                   }
-                                } else {
-                                  try {
-                                    const authData = localStorage.getItem('edutechex_token');
-                                    const token = authData ? JSON.parse(authData).token : null;
-                                    const res = await fetch(`${API_BASE}/api/members/system`, {
+                                };
+
+                                try {
+                                  if (isDbMember) {
+                                    const res = await fetch(`${API_BASE}/api/access-requests/${mongoId}`, {
                                       method: 'DELETE',
-                                      headers: {
-                                        'Content-Type': 'application/json',
-                                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                                      },
-                                      body: JSON.stringify({
-                                        email: member.email,
-                                        memberId: member.id,
-                                      }),
+                                      headers: token ? { Authorization: `Bearer ${token}` } : {},
                                     });
                                     const body = await res.json().catch(() => ({}));
                                     if (res.ok && body.success) {
                                       removeMember(member.id);
-                                      toast.success(
-                                        `${member.name} was removed from the workspace.`
-                                      );
+                                      toast.success(`${member.name} was removed from the workspace.`);
                                       loadLocalMembers?.();
+                                    } else if (res.status === 404) {
+                                      // DB record already gone — try system endpoint (covers
+                                      // hardcoded members that were also registered via sign-up)
+                                      // or just remove from local state if truly gone.
+                                      await doSystemRemove().catch(async () => {
+                                        removeMember(member.id);
+                                        toast.success(`${member.name} was removed from the workspace.`);
+                                        loadLocalMembers?.();
+                                      });
                                     } else {
-                                      toast.error(
-                                        `Could not remove ${member.name}: ${body.error ?? res.status}`
-                                      );
+                                      toast.error(`Could not remove ${member.name}: ${body.error ?? res.status}`);
                                     }
-                                  } catch {
-                                    toast.error('Could not reach the server. Please try again.');
+                                  } else {
+                                    await doSystemRemove();
                                   }
+                                } catch {
+                                  toast.error('Could not reach the server. Please try again.');
                                 }
                               }}
                               className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-light transition-all hover:bg-[rgba(244,63,94,0.10)] hover:text-[#f43f5e]"
