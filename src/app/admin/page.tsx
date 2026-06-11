@@ -983,21 +983,29 @@ export default function AdminPage() {
                                 const isDbMember = mongoId !== null && mongoId.length === 24;
 
                                 const doSystemRemove = async () => {
-                                  const r = await fetch(`${API_BASE}/api/members/system`, {
-                                    method: 'DELETE',
-                                    headers: {
-                                      'Content-Type': 'application/json',
-                                      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                                    },
-                                    body: JSON.stringify({ email: member.email, memberId: member.id }),
+                                  const payload = JSON.stringify({ email: member.email, memberId: member.id });
+                                  const headers = {
+                                    'Content-Type': 'application/json',
+                                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                                  };
+                                  // Try POST /api/members/remove first (works even when some
+                                  // reverse-proxies 404 DELETE on this path), then fall back
+                                  // to the original DELETE endpoint.
+                                  let r = await fetch(`${API_BASE}/api/members/remove`, {
+                                    method: 'POST', headers, body: payload,
                                   });
+                                  if (r.status === 404) {
+                                    r = await fetch(`${API_BASE}/api/members/system`, {
+                                      method: 'DELETE', headers, body: payload,
+                                    });
+                                  }
                                   const b = await r.json().catch(() => ({}));
                                   if (r.ok && b.success) {
                                     removeMember(member.id);
                                     toast.success(`${member.name} was removed from the workspace.`);
                                     loadLocalMembers?.();
                                   } else if (r.status === 404) {
-                                    // Backend route missing or DB record gone — remove from local state
+                                    // Both endpoints missing (very old deploy) — remove locally
                                     removeMember(member.id);
                                     toast.success(`${member.name} was removed from the workspace.`);
                                     loadLocalMembers?.();

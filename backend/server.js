@@ -836,7 +836,8 @@ app.patch('/api/access-requests/:id', authMiddleware, async (req, res) => {
 
 // DELETE /api/members/system — admin permanently removes a hardcoded system member
 // Stores the email in RemovedMember so they are filtered out of /api/members on every refresh.
-app.delete('/api/members/system', authMiddleware, async (req, res) => {
+// Shared handler used by both DELETE and POST versions of this endpoint.
+async function removeMemberHandler(req, res) {
   if (!req.user || req.user.role !== 'Admin') {
     return res.status(403).json({ success: false, error: 'Admin access required.' });
   }
@@ -862,7 +863,10 @@ app.delete('/api/members/system', authMiddleware, async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
-});
+}
+app.delete('/api/members/system', authMiddleware, removeMemberHandler);
+// POST alias — some reverse-proxies (Render free) silently 404 DELETE on certain paths
+app.post('/api/members/remove', authMiddleware, removeMemberHandler);
 
 // POST /api/members/system/restore — admin re-activates a previously removed system member
 app.post('/api/members/system/restore', authMiddleware, async (req, res) => {
