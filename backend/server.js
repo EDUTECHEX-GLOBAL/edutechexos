@@ -955,8 +955,9 @@ app.get('/api/members', async (req, res) => {
         .join('')
         .toUpperCase()
         .slice(0, 2);
-      // Normalise: channelIds is authoritative; fall back to legacy channelId
-      const ids = r.channelIds && r.channelIds.length > 0
+      // Normalise: channelIds is authoritative when explicitly set (even []);
+      // only fall back to legacy channelId when channelIds was never stored.
+      const ids = Array.isArray(r.channelIds)
         ? r.channelIds
         : (r.channelId ? [r.channelId] : []);
       return {
