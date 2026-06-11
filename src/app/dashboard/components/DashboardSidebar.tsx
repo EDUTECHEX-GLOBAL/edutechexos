@@ -224,19 +224,39 @@ export default function DashboardSidebar({
         return next;
       });
     };
-    const handleMemberUpdated = ({ email, role }: { email?: string; role?: string } = {}) => {
+    const handleMemberUpdated = ({
+      email,
+      role,
+      channelIds,
+    }: { email?: string; role?: string; channelIds?: string[] } = {}) => {
       const store = useDashboardStore.getState();
       store.loadLocalMembers?.();
-      // If admin changed the current user's role, update state + localStorage immediately
-      if (email && role) {
+      store.loadWorkspaceChannels?.();
+
+      if (email) {
         try {
           const raw = localStorage.getItem('edutechex_token');
           if (raw) {
             const parsed = JSON.parse(raw);
             if (parsed.user && parsed.user.email?.toLowerCase() === email.toLowerCase()) {
-              parsed.user.role = role;
-              localStorage.setItem('edutechex_token', JSON.stringify(parsed));
-              setCurrentUser((prev) => ({ ...prev, role }));
+              // Role change
+              if (role) {
+                parsed.user.role = role;
+                localStorage.setItem('edutechex_token', JSON.stringify(parsed));
+                setCurrentUser((prev) => ({ ...prev, role }));
+                toast.success(`Your role has been updated to ${role} by an admin`, {
+                  duration: 5000,
+                });
+              }
+              // Channel access change (if backend includes channelIds in payload)
+              if (channelIds !== undefined && !role) {
+                toast.success('Your channel access has been updated by an admin', {
+                  duration: 5000,
+                });
+              } else if (!role && channelIds === undefined) {
+                // Generic update — admin changed something for this user
+                toast.info('Your workspace access has been updated', { duration: 4000 });
+              }
             }
           }
         } catch {

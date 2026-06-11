@@ -79,9 +79,9 @@ export default function AdminPage() {
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState('Developer');
-  const [newExtraChannel, setNewExtraChannel] = useState('');
+  const [newExtraChannels, setNewExtraChannels] = useState<string[]>([]);
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
-  const [requestChannelById, setRequestChannelById] = useState<Record<string, string>>({});
+  const [requestChannelsByReq, setRequestChannelsByReq] = useState<Record<string, string[]>>({});
   const [promoteLoadingId, setPromoteLoadingId] = useState<string | null>(null);
   const [activityStats, setActivityStats] = useState<ActivityStat[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
@@ -399,15 +399,15 @@ export default function AdminPage() {
           name: cleanName,
           email: emailClean,
           role: newRole,
-          channelId: newExtraChannel || null,
+          channelIds: newRole !== 'Admin' ? newExtraChannels : [],
         }),
       });
       const data = await res.json();
       if (res.ok && data.success && data.member) {
         // Use the real DB-backed ID returned by the server
         addMember({ ...data.member, initials, status: 'online', color });
-        if (newRole !== 'Admin' && newExtraChannel)
-          setMemberWorkspaceChannel(data.member.id, newExtraChannel);
+        if (newRole !== 'Admin' && newExtraChannels.length > 0)
+          setMemberWorkspaceChannels(data.member.id, newExtraChannels);
         toast.success(`${cleanName} added. Default password: Welcome@2026`);
       } else {
         toast.error(data.error ?? 'Failed to add member on server.');
@@ -428,15 +428,15 @@ export default function AdminPage() {
         status: 'online',
         color,
       });
-      if (newRole !== 'Admin' && newExtraChannel)
-        setMemberWorkspaceChannel(tempId, newExtraChannel);
+      if (newRole !== 'Admin' && newExtraChannels.length > 0)
+        setMemberWorkspaceChannels(tempId, newExtraChannels);
       toast.warning(`${cleanName} added locally — backend unreachable, won't persist.`);
     }
 
     setNewName('');
     setNewEmail('');
     setNewRole('Developer');
-    setNewExtraChannel('');
+    setNewExtraChannels([]);
     setShowAddModal(false);
   }
 
@@ -453,7 +453,7 @@ export default function AdminPage() {
       return;
     }
 
-    const selectedChannel = requestChannelById[request.id] || null;
+    const selectedChannels = requestChannelsByReq[request.id] ?? [];
 
     // Build member object up-front — used in both online and offline paths
     const MEMBER_COLORS = ['#3E4A89', '#9BA6D3', '#7c3aed', '#a78bfa', '#2A3568', '#c4b5fd'];
@@ -482,7 +482,7 @@ export default function AdminPage() {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ status: 'approved', channelId: selectedChannel }),
+        body: JSON.stringify({ status: 'approved', channelIds: selectedChannels }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -500,14 +500,15 @@ export default function AdminPage() {
         status: 'online',
         color,
       });
-      if (selectedChannel) setMemberWorkspaceChannel(memberId, selectedChannel);
+      if (selectedChannels.length > 0) setMemberWorkspaceChannels(memberId, selectedChannels);
 
       // Sync from backend in background (don't await — keep UI snappy)
       loadLocalMembers?.();
     } catch {
       // Backend unreachable — still approve locally so the list updates
+      const fallbackId = makeMemberId(request.name);
       addMember({
-        id: makeMemberId(request.name),
+        id: fallbackId,
         initials,
         name: request.name,
         email: request.email,
@@ -515,7 +516,7 @@ export default function AdminPage() {
         status: 'online',
         color,
       });
-      if (selectedChannel) setMemberWorkspaceChannel(makeMemberId(request.name), selectedChannel);
+      if (selectedChannels.length > 0) setMemberWorkspaceChannels(fallbackId, selectedChannels);
     }
 
     // ── Update local UI state + localStorage fallback ───────────────────────
@@ -599,77 +600,100 @@ export default function AdminPage() {
       label: 'People in app',
       value: members.length,
       icon: Users,
-      color: 'from-primary to-primary-light',
-      bg: 'bg-primary/10',
+      accent: '#5B4FDB',
+      accentBg: 'rgba(91,79,219,0.10)',
+      gradient: 'linear-gradient(135deg, #5B4FDB, #7B6FEB)',
     },
     {
       label: 'Online now',
       value: onlineMembers,
       icon: Activity,
-      color: 'from-green-light to-green-dark',
-      bg: 'bg-green-surface',
+      accent: '#10C98A',
+      accentBg: 'rgba(16,201,138,0.10)',
+      gradient: 'linear-gradient(135deg, #10C98A, #059669)',
     },
     {
       label: 'Access requests',
       value: pendingRequests.length,
       icon: Mail,
-      color: 'from-primary to-primary-dark',
-      bg: 'bg-primary/10',
+      accent: '#EF476F',
+      accentBg: 'rgba(239,71,111,0.10)',
+      gradient: 'linear-gradient(135deg, #EF476F, #F57A98)',
     },
     {
       label: 'Project channels',
       value: extraChannels.length,
       icon: Hash,
-      color: 'from-[#6366F1] to-[#4F46E5]',
-      bg: 'bg-secondary',
+      accent: '#0DAFCE',
+      accentBg: 'rgba(13,175,206,0.10)',
+      gradient: 'linear-gradient(135deg, #0DAFCE, #3B82F6)',
     },
   ];
 
   const TABS = [
-    { id: 'people' as const, Icon: Users, label: 'People', badge: 0 },
-    { id: 'requests' as const, Icon: UserPlus, label: 'Requests', badge: pendingRequests.length },
-    { id: 'channels' as const, Icon: Hash, label: 'Channels', badge: 0 },
-    { id: 'broadcast' as const, Icon: Send, label: 'Broadcast', badge: 0 },
-    { id: 'activity' as const, Icon: Activity, label: 'Activity', badge: 0 },
-    { id: 'attendance' as const, Icon: CalendarDays, label: 'Attendance', badge: 0 },
+    { id: 'people' as const,     Icon: Users,        label: 'People',     badge: 0,                      accent: '#5B4FDB', accentBg: 'rgba(91,79,219,0.10)',   accentBorder: 'rgba(91,79,219,0.22)',   animClass: 'click-slide-deck' },
+    { id: 'requests' as const,   Icon: UserPlus,     label: 'Requests',   badge: pendingRequests.length,  accent: '#EF476F', accentBg: 'rgba(239,71,111,0.10)',  accentBorder: 'rgba(239,71,111,0.22)',  animClass: 'click-bubble-pop' },
+    { id: 'channels' as const,   Icon: Hash,         label: 'Channels',   badge: 0,                      accent: '#0DAFCE', accentBg: 'rgba(13,175,206,0.10)',  accentBorder: 'rgba(13,175,206,0.22)',  animClass: 'click-bubble-pop' },
+    { id: 'broadcast' as const,  Icon: Send,         label: 'Broadcast',  badge: 0,                      accent: '#C026D3', accentBg: 'rgba(192,38,211,0.10)',  accentBorder: 'rgba(192,38,211,0.22)',  animClass: 'click-send-whoosh' },
+    { id: 'activity' as const,   Icon: Activity,     label: 'Activity',   badge: 0,                      accent: '#3B82F6', accentBg: 'rgba(59,130,246,0.10)',  accentBorder: 'rgba(59,130,246,0.22)',  animClass: 'click-bar-rise' },
+    { id: 'attendance' as const, Icon: CalendarDays, label: 'Attendance', badge: 0,                      accent: '#F59E0B', accentBg: 'rgba(245,158,11,0.10)',  accentBorder: 'rgba(245,158,11,0.22)',  animClass: 'click-cell-bloom' },
   ];
+
+  const activeTabMeta = TABS.find(t => t.id === activeTab)!;
 
   return (
     <AdminGuard>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen" style={{ background: '#F7F8FF', fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
+
+        {/* ── Spectrum bar ─────────────────────────────────────────────── */}
+        <div className="spectrum-bar fixed top-0 left-0 right-0 z-50 pointer-events-none" />
+
         {/* ── Header ──────────────────────────────────────────────────────── */}
-        <header className="sticky top-0 z-30 glass-nav">
+        <header className="sticky top-[3px] z-40" style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(91,79,219,0.08)', boxShadow: '0 2px 16px rgba(91,79,219,0.06)' }}>
           <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-6 lg:px-8">
             <div className="flex items-center gap-4">
               <Link href="/" className="flex items-center gap-2.5 no-underline">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center shadow-md" style={{ background: '#F0A028', boxShadow: '0 2px 10px rgba(240,160,40,0.25)' }}>
-                  <span style={{ fontSize: 9, fontWeight: 900, color: '#04060E' }}>EX</span>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md" style={{ background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', boxShadow: '0 4px 14px rgba(91,79,219,0.28)' }}>
+                  <span style={{ fontSize: 9, fontWeight: 900, color: '#FFFFFF' }}>EX</span>
                 </div>
-                <span className="font-display font-bold text-base tracking-[-0.02em] text-foreground">
-                  EduTechEx<span className="text-primary">OS</span>
+                <span style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 16, fontWeight: 800, color: '#1A1B3A', letterSpacing: '-0.025em' }}>
+                  EduTechEx<span style={{ color: '#5B4FDB' }}>OS</span>
                 </span>
               </Link>
-              <span className="hidden rounded-lg bg-primary/10 border border-primary/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-primary sm:inline-flex" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: 8, background: 'rgba(239,71,111,0.08)', border: '1px solid rgba(239,71,111,0.18)', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: '#EF476F', fontFamily: "'JetBrains Mono', monospace" }}>
                 Admin control
               </span>
             </div>
             <div className="flex items-center gap-3">
               <Link
                 href="/dashboard"
-                className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-ink border border-border bg-surface hover:border-primary/20 hover:text-primary transition-all"
+                style={{ display: 'none' }}
+                className="md:inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all"
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.25)'; (e.currentTarget as HTMLElement).style.color = '#5B4FDB'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.10)'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
+              >
+                Workspace
+              </Link>
+              <Link href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 20, border: '1.5px solid rgba(91,79,219,0.12)', background: '#FFFFFF', fontSize: 12, fontWeight: 600, color: '#5A5F80', textDecoration: 'none', transition: 'all .2s' }}
+                className="hidden md:inline-flex"
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.28)'; (e.currentTarget as HTMLElement).style.color = '#5B4FDB'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.12)'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
               >
                 Workspace
               </Link>
               <button
-                className="relative flex h-9 w-9 items-center justify-center rounded-xl text-ink-light hover:bg-surface hover:text-foreground transition-all"
+                className="relative flex h-9 w-9 items-center justify-center rounded-xl transition-all"
+                style={{ color: '#9296B0', background: 'transparent', border: '1.5px solid rgba(91,79,219,0.10)' }}
                 title="Admin alerts"
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.06)'; (e.currentTarget as HTMLElement).style.color = '#EF476F'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#9296B0'; }}
               >
                 <Bell size={17} />
                 {pendingRequests.length > 0 && (
-                  <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#f59e0b] ring-2 ring-surface" />
+                  <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-white" style={{ background: '#EF476F' }} />
                 )}
               </button>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold shadow-md" style={{ background: '#F0A028', color: '#04060E' }}>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold" style={{ background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', color: '#FFFFFF', boxShadow: '0 2px 10px rgba(91,79,219,0.25)' }}>
                 {(adminUser?.name ?? 'Admin')
                   .split(' ')
                   .map((p) => p[0])
@@ -685,15 +709,14 @@ export default function AdminPage() {
           {/* ── Page hero ───────────────────────────────────────────────── */}
           <section className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-primary">
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: '#EF476F', marginBottom: 8 }}>
                 Admin-only dashboard
               </p>
-              <h1 className="font-display font-bold text-3xl md:text-4xl tracking-[-0.03em] text-foreground">
+              <h1 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.8rem)', fontWeight: 800, letterSpacing: '-0.03em', color: '#1A1B3A', marginBottom: 8 }}>
                 Workspace Control Center
               </h1>
-              <p className="mt-2 max-w-3xl text-sm text-ink-light leading-relaxed">
-                Manage people, channel access, broadcast emails, and monitor team activity — all in
-                one place.
+              <p style={{ fontSize: 14, color: 'rgba(90,95,128,0.75)', lineHeight: 1.65, maxWidth: 560 }}>
+                Manage people, channel access, broadcast emails, and monitor team activity — all in one place.
               </p>
             </div>
             <button
@@ -708,22 +731,28 @@ export default function AdminPage() {
 
           {/* ── Stat cards ──────────────────────────────────────────────── */}
           <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {statCards.map(({ label, value, icon: Icon, color }) => (
-              <div key={label} className="card-premium p-5">
+            {statCards.map(({ label, value, icon: Icon, accent, accentBg, gradient }) => (
+              <div
+                key={label}
+                className="relative overflow-hidden rounded-2xl p-5 transition-all duration-300"
+                style={{ background: '#FFFFFF', border: `1.5px solid ${accent}18`, boxShadow: `0 2px 8px ${accent}0A`, cursor: 'default' }}
+                onMouseEnter={e => { const el = e.currentTarget; el.style.boxShadow = `0 12px 40px ${accent}16`; el.style.borderColor = `${accent}30`; el.style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={e => { const el = e.currentTarget; el.style.boxShadow = `0 2px 8px ${accent}0A`; el.style.borderColor = `${accent}18`; el.style.transform = 'translateY(0)'; }}
+              >
+                {/* Left accent strip */}
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: gradient, borderRadius: '3px 0 0 3px' }} />
                 <div className="mb-4 flex items-center justify-between">
-                  <div
-                    className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-md`}
-                  >
-                    <Icon size={18} className="text-white" />
+                  <div style={{ width: 42, height: 42, borderRadius: 12, background: gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 14px ${accent}28` }}>
+                    <Icon size={19} style={{ color: '#FFFFFF' }} />
                   </div>
-                  <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-light">
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: accent, background: accentBg, padding: '3px 8px', borderRadius: 20 }}>
                     Live
                   </span>
                 </div>
-                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-light">
+                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.65)', marginBottom: 4 }}>
                   {label}
                 </p>
-                <p className="mt-1 font-display font-bold text-3xl tracking-[-0.02em] text-foreground">
+                <p style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', color: '#1A1B3A', lineHeight: 1 }}>
                   {value}
                 </p>
               </div>
@@ -731,54 +760,81 @@ export default function AdminPage() {
           </section>
 
           {/* ── Tab navigation ──────────────────────────────────────────── */}
-          <div className="mb-6 flex gap-1 overflow-x-auto rounded-2xl border border-border bg-surface p-1.5">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-primary shadow-md shadow-primary/20'
-                    : 'text-ink-light hover:bg-surface-muted hover:text-foreground'
-                }`}
-                style={activeTab === tab.id ? { color: '#04060E' } : {}}
-              >
-                <tab.Icon size={15} />
-                {tab.label}
-                {tab.badge > 0 && (
-                  <span
-                    className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold`}
-                    style={activeTab === tab.id ? { background: 'rgba(4,6,14,0.25)', color: '#04060E' } : { background: '#F0A028', color: '#04060E' }}
-                  >
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            ))}
+          <div className="mb-6 flex gap-2 overflow-x-auto rounded-2xl p-1.5" style={{ background: '#FFFFFF', border: '1.5px solid rgba(91,79,219,0.08)', boxShadow: '0 2px 8px rgba(91,79,219,0.04)' }}>
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    const btn = document.querySelector(`[data-tab="${tab.id}"]`) as HTMLElement;
+                    if (btn) {
+                      btn.classList.remove(tab.animClass);
+                      void btn.offsetWidth;
+                      btn.classList.add(tab.animClass);
+                      setTimeout(() => btn.classList.remove(tab.animClass), 600);
+                    }
+                  }}
+                  data-tab={tab.id}
+                  className="flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-250"
+                  style={isActive ? {
+                    background: tab.accentBg,
+                    color: tab.accent,
+                    border: `1.5px solid ${tab.accentBorder}`,
+                    boxShadow: `0 2px 12px ${tab.accent}18`,
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  } : {
+                    color: 'rgba(90,95,128,0.70)',
+                    border: '1.5px solid transparent',
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  }}
+                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(91,79,219,0.04)'; }}
+                  onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                >
+                  <tab.Icon size={15} />
+                  {tab.label}
+                  {tab.badge > 0 && (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      height: 18, minWidth: 18, padding: '0 5px',
+                      borderRadius: 9, fontSize: 9, fontWeight: 800,
+                      background: isActive ? tab.accent : '#EF476F',
+                      color: '#FFFFFF',
+                    }}>
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* ════════════════════════════════════════════════════════════
               TAB: PEOPLE
           ════════════════════════════════════════════════════════════ */}
           {activeTab === 'people' && (
-            <div className="card-premium overflow-hidden">
-              <div className="flex flex-col gap-4 border-b border-border p-5 md:flex-row md:items-center md:justify-between">
+            <div className="overflow-hidden rounded-2xl" style={{ background: '#FFFFFF', border: '1.5px solid rgba(91,79,219,0.10)', boxShadow: '0 4px 16px rgba(91,79,219,0.06)', animation: 'slide-deck 0.4s cubic-bezier(0.22,1,0.36,1)' }}>
+              {/* People tab top accent */}
+              <div style={{ height: 3, background: 'linear-gradient(90deg, #5B4FDB, #7B6FEB, #8B3FDB)', borderRadius: '8px 8px 0 0' }} />
+              <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between" style={{ borderBottom: '1px solid rgba(91,79,219,0.08)' }}>
                 <div>
-                  <h2 className="font-display font-bold text-lg tracking-[-0.02em] text-foreground">
+                  <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 17, fontWeight: 700, color: '#1A1B3A', letterSpacing: '-0.02em', marginBottom: 2 }}>
                     Users
                   </h2>
-                  <p className="text-sm text-ink-light">
+                  <p style={{ fontSize: 13, color: 'rgba(90,95,128,0.65)' }}>
                     Grant one controlled channel per person.
                   </p>
                 </div>
-                <label className="flex h-10 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 md:w-80 focus-within:border-primary focus-within:shadow-[0_0_0_3px_rgba(240,160,40,0.12)] transition-all">
-                  <Search size={15} className="text-ink-light" />
+                <label className="flex h-10 items-center gap-2 rounded-xl px-3.5 md:w-80 transition-all" style={{ border: '1.5px solid rgba(91,79,219,0.14)', background: '#F7F8FF' }}>
+                  <Search size={15} style={{ color: '#9296B0' }} />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search people"
-                    className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-light"
+                    className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                    style={{ color: '#1A1B3A' }}
                   />
                 </label>
               </div>
@@ -786,12 +842,12 @@ export default function AdminPage() {
               <div className="overflow-x-auto scrollbar-thin">
                 <table className="w-full min-w-[820px] text-left">
                   <thead>
-                    <tr className="border-b border-border">
+                    <tr style={{ borderBottom: '1px solid rgba(91,79,219,0.08)', background: 'rgba(91,79,219,0.02)' }}>
                       {['User', 'Role', 'Status', 'Current access', 'Channel access', ''].map(
                         (h) => (
                           <th
                             key={h}
-                            className="px-5 py-4 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-light"
+                            style={{ padding: '12px 20px', fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)' }}
                           >
                             {h}
                           </th>
@@ -799,24 +855,25 @@ export default function AdminPage() {
                       )}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody>
                     {filteredMembers.map((member) => {
                       const memberExtraChannels = getExtraChannels(member.id);
                       const isAdminMember = member.role === 'Admin';
                       return (
-                        <tr key={member.id} className="transition hover:bg-surface-muted/70">
+                        <tr key={member.id} style={{ borderBottom: '1px solid rgba(91,79,219,0.05)', transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(91,79,219,0.03)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-3">
                               <div
-                                className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold text-white shadow-sm"
+                                className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold text-white"
                                 style={{
-                                  background: `linear-gradient(135deg, ${member.color}, ${member.color}dd)`,
+                                  background: `linear-gradient(135deg, ${member.color}, ${member.color}cc)`,
+                                  boxShadow: `0 3px 10px ${member.color}30`,
                                 }}
                               >
                                 {member.initials}
                               </div>
                               <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-foreground">
+                                <p className="truncate text-sm font-semibold" style={{ color: '#1A1B3A' }}>
                                   {member.name}
                                 </p>
                                 <p className="truncate text-xs text-ink-light">{member.email}</p>
@@ -825,19 +882,15 @@ export default function AdminPage() {
                           </td>
                           <td className="px-5 py-4">
                             {systemEmails.includes(member.email.toLowerCase()) ? (
-                              <span
-                                className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${isAdminMember ? 'bg-primary/10 text-primary' : 'bg-secondary text-ink'}`}
-                              >
+                              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', background: isAdminMember ? 'rgba(91,79,219,0.10)' : 'rgba(90,95,128,0.08)', color: isAdminMember ? '#5B4FDB' : '#5A5F80', border: `1px solid ${isAdminMember ? 'rgba(91,79,219,0.20)' : 'rgba(90,95,128,0.12)'}` }}>
                                 {member.role}
                               </span>
                             ) : (
                               <div className="flex flex-col gap-1.5">
                                 <select
                                   value={member.role}
-                                  onChange={(e) =>
-                                    handleRoleChange(member.id, member.name, e.target.value)
-                                  }
-                                  className="h-9 rounded-xl border border-border bg-surface px-2 text-xs font-semibold text-foreground outline-none focus:border-primary"
+                                  onChange={(e) => handleRoleChange(member.id, member.name, e.target.value)}
+                                  style={{ height: 36, borderRadius: 10, border: '1.5px solid rgba(91,79,219,0.14)', background: '#F7F8FF', padding: '0 8px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', outline: 'none' }}
                                 >
                                   <option value="Developer">Developer</option>
                                   <option value="Designer">Designer</option>
@@ -850,7 +903,7 @@ export default function AdminPage() {
                                     type="button"
                                     onClick={() => promoteToAdmin(member)}
                                     disabled={promoteLoadingId === member.id}
-                                    className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary hover:bg-primary/20 transition-all disabled:opacity-50"
+                                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 8, background: 'rgba(91,79,219,0.08)', color: '#5B4FDB', fontSize: 10, fontWeight: 700, border: '1px solid rgba(91,79,219,0.16)', cursor: 'pointer', opacity: promoteLoadingId === member.id ? 0.5 : 1 }}
                                     title={`Make Admin (${adminCount}/${MAX_ADMINS} slots used)`}
                                   >
                                     <ShieldCheck size={10} />
@@ -861,37 +914,24 @@ export default function AdminPage() {
                             )}
                           </td>
                           <td className="px-5 py-4">
-                            <span className="inline-flex items-center gap-2 text-xs font-semibold text-ink">
-                              <span
-                                className={`w-2.5 h-2.5 rounded-full ${member.status === 'online' ? 'bg-green-light' : member.status === 'away' ? 'bg-[#f59e0b]' : 'bg-[#d6d3d1]'}`}
-                              />
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#5A5F80' }}>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: member.status === 'online' ? '#10C98A' : member.status === 'away' ? '#F59E0B' : '#D4D0CC', boxShadow: member.status === 'online' ? '0 0 6px rgba(16,201,138,0.60)' : 'none' }} />
                               {member.status}
                             </span>
                           </td>
                           <td className="px-5 py-4">
                             <div className="flex flex-wrap gap-1.5">
                               {isAdminMember ? (
-                                <span className="rounded-lg bg-primary/10 border border-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-primary">
-                                  All channels
-                                </span>
+                                <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, letterSpacing: '.06em', background: 'rgba(91,79,219,0.08)', color: '#5B4FDB', border: '1px solid rgba(91,79,219,0.16)' }}>All channels</span>
                               ) : (
                                 <>
-                                  <span className="rounded-lg bg-surface border border-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-ink">
-                                    #general
-                                  </span>
+                                  <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'rgba(13,175,206,0.08)', color: '#0DAFCE', border: '1px solid rgba(13,175,206,0.18)' }}>#general</span>
                                   {memberExtraChannels.length > 0 ? (
                                     memberExtraChannels.map((ec) => (
-                                      <span
-                                        key={ec.id}
-                                        className="rounded-lg bg-primary/10 border border-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-primary"
-                                      >
-                                        #{ec.name}
-                                      </span>
+                                      <span key={ec.id} style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'rgba(91,79,219,0.08)', color: '#5B4FDB', border: '1px solid rgba(91,79,219,0.16)' }}>#{ec.name}</span>
                                     ))
                                   ) : (
-                                    <span className="rounded-lg bg-primary/10 border border-primary/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-primary">
-                                      Needs assignment
-                                    </span>
+                                    <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'rgba(245,158,11,0.08)', color: '#D48C00', border: '1px solid rgba(245,158,11,0.18)' }}>Needs assignment</span>
                                   )}
                                 </>
                               )}
@@ -1026,18 +1066,23 @@ export default function AdminPage() {
           ════════════════════════════════════════════════════════════ */}
           {activeTab === 'requests' && (
             <div className="space-y-6">
+              {/* Tab top accent */}
+              <div style={{ height: 3, background: 'linear-gradient(90deg, #EF476F, #F57A98)', borderRadius: 3, marginBottom: 8 }} />
               {/* Pending requests grid */}
               {pendingRequests.length > 0 ? (
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {pendingRequests.map((request) => (
                     <div
                       key={request.id}
-                      className="card-premium rounded-2xl border border-primary/20 p-5"
+                      className="rounded-2xl p-5 transition-all duration-300"
+                      style={{ background: '#FFFFFF', border: '1.5px solid rgba(239,71,111,0.14)', boxShadow: '0 2px 12px rgba(239,71,111,0.06)' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 28px rgba(239,71,111,0.12)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.28)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(239,71,111,0.06)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.14)'; }}
                     >
                       <div className="mb-4 flex items-start justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15">
-                            <span className="text-sm font-black text-primary">
+                          <div style={{ width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,71,111,0.10)', border: '1.5px solid rgba(239,71,111,0.20)', flexShrink: 0 }}>
+                            <span style={{ fontSize: 13, fontWeight: 900, color: '#EF476F' }}>
                               {request.name
                                 .split(' ')
                                 .map((p) => p[0])
@@ -1047,47 +1092,75 @@ export default function AdminPage() {
                             </span>
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-foreground">
+                            <p style={{ fontSize: 13, fontWeight: 600, color: '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {request.name}
                             </p>
-                            <p className="truncate text-xs text-ink-light">{request.email}</p>
-                            <p className="mt-1 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
+                            <p style={{ fontSize: 11, color: 'rgba(90,95,128,0.65)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{request.email}</p>
+                            <p style={{ marginTop: 3, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#EF476F' }}>
                               {request.role} request
                             </p>
                           </div>
                         </div>
-                        <span className="shrink-0 rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase text-primary">
+                        <span style={{ flexShrink: 0, borderRadius: 8, border: '1px solid rgba(239,71,111,0.20)', background: 'rgba(239,71,111,0.08)', padding: '3px 10px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', color: '#EF476F' }}>
                           Pending
                         </span>
                       </div>
-                      <select
-                        value={requestChannelById[request.id] ?? ''}
-                        onChange={(e) =>
-                          setRequestChannelById((v) => ({ ...v, [request.id]: e.target.value }))
-                        }
-                        className="mb-3 h-10 w-full rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(240,160,40,0.12)]"
-                      >
-                        <option value="">General only</option>
-                        {extraChannels.map((c) => (
-                          <option key={`req-${request.id}-${c.id}`} value={c.id}>
-                            #{c.name}
-                          </option>
-                        ))}
-                      </select>
+                      {/* Multi-channel picker */}
+                      {extraChannels.length > 0 && (
+                        <div style={{ marginBottom: 12, borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.14)', background: '#F7F8FF', padding: '10px 12px' }}>
+                          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)', marginBottom: 8 }}>
+                            Assign channels · #general is always included
+                          </p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {extraChannels.map((c) => {
+                              const picked = (requestChannelsByReq[request.id] ?? []).includes(c.id);
+                              const pickedCount = (requestChannelsByReq[request.id] ?? []).length;
+                              return (
+                                <label key={`req-${request.id}-${c.id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: (!picked && pickedCount >= 3) ? 'not-allowed' : 'pointer', opacity: (!picked && pickedCount >= 3) ? 0.45 : 1 }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={picked}
+                                    disabled={!picked && pickedCount >= 3}
+                                    onChange={(e) => {
+                                      setRequestChannelsByReq((prev) => {
+                                        const cur = prev[request.id] ?? [];
+                                        const next = e.target.checked
+                                          ? [...cur, c.id]
+                                          : cur.filter((id) => id !== c.id);
+                                        return { ...prev, [request.id]: next };
+                                      });
+                                    }}
+                                    style={{ width: 14, height: 14, accentColor: '#5B4FDB', cursor: 'inherit' }}
+                                  />
+                                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: picked ? '#5B4FDB' : '#1A1B3A' }}>
+                                    #{c.name}
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                          <p style={{ marginTop: 8, fontSize: 9.5, color: 'rgba(90,95,128,0.50)', fontFamily: "'JetBrains Mono', monospace" }}>
+                            {(requestChannelsByReq[request.id] ?? []).length}/3 selected
+                          </p>
+                        </div>
+                      )}
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => approveRequest(request)}
-                          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-xs font-bold uppercase tracking-[0.06em] hover:bg-primary-dark transition-all"
-                          style={{ color: '#04060E' }}
+                          style={{ display: 'flex', height: 36, flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, background: 'linear-gradient(135deg, #10C98A, #059669)', color: '#FFFFFF', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', border: 'none', cursor: 'pointer', transition: 'all .2s', boxShadow: '0 3px 12px rgba(16,201,138,0.22)' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(16,201,138,0.30)'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 3px 12px rgba(16,201,138,0.22)'; }}
                         >
-                          <CheckCircle2 size={14} />
+                          <CheckCircle2 size={13} />
                           Approve
                         </button>
                         <button
                           type="button"
                           onClick={() => rejectRequest(request.id)}
-                          className="h-9 rounded-xl border border-border bg-surface px-3 text-xs font-bold uppercase tracking-[0.06em] text-ink-light hover:border-primary/30 hover:text-primary transition-all"
+                          style={{ height: 36, borderRadius: 12, border: '1.5px solid rgba(239,71,111,0.18)', background: '#FFFFFF', padding: '0 14px', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: '#EF476F', cursor: 'pointer', transition: 'all .2s' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.06)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.35)'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#FFFFFF'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.18)'; }}
                         >
                           Reject
                         </button>
@@ -1096,10 +1169,10 @@ export default function AdminPage() {
                   ))}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-border bg-surface-muted p-14 text-center">
-                  <UserPlus size={28} className="mx-auto mb-3 text-ink-light opacity-30" />
-                  <p className="text-sm font-semibold text-ink-light">No pending access requests</p>
-                  <p className="mt-1 text-xs text-ink-light opacity-60">
+                <div style={{ borderRadius: 16, border: '1.5px dashed rgba(239,71,111,0.20)', background: '#FFF8F9', padding: '56px 32px', textAlign: 'center' }}>
+                  <UserPlus size={28} style={{ margin: '0 auto 12px', color: 'rgba(239,71,111,0.40)' }} />
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(90,95,128,0.70)' }}>No pending access requests</p>
+                  <p style={{ marginTop: 4, fontSize: 11, color: 'rgba(90,95,128,0.45)' }}>
                     New sign-up requests will appear here for review.
                   </p>
                 </div>
@@ -1107,11 +1180,11 @@ export default function AdminPage() {
 
               {/* Approved users */}
               {approvedRequests.length > 0 && (
-                <div className="card-premium p-5">
-                  <h3 className="mb-4 flex items-center gap-2 font-display font-bold text-base tracking-[-0.02em] text-foreground">
-                    <CheckCircle2 size={16} className="text-green-light" />
+                <div style={{ borderRadius: 16, border: '1.5px solid rgba(16,201,138,0.16)', background: '#FFFFFF', padding: 20, boxShadow: '0 2px 12px rgba(16,201,138,0.06)' }}>
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 700, color: '#1A1B3A', marginBottom: 16 }}>
+                    <CheckCircle2 size={16} style={{ color: '#10C98A' }} />
                     Approved users
-                    <span className="ml-auto rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary">
+                    <span style={{ marginLeft: 'auto', borderRadius: 20, background: 'rgba(16,201,138,0.10)', padding: '2px 10px', fontSize: 9.5, fontWeight: 700, color: '#10C98A' }}>
                       {approvedRequests.length}
                     </span>
                   </h3>
@@ -1119,18 +1192,18 @@ export default function AdminPage() {
                     {approvedRequests.map((request) => (
                       <div
                         key={`approved-${request.id}`}
-                        className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3"
+                        style={{ display: 'flex', alignItems: 'center', gap: 12, borderRadius: 12, border: '1.5px solid rgba(16,201,138,0.12)', background: '#F7FFFC', padding: 12 }}
                       >
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-light/10">
-                          <CheckCircle2 size={14} className="text-green-light" />
+                        <div style={{ width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,201,138,0.10)', flexShrink: 0 }}>
+                          <CheckCircle2 size={14} style={{ color: '#10C98A' }} />
                         </div>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-foreground">
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontSize: 13, fontWeight: 600, color: '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {request.name}
                           </p>
-                          <p className="truncate text-xs text-ink-light">{request.email}</p>
+                          <p style={{ fontSize: 11, color: 'rgba(90,95,128,0.65)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{request.email}</p>
                         </div>
-                        <span className="ml-auto shrink-0 text-[10px] font-bold text-green-light">
+                        <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 9.5, fontWeight: 700, color: '#10C98A', fontFamily: "'JetBrains Mono', monospace" }}>
                           Active
                         </span>
                       </div>
@@ -1146,70 +1219,76 @@ export default function AdminPage() {
           ════════════════════════════════════════════════════════════ */}
           {activeTab === 'channels' && (
             <div className="space-y-4">
+              {/* Top accent */}
+              <div style={{ height: 3, background: 'linear-gradient(90deg, #0DAFCE, #3B82F6)', borderRadius: 3 }} />
               {/* General channel */}
-              <div className="card-premium p-5">
+              <div style={{ borderRadius: 16, border: '1.5px solid rgba(13,175,206,0.16)', background: '#FFFFFF', padding: 20, boxShadow: '0 2px 12px rgba(13,175,206,0.06)' }}>
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
-                      <Hash size={16} className="text-ink-light" />
+                    <div style={{ width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(13,175,206,0.10)', border: '1.5px solid rgba(13,175,206,0.20)' }}>
+                      <Hash size={16} style={{ color: '#0DAFCE' }} />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-foreground">#general</p>
-                      <p className="text-xs text-ink-light">
+                      <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', fontFamily: "'JetBrains Mono', monospace" }}>#general</p>
+                      <p style={{ fontSize: 11, color: 'rgba(90,95,128,0.65)', marginTop: 2 }}>
                         Default channel — every user is automatically added.
                       </p>
                     </div>
                   </div>
-                  <span className="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-bold text-ink-light">
+                  <span style={{ borderRadius: 10, border: '1.5px solid rgba(13,175,206,0.18)', background: 'rgba(13,175,206,0.08)', padding: '4px 12px', fontSize: 10, fontWeight: 700, color: '#0DAFCE' }}>
                     {getChannelMembers('general').length} members
                   </span>
                 </div>
               </div>
 
               {extraChannels.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border bg-surface-muted p-14 text-center">
-                  <Hash size={28} className="mx-auto mb-3 text-ink-light opacity-30" />
-                  <p className="text-sm font-semibold text-ink-light">No project channels yet.</p>
+                <div style={{ borderRadius: 16, border: '1.5px dashed rgba(13,175,206,0.20)', background: 'rgba(13,175,206,0.03)', padding: '56px 32px', textAlign: 'center' }}>
+                  <Hash size={28} style={{ margin: '0 auto 12px', color: 'rgba(13,175,206,0.40)' }} />
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(90,95,128,0.70)' }}>No project channels yet.</p>
                 </div>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {extraChannels.map((channel) => {
                     const channelMembers = getChannelMembers(channel.id);
                     return (
-                      <div key={channel.id} className="card-premium p-5">
+                      <div key={channel.id} style={{ borderRadius: 16, border: '1.5px solid rgba(13,175,206,0.14)', background: '#FFFFFF', padding: 20, boxShadow: '0 2px 10px rgba(13,175,206,0.06)', transition: 'all .2s' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 28px rgba(13,175,206,0.12)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(13,175,206,0.28)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 10px rgba(13,175,206,0.06)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(13,175,206,0.14)'; }}
+                      >
                         <div className="mb-4 flex items-start justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                              <Hash size={16} className="text-primary" />
+                            <div style={{ width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(13,175,206,0.10)', border: '1.5px solid rgba(13,175,206,0.20)', flexShrink: 0 }}>
+                              <Hash size={16} style={{ color: '#0DAFCE' }} />
                             </div>
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-bold text-foreground">
+                            <div style={{ minWidth: 0 }}>
+                              <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'JetBrains Mono', monospace" }}>
                                 #{channel.name}
                               </p>
-                              <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-ink-light">
+                              <p style={{ marginTop: 2, fontSize: 11, color: 'rgba(90,95,128,0.65)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                                 {channel.description}
                               </p>
                             </div>
                           </div>
-                          <span className="shrink-0 rounded-lg bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase text-primary">
+                          <span style={{ flexShrink: 0, borderRadius: 8, background: 'rgba(13,175,206,0.08)', padding: '3px 10px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', color: '#0DAFCE' }}>
                             {channelMembers.length} users
                           </span>
                         </div>
 
                         {/* Member chips */}
-                        <div className="mb-3 flex min-h-[28px] flex-wrap gap-1.5">
+                        <div style={{ marginBottom: 12, display: 'flex', minHeight: 28, flexWrap: 'wrap', gap: 6 }}>
                           {channelMembers.length ? (
                             channelMembers.map((member) => (
                               <button
                                 key={`${channel.id}-${member.id}`}
                                 type="button"
                                 onClick={() => handleChannelToggle(member.id, channel.id, false)}
-                                className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.06em] text-ink transition-all hover:border-[rgba(244,63,94,0.30)] hover:bg-[rgba(244,63,94,0.08)] hover:text-[#f43f5e]"
+                                style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 8, border: '1.5px solid rgba(91,79,219,0.12)', background: '#F7F8FF', padding: '3px 10px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: '#5A5F80', cursor: 'pointer', transition: 'all .15s' }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.30)'; (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.06)'; (e.currentTarget as HTMLElement).style.color = '#EF476F'; }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.12)'; (e.currentTarget as HTMLElement).style.background = '#F7F8FF'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
                                 title={`Remove ${member.name} from #${channel.name}`}
                               >
                                 <span
-                                  className="flex h-4 w-4 items-center justify-center rounded-md text-[8px] font-black text-white"
-                                  style={{ backgroundColor: member.color }}
+                                  style={{ width: 16, height: 16, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 900, color: '#FFFFFF', backgroundColor: member.color }}
                                 >
                                   {member.initials?.[0]}
                                 </span>
@@ -1217,7 +1296,7 @@ export default function AdminPage() {
                               </button>
                             ))
                           ) : (
-                            <span className="text-xs font-medium text-[#d6d3d1]">
+                            <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(90,95,128,0.50)' }}>
                               No users assigned yet
                             </span>
                           )}
@@ -1230,7 +1309,7 @@ export default function AdminPage() {
                             if (!e.target.value) return;
                             handleChannelToggle(e.target.value, channel.id, true);
                           }}
-                          className="h-10 w-full rounded-xl border border-border bg-surface-muted px-3 text-xs font-semibold text-ink outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(240,160,40,0.12)]"
+                          style={{ height: 40, width: '100%', borderRadius: 12, border: '1.5px solid rgba(13,175,206,0.18)', background: 'rgba(13,175,206,0.04)', padding: '0 12px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', outline: 'none' }}
                         >
                           <option value="">+ Grant access to a user</option>
                           {members
@@ -1254,16 +1333,18 @@ export default function AdminPage() {
           ════════════════════════════════════════════════════════════ */}
           {activeTab === 'broadcast' && (
             <div className="mx-auto max-w-2xl">
-              <div className="card-premium p-6">
+              <div style={{ borderRadius: 20, border: '1.5px solid rgba(192,38,211,0.14)', background: '#FFFFFF', padding: 24, boxShadow: '0 4px 24px rgba(192,38,211,0.08)' }}>
+                {/* Top accent */}
+                <div style={{ height: 3, background: 'linear-gradient(90deg, #C026D3, #8B3FDB)', borderRadius: 3, marginBottom: 24, marginLeft: -24, marginRight: -24, marginTop: -24, borderRadius: '8px 8px 0 0' }} />
                 <div className="mb-6 flex items-start gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
-                    <Send size={20} className="text-primary" />
+                  <div style={{ width: 48, height: 48, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(192,38,211,0.10)', border: '1.5px solid rgba(192,38,211,0.20)', flexShrink: 0 }}>
+                    <Send size={20} style={{ color: '#C026D3' }} />
                   </div>
                   <div>
-                    <h2 className="font-display font-bold text-xl tracking-[-0.02em] text-foreground">
+                    <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A' }}>
                       Broadcast Email
                     </h2>
-                    <p className="mt-1 text-sm text-ink-light">
+                    <p style={{ marginTop: 4, fontSize: 13, color: 'rgba(90,95,128,0.70)' }}>
                       Send one message to all {members.length} workspace members at once.
                     </p>
                   </div>
@@ -1271,7 +1352,7 @@ export default function AdminPage() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-light">
+                    <label style={{ display: 'block', marginBottom: 6, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.65)' }}>
                       Subject
                     </label>
                     <input
@@ -1280,12 +1361,14 @@ export default function AdminPage() {
                       onChange={(e) => setBroadcastSubject(e.target.value)}
                       placeholder="e.g. Team update — June 2026"
                       maxLength={150}
-                      className="h-11 w-full rounded-xl border border-border bg-surface px-3.5 text-sm font-medium text-foreground placeholder-slate-300 outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(240,160,40,0.12)]"
+                      style={{ height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.18)', background: '#F7F8FF', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
+                      onFocus={e => { e.target.style.borderColor = 'rgba(192,38,211,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(192,38,211,0.10)'; }}
+                      onBlur={e => { e.target.style.borderColor = 'rgba(192,38,211,0.18)'; e.target.style.boxShadow = 'none'; }}
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-light">
+                    <label style={{ display: 'block', marginBottom: 6, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.65)' }}>
                       Message
                     </label>
                     <textarea
@@ -1294,35 +1377,34 @@ export default function AdminPage() {
                       placeholder="Write your message here. Plain text — line breaks are preserved."
                       rows={7}
                       maxLength={2000}
-                      className="w-full resize-none rounded-xl border border-border bg-surface px-3.5 py-3 text-sm font-medium text-foreground placeholder-slate-300 outline-none transition-all focus:border-primary focus:shadow-[0_0_0_3px_rgba(240,160,40,0.12)]"
+                      style={{ width: '100%', resize: 'none', borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.18)', background: '#F7F8FF', padding: '12px 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6, transition: 'border-color .2s, box-shadow .2s' }}
+                      onFocus={e => { e.target.style.borderColor = 'rgba(192,38,211,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(192,38,211,0.10)'; }}
+                      onBlur={e => { e.target.style.borderColor = 'rgba(192,38,211,0.18)'; e.target.style.boxShadow = 'none'; }}
                     />
-                    <p className="mt-1 text-right text-[10px] text-ink-light">
+                    <p style={{ marginTop: 4, textAlign: 'right', fontSize: 9.5, color: 'rgba(90,95,128,0.50)', fontFamily: "'JetBrains Mono', monospace" }}>
                       {broadcastMessage.length}/2000
                     </p>
                   </div>
 
                   {/* Recipients preview */}
-                  <div className="rounded-xl border border-border bg-surface-muted p-4">
-                    <p className="mb-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-light">
+                  <div style={{ borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.12)', background: 'rgba(192,38,211,0.03)', padding: 16 }}>
+                    <p style={{ marginBottom: 10, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)' }}>
                       Will be sent to {members.length} members
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {members.slice(0, 10).map((m) => (
                         <span
                           key={m.id}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-ink"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 8, border: '1.5px solid rgba(91,79,219,0.10)', background: '#FFFFFF', padding: '4px 10px', fontSize: 11, fontWeight: 500, color: '#5A5F80' }}
                         >
-                          <span
-                            className="flex h-4 w-4 items-center justify-center rounded-md text-[8px] font-black text-white"
-                            style={{ backgroundColor: m.color }}
-                          >
+                          <span style={{ width: 16, height: 16, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 900, color: '#FFFFFF', backgroundColor: m.color }}>
                             {m.initials?.[0]}
                           </span>
                           {m.name.split(' ')[0]}
                         </span>
                       ))}
                       {members.length > 10 && (
-                        <span className="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-ink-light">
+                        <span style={{ borderRadius: 8, border: '1.5px solid rgba(91,79,219,0.10)', background: '#FFFFFF', padding: '4px 10px', fontSize: 11, fontWeight: 500, color: 'rgba(90,95,128,0.60)' }}>
                           +{members.length - 10} more
                         </span>
                       )}
@@ -1330,7 +1412,7 @@ export default function AdminPage() {
                   </div>
 
                   {broadcastLastSent && (
-                    <div className="rounded-xl border border-green-light/20 bg-green-surface px-4 py-3 text-xs font-medium text-green-light">
+                    <div style={{ borderRadius: 12, border: '1.5px solid rgba(16,201,138,0.20)', background: 'rgba(16,201,138,0.06)', padding: '12px 16px', fontSize: 12, fontWeight: 500, color: '#059669' }}>
                       ✓ Last sent at {broadcastLastSent.at} · &ldquo;{broadcastLastSent.subject}
                       &rdquo; → {broadcastLastSent.count} members
                     </div>
@@ -1339,11 +1421,10 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={handleBroadcast}
-                    disabled={
-                      broadcastSending || !broadcastSubject.trim() || !broadcastMessage.trim()
-                    }
-                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold transition-all hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
-                    style={{ color: '#04060E' }}
+                    disabled={broadcastSending || !broadcastSubject.trim() || !broadcastMessage.trim()}
+                    style={{ display: 'flex', height: 44, width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 12, background: 'linear-gradient(135deg, #C026D3, #8B3FDB)', color: '#FFFFFF', fontSize: 13, fontWeight: 700, border: 'none', cursor: broadcastSending ? 'not-allowed' : 'pointer', opacity: broadcastSending || !broadcastSubject.trim() || !broadcastMessage.trim() ? 0.5 : 1, transition: 'all .2s', boxShadow: '0 4px 16px rgba(192,38,211,0.25)' }}
+                    onMouseEnter={e => { if (!broadcastSending) { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(192,38,211,0.32)'; } }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(192,38,211,0.25)'; }}
                   >
                     {broadcastSending ? (
                       <>
@@ -1365,24 +1446,26 @@ export default function AdminPage() {
           ════════════════════════════════════════════════════════════ */}
           {activeTab === 'activity' && (
             <div className="space-y-8">
+              {/* Top accent */}
+              <div style={{ height: 3, background: 'linear-gradient(90deg, #3B82F6, #0DAFCE)', borderRadius: 3 }} />
               {/* Activity monitoring */}
               <div>
                 <div className="mb-6 flex items-center justify-between">
                   <div>
-                    <p className="mb-1 font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-primary">
+                    <p style={{ marginBottom: 4, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase', color: '#3B82F6' }}>
                       Last 7 days · With user permission
                     </p>
-                    <h2 className="flex items-center gap-2 font-display font-bold text-2xl tracking-[-0.02em] text-foreground">
-                      <Eye size={20} className="text-primary" />
+                    <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A' }}>
+                      <Eye size={20} style={{ color: '#3B82F6' }} />
                       Activity Monitoring
                     </h2>
-                    <p className="mt-1 text-sm text-ink-light">
+                    <p style={{ marginTop: 4, fontSize: 13, color: 'rgba(90,95,128,0.70)', lineHeight: 1.6 }}>
                       In-app session time, messages sent, and engagement per team member. Users can
                       see exactly what is tracked in Settings → Privacy.
                     </p>
-                    <Link
-                      href="/admin/activity"
-                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                    <Link href="/admin/activity" style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: '#3B82F6', textDecoration: 'none' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none'; }}
                     >
                       View full activity report →
                     </Link>
@@ -1411,7 +1494,9 @@ export default function AdminPage() {
                         .catch(() => {})
                         .finally(() => setActivityLoading(false));
                     }}
-                    className="flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-xs font-semibold text-ink hover:border-primary/20 hover:text-primary transition-all"
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 12, border: '1.5px solid rgba(59,130,246,0.18)', background: '#FFFFFF', padding: '8px 16px', fontSize: 11, fontWeight: 600, color: '#3B82F6', cursor: 'pointer', transition: 'all .2s' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.06)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.35)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#FFFFFF'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.18)'; }}
                   >
                     <RefreshCw size={13} className={activityLoading ? 'animate-spin' : ''} />
                     Refresh
@@ -1419,11 +1504,11 @@ export default function AdminPage() {
                 </div>
 
                 {activityLoading ? (
-                  <div className="flex items-center justify-center py-16 text-sm text-ink-light">
-                    <RefreshCw size={16} className="mr-2 animate-spin" /> Loading activity data…
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '64px 0', fontSize: 13, color: 'rgba(90,95,128,0.65)' }}>
+                    <RefreshCw size={16} style={{ marginRight: 8 }} className="animate-spin" /> Loading activity data…
                   </div>
                 ) : activityStats.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-border bg-surface-muted p-10 text-center text-sm text-ink-light">
+                  <div style={{ borderRadius: 16, border: '1.5px dashed rgba(59,130,246,0.20)', background: 'rgba(59,130,246,0.03)', padding: '40px 32px', textAlign: 'center', fontSize: 13, color: 'rgba(90,95,128,0.65)' }}>
                     No activity data yet. Data appears once users open the dashboard.
                   </div>
                 ) : (
@@ -1457,80 +1542,55 @@ export default function AdminPage() {
                           100,
                           Math.round(((stat.totalMinutes ?? 0) / (7 * 8 * 60)) * 100)
                         );
+                        const statusColor = member?.status === 'online' ? '#10C98A' : member?.status === 'away' ? '#F59E0B' : 'rgba(90,95,128,0.50)';
+                        const statusBg = member?.status === 'online' ? 'rgba(16,201,138,0.10)' : member?.status === 'away' ? 'rgba(245,158,11,0.10)' : 'rgba(90,95,128,0.08)';
 
                         return (
-                          <div key={stat.email} className="card-premium flex flex-col gap-3 p-5">
+                          <div key={stat.email} style={{ display: 'flex', flexDirection: 'column', gap: 12, borderRadius: 16, border: '1.5px solid rgba(59,130,246,0.12)', background: '#FFFFFF', padding: 20, boxShadow: '0 2px 12px rgba(59,130,246,0.06)', transition: 'all .2s' }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(59,130,246,0.12)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.25)'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(59,130,246,0.06)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.12)'; }}
+                          >
                             <div className="flex items-center gap-3">
-                              <div
-                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-black text-white"
-                                style={{ backgroundColor: color }}
-                              >
+                              <div style={{ width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#FFFFFF', backgroundColor: color, flexShrink: 0 }}>
                                 {initials}
                               </div>
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-bold text-foreground">
+                              <div style={{ minWidth: 0 }}>
+                                <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {stat.name || stat.email}
                                 </p>
-                                <p className="truncate text-[11px] text-ink-light">{stat.email}</p>
+                                <p style={{ fontSize: 11, color: 'rgba(90,95,128,0.65)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stat.email}</p>
                               </div>
-                              <span
-                                className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                                  member?.status === 'online'
-                                    ? 'bg-green-surface text-green-light'
-                                    : member?.status === 'away'
-                                      ? 'bg-primary/10 text-primary'
-                                      : 'bg-secondary text-ink-light'
-                                }`}
-                              >
+                              <span style={{ marginLeft: 'auto', flexShrink: 0, borderRadius: 20, padding: '2px 8px', fontSize: 9.5, fontWeight: 700, color: statusColor, background: statusBg }}>
                                 {member?.status ?? 'offline'}
                               </span>
                             </div>
 
                             <div>
-                              <div className="mb-1 flex justify-between text-[10px] font-semibold text-ink-light">
+                              <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between', fontSize: 9.5, fontWeight: 600, color: 'rgba(90,95,128,0.60)' }}>
                                 <span>Engagement this week</span>
                                 <span>{engagementPct}%</span>
                               </div>
-                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-                                <div
-                                  className="h-full rounded-full bg-gradient-to-r from-primary to-green-light transition-all"
-                                  style={{ width: `${engagementPct}%` }}
-                                />
+                              <div style={{ height: 6, width: '100%', overflow: 'hidden', borderRadius: 3, background: 'rgba(91,79,219,0.08)' }}>
+                                <div style={{ height: '100%', borderRadius: 3, background: 'linear-gradient(90deg, #3B82F6, #0DAFCE)', transition: 'width .5s', width: `${engagementPct}%` }} />
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-2">
-                              <div className="flex flex-col items-center rounded-xl bg-surface-muted px-1 py-2.5">
-                                <Clock size={12} className="mb-1 text-primary" />
-                                <span className="text-sm font-black text-foreground">
-                                  {timeLabel}
-                                </span>
-                                <span className="text-[9px] uppercase tracking-wide text-ink-light">
-                                  Session
-                                </span>
-                              </div>
-                              <div className="flex flex-col items-center rounded-xl bg-surface-muted px-1 py-2.5">
-                                <MessageSquare size={12} className="mb-1 text-primary" />
-                                <span className="text-sm font-black text-foreground">
-                                  {stat.messageCount ?? 0}
-                                </span>
-                                <span className="text-[9px] uppercase tracking-wide text-ink-light">
-                                  Messages
-                                </span>
-                              </div>
-                              <div className="flex flex-col items-center rounded-xl bg-surface-muted px-1 py-2.5">
-                                <Activity size={12} className="mb-1 text-primary" />
-                                <span className="text-sm font-black text-foreground">
-                                  {stat.activeDays ?? 0}
-                                </span>
-                                <span className="text-[9px] uppercase tracking-wide text-ink-light">
-                                  Days
-                                </span>
-                              </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                              {[
+                                { Icon: Clock,        value: timeLabel,              label: 'Session',  color: '#3B82F6' },
+                                { Icon: MessageSquare, value: stat.messageCount ?? 0, label: 'Messages', color: '#0DAFCE' },
+                                { Icon: Activity,      value: stat.activeDays ?? 0,   label: 'Days',     color: '#10C98A' },
+                              ].map(({ Icon: Ic, value, label, color: c }) => (
+                                <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', borderRadius: 12, background: 'rgba(91,79,219,0.04)', padding: '10px 4px' }}>
+                                  <Ic size={12} style={{ marginBottom: 4, color: c }} />
+                                  <span style={{ fontSize: 13, fontWeight: 900, color: '#1A1B3A' }}>{value}</span>
+                                  <span style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'rgba(90,95,128,0.55)', marginTop: 1 }}>{label}</span>
+                                </div>
+                              ))}
                             </div>
 
-                            <p className="border-t border-border pt-2 text-[11px] text-ink-light">
-                              <span className="font-semibold text-foreground">Last active:</span>{' '}
+                            <p style={{ borderTop: '1px solid rgba(91,79,219,0.08)', paddingTop: 8, fontSize: 11, color: 'rgba(90,95,128,0.65)' }}>
+                              <span style={{ fontWeight: 600, color: '#1A1B3A' }}>Last active:</span>{' '}
                               {lastSeenLabel}
                             </p>
                           </div>
@@ -1547,24 +1607,24 @@ export default function AdminPage() {
           ════════════════════════════════════════════════════════════ */}
           {activeTab === 'attendance' && (
             <div>
-              {/* Dark hero banner */}
-              <div className="mb-6 overflow-hidden rounded-2xl px-7 py-6" style={{ background: '#07090F', border: '1px solid rgba(240,160,40,0.12)' }}>
+              {/* Attendance hero banner */}
+              <div className="mb-6 overflow-hidden rounded-2xl px-7 py-6" style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(239,71,111,0.06))', border: '1.5px solid rgba(245,158,11,0.18)', boxShadow: '0 4px 24px rgba(245,158,11,0.08)' }}>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
+                    <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: '#D48C00', marginBottom: 6 }}>
                       Admin · Real-time tracking
                     </p>
-                    <h2 className="mt-1 text-2xl font-black tracking-tight text-foreground" style={{ fontFamily: "'Cabinet Grotesk', 'Inter', sans-serif" }}>
+                    <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: '#1A1B3A', marginBottom: 4 }}>
                       Attendance Command Center
                     </h2>
-                    <p className="mt-1 text-sm font-medium text-ink-light">
+                    <p style={{ fontSize: 13, color: 'rgba(90,95,128,0.75)', lineHeight: 1.6 }}>
                       Review daily login patterns, manage check-ins, and track streaks per team
                       member.
                     </p>
                   </div>
                   {/* Today's quick presence dots */}
-                  <div className="shrink-0 rounded-2xl px-5 py-4" style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
-                    <p className="mb-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-ink-light">
+                  <div className="shrink-0 rounded-2xl px-5 py-4" style={{ border: '1.5px solid rgba(245,158,11,0.18)', background: 'rgba(255,255,255,0.70)', backdropFilter: 'blur(12px)' }}>
+                    <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)', marginBottom: 10 }}>
                       Present today
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -1587,11 +1647,11 @@ export default function AdminPage() {
                         </div>
                       ))}
                     </div>
-                    <p className="mt-2.5 text-xs font-semibold text-ink-light">
-                      <span className="text-green-light font-bold">
+                    <p style={{ marginTop: 10, fontSize: 11, fontWeight: 600, color: 'rgba(90,95,128,0.70)' }}>
+                      <span style={{ color: '#10C98A', fontWeight: 800 }}>
                         {members.filter((m) => m.status === 'online').length}
-                      </span>{' '}
-                      / {members.length} online now
+                      </span>
+                      {' '}/ {members.length} online now
                     </p>
                   </div>
                 </div>
@@ -1605,31 +1665,36 @@ export default function AdminPage() {
 
         {/* ── Add user modal ───────────────────────────────────────────── */}
         {showAddModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/30 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" style={{ background: 'rgba(26,27,58,0.28)' }}>
             <form
               onSubmit={handleAddMember}
-              className="w-full max-w-lg card-premium overflow-hidden animate-scale-in"
+              className="w-full max-w-lg overflow-hidden"
+              style={{ borderRadius: 20, background: '#FFFFFF', border: '1.5px solid rgba(91,79,219,0.16)', boxShadow: '0 24px 64px rgba(91,79,219,0.18)' }}
             >
-              <div className="flex items-start justify-between gap-4 p-6 border-b border-border">
+              {/* Modal top accent */}
+              <div style={{ height: 3, background: 'linear-gradient(90deg, #5B4FDB, #8B3FDB, #C026D3)', borderRadius: '8px 8px 0 0' }} />
+              <div className="flex items-start justify-between gap-4 p-6" style={{ borderBottom: '1px solid rgba(91,79,219,0.08)' }}>
                 <div>
-                  <h2 className="font-display font-bold text-lg tracking-[-0.02em] text-foreground">
+                  <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A' }}>
                     Add application user
                   </h2>
-                  <p className="mt-1 text-sm text-ink-light">
+                  <p style={{ marginTop: 4, fontSize: 13, color: 'rgba(90,95,128,0.70)' }}>
                     General is automatic. Pick one extra channel when needed.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="w-8 h-8 rounded-xl flex items-center justify-center text-ink-light hover:bg-secondary hover:text-foreground transition-all"
+                  style={{ width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(90,95,128,0.60)', border: '1.5px solid rgba(91,79,219,0.10)', background: 'transparent', cursor: 'pointer', transition: 'all .15s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.08)'; (e.currentTarget as HTMLElement).style.color = '#EF476F'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(90,95,128,0.60)'; }}
                 >
                   <X size={16} />
                 </button>
               </div>
               <div className="space-y-4 p-6">
                 <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-light">
+                  <span style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>
                     Full name
                   </span>
                   <input
@@ -1637,11 +1702,13 @@ export default function AdminPage() {
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder="Priya Nair"
-                    className="mt-2 input-premium"
+                    style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.18)', background: '#F7F8FF', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
+                    onFocus={e => { e.target.style.borderColor = 'rgba(91,79,219,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(91,79,219,0.10)'; }}
+                    onBlur={e => { e.target.style.borderColor = 'rgba(91,79,219,0.18)'; e.target.style.boxShadow = 'none'; }}
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-light">
+                  <span style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>
                     Work email
                   </span>
                   <input
@@ -1650,17 +1717,19 @@ export default function AdminPage() {
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     placeholder="priya@edutechex.in"
-                    className="mt-2 input-premium"
+                    style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.18)', background: '#F7F8FF', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
+                    onFocus={e => { e.target.style.borderColor = 'rgba(91,79,219,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(91,79,219,0.10)'; }}
+                    onBlur={e => { e.target.style.borderColor = 'rgba(91,79,219,0.18)'; e.target.style.boxShadow = 'none'; }}
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-light">
+                  <span style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>
                     Role
                   </span>
                   <select
                     value={newRole}
                     onChange={(e) => setNewRole(e.target.value)}
-                    className="mt-2 input-premium"
+                    style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.18)', background: '#F7F8FF', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box' }}
                   >
                     <option value="Developer">Developer</option>
                     <option value="Designer">Designer</option>
@@ -1669,40 +1738,80 @@ export default function AdminPage() {
                     <option value="Admin">Admin</option>
                   </select>
                 </label>
-                <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-light">
-                    Extra channel
+                <div>
+                  <span style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    Channel access
                   </span>
-                  <select
-                    value={newRole === 'Admin' ? '__all' : newExtraChannel}
-                    disabled={newRole === 'Admin'}
-                    onChange={(e) => setNewExtraChannel(e.target.value)}
-                    className="mt-2 input-premium disabled:cursor-not-allowed disabled:bg-secondary disabled:text-ink-light"
-                  >
-                    {newRole === 'Admin' ? (
-                      <option value="__all">Full admin access</option>
-                    ) : (
-                      <>
-                        <option value="">General only for now</option>
-                        {extraChannels.map((c) => (
-                          <option key={`new-${c.id}`} value={c.id}>
-                            #{c.name}
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
-                </label>
+                  {newRole === 'Admin' ? (
+                    <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.12)', background: '#EEF2FF', padding: '12px 14px', fontSize: 12, fontWeight: 600, color: 'rgba(90,95,128,0.55)' }}>
+                      Full access to all channels (Admin)
+                    </div>
+                  ) : extraChannels.length === 0 ? (
+                    <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.12)', background: '#F7F8FF', padding: '12px 14px', fontSize: 12, color: 'rgba(90,95,128,0.55)' }}>
+                      #general only — no project channels created yet
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.18)', background: '#F7F8FF', padding: '12px 14px' }}>
+                      <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.55)', marginBottom: 10 }}>
+                        #general is always included · pick up to 3 more
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {extraChannels.map((c) => {
+                          const checked = newExtraChannels.includes(c.id);
+                          const atLimit = newExtraChannels.length >= 3;
+                          return (
+                            <label key={`new-${c.id}`} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: (!checked && atLimit) ? 'not-allowed' : 'pointer', opacity: (!checked && atLimit) ? 0.45 : 1 }}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                disabled={!checked && atLimit}
+                                onChange={(e) => {
+                                  if (e.target.checked) setNewExtraChannels((p) => [...p, c.id]);
+                                  else setNewExtraChannels((p) => p.filter((id) => id !== c.id));
+                                }}
+                                style={{ width: 15, height: 15, accentColor: '#5B4FDB', cursor: 'inherit', flexShrink: 0 }}
+                              />
+                              <div>
+                                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: checked ? '#5B4FDB' : '#1A1B3A' }}>
+                                  #{c.name}
+                                </span>
+                                {c.description && (
+                                  <span style={{ fontSize: 10, color: 'rgba(90,95,128,0.55)', marginLeft: 6 }}>{c.description}</span>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 9.5, fontFamily: "'JetBrains Mono', monospace", color: newExtraChannels.length >= 3 ? '#EF476F' : 'rgba(90,95,128,0.50)' }}>
+                          {newExtraChannels.length}/3 selected
+                        </span>
+                        {newExtraChannels.length > 0 && (
+                          <button type="button" onClick={() => setNewExtraChannels([])} style={{ fontSize: 9.5, fontWeight: 600, color: 'rgba(90,95,128,0.55)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}>
+                            clear
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-end gap-3 border-t border-border bg-surface-muted p-5">
+              <div className="flex justify-end gap-3 p-5" style={{ borderTop: '1px solid rgba(91,79,219,0.08)', background: 'rgba(91,79,219,0.02)' }}>
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="btn-secondary px-5 py-2.5 text-sm"
+                  style={{ padding: '10px 20px', borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.16)', background: '#FFFFFF', fontSize: 13, fontWeight: 600, color: '#5A5F80', cursor: 'pointer', transition: 'all .15s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.30)'; (e.currentTarget as HTMLElement).style.color = '#EF476F'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.16)'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary px-5 py-2.5 text-sm">
+                <button type="submit"
+                  style={{ padding: '10px 20px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all .2s', boxShadow: '0 4px 14px rgba(91,79,219,0.28)' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(91,79,219,0.35)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(91,79,219,0.28)'; }}
+                >
                   Create access
                 </button>
               </div>
