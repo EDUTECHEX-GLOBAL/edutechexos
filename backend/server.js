@@ -70,7 +70,7 @@ const JWT_EXPIRY = '7d';
 // Use bcc for bulk sends — one API call, one email credit, no cross-leakage.
 async function sendBrevoEmail({ to, bcc, subject, html }) {
   const apiKey = process.env.BREVO_API_KEY;
-  if (!apiKey) { console.error('[Brevo] BREVO_API_KEY not set'); return { ok: false }; }
+  if (!apiKey) { console.error('[Brevo] BREVO_API_KEY not set'); return { ok: false, brevoError: 'NOT_CONFIGURED' }; }
 
   const fromRaw  = process.env.SMTP_FROM || 'EduTechExOS <edutechexos121@gmail.com>';
   const fromEmail = (fromRaw.match(/<(.+)>/) || [])[1] || fromRaw.trim();
@@ -1299,14 +1299,26 @@ app.post('/api/admin/broadcast-email', authMiddleware, async (req, res) => {
     });
 
     if (!r.ok) {
+      if (r.brevoError === 'NOT_CONFIGURED') {
+        return res.status(503).json({
+          success: false,
+          error: 'Email service not configured. Please set the BREVO_API_KEY environment variable in your Render backend settings, then redeploy.',
+        });
+      }
       const brevoStatus = parseInt((r.brevoError || '').split(':')[0], 10);
       if (brevoStatus === 401) {
         return res.status(503).json({
           success: false,
-          error: 'Email service rejected the request: the server IP address is not authorized. Go to Brevo → Security → Authorised IPs and add the current server IP.',
+          error: 'Invalid Brevo API key (401). Double-check BREVO_API_KEY in Render environment variables.',
         });
       }
-      return res.status(502).json({ success: false, error: `Email provider error: ${r.brevoError}` });
+      if (brevoStatus === 403) {
+        return res.status(503).json({
+          success: false,
+          error: 'Brevo rejected the request (403): the server IP is not on the authorised list. Go to Brevo → Account → Security → Authorised IPs and add the Render server IP, or disable IP restriction.',
+        });
+      }
+      return res.status(502).json({ success: false, error: `Email provider error (${brevoStatus || 'unknown'}): ${r.brevoError}` });
     }
 
     console.log(`[broadcast] Admin ${req.user.email} sent "${subject.trim()}" to ${allEmails.length} users.`);

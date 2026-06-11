@@ -224,14 +224,16 @@ export default function DashboardSidebar({
         return next;
       });
     };
-    const handleMemberUpdated = ({
+    const handleMemberUpdated = async ({
       email,
       role,
       channelIds,
     }: { email?: string; role?: string; channelIds?: string[] } = {}) => {
       const store = useDashboardStore.getState();
-      store.loadLocalMembers?.();
-      store.loadWorkspaceChannels?.();
+      // Load workspace channels first so new channels exist in the store,
+      // then load members so memberIds are correctly rebuilt from DB channelIds.
+      await store.loadWorkspaceChannels?.();
+      await store.loadLocalMembers?.();
 
       if (email) {
         try {

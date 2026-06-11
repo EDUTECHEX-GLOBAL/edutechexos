@@ -1333,7 +1333,7 @@ export default function AdminPage() {
             <div className="mx-auto max-w-2xl">
               <div style={{ borderRadius: 20, border: '1.5px solid rgba(192,38,211,0.14)', background: '#FFFFFF', padding: 24, boxShadow: '0 4px 24px rgba(192,38,211,0.08)' }}>
                 {/* Top accent */}
-                <div style={{ height: 3, background: 'linear-gradient(90deg, #C026D3, #8B3FDB)', borderRadius: 3, marginBottom: 24, marginLeft: -24, marginRight: -24, marginTop: -24, borderRadius: '8px 8px 0 0' }} />
+                <div style={{ height: 3, background: 'linear-gradient(90deg, #C026D3, #8B3FDB)', borderRadius: '8px 8px 0 0', marginBottom: 24, marginLeft: -24, marginRight: -24, marginTop: -24 }} />
                 <div className="mb-6 flex items-start gap-4">
                   <div style={{ width: 48, height: 48, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(192,38,211,0.10)', border: '1.5px solid rgba(192,38,211,0.20)', flexShrink: 0 }}>
                     <Send size={20} style={{ color: '#C026D3' }} />
