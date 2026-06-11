@@ -330,31 +330,17 @@ export default function AdminPage() {
     return members.filter((m) => channel?.memberIds?.includes(m.id));
   }
 
-  async function handleChannelToggle(memberId: string, channelId: string, checked: boolean) {
+  function handleChannelToggle(memberId: string, channelId: string, checked: boolean) {
     const current = getExtraChannels(memberId).map((c) => c.id);
+    if (checked && current.length >= 3) {
+      toast.error('Max 3 channels per user. Remove one first.');
+      return;
+    }
     const next = checked
       ? [...new Set([...current, channelId])]
       : current.filter((id) => id !== channelId);
-    // Optimistic local update
+    // setMemberWorkspaceChannels handles both the optimistic update and the backend PATCH
     setMemberWorkspaceChannels(memberId, next);
-
-    // Persist to backend for DB members
-    const rawId = memberId.replace('member-', '');
-    if (rawId.length === 24) {
-      try {
-        const token = getAdminToken();
-        await fetch(`${API_BASE}/api/access-requests/${rawId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ channelIds: next }),
-        });
-      } catch {
-        /* non-critical — local update already applied */
-      }
-    }
 
     const member = members.find((m) => m.id === memberId);
     const channel = extraChannels.find((c) => c.id === channelId);
@@ -942,16 +928,22 @@ export default function AdminPage() {
                               <span className="text-xs text-ink-light italic">Full access</span>
                             ) : (
                               <div className="flex flex-col gap-1.5">
+                                <span style={{ fontSize: 10, fontWeight: 700, color: memberExtraChannels.length >= 3 ? '#EF476F' : 'rgba(90,95,128,0.55)', marginBottom: 2 }}>
+                                  {memberExtraChannels.length}/3 channels
+                                </span>
                                 {extraChannels.map((c) => {
                                   const checked = memberExtraChannels.some((ec) => ec.id === c.id);
+                                  const atCap = !checked && memberExtraChannels.length >= 3;
                                   return (
                                     <label
                                       key={c.id}
-                                      className="flex items-center gap-2 cursor-pointer select-none group"
+                                      className="flex items-center gap-2 select-none group"
+                                      style={{ cursor: atCap ? 'not-allowed' : 'pointer', opacity: atCap ? 0.45 : 1 }}
                                     >
                                       <input
                                         type="checkbox"
                                         checked={checked}
+                                        disabled={atCap}
                                         onChange={(e) =>
                                           handleChannelToggle(member.id, c.id, e.target.checked)
                                         }

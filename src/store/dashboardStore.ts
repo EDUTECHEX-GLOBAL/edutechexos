@@ -138,6 +138,7 @@ type Member = {
   role: string;
   status: 'online' | 'away' | 'offline';
   color: string;
+  channelIds?: string[];
 };
 
 type Channel = {
@@ -1022,8 +1023,7 @@ export const useDashboardStore = create<DashboardState>()(
               const assigned = dbMembers
                 .filter((m) => {
                   if (privilegedIds.has(m.id)) return true;
-                  const ids: string[] = (m as unknown as { channelIds?: string[] }).channelIds ?? [];
-                  return ids.includes(ch.id);
+                  return (m.channelIds ?? []).includes(ch.id);
                 })
                 .map((m) => m.id);
               return syncCount({ ...ch, memberIds: assigned });
@@ -1226,10 +1226,8 @@ export const useDashboardStore = create<DashboardState>()(
             method: 'PATCH',
             body: JSON.stringify({ channelIds }),
           })
-            .then(() => {
-              get().loadLocalMembers();
-            })
-            .catch(() => {});
+            .then(() => get().loadLocalMembers())
+            .catch(() => get().loadLocalMembers());
         }
 
         set((s) => ({
