@@ -23,6 +23,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const bcrypt = require('bcrypt');
 // ── Zero-dependency rate limiter — replaces express-rate-limit entirely.
 // express-rate-limit throws ERR_ERL_UNEXPECTED_X_FORWARDED_FOR on Render
 // (a proxy host) even with app.set('trust proxy', 1) + validate:false due
@@ -370,15 +371,16 @@ const MessageSchema = new mongoose.Schema(
 MessageSchema.index({ text: 'text', sender: 'text' });
 const Message = mongoose.model('Message', MessageSchema);
 
-// ── Hardcoded accounts (never touch the DB) ──────────────────────────────────
+// ── Hardcoded accounts — passwords loaded from env vars, never from source ────
+// Set these in Render → Environment: SYS_PASS_ADMIN, SYS_PASS_ADITYA, etc.
 const VALID_ACCOUNTS = [
-  { email: 'admin@edutechex.in',     password: 'Admin@2026',    name: 'Admin',            role: 'Admin'    },
-  { email: 'aditya@edutechex.in',    password: 'TeamOS@2026',   name: 'Aditya Cherikuri', role: 'Manager'  },
-  { email: 'dev.rk@edutechex.in',    password: 'DevAccess#26',  name: 'Developer RK',     role: 'Developer'},
-  { email: 'design.sa@edutechex.in', password: 'Design$2026',   name: 'Designer SA',      role: 'Designer' },
-  { email: 'mohan.kumar@edutechex.in',  password: 'MohanK@2026', name: 'Mohan K.', role: 'Member' },
-  { email: 'mohan.reddy@edutechex.in',  password: 'MohanR@2026', name: 'Mohan R.', role: 'Member' },
-  { email: 'mohan.sen@edutechex.in',    password: 'MohanS@2026', name: 'Mohan S.', role: 'Member' },
+  { email: 'admin@edutechex.in',        password: process.env.SYS_PASS_ADMIN   || '', name: 'Admin',            role: 'Admin'    },
+  { email: 'aditya@edutechex.in',       password: process.env.SYS_PASS_ADITYA  || '', name: 'Aditya Cherikuri', role: 'Manager'  },
+  { email: 'dev.rk@edutechex.in',       password: process.env.SYS_PASS_DEV_RK  || '', name: 'Developer RK',     role: 'Developer'},
+  { email: 'design.sa@edutechex.in',    password: process.env.SYS_PASS_DESIGN  || '', name: 'Designer SA',      role: 'Designer' },
+  { email: 'mohan.kumar@edutechex.in',  password: process.env.SYS_PASS_MOHAN_K || '', name: 'Mohan K.',         role: 'Member'   },
+  { email: 'mohan.reddy@edutechex.in',  password: process.env.SYS_PASS_MOHAN_R || '', name: 'Mohan R.',         role: 'Member'   },
+  { email: 'mohan.sen@edutechex.in',    password: process.env.SYS_PASS_MOHAN_S || '', name: 'Mohan S.',         role: 'Member'   },
 ];
 
 const AccessRequestSchema = new mongoose.Schema({
@@ -393,20 +395,6 @@ const AccessRequestSchema = new mongoose.Schema({
 });
 const AccessRequest = mongoose.model('AccessRequest', AccessRequestSchema);
 
-// ── Direct Messages ──────────────────────────────────────────────────────────
-const DirectMessageSchema = new mongoose.Schema({
-  fromEmail:  { type: String, required: true, index: true },
-  fromName:   { type: String, required: true },
-  toEmail:    { type: String, required: true, index: true },
-  text:       { type: String, default: '' },
-  audioUrl:   { type: String },
-  files:      [{ name: String, url: String, type: String }],
-  timestamp:  { type: Date, default: Date.now },
-  read:       { type: Boolean, default: false },
-}, { strict: false });
-// Compound index so conversation queries are fast
-DirectMessageSchema.index({ fromEmail: 1, toEmail: 1, timestamp: -1 });
-const DirectMessage = mongoose.model('DirectMessage', DirectMessageSchema);
 
 // ── Password reset codes (TTL: 15 min) ──────────────────────────────────────
 const ResetCodeSchema = new mongoose.Schema({
@@ -670,7 +658,7 @@ app.post('/api/access-requests', authLimiter, async (req, res) => {
       });
     }
 
-    const request = new AccessRequest({ name, email: emailClean, password, role });
+    const request = new AccessRequest({ name, email: emailClean, password: await bcrypt.hash(password, 10), role });
     const saved = await request.save();
     const { _id, __v, ...rest } = saved.toObject();
 
@@ -1459,142 +1447,7 @@ app.patch('/api/meeting-access/:messageId/grant', authMiddleware, async (req, re
   }
 });
 
-// ── Direct Message Routes ──────────────────────────────────────────────────────
 
-// GET /api/dm/conversations — list all unique DM partners for the current user
-app.get('/api/dm/conversations', authMiddleware, async (req, res) => {
-  try {
-    const myEmail = req.user.email.toLowerCase();
-
-    // Pull latest message per conversation partner
-    const msgs = await DirectMessage.find({
-      $or: [{ fromEmail: myEmail }, { toEmail: myEmail }],
-    }).sort({ timestamp: -1 }).lean();
-
-    const convMap = new Map();
-    for (const msg of msgs) {
-      const partner = msg.fromEmail === myEmail ? msg.toEmail : msg.fromEmail;
-      const partnerName = msg.fromEmail === myEmail ? null : msg.fromName;
-      if (!convMap.has(partner)) {
-        convMap.set(partner, {
-          partnerEmail: partner,
-          partnerName: partnerName || partner,
-          lastMessage: msg.text || (msg.audioUrl ? '[Voice message]' : '[File]'),
-          lastTimestamp: msg.timestamp,
-          unread: 0,
-        });
-      }
-      if (msg.toEmail === myEmail && !msg.read) {
-        convMap.get(partner).unread = (convMap.get(partner).unread || 0) + 1;
-      }
-    }
-
-    // Enrich partner names from AccessRequest if missing
-    const convList = Array.from(convMap.values());
-    for (const conv of convList) {
-      if (!conv.partnerName || conv.partnerName === conv.partnerEmail) {
-        const u = await AccessRequest.findOne({ email: conv.partnerEmail }).lean().catch(() => null);
-        if (u) conv.partnerName = u.name;
-      }
-    }
-
-    res.json({ success: true, conversations: convList });
-  } catch (err) {
-    res.status(500).json({ success: false, error: String(err) });
-  }
-});
-
-// GET /api/dm/unread-count — total unread DMs for current user
-// MUST be before /api/dm/:partnerEmail or Express captures it as a partner email
-app.get('/api/dm/unread-count', authMiddleware, async (req, res) => {
-  try {
-    const count = await DirectMessage.countDocuments({
-      toEmail: req.user.email.toLowerCase(),
-      read: false,
-    });
-    res.json({ success: true, count });
-  } catch (err) {
-    res.status(500).json({ success: false, error: String(err) });
-  }
-});
-
-// GET /api/dm/:partnerEmail — fetch message thread with one user
-app.get('/api/dm/:partnerEmail', authMiddleware, async (req, res) => {
-  try {
-    const myEmail = req.user.email.toLowerCase();
-    const partnerEmail = decodeURIComponent(req.params.partnerEmail).toLowerCase();
-    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
-
-    const msgs = await DirectMessage.find({
-      $or: [
-        { fromEmail: myEmail,      toEmail: partnerEmail },
-        { fromEmail: partnerEmail, toEmail: myEmail      },
-      ],
-    }).sort({ timestamp: 1 }).limit(limit).lean();
-
-    // Mark incoming messages as read
-    await DirectMessage.updateMany(
-      { fromEmail: partnerEmail, toEmail: myEmail, read: false },
-      { $set: { read: true } }
-    ).catch(() => {});
-
-    const formatted = msgs.map(({ _id, __v, ...m }) => ({ id: _id.toString(), ...m }));
-    res.json({ success: true, messages: formatted });
-  } catch (err) {
-    res.status(500).json({ success: false, error: String(err) });
-  }
-});
-
-// POST /api/dm/:partnerEmail — send a direct message
-app.post('/api/dm/:partnerEmail', authMiddleware, async (req, res) => {
-  try {
-    const myEmail    = req.user.email.toLowerCase();
-    const myName     = req.user.name || req.user.email;
-    const partnerEmail = decodeURIComponent(req.params.partnerEmail).toLowerCase();
-    const { text, audioUrl, files } = req.body;
-
-    if (!text && !audioUrl && (!files || files.length === 0)) {
-      return res.status(400).json({ success: false, error: 'Message content is required.' });
-    }
-
-    const saved = await new DirectMessage({
-      fromEmail:  myEmail,
-      fromName:   myName,
-      toEmail:    partnerEmail,
-      text:       text || '',
-      audioUrl:   audioUrl || undefined,
-      files:      files   || [],
-      timestamp:  new Date(),
-      read:       false,
-    }).save();
-
-    const formatted = { id: saved._id.toString(), ...saved.toObject() };
-    delete formatted._id; delete formatted.__v;
-
-    // Push real-time to both sides of the conversation
-    const room = 'dm:' + [myEmail, partnerEmail].sort().join('::');
-    io.to(room).emit('dm_message', formatted);
-
-    res.json({ success: true, message: formatted });
-  } catch (err) {
-    res.status(500).json({ success: false, error: String(err) });
-  }
-});
-
-// DELETE /api/dm/:id — soft-delete a single DM (only sender can delete)
-app.delete('/api/dm/:id', authMiddleware, async (req, res) => {
-  try {
-    const msg = await DirectMessage.findById(req.params.id).lean();
-    if (!msg) return res.status(404).json({ success: false, error: 'Message not found.' });
-    if (msg.fromEmail !== req.user.email.toLowerCase() && req.user.role !== 'Admin') {
-      return res.status(403).json({ success: false, error: 'Only the sender can delete this message.' });
-    }
-    await DirectMessage.findByIdAndUpdate(req.params.id, { $set: { text: 'Message deleted.', deleted: true } });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: String(err) });
-  }
-});
 
 // ── Meeting Invite Email ───────────────────────────────────────────────────────
 
@@ -1752,7 +1605,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (!request) {
       return res.status(401).json({ success: false, error: 'invalid', message: 'Invalid credentials. Use an approved user account.' });
     }
-    if (request.password !== password) {
+    if (!(await bcrypt.compare(password, request.password))) {
       return res.status(401).json({ success: false, error: 'invalid', message: 'Invalid credentials. Use an approved user account.' });
     }
     if (request.status === 'pending') {

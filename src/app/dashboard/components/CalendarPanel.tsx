@@ -24,6 +24,7 @@ import {
 import { useDashboardStore } from '@/store/dashboardStore';
 import type { Message } from '@/store/dashboardStore';
 import { GOOGLE_MEET_LINKS } from '@/lib/meetLinks';
+import { getSocket } from '@/lib/socket';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 // Per-user keys so each team member's calendar and deadline cache are isolated.
@@ -332,6 +333,8 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
   const [grantFor, setGrantFor] = useState<string | null>(null);
   const [grantEmail, setGrantEmail] = useState('');
   const [granting, setGranting] = useState(false);
+  // messageId → whether the current user has been explicitly granted access
+  const [accessCache, setAccessCache] = useState<Record<string, boolean>>({});
 
   const runScan = useCallback((msgs: Record<string, Message[]>) => {
     setScanning(true);
@@ -412,6 +415,41 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
   const past = allMeetings.filter((m) => !isUpcoming(m.timeStr)).reverse();
   const futureDeadlines = deadlines.filter((d) => !d.dateMs || d.dateMs >= Date.now() - 3600000);
   const pastDeadlines = deadlines.filter((d) => d.dateMs && d.dateMs < Date.now() - 3600000);
+
+  // Fetch backend access grants for meetings where local canJoin() is false,
+  // then listen for live meeting_access_granted events.
+  useEffect(() => {
+    if (!currentUser) return;
+    const user = currentUser;
+    const tk = (() => { try { return JSON.parse(localStorage.getItem('edutechex_token') || '{}')?.token; } catch { return ''; } })();
+    if (!tk) return;
+
+    // For each meeting the local check denies, ask the backend if access was granted
+    allMeetings
+      .filter((m) => !canJoin(m, user))
+      .forEach(async (m) => {
+        try {
+          const res = await fetch(`${API_BASE}/api/meeting-access/${m.id}`, {
+            headers: { Authorization: `Bearer ${tk}` },
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data.success && data.canJoin) {
+            setAccessCache((prev) => ({ ...prev, [m.id]: true }));
+          }
+        } catch { /* backend unavailable */ }
+      });
+
+    // Real-time: when host grants access, update cache for this user
+    const socket = getSocket();
+    const onGranted = ({ messageId, email }: { messageId: string; email: string }) => {
+      if (email.toLowerCase() === user.email.toLowerCase()) {
+        setAccessCache((prev) => ({ ...prev, [messageId]: true }));
+      }
+    };
+    socket.on('meeting_access_granted', onGranted);
+    return () => { socket.off('meeting_access_granted', onGranted); };
+  }, [currentUser, allMeetings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function connectGcal() {
     const email = gcalEmail.trim();
@@ -574,7 +612,7 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                   </div>
                 ) : (
                   upcoming.map((m) => {
-                    const ok = canJoin(m, currentUser);
+                    const ok = accessCache[m.id] ?? canJoin(m, currentUser);
                     const isHost = currentUser?.name.toLowerCase() === m.sender.toLowerCase();
                     const { mo, dy } = dateBlock(m.timeStr);
                     const cs = chips(m.people);

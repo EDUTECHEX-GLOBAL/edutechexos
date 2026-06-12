@@ -157,10 +157,6 @@ export default function LandingHero() {
           0%,100% { transform: translateY(0px); }
           50%      { transform: translateY(8px); }
         }
-        @keyframes hero-ticker {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
         @keyframes bubble-pop {
           0% { transform: scale(1); }
           40% { transform: scale(1.12); }
@@ -277,21 +273,6 @@ export default function LandingHero() {
             <a href="#features" className="hero-cta-ghost">Explore features</a>
           </div>
 
-          {/* Social proof */}
-          <div className="h-in h-d5 flex flex-wrap items-center gap-6">
-            {[
-              { value: '11+', label: 'Team members', color: '#5B4FDB' },
-              { value: '6', label: 'Channels', color: '#0DAFCE' },
-              { value: '99.8%', label: 'Uptime', color: '#10C98A' },
-            ].map(({ value, label, color }) => (
-              <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 800, color, lineHeight: 1, letterSpacing: '-0.03em' }}>{value}</span>
-                <span style={{ fontSize: 9.5, fontWeight: 600, color: 'rgba(90,95,128,0.55)', letterSpacing: '.12em', textTransform: 'uppercase', marginTop: 2 }}>{label}</span>
-              </div>
-            ))}
-            <div style={{ height: 32, width: 1.5, background: 'rgba(26,27,58,0.18)' }} />
-            <span style={{ fontSize: 9.5, fontWeight: 600, color: 'rgba(90,95,128,0.45)', letterSpacing: '.10em', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace" }}>Live · Hyderabad, IN</span>
-          </div>
         </div>
 
         {/* ── Right: Floating dashboard mockup ── */}
@@ -313,20 +294,6 @@ export default function LandingHero() {
         </div>
       </div>
 
-      {/* ── Bottom: trusted by ticker ── */}
-      <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{ borderTop: '1px solid rgba(91,79,219,0.07)' }}>
-        <div style={{ display: 'flex', overflow: 'hidden', padding: '14px 0', background: 'rgba(255,255,255,0.60)', backdropFilter: 'blur(8px)' }}>
-          <div style={{ display: 'flex', width: 'fit-content', alignItems: 'center', gap: 48, animation: 'hero-ticker 30s linear infinite' }}>
-            {[...Array(2)].map((_, rep) => (
-              <div key={rep} style={{ display: 'flex', alignItems: 'center', gap: 48, paddingRight: 48 }}>
-                {['Oxford', 'Harvard', 'Cambridge', 'Princeton', 'Stanford', 'MIT', 'LSE', 'IIT'].map(name => (
-                  <span key={name} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.28em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.35)', whiteSpace: 'nowrap', fontFamily: "'JetBrains Mono', monospace" }}>{name}</span>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
     </section>
   );
 }
