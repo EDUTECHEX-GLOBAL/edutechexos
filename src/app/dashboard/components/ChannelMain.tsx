@@ -88,6 +88,8 @@ export default function ChannelMain({
     activeThreadId,
     setActiveThread,
     setTyping,
+    applyPinFromSocket,
+    applyUnpinFromSocket,
   } = useDashboardStore();
   const channel = channels.find((c) => c.id === activeChannelId) ?? channels[0];
   const [showMembersModal, setShowMembersModal] = useState(false);
@@ -104,13 +106,23 @@ export default function ChannelMain({
     const onStopTyping = ({ channelId, userName }: { channelId: string; userName: string }) => {
       setTyping(channelId, userName, false);
     };
+    const onPinned = ({ channelId, messageId }: { channelId: string; messageId: string }) => {
+      applyPinFromSocket(channelId, messageId);
+    };
+    const onUnpinned = ({ channelId, messageId }: { channelId: string; messageId: string }) => {
+      applyUnpinFromSocket(channelId, messageId);
+    };
     socket.on('user_typing', onTyping);
     socket.on('user_stopped_typing', onStopTyping);
+    socket.on('message_pinned', onPinned);
+    socket.on('message_unpinned', onUnpinned);
     return () => {
       socket.off('user_typing', onTyping);
       socket.off('user_stopped_typing', onStopTyping);
+      socket.off('message_pinned', onPinned);
+      socket.off('message_unpinned', onUnpinned);
     };
-  }, [setTyping]);
+  }, [setTyping, applyPinFromSocket, applyUnpinFromSocket]);
 
   const pinnedIds = pinnedMessageIds[activeChannelId] ?? [];
   const typing = typingUsers[activeChannelId] ?? [];

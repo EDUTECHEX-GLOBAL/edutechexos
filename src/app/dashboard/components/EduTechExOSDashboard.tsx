@@ -646,18 +646,25 @@ export default function EduTechExOSDashboard() {
 
   // ── Socket.IO real-time message delivery ──────────────────────────────────
   // Join the active channel room so we receive live `new_message` events.
-  // Uses activeChannelId (not activeChannel) so DM rooms (dm-X-Y) work correctly.
+  // Also join all other accessible channel rooms so DMs and background channels
+  // deliver in real-time even when the user is viewing a different channel.
   // Re-joins on every 'connect' event so Render cold-start wakeups don't silently
   // break real-time delivery for User 2.
   useEffect(() => {
     const socket = getSocket();
 
-    // Join correct room (DMs use 'dm-X-Y', workspace channels use their id)
-    socket.emit('join_channel', activeChannelId);
-
-    // Rejoin room and reload messages whenever socket reconnects (Render cold start, network blip)
-    const handleReconnect = () => {
+    // Join the active channel, then all others so background DMs arrive in real-time
+    const joinAllChannels = () => {
       socket.emit('join_channel', activeChannelId);
+      useDashboardStore.getState().channels.forEach((ch) => {
+        if (ch.id !== activeChannelId) socket.emit('join_channel', ch.id);
+      });
+    };
+    joinAllChannels();
+
+    // Rejoin all rooms and reload messages whenever socket reconnects (Render cold start, network blip)
+    const handleReconnect = () => {
+      joinAllChannels();
       useDashboardStore.getState().loadLocalMessages?.();
     };
 
@@ -673,7 +680,11 @@ export default function EduTechExOSDashboard() {
       if (message.sender !== currentUserRef.current?.name) {
         if (settingsRef.current.soundNotifications) playNotificationSound();
         if (settingsRef.current.desktopNotifications) {
-          showDesktopNotification(`${message.sender} · #${channelId}`, message.text);
+          const isDMChannel = channelId.startsWith('member-');
+          const notifTitle = isDMChannel
+            ? `DM from ${message.sender}`
+            : `${message.sender} · #${channelId}`;
+          showDesktopNotification(notifTitle, message.text);
         }
       }
     };
@@ -736,12 +747,22 @@ export default function EduTechExOSDashboard() {
       }, 800);
     };
 
+    // Reload channel list when admin creates or deletes a channel
+    const handleChannelCreated = () => {
+      useDashboardStore.getState().loadWorkspaceChannels?.();
+    };
+    const handleChannelDeleted = () => {
+      useDashboardStore.getState().loadWorkspaceChannels?.();
+    };
+
     socket.on('connect', handleReconnect);
     socket.on('new_message', handleNewMessage);
     socket.on('message_updated', handleUpdatedMessage);
     socket.on('message_deleted', handleDeletedMessage);
     socket.on('member_updated', handleMemberUpdated);
     socket.on('user_forcefully_removed', handleForcefullyRemoved);
+    socket.on('channel_created', handleChannelCreated);
+    socket.on('channel_deleted', handleChannelDeleted);
 
     return () => {
       socket.off('connect', handleReconnect);
@@ -750,6 +771,8 @@ export default function EduTechExOSDashboard() {
       socket.off('message_deleted', handleDeletedMessage);
       socket.off('member_updated', handleMemberUpdated);
       socket.off('user_forcefully_removed', handleForcefullyRemoved);
+      socket.off('channel_created', handleChannelCreated);
+      socket.off('channel_deleted', handleChannelDeleted);
       socket.emit('leave_channel', activeChannelId);
     };
   }, [activeChannelId, addMessageFromSocket, updateMessageFromSocket, deleteMessageFromSocket]);

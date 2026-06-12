@@ -174,6 +174,8 @@ type DashboardState = {
   pinnedMessageIds: Record<string, string[]>;
   pinMessage: (channelId: string, messageId: string) => void;
   unpinMessage: (channelId: string, messageId: string) => void;
+  applyPinFromSocket: (channelId: string, messageId: string) => void;
+  applyUnpinFromSocket: (channelId: string, messageId: string) => void;
   loadPinnedMessages: () => Promise<void>;
 
   bookmarkedMessageIds: string[];
@@ -640,6 +642,22 @@ export const useDashboardStore = create<DashboardState>()(
           `${API_BASE}/api/pinned/${encodeURIComponent(channelId)}/${encodeURIComponent(messageId)}`,
           { method: 'DELETE' }
         ).catch(() => {});
+      },
+      applyPinFromSocket: (channelId, messageId) => {
+        set((s) => ({
+          pinnedMessageIds: {
+            ...s.pinnedMessageIds,
+            [channelId]: [...new Set([...(s.pinnedMessageIds[channelId] ?? []), messageId])],
+          },
+        }));
+      },
+      applyUnpinFromSocket: (channelId, messageId) => {
+        set((s) => ({
+          pinnedMessageIds: {
+            ...s.pinnedMessageIds,
+            [channelId]: (s.pinnedMessageIds[channelId] ?? []).filter((id) => id !== messageId),
+          },
+        }));
       },
       loadPinnedMessages: async () => {
         try {

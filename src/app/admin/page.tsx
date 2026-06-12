@@ -1737,7 +1737,7 @@ export default function AdminPage() {
                     .sort((a, b) => (b.totalActiveMinutes ?? 0) - (a.totalActiveMinutes ?? 0))
                     .map((rec) => {
                       const member = members.find(m => m.email.toLowerCase() === rec.email.toLowerCase());
-                      const initials = member?.initials ?? rec.name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '??';
+                      const initials = member?.initials ?? (rec.name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '??');
                       const color = member?.color ?? '#64748b';
                       const activeH = Math.floor((rec.totalActiveMinutes ?? 0) / 60);
                       const activeM = (rec.totalActiveMinutes ?? 0) % 60;
