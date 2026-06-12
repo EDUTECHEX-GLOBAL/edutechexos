@@ -104,6 +104,10 @@ export default function AdminPage() {
   };
   const [awRecords, setAwRecords] = useState<AWRecord[]>([]);
   const [awLoading, setAwLoading] = useState(false);
+  const [awDate, setAwDate] = useState<string>(() => {
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    return new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+  });
 
   useEffect(() => {
     const authData = localStorage.getItem('edutechex_token');
@@ -243,18 +247,19 @@ export default function AdminPage() {
       .finally(() => setActivityLoading(false));
   }, []);
 
-  const fetchAwData = useCallback(() => {
+  const fetchAwData = useCallback((date?: string) => {
     const token = getAdminToken();
     if (!token) return;
     setAwLoading(true);
-    fetch(`${API_BASE}/api/activity/aw`, { headers: { Authorization: `Bearer ${token}` } })
+    const d = date ?? awDate;
+    fetch(`${API_BASE}/api/activity/aw?date=${d}`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data: { success: boolean; records?: AWRecord[] } | null) => {
         if (data?.success && Array.isArray(data.records)) setAwRecords(data.records);
       })
       .catch(() => {})
       .finally(() => setAwLoading(false));
-  }, []);
+  }, [awDate]);
 
   useEffect(() => {
     if (activeTab === 'desktop') fetchAwData();
@@ -1683,41 +1688,107 @@ export default function AdminPage() {
           {/* ════════════════════════════════════════════════════════════
               TAB: DESKTOP ACTIVITY (ActivityWatch)
           ════════════════════════════════════════════════════════════ */}
-          {activeTab === 'desktop' && (
+          {activeTab === 'desktop' && (() => {
+            const istOffset = 5.5 * 60 * 60 * 1000;
+            const todayIST = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+            const isToday = awDate === todayIST;
+
+            // Summary stats
+            const totalActive = awRecords.reduce((s, r) => s + (r.totalActiveMinutes ?? 0), 0);
+            const totalAfk    = awRecords.reduce((s, r) => s + (r.totalAfkMinutes    ?? 0), 0);
+            const mostActive  = awRecords.length ? awRecords.reduce((a, b) => (a.totalActiveMinutes ?? 0) > (b.totalActiveMinutes ?? 0) ? a : b) : null;
+            const appTotals: Record<string, number> = {};
+            awRecords.forEach(r => (r.appBreakdown ?? []).forEach(({ app, minutes }) => { appTotals[app] = (appTotals[app] ?? 0) + minutes; }));
+            const topTeamApp = Object.entries(appTotals).sort((a, b) => b[1] - a[1])[0];
+
+            // Members who haven't synced today (only relevant for today's view)
+            const syncedEmails = new Set(awRecords.map(r => r.email.toLowerCase()));
+            const missingMembers = isToday
+              ? members.filter(m => !syncedEmails.has(m.email.toLowerCase()))
+              : [];
+
+            return (
             <div className="space-y-6">
               <div style={{ height: 3, background: 'linear-gradient(90deg, #10B981, #0DAFCE)', borderRadius: 3 }} />
 
-              {/* Header */}
+              {/* Header + date picker + refresh */}
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
                   <p style={{ marginBottom: 4, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase', color: '#10B981' }}>
-                    Live · Today · Via ActivityWatch
+                    {isToday ? 'Live · Today' : awDate} · Via ActivityWatch
                   </p>
                   <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A' }}>
                     <Monitor size={20} style={{ color: '#10B981' }} /> Desktop Activity
                   </h2>
                   <p style={{ marginTop: 4, fontSize: 13, color: 'rgba(90,95,128,0.70)', lineHeight: 1.6, maxWidth: 520 }}>
-                    Real computer activity — which apps each team member is using right now. Requires <strong>ActivityWatch</strong> + <code style={{ fontSize: 11, background: 'rgba(16,185,129,0.08)', padding: '1px 6px', borderRadius: 4 }}>aw-sync.js</code> running on their machine.
+                    Real computer activity — which apps each team member is using. Requires <strong>ActivityWatch</strong> + <code style={{ fontSize: 11, background: 'rgba(16,185,129,0.08)', padding: '1px 6px', borderRadius: 4 }}>aw-sync.js</code> on their machine.
                   </p>
                 </div>
-                <button type="button" onClick={fetchAwData}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 12, border: '1.5px solid rgba(16,185,129,0.22)', background: '#FFFFFF', padding: '8px 16px', fontSize: 11, fontWeight: 600, color: '#10B981', cursor: 'pointer', transition: 'all .2s', whiteSpace: 'nowrap' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(16,185,129,0.06)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#FFFFFF'; }}
-                >
-                  <RefreshCw size={13} className={awLoading ? 'animate-spin' : ''} /> Refresh
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <input
+                    type="date"
+                    value={awDate}
+                    max={todayIST}
+                    onChange={e => {
+                      const d = e.target.value;
+                      setAwDate(d);
+                      fetchAwData(d);
+                    }}
+                    style={{ borderRadius: 10, border: '1.5px solid rgba(16,185,129,0.22)', background: '#FFFFFF', padding: '7px 12px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', outline: 'none', cursor: 'pointer' }}
+                  />
+                  <button type="button" onClick={() => fetchAwData()}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 10, border: '1.5px solid rgba(16,185,129,0.22)', background: '#FFFFFF', padding: '8px 16px', fontSize: 11, fontWeight: 600, color: '#10B981', cursor: 'pointer', transition: 'all .2s', whiteSpace: 'nowrap' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(16,185,129,0.06)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#FFFFFF'; }}
+                  >
+                    <RefreshCw size={13} className={awLoading ? 'animate-spin' : ''} /> Refresh
+                  </button>
+                </div>
               </div>
 
+              {/* Summary stats row */}
+              {awRecords.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+                  {[
+                    { label: 'Team active', value: `${Math.floor(totalActive / 60)}h ${totalActive % 60}m`, color: '#10B981', bg: 'rgba(16,185,129,0.07)' },
+                    { label: 'Team AFK', value: `${Math.floor(totalAfk / 60)}h ${totalAfk % 60}m`, color: '#D97706', bg: 'rgba(245,158,11,0.07)' },
+                    { label: 'Most active', value: mostActive ? (mostActive.name || mostActive.email).split(' ')[0] : '—', color: '#6366F1', bg: 'rgba(99,102,241,0.07)' },
+                    { label: 'Top app (team)', value: topTeamApp ? topTeamApp[0].replace(/^🌐 /, '') : '—', color: '#0DAFCE', bg: 'rgba(13,175,206,0.07)' },
+                  ].map(({ label, value, color, bg }) => (
+                    <div key={label} style={{ borderRadius: 12, background: bg, padding: '12px 16px' }}>
+                      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.10em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.55)', marginBottom: 4 }}>{label}</p>
+                      <p style={{ fontSize: 16, fontWeight: 800, color, lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Missing members alert (today only) */}
+              {missingMembers.length > 0 && (
+                <div style={{ borderRadius: 12, border: '1.5px solid rgba(245,158,11,0.22)', background: 'rgba(245,158,11,0.05)', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <span style={{ fontSize: 16, lineHeight: 1.4 }}>⚠️</span>
+                  <div>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: '#B45309', marginBottom: 4 }}>
+                      {missingMembers.length} member{missingMembers.length > 1 ? 's' : ''} haven&apos;t synced today
+                    </p>
+                    <p style={{ fontSize: 11, color: 'rgba(90,95,128,0.70)' }}>
+                      {missingMembers.map(m => m.name).join(', ')} — make sure <code style={{ fontSize: 10, background: 'rgba(245,158,11,0.10)', padding: '1px 5px', borderRadius: 4 }}>aw-sync.js</code> is running on their machine.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Setup instructions banner */}
-              <div style={{ borderRadius: 14, border: '1.5px solid rgba(16,185,129,0.18)', background: 'rgba(16,185,129,0.04)', padding: '14px 18px' }}>
-                <p style={{ fontSize: 12, fontWeight: 700, color: '#059669', marginBottom: 6 }}>Setup for each team member (one time)</p>
-                <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'rgba(90,95,128,0.80)', lineHeight: 2 }}>
+              <details style={{ borderRadius: 14, border: '1.5px solid rgba(16,185,129,0.18)', background: 'rgba(16,185,129,0.04)' }}>
+                <summary style={{ padding: '12px 18px', fontSize: 12, fontWeight: 700, color: '#059669', cursor: 'pointer', userSelect: 'none' }}>
+                  Setup guide — how to connect a team member (one time)
+                </summary>
+                <ol style={{ margin: 0, padding: '0 18px 14px 36px', fontSize: 12, color: 'rgba(90,95,128,0.80)', lineHeight: 2.2 }}>
                   <li>Download &amp; install <strong>ActivityWatch</strong> from <code style={{ fontSize: 11, background: 'rgba(16,185,129,0.08)', padding: '1px 5px', borderRadius: 4 }}>activitywatch.net</code> — keep it running in system tray</li>
-                  <li>Open <code style={{ fontSize: 11, background: 'rgba(16,185,129,0.08)', padding: '1px 5px', borderRadius: 4 }}>aw-sync.js</code> (in project root) and paste their EduTechExOS token on line 20</li>
-                  <li>Run <code style={{ fontSize: 11, background: 'rgba(16,185,129,0.08)', padding: '1px 5px', borderRadius: 4 }}>node aw-sync.js</code> — it syncs every 5 minutes automatically</li>
+                  <li>Copy <code style={{ fontSize: 11, background: 'rgba(16,185,129,0.08)', padding: '1px 5px', borderRadius: 4 }}>aw-sync.js</code> to their machine, open it and set <code style={{ fontSize: 11, background: 'rgba(16,185,129,0.08)', padding: '1px 5px', borderRadius: 4 }}>EDUTECHEX_TOKEN</code> env var (or paste token on line 23)</li>
+                  <li>Run <code style={{ fontSize: 11, background: 'rgba(16,185,129,0.08)', padding: '1px 5px', borderRadius: 4 }}>node aw-sync.js</code> — syncs every 5 min. On Windows: run <code style={{ fontSize: 11, background: 'rgba(16,185,129,0.08)', padding: '1px 5px', borderRadius: 4 }}>start-aw-sync.bat</code> (auto-starts on login)</li>
                 </ol>
-              </div>
+              </details>
 
               {/* Data table */}
               {awLoading ? (
@@ -1827,7 +1898,8 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
-          )}
+          );
+          })()}
         </main>
 
         {/* ── Add user modal ───────────────────────────────────────────── */}

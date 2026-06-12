@@ -1232,17 +1232,19 @@ app.post('/api/activity/aw-sync', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/activity/aw — admin fetches all users' AW data for today
+// GET /api/activity/aw — admin fetches AW data for a given date (default: today IST)
+// Query: ?date=YYYY-MM-DD
 app.get('/api/activity/aw', authMiddleware, async (req, res) => {
   try {
     if (!req.user || req.user.role !== 'Admin') {
       return res.status(403).json({ success: false, error: 'Admin only.' });
     }
     const istOffset = 5.5 * 60 * 60 * 1000;
-    const dateStr = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+    const todayIST = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+    const dateStr = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date) ? req.query.date : todayIST;
 
     const records = await AWActivity.find({ dateStr }).lean();
-    res.json({ success: true, records });
+    res.json({ success: true, records, dateStr });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
