@@ -12,12 +12,24 @@ import { smartUpload } from '@/lib/uploadToFirebase';
 import NotificationPanel from './NotificationPanel';
 import AIPanel from './AIPanel';
 import { getSocket } from '@/lib/socket';
+import {
+  getOrCreateKeyPair,
+  publishPublicKey,
+  fetchPartnerPublicKey,
+  encryptDMMessage,
+  decryptDMMessage,
+  dmCacheKey,
+  isEncrypted,
+} from '@/lib/dmCrypto';
 
 import MyActivityCalendar from './MyActivityCalendar';
 import CalendarPanel from './CalendarPanel';
+import AdminAvailabilityView from './AdminAvailabilityView';
+import LeavePanel from './LeavePanel';
 import SearchPanel from './SearchPanel';
 
 import IntegrationsPanel from './IntegrationsPanel';
+import { useActivityWatchSync } from '@/lib/useActivityWatchSync';
 
 import UserProfileModal from './UserProfileModal';
 import WikiPanel from './WikiPanel';
@@ -51,6 +63,7 @@ import {
   Bookmark,
   BookOpen,
   CalendarPlus,
+  CalendarCheck,
   Bot,
   CalendarDays,
   ChevronDown,
@@ -92,6 +105,8 @@ import {
   Clock,
   Menu,
   ChevronLeft,
+  CalendarX,
+  Activity,
 } from 'lucide-react';
 
 type CurrentUser = {
@@ -99,6 +114,7 @@ type CurrentUser = {
   email: string;
   role: string;
   initials: string;
+  status?: string;
 };
 
 const DEFAULT_COMPANY_MEET_LINK = 'https://meet.google.com/uie-jxkt-vkx';
@@ -335,6 +351,7 @@ export default function EduTechExOSDashboard() {
     addMessageFromSocket,
     updateMessageFromSocket,
     deleteMessageFromSocket,
+    patchLocalMessage,
     addNotification,
     loadLocalMessages,
     loadLocalWikiPages,
@@ -368,6 +385,8 @@ export default function EduTechExOSDashboard() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [activityCalendarOpen, setActivityCalendarOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [availabilityOpen, setAvailabilityOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   const [channelsExpanded, setChannelsExpanded] = useState(true);
   const [membersOpen, setMembersOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -590,6 +609,10 @@ export default function EduTechExOSDashboard() {
     return members.filter((member) => channel.memberIds?.includes(member.id));
   }, [channel, currentMemberId, members]);
   const currentUserEmail = currentUser?.email?.toLowerCase() ?? '';
+
+  // ActivityWatch auto-sync — starts on login, stops on logout/unmount
+  const awStatus = useActivityWatchSync(!!currentUserEmail);
+
   const visibleNotifications = notifications.filter(
     (item) =>
       !item.recipientEmails?.length ||
@@ -644,6 +667,46 @@ export default function EduTechExOSDashboard() {
     };
   }, []); // Zustand actions are stable refs � empty deps is safe
 
+  // ── Decrypt DM messages loaded from the server ────────────────────────────
+  // Runs whenever the messages snapshot changes. Scans all DM channels for any
+  // message whose text starts with ENC: and replaces it with the plaintext.
+  // Uses a ref-set to skip already-decrypted IDs so it's effectively idempotent.
+  const decryptedIdsRef = useRef(new Set<string>());
+  useEffect(() => {
+    if (!currentUserEmail) return;
+    const authData = localStorage.getItem('edutechex_token');
+    const token = authData ? (() => { try { return JSON.parse(authData).token; } catch { return null; } })() : null;
+    if (!token) return;
+
+    const dmChannelIds = Object.keys(messages).filter((id) => id.startsWith('member-'));
+    if (dmChannelIds.length === 0) return;
+
+    (async () => {
+      const kp = await getOrCreateKeyPair().catch(() => null);
+      if (!kp) return;
+      const { privateKeyJwk } = kp;
+
+      for (const channelId of dmChannelIds) {
+        const partner = members.find((m) => m.id === channelId);
+        if (!partner?.email) continue;
+        const partnerPub = await fetchPartnerPublicKey(partner.email, token).catch(() => null);
+        if (!partnerPub) continue;
+        const cKey = dmCacheKey(currentUserEmail, partner.email);
+
+        for (const msg of messages[channelId] ?? []) {
+          if (!isEncrypted(msg.text)) continue;
+          if (decryptedIdsRef.current.has(msg.id)) continue;
+          decryptedIdsRef.current.add(msg.id);
+          try {
+            const plain = await decryptDMMessage(msg.text, privateKeyJwk, partnerPub, cKey);
+            patchLocalMessage(channelId, msg.id, { text: plain });
+          } catch { /* keep encrypted fallback */ }
+        }
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, currentUserEmail]);
+
   // ── Socket.IO real-time message delivery ──────────────────────────────────
   // Join the active channel room so we receive live `new_message` events.
   // Also join all other accessible channel rooms so DMs and background channels
@@ -668,14 +731,35 @@ export default function EduTechExOSDashboard() {
       useDashboardStore.getState().loadLocalMessages?.();
     };
 
-    const handleNewMessage = ({
+    const handleNewMessage = async ({
       channelId,
       message,
     }: {
       channelId: string;
-      message: import('@/store/dashboardStore').Message;
+      message: import('@/store/dashboardStore').Message & { senderEmail?: string };
     }) => {
-      addMessageFromSocket(channelId, message);
+      let displayMessage = message;
+
+      if (channelId.startsWith('member-') && isEncrypted(message.text)) {
+        try {
+          const authData = localStorage.getItem('edutechex_token');
+          const token = authData ? (() => { try { return JSON.parse(authData).token; } catch { return null; } })() : null;
+          if (token) {
+            const { privateKeyJwk } = await getOrCreateKeyPair();
+            const partnerEmail = message.senderEmail ?? '';
+            if (partnerEmail) {
+              const partnerPub = await fetchPartnerPublicKey(partnerEmail, token);
+              if (partnerPub) {
+                const cKey = dmCacheKey(currentUserRef.current?.email ?? '', partnerEmail);
+                const plain = await decryptDMMessage(message.text, privateKeyJwk, partnerPub, cKey);
+                displayMessage = { ...message, text: plain };
+              }
+            }
+          }
+        } catch { /* show encrypted text as fallback */ }
+      }
+
+      addMessageFromSocket(channelId, displayMessage);
       // Only notify for messages sent by someone else
       if (message.sender !== currentUserRef.current?.name) {
         if (settingsRef.current.soundNotifications) playNotificationSound();
@@ -684,7 +768,7 @@ export default function EduTechExOSDashboard() {
           const notifTitle = isDMChannel
             ? `DM from ${message.sender}`
             : `${message.sender} · #${channelId}`;
-          showDesktopNotification(notifTitle, message.text);
+          showDesktopNotification(notifTitle, displayMessage.text);
         }
       }
     };
@@ -755,6 +839,37 @@ export default function EduTechExOSDashboard() {
       useDashboardStore.getState().loadWorkspaceChannels?.();
     };
 
+    // ── Access approved / rejected in real time ──────────────────────────────
+    const handleAccessApproved = ({ email }: { email: string }) => {
+      const me = currentUserRef.current?.email?.toLowerCase();
+      if (!me || me !== email.toLowerCase()) return;
+      // Update stored token
+      try {
+        const raw = localStorage.getItem('edutechex_token');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          parsed.user = { ...parsed.user, status: 'approved' };
+          localStorage.setItem('edutechex_token', JSON.stringify(parsed));
+        }
+      } catch { /* */ }
+      setCurrentUser((prev) => prev ? { ...prev, status: 'approved' } : prev);
+      toast.success('Your account has been approved! Welcome to EduTechExOS.', { duration: 5000 });
+    };
+    const handleAccessRejected = ({ email }: { email: string }) => {
+      const me = currentUserRef.current?.email?.toLowerCase();
+      if (!me || me !== email.toLowerCase()) return;
+      try {
+        const raw = localStorage.getItem('edutechex_token');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          parsed.user = { ...parsed.user, status: 'rejected' };
+          localStorage.setItem('edutechex_token', JSON.stringify(parsed));
+        }
+      } catch { /* */ }
+      setCurrentUser((prev) => prev ? { ...prev, status: 'rejected' } : prev);
+      toast.error('Your access request has been declined by the admin.', { duration: 6000 });
+    };
+
     socket.on('connect', handleReconnect);
     socket.on('new_message', handleNewMessage);
     socket.on('message_updated', handleUpdatedMessage);
@@ -763,6 +878,8 @@ export default function EduTechExOSDashboard() {
     socket.on('user_forcefully_removed', handleForcefullyRemoved);
     socket.on('channel_created', handleChannelCreated);
     socket.on('channel_deleted', handleChannelDeleted);
+    socket.on('access_approved', handleAccessApproved);
+    socket.on('access_rejected', handleAccessRejected);
 
     return () => {
       socket.off('connect', handleReconnect);
@@ -773,6 +890,8 @@ export default function EduTechExOSDashboard() {
       socket.off('user_forcefully_removed', handleForcefullyRemoved);
       socket.off('channel_created', handleChannelCreated);
       socket.off('channel_deleted', handleChannelDeleted);
+      socket.off('access_approved', handleAccessApproved);
+      socket.off('access_rejected', handleAccessRejected);
       socket.emit('leave_channel', activeChannelId);
     };
   }, [activeChannelId, addMessageFromSocket, updateMessageFromSocket, deleteMessageFromSocket]);
@@ -822,6 +941,15 @@ export default function EduTechExOSDashboard() {
     ping(); // immediate first ping on mount
     const intervalId = setInterval(ping, 60_000);
     return () => clearInterval(intervalId);
+  }, [currentUserEmail]);
+
+  // ── E2E DM encryption — register public key with server once per login ────────
+  useEffect(() => {
+    if (!currentUserEmail) return;
+    const authData = localStorage.getItem('edutechex_token');
+    const token = authData ? (() => { try { return JSON.parse(authData).token; } catch { return null; } })() : null;
+    if (!token) return;
+    getOrCreateKeyPair().then(({ publicKeyJwk }) => publishPublicKey(publicKeyJwk, token)).catch(() => {});
   }, [currentUserEmail]);
 
   // Sync dark mode from store on mount
@@ -930,30 +1058,20 @@ export default function EduTechExOSDashboard() {
     setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 120);
   };
 
-  function sendMessage() {
+  async function sendMessage() {
     const text = composerMessage.trim();
     if (!text || !channel) return;
 
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+    const authData = localStorage.getItem('edutechex_token');
+    const token = authData ? (() => { try { return JSON.parse(authData).token; } catch { return null; } })() : null;
+
     // Increment today's message count in the activity tracker (fire-and-forget)
-    {
-      const API_BASE =
-        process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
-      const authData = localStorage.getItem('edutechex_token');
-      const token = authData
-        ? (() => {
-            try {
-              return JSON.parse(authData).token;
-            } catch {
-              return null;
-            }
-          })()
-        : null;
-      if (token) {
-        fetch(`${API_BASE}/api/activity/message`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        }).catch(() => {});
-      }
+    if (token) {
+      fetch(`${API_BASE}/api/activity/message`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      }).catch(() => {});
     }
     trackEvent('message_sent', { channel: channel?.name, channelId: activeChannelId });
 
@@ -963,14 +1081,43 @@ export default function EduTechExOSDashboard() {
         text.toLowerCase().includes(`@${member.name}`.toLowerCase())
     );
 
-    addMessage(activeChannelId, {
+    const localMsg = {
       id: `msg-${Date.now()}`,
       sender: currentUser?.name ?? 'You',
       initials: currentUser?.initials ?? 'Y',
       color: currentUserColor,
       timestamp: new Date().toISOString(),
       text,
-    });
+    };
+
+    if (activeChannelId.startsWith('member-') && token) {
+      // ── DM: encrypt before sending to server, keep plaintext locally ─────────
+      const partner = members.find((m) => m.id === activeChannelId);
+      let textToSend = text;
+      if (partner?.email) {
+        try {
+          const { privateKeyJwk } = await getOrCreateKeyPair();
+          const partnerPub = await fetchPartnerPublicKey(partner.email, token);
+          if (partnerPub) {
+            const cKey = dmCacheKey(currentUserEmail, partner.email);
+            textToSend = await encryptDMMessage(text, privateKeyJwk, partnerPub, cKey);
+          }
+        } catch { /* fallback: send plaintext */ }
+      }
+      // Optimistic local add with plaintext — socket echo is deduplicated and dropped
+      addMessageFromSocket(activeChannelId, localMsg);
+      // POST encrypted text to server
+      fetch(`${API_BASE}/api/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ ...localMsg, channelId: activeChannelId, text: textToSend }),
+      }).catch(() => {});
+    } else {
+      addMessage(activeChannelId, localMsg);
+    }
 
     // @here / @channel — notify all channel members at once
     const isBroadcast = /@(here|channel)\b/i.test(text);
@@ -1428,9 +1575,8 @@ export default function EduTechExOSDashboard() {
 
     const meetLink = companyMeetLink;
     const inviteeNames = selectedInvitees.map((member) => `@${member.name}`).join(', ');
-    // Email goes to ALL workspace members (except the scheduler themselves).
-    // The selectedInvitees are only for the "@mention" in the chat message.
-    const allMemberEmails = members
+    // Only invited members get the email and notification
+    const inviteeEmails = selectedInvitees
       .map((m) => m.email)
       .filter((e) => e && e.toLowerCase() !== currentUserEmail);
     const timeLabel = `${meetDate} at ${meetTime}`;
@@ -1458,7 +1604,7 @@ export default function EduTechExOSDashboard() {
       actorColor: currentUserColor,
       channel: channel.name,
       message: `scheduled "${title}" for ${timeLabel}. Join: ${meetLink}`,
-      recipientEmails: allMemberEmails,
+      recipientEmails: inviteeEmails,
     });
 
     // Always close the modal and return to chat first, then send email in background
@@ -1493,12 +1639,13 @@ export default function EduTechExOSDashboard() {
             time: timeLabel,
             joinLink: meetLink,
             channelId: activeChannelId,
+            inviteeEmails,
           }),
         });
         const emailResult = await emailRes.json().catch(() => ({}));
         if (emailResult.success) {
           toast.success(
-            `Meeting scheduled. Email invite sent to ${emailResult.sent} team member${emailResult.sent === 1 ? '' : 's'}.`
+            `Meeting scheduled. Invite sent to ${emailResult.sent} member${emailResult.sent === 1 ? '' : 's'}.`
           );
           trackEvent('meeting_scheduled', {
             emailInviteSent: true,
@@ -1556,6 +1703,84 @@ export default function EduTechExOSDashboard() {
         <div className="flex items-center gap-3 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] px-5 py-4 text-sm font-black shadow-sm  dark:bg-[#191E2F] dark:text-[#9BA6D3]">
           <Loader2 size={18} className="animate-spin text-green-700" />
           Checking workspace access
+        </div>
+      </div>
+    );
+  }
+
+  // ── Pending-approval gate ────────────────────────────────────────────────────
+  if (currentUser?.status === 'pending') {
+    return (
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #F7F6FF 0%, #ECEAF8 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', fontFamily: "'Plus Jakarta Sans', Inter, sans-serif" }}>
+        <div style={{ width: '100%', maxWidth: 480, background: '#FFFFFF', borderRadius: 20, border: '1.5px solid rgba(91,79,219,0.15)', boxShadow: '0 24px 72px rgba(91,79,219,0.12)', padding: 40, textAlign: 'center' }}>
+          {/* Animated icon */}
+          <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, rgba(91,79,219,0.12), rgba(139,63,219,0.12))', border: '2px solid rgba(91,79,219,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', position: 'relative' }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#5B4FDB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <div style={{ position: 'absolute', inset: -4, borderRadius: '50%', border: '2px solid rgba(91,79,219,0.12)', animation: 'ping 2s cubic-bezier(0,0,0.2,1) infinite' }} />
+          </div>
+          <style>{`@keyframes ping { 75%,100% { transform: scale(1.4); opacity: 0; } }`}</style>
+
+          <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 22, fontWeight: 800, color: '#1A1B3A', letterSpacing: '-0.03em', margin: '0 0 10px' }}>
+            Awaiting Approval
+          </h2>
+          <p style={{ fontSize: 14, color: 'rgba(90,95,128,0.70)', lineHeight: 1.7, margin: '0 0 24px' }}>
+            Hi <strong>{currentUser.name.split(' ')[0]}</strong>! Your account is pending admin review. You will receive an email and this page will automatically update once approved.
+          </p>
+
+          {/* Status badge */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(245,122,152,0.08)', border: '1.5px solid rgba(245,122,152,0.22)', borderRadius: 20, padding: '6px 16px', marginBottom: 28 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#EF476F', display: 'inline-block', animation: 'ping 1.5s infinite' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#EF476F', letterSpacing: '.12em', textTransform: 'uppercase' }}>Pending Admin Approval</span>
+          </div>
+
+          <div style={{ background: 'rgba(91,79,219,0.04)', borderRadius: 12, border: '1px solid rgba(91,79,219,0.10)', padding: '14px 18px', marginBottom: 28, textAlign: 'left' }}>
+            <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 700, color: 'rgba(90,95,128,0.50)', letterSpacing: '.18em', textTransform: 'uppercase' }}>Your account</p>
+            <p style={{ margin: '4px 0', fontSize: 13, color: '#1A1B3A' }}><strong>Email:</strong> {currentUser.email}</p>
+            <p style={{ margin: '4px 0', fontSize: 13, color: '#1A1B3A' }}><strong>Role:</strong> {currentUser.role}</p>
+          </div>
+
+          <button
+            onClick={() => {
+              localStorage.removeItem('edutechex_token');
+              window.location.replace('/sign-up-login-screen');
+            }}
+            style={{ width: '100%', padding: '13px', background: 'transparent', border: '1.5px solid rgba(26,27,58,0.12)', borderRadius: 10, fontSize: 12, fontWeight: 700, color: 'rgba(90,95,128,0.65)', cursor: 'pointer', letterSpacing: '.08em', transition: 'all .2s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(91,79,219,0.30)'; (e.currentTarget as HTMLButtonElement).style.color = '#5B4FDB'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(26,27,58,0.12)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(90,95,128,0.65)'; }}
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Rejected gate ────────────────────────────────────────────────────────────
+  if (currentUser?.status === 'rejected') {
+    return (
+      <div style={{ minHeight: '100vh', background: '#FFF8F9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', fontFamily: "'Plus Jakarta Sans', Inter, sans-serif" }}>
+        <div style={{ width: '100%', maxWidth: 440, background: '#FFFFFF', borderRadius: 20, border: '1.5px solid rgba(239,71,111,0.18)', boxShadow: '0 24px 72px rgba(239,71,111,0.10)', padding: 40, textAlign: 'center' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(239,71,111,0.10)', border: '2px solid rgba(239,71,111,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EF476F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+          </div>
+          <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 800, color: '#1A1B3A', margin: '0 0 10px' }}>Access Declined</h2>
+          <p style={{ fontSize: 13.5, color: 'rgba(90,95,128,0.70)', lineHeight: 1.7, margin: '0 0 24px' }}>
+            Your access request was not approved. Please contact the workspace admin for further information.
+          </p>
+          <button
+            onClick={() => {
+              localStorage.removeItem('edutechex_token');
+              window.location.replace('/sign-up-login-screen');
+            }}
+            style={{ width: '100%', padding: '13px', background: '#EF476F', border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 700, color: '#FFFFFF', cursor: 'pointer', letterSpacing: '.08em' }}
+          >
+            Back to Sign In
+          </button>
         </div>
       </div>
     );
@@ -1833,14 +2058,9 @@ export default function EduTechExOSDashboard() {
           </motion.button>
 
           {[
-            { icon: CheckSquare, label: 'Tasks', action: () => setKanbanOpen(true) },
-            { icon: BookOpen, label: 'Wiki', action: () => setWikiOpen(true) },
-            { icon: CalendarDays, label: 'Calendar', action: () => setCalendarOpen(true) },
-
-            { icon: Zap, label: 'Integrations', action: () => setIntegrationsOpen(true) },
-            ...(isAdmin
-              ? [{ icon: BarChart2, label: 'Analytics', action: () => setAnalyticsOpen(true) }]
-              : []),
+            { icon: CheckSquare, label: 'Tasks',    action: () => setKanbanOpen(true)   },
+            { icon: BookOpen,    label: 'Wiki',     action: () => setWikiOpen(true)     },
+            { icon: CalendarDays,label: 'Calendar', action: () => setCalendarOpen(true) },
           ].map(({ icon: Icon, label, action }) => (
             <motion.button
               key={label}
@@ -1856,6 +2076,41 @@ export default function EduTechExOSDashboard() {
 
         <div className="rail-bottom">
           <div className="rail-divider" />
+
+          {/* ActivityWatch status indicator */}
+          <div
+            title={
+              awStatus === 'connected' ? 'ActivityWatch connected — syncing desktop activity'
+              : awStatus === 'offline'  ? 'ActivityWatch not detected — install & open ActivityWatch on this machine'
+              : 'Checking for ActivityWatch…'
+            }
+            className="rail-btn cursor-default select-none"
+          >
+            <div className="relative flex items-center justify-center">
+              <Activity
+                size={19}
+                strokeWidth={1.8}
+                className={
+                  awStatus === 'connected' ? 'text-emerald-500'
+                  : awStatus === 'offline' ? 'text-[#C5CAE0]'
+                  : 'text-[#9BA6D3]'
+                }
+              />
+              {awStatus === 'connected' && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-white animate-pulse" />
+              )}
+            </div>
+            <span
+              className={`rail-label ${
+                awStatus === 'connected' ? 'text-emerald-600'
+                : awStatus === 'offline' ? 'text-[#C5CAE0]'
+                : 'text-[#9BA6D3]'
+              }`}
+            >
+              {awStatus === 'connected' ? 'AW Live' : awStatus === 'offline' ? 'AW Off' : 'AW…'}
+            </span>
+          </div>
+
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => {
@@ -3419,16 +3674,27 @@ export default function EduTechExOSDashboard() {
 
       {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• RIGHT ICON RAIL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <nav className="workspace-right-rail">
-        {/* Top: Pinned + Bookmarked */}
+        {/* Top section — moved from left rail */}
+        {[
+          { icon: CalendarCheck, label: 'Avail.',  action: () => setAvailabilityOpen(true) },
+          { icon: CalendarX,     label: 'Leave',   action: () => setLeaveOpen(true)        },
+          { icon: Zap,           label: 'Integr.', action: () => setIntegrationsOpen(true) },
+          ...(isAdmin ? [{ icon: BarChart2, label: 'Analytics', action: () => setAnalyticsOpen(true) }] : []),
+        ].map(({ icon: Icon, label, action }) => (
+          <motion.button key={label} whileTap={{ scale: 0.88 }} onClick={action} className="rail-btn">
+            <Icon size={18} strokeWidth={1.8} />
+            <span className="rail-label">{label}</span>
+          </motion.button>
+        ))}
+
+        <div className="rail-divider" />
+
+        {/* Channel tools — Pinned + Saved */}
         <motion.button
           whileTap={{ scale: 0.88 }}
           onClick={() => setRightSidePanel(rightSidePanel === 'pinned' ? null : 'pinned')}
           className={`rail-btn${rightSidePanel === 'pinned' ? ' active' : ''}`}
-          style={
-            rightSidePanel === 'pinned'
-              ? { background: 'rgba(245,158,11,0.15)', color: '#b45309' }
-              : {}
-          }
+          style={rightSidePanel === 'pinned' ? { background: 'rgba(245,158,11,0.15)', color: '#b45309' } : {}}
         >
           <Pin size={18} strokeWidth={2} />
           <span className="rail-label">Pinned</span>
@@ -3438,17 +3704,13 @@ export default function EduTechExOSDashboard() {
           whileTap={{ scale: 0.88 }}
           onClick={() => setRightSidePanel(rightSidePanel === 'bookmarked' ? null : 'bookmarked')}
           className={`rail-btn${rightSidePanel === 'bookmarked' ? ' active' : ''}`}
-          style={
-            rightSidePanel === 'bookmarked'
-              ? { background: 'rgba(245,158,11,0.15)', color: '#b45309' }
-              : {}
-          }
+          style={rightSidePanel === 'bookmarked' ? { background: 'rgba(245,158,11,0.15)', color: '#b45309' } : {}}
         >
           <Bookmark size={18} strokeWidth={2} />
           <span className="rail-label">Saved</span>
         </motion.button>
 
-        {/* Bottom: Copilot button */}
+        {/* Bottom: Copilot */}
         <div style={{ marginTop: 'auto' }}>
           <motion.button
             whileTap={{ scale: 0.9 }}
@@ -3509,29 +3771,43 @@ export default function EduTechExOSDashboard() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-                className="fixed top-0 right-14 z-[150] h-full w-72 border-l border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/95 backdrop-blur-md shadow-2xl flex flex-col"
+                className="fixed top-0 right-14 z-[150] h-full w-80 border-l border-[rgba(62,74,137,0.08)] bg-white dark:bg-[#141928] shadow-2xl flex flex-col"
               >
-                <div className="flex h-14 shrink-0 items-center justify-between border-b border-[rgba(62,74,137,0.12)] px-4">
-                  <div className="flex items-center gap-2">
-                    <Pin size={15} className="text-amber-500" />
-                    <span className="text-sm font-bold text-[#1E2636]">Pinned Messages</span>
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-600">
-                      {pinIds.length}
-                    </span>
+                {/* Header */}
+                <div className="flex h-14 shrink-0 items-center justify-between border-b border-[rgba(62,74,137,0.08)] dark:border-slate-800 px-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#3E4A89]/10 dark:bg-[#3E4A89]/20">
+                      <Pin size={13} className="text-[#3E4A89] dark:text-[#9BA6D3]" strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-[#1E2636] dark:text-white leading-none">Pinned</p>
+                      <p className="text-[10px] text-[#7C859E] dark:text-slate-500 mt-0.5">#{channel?.name ?? activeChannelId}</p>
+                    </div>
+                    {pinIds.length > 0 && (
+                      <span className="ml-1 rounded-full bg-[#3E4A89] px-2 py-0.5 text-[10px] font-black text-white">
+                        {pinIds.length}
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={() => setRightSidePanel(null)}
-                    className="rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]"
+                    className="rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 hover:text-[#4A5578] transition-colors"
                   >
-                    <X size={16} />
+                    <X size={15} />
                   </button>
                 </div>
+
+                {/* Content */}
                 <div className="flex-1 overflow-y-auto p-3 space-y-2">
                   {pinnedMsgs.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                      <Pin size={32} className="mb-3 text-slate-200" />
-                      <p className="text-sm font-semibold text-[#7C859E]">No pinned messages</p>
-                      <p className="text-xs text-[#9BA6D3] mt-1">Pin a message to see it here</p>
+                    <div className="flex flex-col items-center justify-center h-full text-center py-12 px-6">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800 mb-4">
+                        <Pin size={22} className="text-slate-300 dark:text-slate-600" />
+                      </div>
+                      <p className="text-sm font-bold text-[#4A5578] dark:text-slate-400">Nothing pinned yet</p>
+                      <p className="text-xs text-[#9BA6D3] dark:text-slate-600 mt-1 leading-relaxed">
+                        Right-click any message and choose <strong>Pin</strong> to keep it here.
+                      </p>
                     </div>
                   ) : (
                     pinnedMsgs.map(
@@ -3539,34 +3815,77 @@ export default function EduTechExOSDashboard() {
                         msg && (
                           <div
                             key={msg.id}
-                            className="rounded-xl border border-amber-100 bg-amber-50/50 p-3"
+                            className="group rounded-xl border border-[rgba(62,74,137,0.1)] dark:border-slate-700 bg-[#F8F9FC] dark:bg-[#1A2035] overflow-hidden"
                           >
-                            <div className="flex items-center gap-2 mb-1.5">
-                              <div
-                                className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                                style={{ backgroundColor: msg.color }}
-                              >
-                                {msg.initials}
-                              </div>
-                              <span className="text-xs font-bold text-[#4A5578]">{msg.sender}</span>
-                              <span className="text-[10px] text-[#7C859E] ml-auto">
-                                {formatTime(msg.timestamp)}
+                            {/* Pin label */}
+                            <div className="flex items-center gap-1.5 px-3 pt-2.5 pb-1">
+                              <Pin size={9} className="text-[#3E4A89]/50 dark:text-slate-500" strokeWidth={2.5} />
+                              <span className="text-[9px] font-black uppercase tracking-widest text-[#3E4A89]/50 dark:text-slate-500">
+                                Pinned message
                               </span>
                             </div>
-                            <p className="text-xs text-[#4A5578] leading-relaxed line-clamp-3">
-                              {msg.text}
-                            </p>
-                            <button
-                              onClick={() => {
-                                unpinMessage(activeChannelId, msg.id);
-                                document
-                                  .getElementById(`msg-${msg.id}`)
-                                  ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              }}
-                              className="mt-2 text-[10px] font-bold text-amber-600 hover:text-amber-700"
-                            >
-                              Unpin · Jump to message
-                            </button>
+
+                            {/* Message body */}
+                            <div className="px-3 pb-2">
+                              <div className="flex items-center gap-2 mb-1.5">
+                                <div
+                                  className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white shrink-0"
+                                  style={{ backgroundColor: msg.color }}
+                                >
+                                  {msg.initials}
+                                </div>
+                                <span className="text-xs font-bold text-[#1E2636] dark:text-white">{msg.sender}</span>
+                                <span className="text-[10px] text-[#9BA6D3] dark:text-slate-500 ml-auto tabular-nums">
+                                  {formatTime(msg.timestamp)}
+                                </span>
+                              </div>
+
+                              {msg.text && (
+                                <p className="text-xs text-[#4A5578] dark:text-[#9BA6D3] leading-relaxed line-clamp-4 mb-1.5">
+                                  {msg.text}
+                                </p>
+                              )}
+
+                              {/* File attachments */}
+                              {msg.files && msg.files.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1 mb-1.5">
+                                  {msg.files.map((f: {name: string; url: string; type: string}, fi: number) => (
+                                    <a
+                                      key={fi}
+                                      href={f.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex items-center gap-1 rounded-lg border border-[rgba(62,74,137,0.15)] dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1 text-[10px] font-semibold text-[#4A5578] dark:text-slate-300 hover:border-[#3E4A89]/30 transition-colors"
+                                    >
+                                      <Paperclip size={9} />
+                                      <span className="max-w-[140px] truncate">{f.name}</span>
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-2 border-t border-[rgba(62,74,137,0.06)] dark:border-slate-700/50 px-3 py-2">
+                              <button
+                                onClick={() => {
+                                  document
+                                    .getElementById(`msg-${msg.id}`)
+                                    ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }}
+                                className="flex items-center gap-1 text-[10px] font-bold text-[#3E4A89] dark:text-[#9BA6D3] hover:text-[#2A3568] dark:hover:text-white transition-colors"
+                              >
+                                <ChevronDown size={10} className="-rotate-90" />
+                                Jump to
+                              </button>
+                              <span className="text-[#E2E6F0] dark:text-slate-700">·</span>
+                              <button
+                                onClick={() => unpinMessage(activeChannelId, msg.id)}
+                                className="text-[10px] font-bold text-[#7C859E] dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                              >
+                                Unpin
+                              </button>
+                            </div>
                           </div>
                         )
                     )
@@ -3809,6 +4128,8 @@ export default function EduTechExOSDashboard() {
       {/* ── Feature panels (AnimatePresence enables exit animations) ── */}
       <AnimatePresence>
         {calendarOpen && <CalendarPanel key="calendar" onClose={() => setCalendarOpen(false)} />}
+        {availabilityOpen && <AdminAvailabilityView key="availability" onClose={() => setAvailabilityOpen(false)} />}
+        {leaveOpen && <LeavePanel key="leave" onClose={() => setLeaveOpen(false)} />}
 
         {integrationsOpen && (
           <IntegrationsPanel

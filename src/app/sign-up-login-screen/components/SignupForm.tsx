@@ -1,10 +1,10 @@
 'use client';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, Loader2, Mail, Lock, User, Briefcase, ArrowRight } from 'lucide-react';
+import { Loader2, Mail, User, Briefcase, ArrowRight, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 
-type SignupFormData = { name: string; email: string; password: string; role: string };
+type SignupFormData = { name: string; email: string; role: string };
 
 const roles = ['Developer', 'Designer', 'Manager', 'Other'];
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
@@ -12,7 +12,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend
 
 type AccessRequest = SignupFormData & {
   id: string;
-  status: 'pending' | 'approved';
+  status: 'pending' | 'approved' | 'rejected';
   requestedAt: string;
 };
 
@@ -24,7 +24,6 @@ const inputIvyStyle = {
 };
 
 export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -71,7 +70,7 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
           };
           localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify([localEntry, ...localRequests]));
         }
-        toast.success('Account request submitted. You can sign in after admin approval.');
+        toast.success('Account created! Check your email for your temporary password — you can sign in now.', { duration: 7000 });
         reset();
         onSwitchToLogin();
         return;
@@ -88,23 +87,13 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
         toast.info(
           existing.status === 'approved'
             ? 'Your access is approved. You can sign in now.'
-            : 'Your access request is already waiting for admin approval.'
+            : 'Your account is pending admin approval. Check your email for your temporary password.'
         );
         if (existing.status === 'approved') onSwitchToLogin();
         return;
       }
 
-      const nextRequest: AccessRequest = {
-        ...data,
-        id: `request-${Date.now()}`,
-        email: emailClean,
-        status: 'pending',
-        requestedAt: new Date().toISOString(),
-      };
-      localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify([nextRequest, ...requests]));
-      toast.success('Account request submitted (offline mode). Admin will review it.');
-      reset();
-      onSwitchToLogin();
+      toast.error('Network error. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -120,6 +109,14 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
           outline: none;
         }
       `}</style>
+
+      {/* Info banner */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: 'rgba(91,79,219,0.06)', border: '1px solid rgba(91,79,219,0.14)', borderRadius: 8, padding: '10px 14px', marginBottom: 20 }}>
+        <KeyRound size={14} style={{ color: '#5B4FDB', flexShrink: 0, marginTop: 1 }} />
+        <p style={{ margin: 0, fontSize: 11.5, color: 'rgba(26,27,58,0.65)', lineHeight: 1.5 }}>
+          A temporary password will be <strong>sent to your email</strong>. You can sign in immediately — full access is granted after admin approval.
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
         {/* Full Name */}
@@ -179,45 +176,6 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
           )}
         </div>
 
-        {/* Password */}
-        <div className="space-y-2.5">
-          <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">
-            Security Key
-          </label>
-          <div className="relative group">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0A1128]/30 group-focus-within:text-[#D4AF37] transition-colors" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="new-password"
-              placeholder="Min. 8 characters"
-              className={`input-ivy w-full pl-12 pr-12 py-4 text-sm text-[#0A1128] font-medium placeholder:text-[#0A1128]/20 ${errors.password ? 'border-red-300 bg-red-50/30' : ''}`}
-              style={{
-                ...inputIvyStyle,
-                borderColor: errors.password ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)',
-              }}
-              {...register('password', {
-                required: 'Password is required',
-                minLength: { value: 8, message: 'Min 8 characters' },
-                pattern: {
-                  value: /^(?=.*[a-zA-Z])(?=.*\d)/,
-                  message: 'Include a letter and number',
-                },
-              })}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#0A1128]/20 hover:text-[#0A1128]/60 transition-colors"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-            >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-          {errors.password && (
-            <p className="text-xs font-medium text-red-600 ml-1">{errors.password.message}</p>
-          )}
-        </div>
-
         {/* Role */}
         <div className="space-y-2.5">
           <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">
@@ -260,11 +218,11 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
               {isLoading ? (
                 <>
                   <Loader2 size={15} className="animate-spin" />
-                  Submitting…
+                  Creating account…
                 </>
               ) : (
                 <>
-                  Request Access{' '}
+                  Create Account{' '}
                   <ArrowRight
                     size={14}
                     className="group-hover:translate-x-1 transition-transform"

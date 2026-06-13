@@ -14,10 +14,10 @@
   --brand-700: #4A58E8;
   --brand-900: #1e2260;
 
-  /* ── Rail (ultra-dark, premium) ── */
+  /* ── Rail (glass liquid) ── */
   --rail-w:       4rem;          /* 64px – compact icon-only rail */
-  --rail-bg:      #080A12;
-  --rail-border:  rgba(255,255,255,0.05);
+  --rail-bg:      rgba(6, 8, 16, 0.48);
+  --rail-border:  rgba(255,255,255,0.07);
 
   /* ── Sidebar (rich dark blue-navy) ── */
   --sidebar-bg:     #0E1120;
@@ -78,7 +78,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   ICON RAIL — ultra-dark, icon-only, minimal
+   ICON RAIL — glass liquid, floating
 ═══════════════════════════════════════════════════════════════ */
 .workspace-rail,
 .workspace-right-rail {
@@ -89,13 +89,64 @@
   gap: 1px;
   padding: 10px 6px 12px;
   background: var(--rail-bg);
+  backdrop-filter: blur(28px) saturate(180%) brightness(1.06);
+  -webkit-backdrop-filter: blur(28px) saturate(180%) brightness(1.06);
   z-index: 20;
   overflow: visible;
 }
-.workspace-rail       { border-right: 1px solid var(--rail-border); }
-.workspace-right-rail { border-left:  1px solid var(--rail-border); }
+/* Glass sheen overlay */
+.workspace-rail::after,
+.workspace-right-rail::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    168deg,
+    rgba(108,123,245,0.10) 0%,
+    rgba(255,255,255,0.03) 30%,
+    rgba(74,88,232,0.05)  60%,
+    rgba(108,123,245,0.08) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+.workspace-rail {
+  border-right: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset -1px 0 0 rgba(108,123,245,0.08), 2px 0 24px rgba(0,0,0,0.18);
+}
+.workspace-right-rail {
+  border-left: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 1px 0 0 rgba(108,123,245,0.08), -2px 0 24px rgba(0,0,0,0.18);
+}
 
-/* Rail buttons — icon only, tooltip on hover */
+/* ── Icon bounce & pop keyframes ── */
+@keyframes rail-icon-bounce {
+  0%   { transform: scale(1)    translateY(0px);  }
+  28%  { transform: scale(1.28) translateY(-4px); }
+  52%  { transform: scale(0.90) translateY(0px);  }
+  72%  { transform: scale(1.10) translateY(-2px); }
+  88%  { transform: scale(0.97) translateY(0px);  }
+  100% { transform: scale(1.06) translateY(-1px); }
+}
+@keyframes rail-icon-pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.35) rotate(8deg);  }
+  70%  { transform: scale(0.88) rotate(-4deg); }
+  100% { transform: scale(1.06) rotate(0deg);  }
+}
+@keyframes rail-icon-shake {
+  0%,100% { transform: rotate(0deg) scale(1.06); }
+  18%     { transform: rotate(-14deg) scale(1.15); }
+  36%     { transform: rotate(12deg)  scale(1.10); }
+  54%     { transform: rotate(-8deg)  scale(1.08); }
+  72%     { transform: rotate(6deg)   scale(1.06); }
+}
+@keyframes rail-bar-in {
+  from { height: 0; opacity: 0; }
+  to   { height: 20px; opacity: 1; }
+}
+
+/* Rail buttons — dark-coloured icons, animated hover */
 .rail-btn {
   position: relative;
   display: flex;
@@ -110,19 +161,46 @@
   border: none;
   cursor: pointer;
   background: transparent;
-  color: rgba(100,114,160,0.7);
-  transition: background 0.15s, color 0.15s, transform 0.18s cubic-bezier(.34,1.56,.64,1);
+  /* dark rich indigo — clearly "dark colour" on the glass rail */
+  color: #2D3A7A;
+  transition: background 0.18s, color 0.18s, box-shadow 0.20s;
   outline: none;
   flex-shrink: 0;
+  z-index: 1;
 }
+
+/* SVG gets its own transition so exit is always smooth */
+.rail-btn svg {
+  transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1), filter 0.18s;
+}
+
+/* ── HOVER STATE ── */
 .rail-btn:hover {
-  background: rgba(108,123,245,0.14);
-  color: var(--brand-400);
-  transform: translateY(-1px);
-}
-.rail-btn.active {
   background: rgba(108,123,245,0.18);
-  color: var(--brand-400);
+  color: #A8BDFF;
+  box-shadow:
+    0 6px 22px rgba(108,123,245,0.26),
+    0 0 0 1px rgba(108,123,245,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+}
+/* Main bounce animation fires on hover */
+.rail-btn:hover svg {
+  animation: rail-icon-bounce 0.42s cubic-bezier(0.34,1.56,0.64,1) both;
+  filter: drop-shadow(0 0 7px rgba(129,140,248,0.70));
+}
+
+/* ── ACTIVE / SELECTED STATE ── */
+.rail-btn.active {
+  background: rgba(108,123,245,0.22);
+  color: #C8D5FF;
+  box-shadow:
+    0 4px 18px rgba(108,123,245,0.28),
+    0 0 0 1px rgba(108,123,245,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.rail-btn.active svg {
+  filter: drop-shadow(0 0 8px rgba(129,140,248,0.80));
+  transform: scale(1.08);
 }
 /* Active glow bar */
 .rail-btn.active::before {
@@ -130,15 +208,26 @@
   position: absolute;
   left: -3px; top: 50%;
   transform: translateY(-50%);
-  width: 3px; height: 20px;
+  width: 3px; height: 22px;
   border-radius: 0 3px 3px 0;
-  background: linear-gradient(180deg, var(--brand-400), var(--brand-600));
-  box-shadow: 0 0 10px rgba(108,123,245,0.6);
-  animation: rail-bar-in 0.22s cubic-bezier(.34,1.56,.64,1);
+  background: linear-gradient(180deg, #A8BDFF, var(--brand-600));
+  box-shadow: 0 0 14px rgba(108,123,245,0.80);
+  animation: rail-bar-in 0.24s cubic-bezier(0.34,1.56,0.64,1);
 }
-@keyframes rail-bar-in {
-  from { height: 0; opacity: 0; }
-  to   { height: 20px; opacity: 1; }
+
+/* Bell icon — shake on hover instead of bounce */
+.rail-btn:has(svg.lucide-bell):hover svg,
+.rail-btn[title*="Alert"]:hover svg,
+.rail-btn[title*="Notif"]:hover svg {
+  animation: rail-icon-shake 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+/* Settings — pop+rotate on hover */
+.rail-btn:has(svg.lucide-settings):hover svg {
+  animation: rail-icon-pop 0.40s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+/* Zap (Integrations) — pop on hover */
+.rail-btn:has(svg.lucide-zap):hover svg {
+  animation: rail-icon-pop 0.36s cubic-bezier(0.34,1.56,0.64,1) both;
 }
 
 /* Hover tooltip (CSS only) */
@@ -594,8 +683,8 @@ html.dark {
   --text-secondary: #9AA3BE;
   --text-muted:     #4B5478;
   --accent:         var(--brand-400);
-  --rail-bg:        #06070F;
-  --rail-border:    rgba(255,255,255,0.04);
+  --rail-bg:        rgba(4, 5, 10, 0.52);
+  --rail-border:    rgba(255,255,255,0.06);
   --surface-card:   #0E1120;
 }
 .dark .workspace-sidebar { background: #080A12; }
@@ -609,9 +698,9 @@ html.dark {
 .dark .composer-toolbar button { color: #2E3557; }
 .dark .composer-toolbar button:hover { background: rgba(108,123,245,0.12); color: var(--brand-400); }
 .dark .teams-msg-actions { background: #090B13; border-color: rgba(108,123,245,0.16); box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
-.dark .rail-btn          { color: rgba(70,82,120,0.8); }
-.dark .rail-btn:hover    { background: rgba(108,123,245,0.14); color: var(--brand-400); }
-.dark .rail-btn.active   { background: rgba(108,123,245,0.20); color: var(--brand-400); }
+.dark .rail-btn          { color: #1E2B5E; }
+.dark .rail-btn:hover    { background: rgba(108,123,245,0.18); color: #A8BDFF; box-shadow: 0 6px 22px rgba(108,123,245,0.22), 0 0 0 1px rgba(108,123,245,0.16), inset 0 1px 0 rgba(255,255,255,0.07); }
+.dark .rail-btn.active   { background: rgba(108,123,245,0.22); color: #C8D5FF; box-shadow: 0 4px 18px rgba(108,123,245,0.26), 0 0 0 1px rgba(108,123,245,0.20), inset 0 1px 0 rgba(255,255,255,0.07); }
 
 /* ═══════════════════════════════════════════════════════════════
    RESPONSIVE — 1100px

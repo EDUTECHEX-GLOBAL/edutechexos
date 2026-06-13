@@ -352,7 +352,7 @@ const MessageSchema = new mongoose.Schema(
     senderEmail: { type: String, index: true },
     initials:    { type: String, required: true },
     color:       { type: String, required: true },
-    text:        { type: String, required: true },
+    text:        { type: String, default: '' },
     timestamp:   { type: Date, default: Date.now },
     // ── optional message payload fields ──────────────────────────────
     audioUrl:    { type: String },
@@ -370,6 +370,22 @@ const MessageSchema = new mongoose.Schema(
 );
 MessageSchema.index({ text: 'text', sender: 'text' });
 const Message = mongoose.model('Message', MessageSchema);
+
+// ── Auto-password generator for new user sign-up requests ────────────────────
+function generatePassword() {
+  const upper   = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower   = 'abcdefghjkmnpqrstuvwxyz';
+  const digits  = '23456789';
+  const symbols = '@#$!';
+  const all     = upper + lower + digits + symbols;
+  let pw =
+    upper[Math.floor(Math.random() * upper.length)] +
+    lower[Math.floor(Math.random() * lower.length)] +
+    digits[Math.floor(Math.random() * digits.length)] +
+    symbols[Math.floor(Math.random() * symbols.length)];
+  for (let i = 0; i < 8; i++) pw += all[Math.floor(Math.random() * all.length)];
+  return pw.split('').sort(() => Math.random() - 0.5).join('');
+}
 
 // ── Hardcoded accounts — passwords loaded from env vars, never from source ────
 // Set these in Render → Environment: SYS_PASS_ADMIN, SYS_PASS_ADITYA, etc.
@@ -395,6 +411,21 @@ const AccessRequestSchema = new mongoose.Schema({
 });
 const AccessRequest = mongoose.model('AccessRequest', AccessRequestSchema);
 
+// ── Leave requests ────────────────────────────────────────────────────────────
+const LeaveSchema = new mongoose.Schema({
+  email:       { type: String, required: true, index: true },
+  name:        { type: String, required: true },
+  type:        { type: String, enum: ['instant', 'planned'], required: true },
+  leaveCategory: { type: String, enum: ['sick', 'vacation', 'personal', 'emergency', 'other'], default: 'other' },
+  startDate:   { type: String, required: true }, // YYYY-MM-DD
+  endDate:     { type: String, default: '' },    // YYYY-MM-DD (planned only)
+  duration:    { type: String, enum: ['half', 'full'], default: 'full' }, // instant only
+  reason:      { type: String, required: true },
+  status:      { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  adminNote:   { type: String, default: '' },
+  requestedAt: { type: Date, default: Date.now },
+});
+const Leave = mongoose.model('Leave', LeaveSchema);
 
 // ── Password reset codes (TTL: 15 min) ──────────────────────────────────────
 const ResetCodeSchema = new mongoose.Schema({
@@ -557,6 +588,39 @@ const PinnedMessageSchema = new mongoose.Schema({
 PinnedMessageSchema.index({ channelId: 1, messageId: 1 }, { unique: true });
 const PinnedMessage = mongoose.model('PinnedMessage', PinnedMessageSchema);
 
+// ── UserKey schema — stores each user's ECDH public key for DM E2E encryption ──
+const UserKeySchema = new mongoose.Schema({
+  email:     { type: String, required: true, unique: true, index: true },
+  publicKey: { type: String, required: true }, // JWK JSON string
+  updatedAt: { type: Date, default: Date.now },
+});
+const UserKey = mongoose.model('UserKey', UserKeySchema);
+
+// ── AdminAvailability schema — admin marks date slots as available/busy ────────
+const AdminAvailabilitySchema = new mongoose.Schema({
+  date:       { type: String, required: true, index: true }, // YYYY-MM-DD IST
+  adminEmail: { type: String, required: true, default: 'admin@edutechex.in' },
+  slots: [{
+    time:   { type: String, required: true }, // e.g. "09:00", "10:30", "All Day"
+    status: { type: String, enum: ['available', 'busy', 'ooo'], default: 'available' },
+    label:  { type: String, default: '' },
+  }],
+}, { timestamps: true });
+AdminAvailabilitySchema.index({ date: 1, adminEmail: 1 }, { unique: true });
+const AdminAvailability = mongoose.model('AdminAvailability', AdminAvailabilitySchema);
+
+// ── MeetingRequest schema — user requests a call/meeting with admin ────────────
+const MeetingRequestSchema = new mongoose.Schema({
+  userEmail:  { type: String, required: true },
+  userName:   { type: String, required: true },
+  adminEmail: { type: String, required: true, default: 'admin@edutechex.in' },
+  date:       { type: String, required: true }, // YYYY-MM-DD
+  time:       { type: String, required: true }, // e.g. "09:00"
+  purpose:    { type: String, default: '' },
+  status:     { type: String, enum: ['pending', 'confirmed', 'declined'], default: 'pending' },
+}, { timestamps: true });
+const MeetingRequest = mongoose.model('MeetingRequest', MeetingRequestSchema);
+
 // ── WorkspaceChannel schema — replaces hardcoded channel list ─────────────────
 const WorkspaceChannelSchema = new mongoose.Schema({
   _id:         { type: String, required: true },
@@ -632,10 +696,10 @@ app.use(/^\/api\/(?!auth\/|access-requests|digest|health).*/, authMiddleware);
 
 // ─── Auth Routes ──────────────────────────────────────────────────────────────
 
-// POST /api/access-requests — user submits signup request
+// POST /api/access-requests — user submits signup request (password auto-generated)
 app.post('/api/access-requests', authLimiter, async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, role } = req.body;
     const emailClean = String(email).trim().toLowerCase();
 
     // Don't let someone shadow a hardcoded account
@@ -654,35 +718,44 @@ app.post('/api/access-requests', authLimiter, async (req, res) => {
             ? 'Your access is approved. You can sign in now.'
             : existing.status === 'rejected'
             ? 'Your previous request was declined. Please contact admin.'
-            : 'Your access request is already waiting for admin approval.',
+            : 'Your account is pending admin approval. Check your email for your temporary password.',
       });
     }
 
-    const request = new AccessRequest({ name, email: emailClean, password: await bcrypt.hash(password, 10), role });
+    // Generate a strong random password and email it to the user immediately
+    const plainPassword = generatePassword();
+    const request = new AccessRequest({ name, email: emailClean, password: await bcrypt.hash(plainPassword, 10), role });
     const saved = await request.save();
     const { _id, __v, ...rest } = saved.toObject();
 
-    // ── Email 1: confirmation to the applicant ─────────────────────────────
+    const appUrl = process.env.APP_URL || 'https://edutechexos.vercel.app';
+
+    // ── Email 1: credentials to the new user ──────────────────────────────
     sendBrevoEmail({
       to: [{ email: emailClean, name }],
-      subject: 'EduTechExOS — We received your access request',
+      subject: 'EduTechExOS — Your account has been created',
       html: `
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#FAF8F5;border-radius:12px;">
           <div style="background:linear-gradient(135deg,#191E2F,#252D45);border-radius:10px;padding:24px;text-align:center;margin-bottom:24px;">
             <h1 style="color:#fff;margin:0;font-size:22px;letter-spacing:-0.5px;">EduTechExOS</h1>
             <p style="color:rgba(255,255,255,0.6);margin:6px 0 0;font-size:13px;">Team Operating System</p>
           </div>
-          <h2 style="color:#1E2636;font-size:18px;margin:0 0 12px;">Hi ${name}, your request is under review 👋</h2>
+          <h2 style="color:#1E2636;font-size:18px;margin:0 0 12px;">Hi ${name}, your account is ready 👋</h2>
           <p style="color:#4A5578;font-size:14px;line-height:1.6;margin:0 0 16px;">
-            Thanks for requesting access to <strong>EduTechExOS</strong>. Your request has been received and is now waiting for admin approval.
+            Your EduTechExOS account has been created. You can sign in right now using the credentials below.
+            Your account is <strong>pending admin approval</strong> — you will have full access once the admin approves your request.
           </p>
-          <div style="background:#fff;border:1px solid rgba(62,74,137,0.12);border-radius:10px;padding:16px;margin-bottom:20px;">
-            <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#9BA6D3;text-transform:uppercase;letter-spacing:1px;">Your request details</p>
-            <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Name:</strong> ${name}</p>
-            <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Email:</strong> ${emailClean}</p>
-            <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Role requested:</strong> ${role}</p>
+          <div style="background:#fff;border:2px solid rgba(91,79,219,0.18);border-radius:10px;padding:20px;margin-bottom:20px;">
+            <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:#9BA6D3;text-transform:uppercase;letter-spacing:1px;">Your login credentials</p>
+            <p style="margin:6px 0;font-size:14px;color:#1E2636;"><strong>Email:</strong> ${emailClean}</p>
+            <p style="margin:6px 0;font-size:16px;color:#5B4FDB;font-weight:700;letter-spacing:0.04em;font-family:monospace;background:#ECEAF8;padding:8px 12px;border-radius:6px;"><strong>Password:</strong> ${plainPassword}</p>
+            <p style="margin:6px 0;font-size:13px;color:#4A5578;"><strong>Role:</strong> ${role}</p>
           </div>
-          <p style="color:#7C859E;font-size:13px;line-height:1.5;">You will receive another email once the admin reviews your request. This usually takes 1–2 business days.</p>
+          <p style="color:#EF476F;font-size:13px;font-weight:600;margin:0 0 16px;">⚠ Please change this password after your first sign-in via your profile settings.</p>
+          <div style="text-align:center;margin:24px 0;">
+            <a href="${appUrl}/sign-up-login-screen" style="display:inline-block;background:#5B4FDB;color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;">Sign In to EduTechExOS →</a>
+          </div>
+          <p style="color:#7C859E;font-size:12px;line-height:1.5;text-align:center;">You'll receive full access once the admin approves your account.</p>
           <hr style="border:none;border-top:1px solid rgba(62,74,137,0.10);margin:24px 0;" />
           <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS · Powered by EduTechEx</p>
         </div>`,
@@ -697,7 +770,7 @@ app.post('/api/access-requests', authLimiter, async (req, res) => {
         html: `
           <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;">
             <h2 style="color:#1E2636;">New access request</h2>
-            <p style="color:#4A5578;font-size:14px;">A new user has requested access to EduTechExOS.</p>
+            <p style="color:#4A5578;font-size:14px;">A new user has requested access to EduTechExOS. They have been sent a temporary password and can sign in, but will see a restricted view until you approve.</p>
             <div style="background:#F7F6F2;border-radius:8px;padding:16px;margin:16px 0;">
               <p style="margin:4px 0;font-size:13px;"><strong>Name:</strong> ${name}</p>
               <p style="margin:4px 0;font-size:13px;"><strong>Email:</strong> ${emailClean}</p>
@@ -773,6 +846,9 @@ app.patch('/api/access-requests/:id', authMiddleware, async (req, res) => {
         status: rest.status,
       });
     }
+    // Notify the affected user's browser directly so they can update their UI
+    if (status === 'approved') io.emit('access_approved', { email: rest.email });
+    if (status === 'rejected') io.emit('access_rejected', { email: rest.email });
 
     // ── Email notifications on approval / rejection ────────────────────────
     const appUrl = process.env.APP_URL || 'https://edutechexos.vercel.app';
@@ -923,6 +999,139 @@ app.delete('/api/access-requests/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// ── Leave endpoints ──────────────────────────────────────────────────────────
+
+// POST /api/leaves — user submits a leave request
+app.post('/api/leaves', authMiddleware, async (req, res) => {
+  try {
+    const { type, leaveCategory, startDate, endDate, duration, reason } = req.body;
+    if (!type || !startDate || !reason) {
+      return res.status(400).json({ success: false, error: 'type, startDate and reason are required.' });
+    }
+    const leave = new Leave({
+      email: req.user.email,
+      name:  req.user.name,
+      type, leaveCategory, startDate,
+      endDate:  endDate  || '',
+      duration: duration || 'full',
+      reason,
+    });
+    const saved = await leave.save();
+    const { _id, __v, ...rest } = saved.toObject();
+
+    // Notify admin via email
+    const adminEmail = (VALID_ACCOUNTS.find(a => a.role === 'Admin') || {}).email;
+    const appUrl = process.env.APP_URL || 'https://edutechexos.vercel.app';
+    const typeLabel  = type === 'instant' ? 'Emergency / Instant' : 'Planned';
+    const catLabel   = { sick: 'Sick', vacation: 'Vacation', personal: 'Personal', emergency: 'Emergency', other: 'Other' }[leaveCategory] || leaveCategory;
+    const dateRange  = type === 'instant'
+      ? `${startDate} (${duration === 'half' ? 'Half day' : 'Full day'})`
+      : `${startDate} → ${endDate || startDate}`;
+
+    if (adminEmail) {
+      sendBrevoEmail({
+        to: [{ email: adminEmail }],
+        subject: `EduTechExOS — Leave request from ${req.user.name}`,
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#FAF8F5;border-radius:12px;">
+            <div style="background:linear-gradient(135deg,#191E2F,#252D45);border-radius:10px;padding:20px;text-align:center;margin-bottom:24px;">
+              <h1 style="color:#fff;margin:0;font-size:20px;">EduTechExOS</h1>
+              <p style="color:rgba(255,255,255,0.6);margin:4px 0 0;font-size:12px;">Leave Management</p>
+            </div>
+            <h2 style="color:#1E2636;font-size:17px;margin:0 0 12px;">New Leave Request</h2>
+            <div style="background:#fff;border:1px solid rgba(62,74,137,0.12);border-radius:10px;padding:16px;margin-bottom:20px;">
+              <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Name:</strong> ${req.user.name}</p>
+              <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Email:</strong> ${req.user.email}</p>
+              <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Type:</strong> ${typeLabel}</p>
+              <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Category:</strong> ${catLabel}</p>
+              <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Dates:</strong> ${dateRange}</p>
+              <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Reason:</strong> ${reason}</p>
+            </div>
+            <div style="text-align:center;">
+              <a href="${appUrl}/admin" style="display:inline-block;background:#3E4A89;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;">Review in Admin Panel →</a>
+            </div>
+          </div>`,
+      }).catch(() => {});
+    }
+
+    // Real-time socket notification to admin
+    io.emit('leave_requested', { leaveId: _id.toString(), email: req.user.email, name: req.user.name, type, startDate, endDate });
+
+    res.json({ success: true, leave: { ...rest, id: _id.toString() } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// GET /api/leaves — user gets own leaves, admin gets all
+app.get('/api/leaves', authMiddleware, async (req, res) => {
+  try {
+    const isAdmin = req.user?.role === 'Admin';
+    const query = isAdmin ? {} : { email: req.user.email };
+    const leaves = await Leave.find(query).sort({ requestedAt: -1 }).lean();
+    const formatted = leaves.map(({ _id, __v, ...rest }) => ({ ...rest, id: _id.toString() }));
+    res.json({ success: true, leaves: formatted });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// PATCH /api/leaves/:id — admin approves or rejects a leave request
+app.patch('/api/leaves/:id', authMiddleware, async (req, res) => {
+  if (!req.user || req.user.role !== 'Admin') {
+    return res.status(403).json({ success: false, error: 'Admin access required.' });
+  }
+  try {
+    const { status, adminNote } = req.body;
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'status must be approved or rejected.' });
+    }
+    const updated = await Leave.findByIdAndUpdate(
+      req.params.id,
+      { $set: { status, adminNote: adminNote || '' } },
+      { new: true }
+    ).lean();
+    if (!updated) return res.status(404).json({ success: false, error: 'Leave not found.' });
+    const { _id, __v, ...rest } = updated;
+
+    // Emit to the user's browser
+    io.emit('leave_updated', { leaveId: _id.toString(), email: rest.email, status, adminNote: rest.adminNote });
+
+    // Email the user
+    const appUrl = process.env.APP_URL || 'https://edutechexos.vercel.app';
+    const statusLabel = status === 'approved' ? '✅ Approved' : '❌ Rejected';
+    const typeLabel   = rest.type === 'instant' ? 'Emergency / Instant' : 'Planned';
+    const dateRange   = rest.type === 'instant'
+      ? `${rest.startDate} (${rest.duration === 'half' ? 'Half day' : 'Full day'})`
+      : `${rest.startDate} → ${rest.endDate || rest.startDate}`;
+
+    sendBrevoEmail({
+      to: [{ email: rest.email, name: rest.name }],
+      subject: `EduTechExOS — Your leave request has been ${status}`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#FAF8F5;border-radius:12px;">
+          <div style="background:linear-gradient(135deg,#191E2F,#252D45);border-radius:10px;padding:20px;text-align:center;margin-bottom:24px;">
+            <h1 style="color:#fff;margin:0;font-size:20px;">EduTechExOS</h1>
+          </div>
+          <h2 style="color:#1E2636;font-size:17px;margin:0 0 8px;">Hi ${rest.name}, your leave has been ${statusLabel}</h2>
+          <div style="background:#fff;border:1px solid rgba(62,74,137,0.12);border-radius:10px;padding:16px;margin:16px 0;">
+            <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Type:</strong> ${typeLabel}</p>
+            <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Dates:</strong> ${dateRange}</p>
+            <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Reason:</strong> ${rest.reason}</p>
+            ${rest.adminNote ? `<p style="margin:8px 0 4px;font-size:13px;color:#4A5578;"><strong>Admin note:</strong> ${rest.adminNote}</p>` : ''}
+          </div>
+          <div style="text-align:center;">
+            <a href="${appUrl}/dashboard" style="display:inline-block;background:#3E4A89;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;">Go to Dashboard →</a>
+          </div>
+        </div>`,
+    }).catch(() => {});
+
+    res.json({ success: true, leave: { ...rest, id: _id.toString() } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
 // GET /api/members — returns all members (hardcoded + approved requests)
 app.get('/api/members', async (req, res) => {
   try {
@@ -1019,10 +1228,17 @@ app.post('/api/members', async (req, res) => {
       return res.status(409).json({ success: false, error: 'A user request/account with this email already exists.' });
     }
 
+    // Auto-generate a secure random password
+    const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+    let generatedPassword = 'Edx@';
+    for (let i = 0; i < 10; i++) generatedPassword += charset[Math.floor(Math.random() * charset.length)];
+
+    const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+
     const request = new AccessRequest({
       name,
       email: emailClean,
-      password: 'Welcome@2026', // default password
+      password: hashedPassword,
       role,
       status: 'approved',
       channelId,
@@ -1031,8 +1247,25 @@ app.post('/api/members', async (req, res) => {
     const saved = await request.save();
     const { _id, __v, ...rest } = saved.toObject();
 
+    // Email the generated password to the new user
+    sendBrevoEmail({
+      to: [{ email: emailClean, name }],
+      subject: 'Your EduTechExOS account has been created',
+      html: `
+        <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:32px;background:#f8f9ff;border-radius:12px;">
+          <h2 style="color:#3E4A89;margin:0 0 16px;">Welcome to EduTechExOS, ${name}!</h2>
+          <p style="color:#4A5578;">An admin has created an account for you. Here are your login credentials:</p>
+          <div style="background:#fff;border:1px solid #d1d5f0;border-radius:8px;padding:20px;margin:20px 0;">
+            <p style="margin:0 0 8px;color:#4A5578;"><strong>Email:</strong> ${emailClean}</p>
+            <p style="margin:0;color:#4A5578;"><strong>Password:</strong> <code style="background:#f0f2ff;padding:4px 8px;border-radius:4px;font-size:15px;letter-spacing:1px;">${generatedPassword}</code></p>
+          </div>
+          <p style="color:#9BA6D3;font-size:13px;">Please change your password after your first login. If you did not expect this email, contact your workspace admin.</p>
+        </div>`,
+    }).catch(() => {});
+
     res.json({
       success: true,
+      generatedPassword, // returned so admin can see it once in the UI
       member: {
         id: `member-${_id.toString()}`,
         name: rest.name,
@@ -1453,24 +1686,36 @@ app.patch('/api/meeting-access/:messageId/grant', authMiddleware, async (req, re
 
 // ── Meeting Invite Email ───────────────────────────────────────────────────────
 
-// POST /api/meetings/invite — send a meeting invite email to all team members
+// POST /api/meetings/invite — send a meeting invite email to selected invitees only
 app.post('/api/meetings/invite', authMiddleware, async (req, res) => {
   try {
-    const { title, time, joinLink, channelId } = req.body;
+    const { title, time, joinLink, channelId, inviteeEmails } = req.body;
     if (!title || !joinLink) {
       return res.status(400).json({ success: false, error: 'title and joinLink are required.' });
     }
 
-    // Collect ALL team members (hardcoded + approved DB users)
-    const toMap = new Map(VALID_ACCOUNTS.map(a => [a.email, { email: a.email, name: a.name }]));
+    // Build the full member map (hardcoded + approved DB users)
+    const allMap = new Map(VALID_ACCOUNTS.map(a => [a.email.toLowerCase(), { email: a.email, name: a.name }]));
     try {
       const dbUsers = await AccessRequest.find({ status: 'approved' }).lean();
       for (const u of dbUsers) {
-        if (!toMap.has(u.email)) toMap.set(u.email, { email: u.email, name: u.name });
+        if (!allMap.has(u.email.toLowerCase())) allMap.set(u.email.toLowerCase(), { email: u.email, name: u.name });
       }
     } catch (_) { /* non-fatal */ }
 
-    const to = Array.from(toMap.values());
+    // If inviteeEmails provided, send only to those; otherwise fall back to everyone
+    let to;
+    if (Array.isArray(inviteeEmails) && inviteeEmails.length > 0) {
+      to = inviteeEmails
+        .map(e => allMap.get(e.toLowerCase()) ?? { email: e, name: e })
+        .filter(r => r.email);
+    } else {
+      to = Array.from(allMap.values());
+    }
+
+    // Exclude the scheduler themselves
+    const senderEmail = req.user?.email?.toLowerCase();
+    if (senderEmail) to = to.filter(r => r.email.toLowerCase() !== senderEmail);
     const hostName = req.user?.name || req.user?.email || 'A team member';
 
     const html = `
@@ -1482,7 +1727,7 @@ app.post('/api/meetings/invite', authMiddleware, async (req, res) => {
           </div>
           <div style="padding:28px;">
             <p style="margin:0 0 20px;color:#334155;font-size:14px;line-height:1.7;">
-              <strong>${hostName}</strong> has scheduled a meeting and invited your team.
+              <strong>${hostName}</strong> has scheduled a meeting and invited you.
             </p>
             ${time ? `
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:14px 16px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;">
@@ -1610,16 +1855,27 @@ app.post('/api/auth/login', async (req, res) => {
     if (!(await bcrypt.compare(password, request.password))) {
       return res.status(401).json({ success: false, error: 'invalid', message: 'Invalid credentials. Use an approved user account.' });
     }
-    if (request.status === 'pending') {
-      return res.status(401).json({ success: false, error: 'pending', message: 'Your request is waiting for admin approval.' });
-    }
     if (request.status === 'rejected') {
       return res.status(401).json({ success: false, error: 'rejected', message: 'Your access request was declined. Contact admin.' });
     }
 
+    // Pending ✓ — user can sign in but sees restricted dashboard until approved
+    if (request.status === 'pending') {
+      const token = jwt.sign(
+        { email: request.email, name: request.name, role: request.role, status: 'pending' },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRY }
+      );
+      return res.json({
+        success: true,
+        user: { email: request.email, name: request.name, role: request.role, status: 'pending' },
+        token,
+      });
+    }
+
     // Approved ✓
     const token = jwt.sign(
-      { email: request.email, name: request.name, role: request.role },
+      { email: request.email, name: request.name, role: request.role, status: 'approved' },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRY }
     );
@@ -1637,7 +1893,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     return res.json({
       success: true,
-      user: { email: request.email, name: request.name, role: request.role },
+      user: { email: request.email, name: request.name, role: request.role, status: 'approved' },
       token,
     });
   } catch (err) {
@@ -1974,6 +2230,211 @@ app.get('/api/og', async (req, res) => {
         siteName:    og('site_name')   || '',
       },
     });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// ── E2E Encryption key endpoints ─────────────────────────────────────────────
+
+// POST /api/keys — upsert your own public key (called once on login)
+app.post('/api/keys', authMiddleware, async (req, res) => {
+  try {
+    const email = req.user?.email?.toLowerCase();
+    if (!email) return res.status(401).json({ success: false, error: 'Auth required.' });
+    const { publicKey } = req.body;
+    if (!publicKey || typeof publicKey !== 'string') {
+      return res.status(400).json({ success: false, error: 'publicKey required.' });
+    }
+    await UserKey.findOneAndUpdate(
+      { email },
+      { email, publicKey, updatedAt: new Date() },
+      { upsert: true, new: true }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// GET /api/keys/:email — fetch any user's public key (auth required)
+app.get('/api/keys/:email', authMiddleware, async (req, res) => {
+  try {
+    const email = req.params.email?.toLowerCase();
+    const record = await UserKey.findOne({ email }).lean();
+    if (!record) return res.status(404).json({ success: false, error: 'No key found.' });
+    res.json({ success: true, publicKey: record.publicKey });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// ── Availability endpoints ────────────────────────────────────────────────────
+
+// GET /api/availability — any authenticated user fetches admin availability
+app.get('/api/availability', authMiddleware, async (req, res) => {
+  try {
+    const { month } = req.query; // YYYY-MM — returns whole month if given
+    const filter = {};
+    if (month) filter.date = { $regex: `^${month}` };
+    const records = await AdminAvailability.find(filter).sort({ date: 1 }).lean();
+    res.json({ success: true, records });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// POST /api/availability — admin upserts slots for a date
+app.post('/api/availability', authMiddleware, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Admin only.' });
+    }
+    const { date, slots } = req.body;
+    if (!date || !Array.isArray(slots)) {
+      return res.status(400).json({ success: false, error: 'date and slots required.' });
+    }
+    const record = await AdminAvailability.findOneAndUpdate(
+      { date, adminEmail: req.user.email },
+      { date, adminEmail: req.user.email, slots },
+      { upsert: true, new: true }
+    );
+    res.json({ success: true, record });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// DELETE /api/availability/:date — admin clears a date
+app.delete('/api/availability/:date', authMiddleware, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Admin only.' });
+    }
+    await AdminAvailability.deleteOne({ date: req.params.date, adminEmail: req.user.email });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// ── Meeting-request endpoints ─────────────────────────────────────────────────
+
+// GET /api/meeting-requests — admin sees all, user sees their own
+app.get('/api/meeting-requests', authMiddleware, async (req, res) => {
+  try {
+    const email = req.user?.email?.toLowerCase();
+    const filter = req.user?.role === 'Admin' ? {} : { userEmail: email };
+    const requests = await MeetingRequest.find(filter).sort({ date: 1, time: 1 }).lean();
+    res.json({ success: true, requests });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// POST /api/meeting-requests — any user books a slot
+app.post('/api/meeting-requests', authMiddleware, async (req, res) => {
+  try {
+    const { date, time, purpose, adminEmail } = req.body;
+    if (!date || !time) return res.status(400).json({ success: false, error: 'date and time required.' });
+    const mr = new MeetingRequest({
+      userEmail: req.user.email,
+      userName:  req.user.name,
+      adminEmail: adminEmail || 'admin@edutechex.in',
+      date, time, purpose: purpose || '',
+    });
+    const saved = await mr.save();
+    // Notify admin via email
+    sendBrevoEmail({
+      to: [{ email: adminEmail || 'admin@edutechex.in' }],
+      subject: `Meeting request from ${req.user.name} on ${date} at ${time}`,
+      html: `<p><strong>${req.user.name}</strong> (${req.user.email}) has requested a meeting on <strong>${date}</strong> at <strong>${time}</strong>.</p><p>Purpose: ${purpose || 'Not specified'}</p>`,
+    }).catch(() => {});
+    res.json({ success: true, request: saved });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// PATCH /api/meeting-requests/:id — admin confirms or declines
+app.patch('/api/meeting-requests/:id', authMiddleware, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Admin only.' });
+    }
+    const { status } = req.body;
+    const updated = await MeetingRequest.findByIdAndUpdate(
+      req.params.id, { status }, { new: true }
+    ).lean();
+    if (!updated) return res.status(404).json({ success: false, error: 'Not found.' });
+    // Notify user
+    sendBrevoEmail({
+      to: [{ email: updated.userEmail }],
+      subject: `Your meeting request on ${updated.date} at ${updated.time} has been ${status}`,
+      html: `<p>Hi <strong>${updated.userName}</strong>,</p><p>Your meeting request for <strong>${updated.date}</strong> at <strong>${updated.time}</strong> has been <strong>${status}</strong> by the admin.</p>`,
+    }).catch(() => {});
+    res.json({ success: true, request: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// ── Excel export endpoint ─────────────────────────────────────────────────────
+
+// GET /api/members/export — admin downloads all members as an Excel file
+app.get('/api/members/export', authMiddleware, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Admin only.' });
+    }
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'EduTechExOS';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('Members');
+    sheet.columns = [
+      { header: 'Name',        key: 'name',        width: 24 },
+      { header: 'Email',       key: 'email',       width: 30 },
+      { header: 'Role',        key: 'role',        width: 14 },
+      { header: 'Status',      key: 'status',      width: 12 },
+      { header: 'Password',    key: 'password',    width: 20 },
+      { header: 'Created At',  key: 'createdAt',   width: 22 },
+    ];
+
+    // Style header row
+    sheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3E4A89' } };
+      cell.alignment = { horizontal: 'center' };
+    });
+
+    // Add DB members (access requests with approved status)
+    const dbMembers = await AccessRequest.find({ status: 'approved' }).lean();
+    dbMembers.forEach((m) => {
+      sheet.addRow({
+        name:      m.name,
+        email:     m.email,
+        role:      m.role,
+        status:    'approved',
+        password:  m.password || '',
+        createdAt: m.requestedAt ? new Date(m.requestedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '',
+      });
+    });
+
+    // Alternate row shading
+    sheet.eachRow((row, i) => {
+      if (i > 1) {
+        row.eachCell((cell) => {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i % 2 === 0 ? 'FFF0F2FF' : 'FFFFFFFF' } };
+        });
+      }
+    });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="edutechexos-members-${new Date().toISOString().slice(0,10)}.xlsx"`);
+    await workbook.xlsx.write(res);
+    res.end();
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }

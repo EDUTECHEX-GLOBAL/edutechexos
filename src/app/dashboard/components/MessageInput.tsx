@@ -177,6 +177,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
   const linkPreviewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const addMessage = useDashboardStore((s) => s.addMessage);
+  const addNotification = useDashboardStore((s) => s.addNotification);
   const setTyping = useDashboardStore((s) => s.setTyping);
   const channels = useDashboardStore((s) => s.channels);
   const members = useDashboardStore((s) => s.members);
@@ -356,6 +357,32 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
         ...(replyToId ? { parentId: replyToId } : {}),
         ...(linkPreview ? { linkPreview } : {}),
       });
+
+      // Parse @mentions and send a targeted notification to each mentioned member
+      const mentionMatches = message.match(/@([\w. ]+)/g) ?? [];
+      if (mentionMatches.length > 0) {
+        const mentionedNames = mentionMatches.map((m) => m.slice(1).trim().toLowerCase());
+        const mentioned = members.filter((mem) =>
+          mentionedNames.some(
+            (n) =>
+              mem.name.toLowerCase().includes(n) || n.includes(mem.name.toLowerCase().split(' ')[0])
+          )
+        );
+        mentioned.forEach((mem) => {
+          if (mem.email && mem.name !== currentUser?.name) {
+            addNotification({
+              type: 'mention',
+              actor: currentUser?.name ?? 'Someone',
+              actorInitials: currentUser?.initials ?? '?',
+              actorColor: currentUser?.color ?? '#3E4A89',
+              channel: channelId,
+              message: message.slice(0, 120),
+              recipientEmails: [mem.email],
+            });
+          }
+        });
+      }
+
       setMessage('');
       setLinkPreview(null);
       setShowAISuggestions(false);

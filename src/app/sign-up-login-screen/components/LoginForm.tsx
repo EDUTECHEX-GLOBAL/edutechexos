@@ -24,28 +24,28 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend
 
 // Hardcoded fallback for when backend is unreachable
 const VALID_ACCOUNTS = [
-  { email: 'admin@edutechex.in', password: 'Admin@2026', name: 'Admin', role: 'Admin' },
+  { email: 'admin@edutechex.in', password: 'Admin@Edx2026', name: 'Admin', role: 'Admin' },
   {
     email: 'aditya@edutechex.in',
-    password: 'TeamOS@2026',
+    password: 'Aditya@Edx2026',
     name: 'Aditya Cherikuri',
     role: 'Manager',
   },
   {
     email: 'dev.rk@edutechex.in',
-    password: 'DevAccess#26',
+    password: 'DevRK@Edx2026',
     name: 'Developer RK',
     role: 'Developer',
   },
   {
     email: 'design.sa@edutechex.in',
-    password: 'Design$2026',
+    password: 'Design@Edx2026',
     name: 'Designer SA',
     role: 'Designer',
   },
-  { email: 'mohan.kumar@edutechex.in', password: 'MohanK@2026', name: 'Mohan K.', role: 'Member' },
-  { email: 'mohan.reddy@edutechex.in', password: 'MohanR@2026', name: 'Mohan R.', role: 'Member' },
-  { email: 'mohan.sen@edutechex.in', password: 'MohanS@2026', name: 'Mohan S.', role: 'Member' },
+  { email: 'mohan.kumar@edutechex.in', password: 'MohanK@Edx2026', name: 'Mohan K.', role: 'Member' },
+  { email: 'mohan.reddy@edutechex.in', password: 'MohanR@Edx2026', name: 'Mohan R.', role: 'Member' },
+  { email: 'mohan.sen@edutechex.in', password: 'MohanS@Edx2026', name: 'Mohan S.', role: 'Member' },
 ];
 
 export default function LoginForm({
@@ -102,8 +102,14 @@ export default function LoginForm({
       return;
     }
     if (authMode === 'user' && loginAccount.role === 'Admin') {
+      // Admin logged in from the regular page — just send them to /admin
+      const token = jwtToken || `mock-jwt-${Date.now()}`;
+      localStorage.setItem('edutechex_token', JSON.stringify({ user: loginAccount, token }));
+      toast.success(`Welcome back, ${loginAccount.name.split(' ')[0]}!`);
+      identifyUser(loginAccount.email, loginAccount.name);
+      trackEvent('login', { role: loginAccount.role });
       setIsLoading(false);
-      setError('email', { message: 'Admin must use the Admin button on the home page.' });
+      router.push('/admin');
       return;
     }
 
@@ -130,7 +136,12 @@ export default function LoginForm({
       localStorage.setItem(trackKey, JSON.stringify([...existing, today]));
     }
 
-    toast.success(`Welcome back, ${loginAccount.name.split(' ')[0]}!`);
+    const isPending = (loginAccount as { status?: string }).status === 'pending';
+    if (isPending) {
+      toast.info(`Signed in, ${loginAccount.name.split(' ')[0]}. Your account is pending admin approval.`, { duration: 5000 });
+    } else {
+      toast.success(`Welcome back, ${loginAccount.name.split(' ')[0]}!`);
+    }
     identifyUser(loginAccount.email, loginAccount.name);
     trackEvent('login', { role: loginAccount.role });
     setIsLoading(false);

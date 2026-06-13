@@ -164,6 +164,7 @@ type DashboardState = {
   updateMessageFromSocket: (channelId: string, message: Message) => void;
   deleteMessage: (channelId: string, messageId: string) => void;
   deleteMessageFromSocket: (channelId: string, messageId: string) => void;
+  patchLocalMessage: (channelId: string, messageId: string, patch: Partial<Message>) => void;
   editMessage: (channelId: string, messageId: string, newText: string) => void;
   loadLocalMessages: () => Promise<void>;
   loadMoreMessages: (channelId: string) => Promise<void>;
@@ -447,6 +448,17 @@ export const useDashboardStore = create<DashboardState>()(
                     reactions: undefined,
                   }
                 : m
+            ),
+          },
+        }));
+      },
+
+      patchLocalMessage: (channelId, messageId, patch) => {
+        set((s) => ({
+          messages: {
+            ...s.messages,
+            [channelId]: (s.messages[channelId] ?? []).map((m) =>
+              m.id === messageId ? { ...m, ...patch } : m
             ),
           },
         }));
