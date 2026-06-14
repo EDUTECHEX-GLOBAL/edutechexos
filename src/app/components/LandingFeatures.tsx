@@ -1,11 +1,104 @@
 'use client';
 import React, { useRef } from 'react';
-import { Hash, Bot, CheckSquare, Newspaper, Database, Users, Zap, Eye, Calendar } from 'lucide-react';
 import AnimatedSection from './AnimatedSection';
+
+/* ── Custom SVG icons — one per feature ──────────────────────────────────── */
+const IconChannels = () => (
+  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+    <rect x="2" y="3" width="14" height="11" rx="2.5" stroke="white" strokeWidth="1.7" />
+    <path d="M5 7.5h8M5 10h6" stroke="white" strokeWidth="1.4" strokeLinecap="round" opacity=".75" />
+    <path d="M6 14l-3 3.5h3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity=".75" />
+    <rect x="10" y="12" width="14" height="11" rx="2.5" stroke="white" strokeWidth="1.7" opacity=".55" />
+    <path d="M13 16.5h8M13 19h5" stroke="white" strokeWidth="1.4" strokeLinecap="round" opacity=".4" />
+  </svg>
+);
+
+const IconAI = () => (
+  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+    <circle cx="13" cy="13" r="3" fill="white" />
+    <circle cx="5"  cy="6"  r="1.8" fill="white" opacity=".7" />
+    <circle cx="21" cy="6"  r="1.8" fill="white" opacity=".7" />
+    <circle cx="5"  cy="20" r="1.8" fill="white" opacity=".7" />
+    <circle cx="21" cy="20" r="1.8" fill="white" opacity=".7" />
+    <path d="M7 7.5L10.2 10.8M18.8 7.5L15.8 10.8M7 18.5L10.2 15.2M18.8 18.5L15.8 15.2" stroke="white" strokeWidth="1.2" opacity=".5" />
+    <circle cx="13" cy="13" r="6" stroke="white" strokeWidth="1" strokeDasharray="2 2.5" opacity=".35" />
+  </svg>
+);
+
+const IconTasks = () => (
+  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+    <rect x="4" y="3" width="14" height="18" rx="2.5" stroke="white" strokeWidth="1.7" />
+    <path d="M8 9l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M8 15h6M8 18h4" stroke="white" strokeWidth="1.4" strokeLinecap="round" opacity=".65" />
+    <path d="M21 4l.8 1.8L23.5 6l-1.7.5L21 8l-.8-1.5L18.5 6l1.7-.7Z" fill="white" opacity=".9" />
+  </svg>
+);
+
+const IconDigest = () => (
+  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+    <circle cx="19" cy="7" r="3.5" stroke="white" strokeWidth="1.6" fill="none" />
+    <path d="M19 2.5V4M19 10v1.5M13.5 7H15M23 7h1.5M15 3.5l1 1M22.5 10.5l1 1M15 10.5l1-1M22.5 3.5l1-1" stroke="white" strokeWidth="1.3" strokeLinecap="round" opacity=".65" />
+    <rect x="3" y="10" width="13" height="14" rx="2" stroke="white" strokeWidth="1.7" />
+    <path d="M6 15h7M6 18h5M6 21h3" stroke="white" strokeWidth="1.3" strokeLinecap="round" opacity=".65" />
+  </svg>
+);
+
+const IconAttendance = () => (
+  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+    <rect x="3" y="6" width="20" height="17" rx="2.5" stroke="white" strokeWidth="1.7" />
+    <path d="M3 11.5h20" stroke="white" strokeWidth="1.3" opacity=".5" />
+    <path d="M9 3v5M17 3v5" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+    <rect x="6"  y="15" width="3.5" height="3.5" rx="1" fill="white" />
+    <rect x="11" y="15" width="3.5" height="3.5" rx="1" fill="white" opacity=".4" />
+    <rect x="16" y="15" width="3.5" height="3.5" rx="1" fill="white" />
+    <rect x="6"  y="19.5" width="3.5" height="1.5" rx=".75" fill="white" opacity=".3" />
+  </svg>
+);
+
+const IconBroadcast = () => (
+  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+    <circle cx="13" cy="15" r="2.5" fill="white" />
+    <path d="M8.5 11.5C10 9.5 11.4 8.5 13 8.5s3 1 4.5 3" stroke="white" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+    <path d="M5 8C7.5 4.5 10 2.5 13 2.5S18.5 4.5 21 8" stroke="white" strokeWidth="1.6" strokeLinecap="round" fill="none" opacity=".55" />
+    <path d="M6 22h14" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+    <path d="M13 17.5V22" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+  </svg>
+);
+
+const IconKnowledge = () => (
+  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+    <ellipse cx="13" cy="19.5" rx="8" ry="3" stroke="white" strokeWidth="1.6" fill="none" />
+    <ellipse cx="13" cy="13"   rx="8" ry="3" stroke="white" strokeWidth="1.6" fill="none" />
+    <ellipse cx="13" cy="6.5"  rx="8" ry="3" stroke="white" strokeWidth="1.6" fill="none" />
+    <path d="M5 6.5v13M21 6.5v13" stroke="white" strokeWidth="1.6" />
+    <path d="M10 6l1.5 1.5L15 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity=".8" />
+  </svg>
+);
+
+const IconActivity = () => (
+  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+    <path d="M2 13h4l2.5-7 4 13 3-10 2 4h6.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <circle cx="21" cy="13" r="2" fill="white" opacity=".7" />
+  </svg>
+);
+
+const IconOnboarding = () => (
+  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+    <circle cx="10" cy="8" r="3.5" stroke="white" strokeWidth="1.7" fill="none" />
+    <path d="M3 22c0-4.5 3.2-7 7-7" stroke="white" strokeWidth="1.7" strokeLinecap="round" fill="none" />
+    <path d="M20 9.5C19 9 17 10 16 11.8c0 4.5 4 6.2 4 6.2s4-1.7 4-6.2C23 10 21 9 20 9.5Z" stroke="white" strokeWidth="1.6" fill="none" />
+    <path d="M18 14l1.5 1.5 3-3.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const CUSTOM_ICONS = [
+  IconChannels, IconAI, IconTasks, IconDigest, IconAttendance,
+  IconBroadcast, IconKnowledge, IconActivity, IconOnboarding,
+];
 
 const features = [
   {
-    Icon: Hash,
+
     accent: '#0DAFCE',
     accentBg: 'rgba(13,175,206,0.10)',
     accentBorder: 'rgba(13,175,206,0.20)',
@@ -17,7 +110,7 @@ const features = [
     gradient: 'linear-gradient(135deg, rgba(13,175,206,0.08), rgba(59,130,246,0.08))',
   },
   {
-    Icon: Bot,
+
     accent: '#8B3FDB',
     accentBg: 'rgba(139,63,219,0.10)',
     accentBorder: 'rgba(139,63,219,0.20)',
@@ -29,7 +122,7 @@ const features = [
     gradient: 'linear-gradient(135deg, rgba(139,63,219,0.08), rgba(26,27,58,0.14))',
   },
   {
-    Icon: CheckSquare,
+
     accent: '#10C98A',
     accentBg: 'rgba(16,201,138,0.10)',
     accentBorder: 'rgba(16,201,138,0.20)',
@@ -41,7 +134,7 @@ const features = [
     gradient: 'linear-gradient(135deg, rgba(16,201,138,0.08), rgba(5,150,105,0.08))',
   },
   {
-    Icon: Newspaper,
+
     accent: '#F97316',
     accentBg: 'rgba(249,115,22,0.10)',
     accentBorder: 'rgba(249,115,22,0.20)',
@@ -53,7 +146,7 @@ const features = [
     gradient: 'linear-gradient(135deg, rgba(249,115,22,0.08), rgba(245,158,11,0.08))',
   },
   {
-    Icon: Calendar,
+
     accent: '#F59E0B',
     accentBg: 'rgba(245,158,11,0.10)',
     accentBorder: 'rgba(245,158,11,0.20)',
@@ -65,7 +158,7 @@ const features = [
     gradient: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(239,71,111,0.06))',
   },
   {
-    Icon: Zap,
+
     accent: '#C026D3',
     accentBg: 'rgba(192,38,211,0.10)',
     accentBorder: 'rgba(192,38,211,0.20)',
@@ -77,7 +170,7 @@ const features = [
     gradient: 'linear-gradient(135deg, rgba(192,38,211,0.08), rgba(139,63,219,0.08))',
   },
   {
-    Icon: Database,
+
     accent: '#059669',
     accentBg: 'rgba(5,150,105,0.10)',
     accentBorder: 'rgba(5,150,105,0.20)',
@@ -89,7 +182,7 @@ const features = [
     gradient: 'linear-gradient(135deg, rgba(5,150,105,0.08), rgba(16,201,138,0.08))',
   },
   {
-    Icon: Eye,
+
     accent: '#3B82F6',
     accentBg: 'rgba(59,130,246,0.10)',
     accentBorder: 'rgba(59,130,246,0.20)',
@@ -101,7 +194,7 @@ const features = [
     gradient: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(26,27,58,0.14))',
   },
   {
-    Icon: Users,
+
     accent: '#EF476F',
     accentBg: 'rgba(239,71,111,0.10)',
     accentBorder: 'rgba(239,71,111,0.20)',
@@ -116,7 +209,7 @@ const features = [
 
 function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { Icon } = feat;
+  const CustomIcon = CUSTOM_ICONS[i];
 
   function handleClick() {
     const el = cardRef.current;
@@ -132,87 +225,121 @@ function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
       <div
         ref={cardRef}
         onClick={handleClick}
-        className="group relative flex flex-col p-6 rounded-2xl cursor-pointer"
+        className="group relative flex flex-col rounded-2xl cursor-pointer overflow-hidden"
         style={{
           background: '#FFFFFF',
           border: `1.5px solid ${feat.accentBorder}`,
-          boxShadow: `0 2px 12px rgba(0,0,0,0.04), 0 1px 0 rgba(255,255,255,0.9) inset`,
-          minHeight: 220,
+          boxShadow: `0 2px 12px rgba(0,0,0,0.04)`,
+          minHeight: 240,
           transition: 'all 0.35s cubic-bezier(0.22,1,0.36,1)',
         }}
         onMouseEnter={e => {
           const el = e.currentTarget;
-          el.style.borderColor = feat.accent + '50';
-          el.style.boxShadow = `0 16px 48px ${feat.accentGlow}, 0 4px 16px rgba(0,0,0,0.04)`;
-          el.style.transform = 'translateY(-4px) scale(1.005)';
+          el.style.borderColor = feat.accent + '55';
+          el.style.boxShadow = `0 20px 56px ${feat.accentGlow}, 0 4px 16px rgba(0,0,0,0.05)`;
+          el.style.transform = 'translateY(-5px)';
         }}
         onMouseLeave={e => {
           const el = e.currentTarget;
           el.style.borderColor = feat.accentBorder;
-          el.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04), 0 1px 0 rgba(255,255,255,0.9) inset';
-          el.style.transform = 'translateY(0) scale(1)';
+          el.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)';
+          el.style.transform = 'translateY(0)';
         }}
       >
-        {/* Gradient bg fill (subtle) */}
-        <div style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', background: feat.gradient, opacity: 0, transition: 'opacity 0.35s', pointerEvents: 'none' }} className="group-hover:opacity-100" />
-
-        {/* Top accent line */}
-        <div style={{ position: 'absolute', top: 0, left: 16, right: 16, height: 2, background: `linear-gradient(90deg, transparent, ${feat.accent}60, transparent)`, borderRadius: '0 0 2px 2px', opacity: 0, transition: 'opacity 0.3s' }} className="group-hover:opacity-100" />
-
-        {/* Left border accent on hover */}
-        <div style={{ position: 'absolute', left: 0, top: 12, bottom: 12, width: 3, borderRadius: '0 2px 2px 0', background: feat.accent, opacity: 0, transition: 'opacity 0.3s' }} className="group-hover:opacity-100" />
-
-        {/* Icon */}
+        {/* Top colour band */}
         <div style={{
-          width: 48, height: 48, borderRadius: 14,
-          background: feat.accentBg,
-          border: `1.5px solid ${feat.accentBorder}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          marginBottom: 18, flexShrink: 0,
-          boxShadow: `0 4px 16px ${feat.accentGlow}`,
-          transition: 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1)',
-          position: 'relative', zIndex: 1,
-        }} className="group-hover:scale-110">
-          <Icon size={22} style={{ color: feat.accent }} />
-        </div>
+          height: 4,
+          background: `linear-gradient(90deg, ${feat.accent}, ${feat.accent}80)`,
+          flexShrink: 0,
+        }} />
 
-        {/* Title */}
-        <h3 style={{
-          fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif",
-          fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em',
-          color: '#1A1B3A', marginBottom: 10, lineHeight: 1.2,
-          position: 'relative', zIndex: 1,
-        }}>
-          {feat.title}
-        </h3>
+        {/* Card body */}
+        <div style={{ padding: '22px 22px 20px', display: 'flex', flexDirection: 'column', flex: 1 }}>
 
-        {/* Description */}
-        <p style={{
-          fontSize: 13, fontWeight: 400, lineHeight: 1.70,
-          color: 'rgba(90,95,128,0.80)', flex: 1,
-          position: 'relative', zIndex: 1,
-        }}>
-          {feat.description}
-        </p>
+          {/* Icon row — index number left, icon right */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
 
-        {/* Tag pill */}
-        <div style={{ marginTop: 18, position: 'relative', zIndex: 1 }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            fontSize: 9, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase',
-            color: feat.accent, background: feat.accentBg,
-            border: `1px solid ${feat.accentBorder}`,
-            padding: '4px 10px', borderRadius: 20,
-            fontFamily: "'JetBrains Mono', monospace",
+            {/* Index number */}
+            <span style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11, fontWeight: 800,
+              color: feat.accent,
+              background: feat.accentBg,
+              border: `1px solid ${feat.accentBorder}`,
+              borderRadius: 8, padding: '3px 8px',
+              letterSpacing: '0.05em',
+            }}>
+              {String(i + 1).padStart(2, '0')}
+            </span>
+
+            {/* Icon container — gradient bg, white icon */}
+            <div
+              className="group-hover:scale-110"
+              style={{
+                width: 52, height: 52, borderRadius: 16, flexShrink: 0,
+                background: `linear-gradient(140deg, ${feat.accent}, ${feat.accent}aa)`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: `0 6px 20px ${feat.accent}40, 0 2px 6px ${feat.accent}25`,
+                transition: 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s',
+                position: 'relative',
+              }}
+            >
+              {/* Inner shine */}
+              <div style={{
+                position: 'absolute', top: 0, left: 0, right: 0, height: '50%',
+                borderRadius: '16px 16px 0 0',
+                background: 'rgba(255,255,255,0.18)',
+                pointerEvents: 'none',
+              }} />
+              <CustomIcon />
+            </div>
+          </div>
+
+          {/* Title */}
+          <h3 style={{
+            fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif",
+            fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em',
+            color: '#1A1B3A', marginBottom: 10, lineHeight: 1.25,
           }}>
-            <span style={{ width: 4, height: 4, borderRadius: '50%', background: feat.accent, display: 'inline-block' }} />
-            {feat.tag}
-          </span>
-        </div>
+            {feat.title}
+          </h3>
 
-        {/* Click hint */}
-        <div style={{ position: 'absolute', bottom: 10, right: 10, fontSize: 8, fontWeight: 600, color: `${feat.accent}60`, letterSpacing: '.08em', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace", opacity: 0, transition: 'opacity 0.3s' }} className="group-hover:opacity-100">
-          click to animate
+          {/* Description */}
+          <p style={{
+            fontSize: 13, fontWeight: 400, lineHeight: 1.70,
+            color: 'rgba(90,95,128,0.78)', flex: 1,
+          }}>
+            {feat.description}
+          </p>
+
+          {/* Bottom row — tag + arrow */}
+          <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              fontSize: 9, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase',
+              color: feat.accent, background: feat.accentBg,
+              border: `1px solid ${feat.accentBorder}`,
+              padding: '4px 10px', borderRadius: 20,
+              fontFamily: "'JetBrains Mono', monospace",
+            }}>
+              <span style={{ width: 4, height: 4, borderRadius: '50%', background: feat.accent, display: 'inline-block' }} />
+              {feat.tag}
+            </span>
+
+            {/* Arrow — visible on hover */}
+            <div
+              className="group-hover:opacity-100"
+              style={{
+                opacity: 0, transition: 'opacity 0.25s',
+                width: 28, height: 28, borderRadius: 8,
+                background: feat.accentBg, border: `1px solid ${feat.accentBorder}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 13, color: feat.accent, fontWeight: 700,
+              }}
+            >
+              →
+            </div>
+          </div>
         </div>
       </div>
     </AnimatedSection>

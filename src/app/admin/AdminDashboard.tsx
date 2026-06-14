@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 import AdminGuard from '../components/AdminGuard';
 import LoginTrackerCalendar from './components/LoginTrackerCalendar';
 import AdminAvailabilityCalendar from './components/AdminAvailabilityCalendar';
+import AdminLeaveCalendar from './components/AdminLeaveCalendar';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { getSocket } from '@/lib/socket';
 
@@ -97,7 +98,7 @@ export default function AdminPage() {
     at: string;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<
-    'people' | 'requests' | 'channels' | 'broadcast' | 'activity' | 'attendance' | 'desktop' | 'availability' | 'leaves'
+    'people' | 'requests' | 'channels' | 'broadcast' | 'activity' | 'attendance' | 'desktop' | 'availability' | 'leaves' | 'leave-calendar'
   >('people');
   type AWRecord = {
     email: string; name: string; currentApp: string; currentTitle: string;
@@ -709,7 +710,8 @@ export default function AdminPage() {
     { id: 'attendance' as const, Icon: CalendarDays, label: 'Attendance', badge: 0,                      accent: '#F59E0B', accentBg: 'rgba(245,158,11,0.10)',  accentBorder: 'rgba(245,158,11,0.22)',  animClass: 'click-cell-bloom' },
     { id: 'desktop' as const,      Icon: Monitor,      label: 'Desktop',      badge: awRecords.length, accent: '#10B981', accentBg: 'rgba(16,185,129,0.10)',  accentBorder: 'rgba(16,185,129,0.22)',  animClass: 'click-bar-rise' },
     { id: 'availability' as const, Icon: CalendarDays, label: 'Availability', badge: 0,                accent: '#6366f1', accentBg: 'rgba(99,102,241,0.10)',  accentBorder: 'rgba(99,102,241,0.22)',  animClass: 'click-cell-bloom' },
-    { id: 'leaves' as const,      Icon: CalendarX,    label: 'Leaves',      badge: leaves.filter(l => l.status === 'pending').length, accent: '#F59E0B', accentBg: 'rgba(245,158,11,0.10)', accentBorder: 'rgba(245,158,11,0.22)', animClass: 'click-cell-bloom' },
+    { id: 'leaves' as const,         Icon: CalendarX,    label: 'Leaves',         badge: leaves.filter(l => l.status === 'pending').length, accent: '#F59E0B', accentBg: 'rgba(245,158,11,0.10)', accentBorder: 'rgba(245,158,11,0.22)', animClass: 'click-cell-bloom' },
+    { id: 'leave-calendar' as const,  Icon: CalendarDays, label: 'Leave Calendar', badge: 0,                                                     accent: '#10C98A', accentBg: 'rgba(16,201,138,0.10)', accentBorder: 'rgba(16,201,138,0.22)', animClass: 'click-cell-bloom' },
   ];
 
   const activeTabMeta = TABS.find(t => t.id === activeTab)!;
@@ -2147,6 +2149,16 @@ export default function AdminPage() {
                   </div>
                 );
               })()}
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════
+              TAB: LEAVE CALENDAR
+          ════════════════════════════════════════════════════════════ */}
+          {activeTab === 'leave-calendar' && (
+            <div className="p-6">
+              <div style={{ height: 3, background: 'linear-gradient(90deg, #10C98A, #059669)', borderRadius: 3, marginBottom: 24 }} />
+              <AdminLeaveCalendar />
             </div>
           )}
         </main>
