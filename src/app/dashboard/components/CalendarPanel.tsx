@@ -95,7 +95,7 @@ function extractDate(text: string): { date: Date | null; raw: string } {
     const d = new Date(now);
     let diff = target - d.getDay();
     if (diff <= 0) diff += 7;
-    d.setDate(d.getDate() + diff + 7);
+    d.setDate(d.getDate() + diff);
     return { date: d, raw: m[0] };
   }
   m = text.match(new RegExp(`\\b(?:this\\s+)?(${dayRe})\\b`, 'i'));
@@ -635,7 +635,7 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                             <span
                               className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black ${ok ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}
                             >
-                              {rel(parseDT(m.timeStr)?.getTime() ?? 0)}
+                              {parseDT(m.timeStr) ? rel(parseDT(m.timeStr)!.getTime()) : '—'}
                             </span>
                           </div>
                           <p className="mt-1 flex items-center gap-2 text-[11px] text-[#7C859E]">

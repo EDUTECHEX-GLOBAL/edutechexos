@@ -113,9 +113,6 @@ export default function NotepadPanel({ onClose, activeChannel }: NotepadPanelPro
     if (!note.trim()) {
       setIsSaving(false);
       setSaveStatus('idle');
-      localStorage.removeItem(getNoteKey(selectedPadId));
-      localStorage.removeItem(getTimestampKey(selectedPadId));
-      void saveNoteAction(selectedPadId, '');
       return;
     }
     setIsSaving(true);
@@ -203,17 +200,6 @@ export default function NotepadPanel({ onClose, activeChannel }: NotepadPanelPro
       localStorage.removeItem(getNoteKey(selectedPadId));
       localStorage.removeItem(getTimestampKey(selectedPadId));
       setSaveStatus('idle');
-
-      // Notify channel members about note clearance
-      addMessage(selectedPadId, {
-        id: `msg-note-${Date.now()}`,
-        sender: 'System',
-        initials: '🛈',
-        color: '#6b7280',
-        timestamp: new Date().toISOString(),
-        text: `🗑️ Note cleared in #${selectedName}`,
-      });
-
       toast.success('Notepad cleared');
     }
   };

@@ -95,7 +95,7 @@ export default function DashboardSidebar({
     addChannel(newChan);
     setActiveChannel(cleanName);
 
-    toast.success(`#${cleanName} created! �¬`);
+    toast.success(`#${cleanName} created! ✨`);
 
     setNewChannelName('');
     setNewChannelDesc('');
@@ -528,7 +528,7 @@ export default function DashboardSidebar({
                 className={`mt-1 inline-block rounded-md px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest ${
                   currentUser.role === 'Admin'
                     ? 'bg-[#3E4A89]/10 text-[#3E4A89]'
-                    : 'bg-[#FAF8F5]0/10 text-[#7C859E]'
+                    : 'bg-[#FAF8F5]/10 text-[#7C859E]'
                 }`}
               >
                 {currentUser.role}
@@ -553,13 +553,18 @@ export default function DashboardSidebar({
             >
               {darkMode ? <Sun size={14} strokeWidth={2} /> : <Moon size={14} strokeWidth={2} />}
             </button>
-            <Link
-              href="/sign-up-login-screen"
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem('edutechex_token');
+                localStorage.removeItem('edutechex_access_requests');
+                window.location.href = '/sign-up-login-screen';
+              }}
               className="flex-1 flex justify-center items-center py-1.5 rounded-lg text-[#7C859E] hover:bg-red-50 hover:text-red-600 hover:shadow-sm transition-all"
               title="Sign out"
             >
               <LogOut size={14} strokeWidth={2} />
-            </Link>
+            </button>
           </div>
         </div>
       </aside>
@@ -574,7 +579,7 @@ export default function DashboardSidebar({
           <div className="bg-white border border-[rgba(62,74,137,0.08)] shadow-2xl rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 p-5 text-white relative">
               <h3 className="text-base font-black uppercase tracking-widest flex items-center gap-2">
-                <span>�¬</span> Create New Channel
+                <span>✨</span> Create New Channel
               </h3>
               <p className="text-[10px] text-indigo-100 font-bold uppercase tracking-wider mt-1">
                 Add a collaborative space for the team
@@ -631,7 +636,7 @@ export default function DashboardSidebar({
                   type="submit"
                   className="h-9 px-5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-black text-sm transition-all hover:scale-[1.02] shadow-md shadow-indigo-600/10 uppercase tracking-wider cursor-pointer"
                 >
-                  Create Channel �¬
+                  Create Channel ✨
                 </button>
               </div>
             </form>
@@ -644,7 +649,7 @@ export default function DashboardSidebar({
           <div className="bg-white border border-[rgba(62,74,137,0.08)] shadow-2xl rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-5 text-white relative">
               <h3 className="text-base font-black uppercase tracking-widest flex items-center gap-2">
-                <span>�¥</span> Add Team Member
+                <span>📧</span> Add Team Member
               </h3>
               <p className="text-[10px] text-emerald-100 font-bold uppercase tracking-wider mt-1">
                 Onboard a new collaborator to the OS workspace

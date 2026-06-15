@@ -235,7 +235,7 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
           {/* Send DM button */}
           <button
             onClick={handleSendDM}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#3E4A89] hover:bg-[rgba(62,74,137,0.08)]0 active:bg-[#2A3568] text-white text-sm font-bold transition-colors shadow-md shadow-indigo-200"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#3E4A89] hover:bg-[#2A3568] active:bg-[#2A3568] text-white text-sm font-bold transition-colors shadow-md shadow-indigo-200"
           >
             <Send size={15} strokeWidth={2.5} />
             Send DM

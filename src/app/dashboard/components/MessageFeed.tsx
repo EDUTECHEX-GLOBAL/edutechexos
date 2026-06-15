@@ -375,7 +375,7 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
   const [activeEmojiPicker, setActiveEmojiPicker] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
-  const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role?: string } | null>(null);
   const [forwardingMsg, setForwardingMsg] = useState<FwdMsg | null>(null);
 
   const messages = parentId
@@ -408,7 +408,7 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
   }, [activeEmojiPicker]);
 
   const userEmail = currentUser?.email ?? '';
-  const isAdmin = currentUser?.name === 'Admin';
+  const isAdmin = currentUser?.role?.toLowerCase() === 'admin';
 
   const handleDelete = (msgId: string, sender: string) => {
     if (sender !== currentUser?.name && !isAdmin) {
@@ -504,7 +504,7 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
             {/* Pinned indicator */}
             {isPinned && (
               <div
-                className={`mb-0.5 flex items-center gap-1 text-[11px] font-bold text-amber-600 ${isOwn ? 'justify-start pl-10' : 'justify-end pr-1'}`}
+                className={`mb-0.5 flex items-center gap-1 text-[11px] font-bold text-amber-600 ${isOwn ? 'justify-end pr-1' : 'justify-start pl-10'}`}
               >
                 <Pin size={10} /> Pinned
               </div>
@@ -512,7 +512,7 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
 
             {/* Message row */}
             <div
-              className={`group flex items-end gap-2 ${msg.isFirst ? 'mt-3 mb-0' : 'mt-0.5 mb-0'} ${isOwn ? 'flex-row' : 'flex-row-reverse'}`}
+              className={`group flex items-end gap-2 ${msg.isFirst ? 'mt-3 mb-0' : 'mt-0.5 mb-0'} ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
             >
               {/* Avatar — only show for first in group, on receiver (right) side */}
               {!isOwn && (

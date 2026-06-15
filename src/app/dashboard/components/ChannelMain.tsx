@@ -347,7 +347,11 @@ export default function ChannelMain({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(25,30,47,0.55)] p-4 backdrop-blur-sm">
           <div className="flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl  dark:bg-[#191E2F]">
             <div className="border-b border-[rgba(62,74,137,0.12)]  bg-gradient-to-r from-slate-900 to-indigo-900 px-6 py-4 text-white">
-              <h2 className="text-base font-black">#{channel.name} Members</h2>
+              <h2 className="text-base font-black">
+                {channel.id.startsWith('member-')
+                  ? members.find((m) => m.id === channel.id)?.name ?? 'Direct Message'
+                  : `#${channel.name} Members`}
+              </h2>
               <p className="mt-0.5 text-xs text-[#9BA6D3]">{channel.memberCount} members</p>
             </div>
             <div className="border-b border-[rgba(62,74,137,0.12)]  px-4 py-3">

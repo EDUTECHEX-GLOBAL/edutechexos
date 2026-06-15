@@ -464,7 +464,8 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
                     )}
 
                     <span className="text-[10px] text-[#9BA6D3] px-1">
-                      {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      {((msg as any).createdAt ? new Date((msg as any).createdAt) : new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                 </div>

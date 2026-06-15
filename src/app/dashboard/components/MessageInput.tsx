@@ -570,10 +570,9 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
     if (!recordedPreview) return;
     const { kind, blob, mimeType } = recordedPreview;
     await sendMedia(kind, blob, mimeType);
-    // Clear preview after sending
+    // sendMedia already shows a success toast — just clear preview
     setRecordedPreview(null);
     setMessage('');
-    toast.success(`${kind === 'video' ? 'Screen recording' : 'Voice note'} sent!`);
   }
 
   const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
