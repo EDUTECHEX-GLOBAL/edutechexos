@@ -1920,7 +1920,7 @@ export default function AdminPage() {
               return {
                 email:              m.email,
                 name:               m.name,
-                initials:           (m.initials ?? m.name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)) || '?',
+                initials:           m.initials || m.name.split(' ').map((p: string) => p[0]).join('').toUpperCase().slice(0, 2) || '?',
                 color:              m.color ?? '#6366f1',
                 role:               m.role ?? '',
                 status,
