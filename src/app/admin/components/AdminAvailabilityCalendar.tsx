@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Clock, Download, Bell } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Clock, Download, Bell, Sun, AlarmClock } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
@@ -49,6 +49,7 @@ export default function AdminAvailabilityCalendar() {
   const [newLabel, setNewLabel]   = useState('');
   const [meetingRequests, setMeetingRequests] = useState<MeetingRequest[]>([]);
   const [activeView, setActiveView] = useState<'calendar' | 'requests'>('calendar');
+  const [availMode, setAvailMode] = useState<'full-day' | 'specific' | null>(null);
 
   const monthKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
 
@@ -100,9 +101,40 @@ export default function AdminAvailabilityCalendar() {
   useEffect(() => { loadMeetingRequests(); }, [loadMeetingRequests]);
 
   function openDay(dateStr: string) {
+    const existingSlots = records[dateStr]?.slots ?? [];
     setSelected(dateStr);
-    setEditSlots(records[dateStr]?.slots ? [...records[dateStr].slots] : []);
+    setEditSlots([...existingSlots]);
     setShowSlotForm(false);
+    // Auto-detect mode from existing slots
+    if (existingSlots.length === 1 && existingSlots[0].time === 'All Day') {
+      setAvailMode('full-day');
+    } else if (existingSlots.length > 0) {
+      setAvailMode('specific');
+    } else {
+      setAvailMode(null);
+    }
+  }
+
+  async function saveFullDay() {
+    if (!selected) return;
+    setSaving(true);
+    const token = getToken();
+    const slots: Slot[] = [{ time: 'All Day', status: 'available', label: 'Full Day Available' }];
+    try {
+      const res = await fetch(`${API_BASE}/api/availability`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}` },
+        body: JSON.stringify({ date: selected, slots }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRecords((prev) => ({ ...prev, [selected]: data.record }));
+        toast.success('Full day availability saved.');
+        setSelected(null);
+        setAvailMode(null);
+      } else toast.error(data.error ?? 'Failed to save.');
+    } catch { toast.error('Network error.'); }
+    finally { setSaving(false); }
   }
 
   async function saveDay() {
@@ -347,99 +379,188 @@ export default function AdminAvailabilityCalendar() {
       </div>
       </>)}
 
-      {/* Day editor modal */}
+      {/* Day editor modal — solid overlay, no transparency */}
       {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1E2636]/80">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8EAF6]">
-              <h3 className="font-bold text-[#1E2636]">
-                {new Date(selected + 'T12:00:00').toLocaleDateString('default', { weekday: 'long', month: 'long', day: 'numeric' })}
-              </h3>
-              <button onClick={() => setSelected(null)} className="p-1.5 rounded-lg hover:bg-[#F0F2FF]">
+
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8EAF6] bg-white">
+              <div>
+                <h3 className="font-bold text-[#1E2636]">
+                  {new Date(selected + 'T12:00:00').toLocaleDateString('default', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </h3>
+                <p className="text-xs text-[#9BA6D3] mt-0.5">Set your availability for this day</p>
+              </div>
+              <button onClick={() => { setSelected(null); setAvailMode(null); }} className="p-1.5 rounded-lg hover:bg-[#F0F2FF]">
                 <X size={16} className="text-[#9BA6D3]" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-              {editSlots.length === 0 && (
-                <p className="text-sm text-[#9BA6D3] text-center py-4">No slots set. Add one below.</p>
-              )}
-              {editSlots.map((slot, idx) => (
-                <div key={idx} className={`flex items-center justify-between p-3 rounded-xl border ${STATUS_CONFIG[slot.status].bg}`}>
-                  <div className="flex items-center gap-3">
-                    <span className={`w-2.5 h-2.5 rounded-full ${STATUS_CONFIG[slot.status].dot}`} />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-[#1E2636]">{slot.time}</span>
-                        <span className={`text-xs font-medium ${STATUS_CONFIG[slot.status].color}`}>{STATUS_CONFIG[slot.status].label}</span>
-                      </div>
-                      {slot.label && <p className="text-xs text-[#9BA6D3] mt-0.5">{slot.label}</p>}
+            <div className="p-6 space-y-4 max-h-[65vh] overflow-y-auto bg-white">
+
+              {/* Mode picker — shown when no mode selected yet */}
+              {availMode === null && (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-[#9BA6D3] uppercase tracking-wide">Choose availability type</p>
+
+                  {/* Full Day option */}
+                  <button
+                    onClick={() => {
+                      setAvailMode('full-day');
+                      setEditSlots([{ time: 'All Day', status: 'available', label: 'Full Day Available' }]);
+                    }}
+                    className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-emerald-200 bg-emerald-50 hover:border-emerald-400 hover:bg-emerald-100 transition-all text-left group"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 group-hover:bg-emerald-200 flex items-center justify-center shrink-0 transition-colors">
+                      <Sun size={20} className="text-emerald-600" />
                     </div>
-                  </div>
-                  <button onClick={() => removeSlot(idx)} className="p-1 rounded hover:bg-white/70">
-                    <Trash2 size={14} className="text-[#9BA6D3]" />
+                    <div>
+                      <p className="font-semibold text-emerald-800 text-sm">Full Day Available</p>
+                      <p className="text-xs text-emerald-600 mt-0.5">Mark the entire day as available for meetings</p>
+                    </div>
+                    <Check size={16} className="ml-auto text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
+
+                  {/* Specific timings option */}
+                  <button
+                    onClick={() => { setAvailMode('specific'); setEditSlots([]); }}
+                    className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-[#C5CAE0] bg-[#F8F9FF] hover:border-[#3E4A89] hover:bg-[#EEF0FB] transition-all text-left group"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-[#E8EAF6] group-hover:bg-[#D8DCF5] flex items-center justify-center shrink-0 transition-colors">
+                      <AlarmClock size={20} className="text-[#3E4A89]" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-[#1E2636] text-sm">Available in specific timings</p>
+                      <p className="text-xs text-[#9BA6D3] mt-0.5">Set individual time slots with custom status</p>
+                    </div>
+                    <Check size={16} className="ml-auto text-[#3E4A89] opacity-0 group-hover:opacity-100 transition-opacity" />
                   </button>
                 </div>
-              ))}
+              )}
 
-              {showSlotForm ? (
-                <div className="border border-[#E8EAF6] rounded-xl p-4 space-y-3 bg-[#F8F9FF]">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-medium text-[#4A5578] mb-1 block">Time</label>
-                      <select value={newTime} onChange={(e) => setNewTime(e.target.value)}
-                        className="w-full border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm text-[#1E2636] bg-white focus:outline-none focus:border-[#3E4A89]">
-                        {TIME_OPTIONS.map((t) => <option key={t}>{t}</option>)}
-                      </select>
+              {/* Full Day mode — confirmation card */}
+              {availMode === 'full-day' && (
+                <div className="space-y-4">
+                  <button onClick={() => { setAvailMode(null); setEditSlots([]); }}
+                    className="flex items-center gap-1.5 text-xs text-[#9BA6D3] hover:text-[#3E4A89] transition-colors">
+                    ← Change type
+                  </button>
+                  <div className="flex items-center gap-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+                      <Sun size={20} className="text-emerald-600" />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-[#4A5578] mb-1 block">Status</label>
-                      <select value={newStatus} onChange={(e) => setNewStatus(e.target.value as SlotStatus)}
-                        className="w-full border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm text-[#1E2636] bg-white focus:outline-none focus:border-[#3E4A89]">
-                        <option value="available">Available</option>
-                        <option value="busy">Busy</option>
-                        <option value="ooo">Out of Office</option>
-                      </select>
+                      <p className="font-semibold text-emerald-800 text-sm">Full Day Available</p>
+                      <p className="text-xs text-emerald-600 mt-0.5">Team members can request a meeting any time today</p>
                     </div>
                   </div>
-                  <div>
-                    <label className="text-xs font-medium text-[#4A5578] mb-1 block">Label (optional)</label>
-                    <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="e.g. Team standup"
-                      className="w-full border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm text-[#1E2636] bg-white focus:outline-none focus:border-[#3E4A89]" />
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={addSlot} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-[#3E4A89] text-white text-sm font-medium hover:bg-[#2A3568]">
-                      <Check size={14} /> Add Slot
-                    </button>
-                    <button onClick={() => setShowSlotForm(false)} className="px-4 py-2 rounded-lg border border-[#E8EAF6] text-sm text-[#9BA6D3] hover:bg-[#F0F2FF]">
-                      Cancel
-                    </button>
-                  </div>
+                  <p className="text-xs text-[#9BA6D3]">
+                    This will replace any existing slots for this day with a single &ldquo;All Day&rdquo; available slot.
+                  </p>
                 </div>
-              ) : (
-                <button onClick={() => setShowSlotForm(true)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-[#C5CAE0] text-sm text-[#9BA6D3] hover:border-[#3E4A89] hover:text-[#3E4A89] transition-colors">
-                  <Plus size={15} /> Add Time Slot
-                </button>
+              )}
+
+              {/* Specific timings mode — slot list + form */}
+              {availMode === 'specific' && (
+                <div className="space-y-3">
+                  <button onClick={() => { setAvailMode(null); setEditSlots([]); }}
+                    className="flex items-center gap-1.5 text-xs text-[#9BA6D3] hover:text-[#3E4A89] transition-colors">
+                    ← Change type
+                  </button>
+
+                  {editSlots.length === 0 && !showSlotForm && (
+                    <p className="text-sm text-[#9BA6D3] text-center py-3">No slots yet. Add one below.</p>
+                  )}
+
+                  {editSlots.map((slot, idx) => (
+                    <div key={idx} className={`flex items-center justify-between p-3 rounded-xl border ${STATUS_CONFIG[slot.status].bg}`}>
+                      <div className="flex items-center gap-3">
+                        <span className={`w-2.5 h-2.5 rounded-full ${STATUS_CONFIG[slot.status].dot}`} />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-[#1E2636]">{slot.time}</span>
+                            <span className={`text-xs font-medium ${STATUS_CONFIG[slot.status].color}`}>{STATUS_CONFIG[slot.status].label}</span>
+                          </div>
+                          {slot.label && <p className="text-xs text-[#9BA6D3] mt-0.5">{slot.label}</p>}
+                        </div>
+                      </div>
+                      <button onClick={() => removeSlot(idx)} className="p-1 rounded hover:bg-white/70">
+                        <Trash2 size={14} className="text-[#9BA6D3]" />
+                      </button>
+                    </div>
+                  ))}
+
+                  {showSlotForm ? (
+                    <div className="border border-[#E8EAF6] rounded-xl p-4 space-y-3 bg-[#F8F9FF]">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-medium text-[#4A5578] mb-1 block">Time</label>
+                          <select value={newTime} onChange={(e) => setNewTime(e.target.value)}
+                            className="w-full border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm text-[#1E2636] bg-white focus:outline-none focus:border-[#3E4A89]">
+                            {TIME_OPTIONS.filter(t => t !== 'All Day').map((t) => <option key={t}>{t}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-[#4A5578] mb-1 block">Status</label>
+                          <select value={newStatus} onChange={(e) => setNewStatus(e.target.value as SlotStatus)}
+                            className="w-full border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm text-[#1E2636] bg-white focus:outline-none focus:border-[#3E4A89]">
+                            <option value="available">Available</option>
+                            <option value="busy">Busy</option>
+                            <option value="ooo">Out of Office</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-[#4A5578] mb-1 block">Label (optional)</label>
+                        <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="e.g. Team standup"
+                          className="w-full border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm text-[#1E2636] bg-white focus:outline-none focus:border-[#3E4A89]" />
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={addSlot} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-[#3E4A89] text-white text-sm font-medium hover:bg-[#2A3568]">
+                          <Check size={14} /> Add Slot
+                        </button>
+                        <button onClick={() => setShowSlotForm(false)} className="px-4 py-2 rounded-lg border border-[#E8EAF6] text-sm text-[#9BA6D3] hover:bg-[#F0F2FF]">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowSlotForm(true)}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-[#C5CAE0] text-sm text-[#9BA6D3] hover:border-[#3E4A89] hover:text-[#3E4A89] transition-colors">
+                      <Plus size={15} /> Add Time Slot
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
-            <div className="flex items-center gap-3 px-6 py-4 border-t border-[#E8EAF6]">
+            {/* Footer actions */}
+            <div className="flex items-center gap-3 px-6 py-4 border-t border-[#E8EAF6] bg-white">
               {records[selected] && (
-                <button onClick={() => { clearDay(selected); setSelected(null); }}
+                <button onClick={() => { clearDay(selected); setSelected(null); setAvailMode(null); }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-rose-200 text-rose-600 text-sm hover:bg-rose-50">
                   <Trash2 size={14} /> Clear Day
                 </button>
               )}
               <div className="flex-1" />
-              <button onClick={() => setSelected(null)} className="px-4 py-2 rounded-xl border border-[#E8EAF6] text-sm text-[#9BA6D3] hover:bg-[#F0F2FF]">
-                Discard
+              <button onClick={() => { setSelected(null); setAvailMode(null); }} className="px-4 py-2 rounded-xl border border-[#E8EAF6] text-sm text-[#9BA6D3] hover:bg-[#F0F2FF]">
+                Cancel
               </button>
-              <button onClick={saveDay} disabled={saving}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-[#3E4A89] text-white text-sm font-medium hover:bg-[#2A3568] disabled:opacity-60">
-                {saving ? <Clock size={14} className="animate-spin" /> : <Check size={14} />}
-                Save
-              </button>
+              {availMode === 'full-day' && (
+                <button onClick={saveFullDay} disabled={saving}
+                  className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-60">
+                  {saving ? <Clock size={14} className="animate-spin" /> : <Sun size={14} />}
+                  Save Full Day
+                </button>
+              )}
+              {availMode === 'specific' && (
+                <button onClick={saveDay} disabled={saving || editSlots.length === 0}
+                  className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-[#3E4A89] text-white text-sm font-medium hover:bg-[#2A3568] disabled:opacity-60">
+                  {saving ? <Clock size={14} className="animate-spin" /> : <Check size={14} />}
+                  Save Timings
+                </button>
+              )}
             </div>
           </div>
         </div>
