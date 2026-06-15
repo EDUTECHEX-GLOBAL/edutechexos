@@ -103,6 +103,15 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
     if (!selectedPageId && pages.length > 0) setSelectedPageId(pages[0].id);
   }, [pages, selectedPageId]);
 
+  const selectedPage = pages.find(p => p.id === selectedPageId) ?? null;
+  // Default to private; track per-page via the stored isPrivate flag
+  const pageIsPrivate = selectedPage ? selectedPage.isPrivate !== false : true;
+
+  const togglePrivacy = () => {
+    if (!selectedPageId) return;
+    updateWikiPage(activeChannel, selectedPageId, { isPrivate: !pageIsPrivate });
+  };
+
   const scheduleAutoSave = useCallback((newTitle: string, newContent: string) => {
     if (!selectedPageId) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -160,7 +169,6 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
     onClose();
   };
 
-  const selectedPage = pages.find(p => p.id === selectedPageId) ?? null;
   const charCount = editor?.storage.characterCount.characters() ?? 0;
   const wordCount = editor?.storage.characterCount.words() ?? 0;
 
@@ -271,15 +279,23 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
                       onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; }}
                       onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
                     >
-                      <p style={{
-                        fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        color: isSelected ? 'white' : 'rgba(255,255,255,0.65)', marginBottom: 3,
-                      }}>
-                        {page.title || 'Untitled'}
-                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+                        {page.isPrivate !== false && (
+                          <Lock size={9} style={{ color: isSelected ? '#c4b5fd' : '#6b7280', flexShrink: 0 }} />
+                        )}
+                        <p style={{
+                          fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          color: isSelected ? 'white' : 'rgba(255,255,255,0.65)', margin: 0,
+                        }}>
+                          {page.title || 'Untitled'}
+                        </p>
+                      </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: isSelected ? 'rgba(255,255,255,0.45)' : '#4A5578' }}>
                         <Clock size={9} />
                         <span>{formatRelativeTime(page.updatedAt)}</span>
+                        {page.isPrivate === false && (
+                          <span style={{ marginLeft: 2, color: isSelected ? '#60a5fa' : '#3b82f6', fontWeight: 700 }}>· shared</span>
+                        )}
                       </div>
                     </button>
                   );
@@ -425,6 +441,26 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
                     onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(0,0,0,0.09)'; (e.currentTarget as HTMLButtonElement).style.color = '#7C859E'; (e.currentTarget as HTMLButtonElement).style.background = 'white'; }}
                   >
                     <Trash2 size={12} strokeWidth={2.5} /> Delete
+                  </button>
+
+                  {/* Privacy toggle */}
+                  <button
+                    type="button"
+                    onClick={togglePrivacy}
+                    title={pageIsPrivate ? 'Only you can see this note — click to share with channel' : 'Shared with channel — click to make private'}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      border: pageIsPrivate ? '1px solid rgba(139,92,246,0.3)' : '1px solid rgba(59,130,246,0.3)',
+                      borderRadius: 9, background: pageIsPrivate ? 'rgba(139,92,246,0.07)' : 'rgba(59,130,246,0.07)',
+                      padding: '8px 12px', cursor: 'pointer',
+                      fontSize: 11, fontWeight: 800,
+                      color: pageIsPrivate ? '#7c3aed' : '#2563eb',
+                      letterSpacing: '0.04em', transition: 'all 0.15s',
+                    }}
+                  >
+                    {pageIsPrivate
+                      ? <><Lock size={11} strokeWidth={2.5} /> Private</>
+                      : <><Share2 size={11} strokeWidth={2.5} /> Shared</>}
                   </button>
 
                   {!isPersonal ? (

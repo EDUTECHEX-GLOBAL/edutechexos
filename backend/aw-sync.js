@@ -1,29 +1,44 @@
 /**
- * aw-sync.js — ActivityWatch → EduTechExOS bridge
+ * aw-sync.js — EduTechExOS Desktop Activity Agent
  *
- * Run this on each team member's machine (where ActivityWatch is installed).
- * It reads ActivityWatch's local REST API every 5 minutes and pushes a summary
- * to the EduTechExOS backend so admins can see live desktop activity.
+ * Tracks which desktop apps the team member is using (VS Code, Chrome, Figma, etc.)
+ * and syncs the data to EduTechExOS so the admin can see everyone's activity.
  *
- * Usage:
+ * Requires ActivityWatch (free, open-source) running on the same machine.
+ * Download: https://activitywatch.net
+ *
+ * FIRST-TIME SETUP (one command, then it runs every day automatically):
+ *
+ *   node aw-sync.js --email you@edutechex.in --password yourpassword --startup
+ *
+ * The --startup flag registers this script to run automatically every time
+ * Windows starts, so you never have to run it manually again.
+ *
+ * TO JUST RUN MANUALLY (without auto-start):
  *   node aw-sync.js --email you@edutechex.in --password yourpassword
  *
- * Or set environment variables:
- *   AW_EMAIL=you@edutechex.in AW_PASSWORD=yourpassword node aw-sync.js
- *
- * Optional:
- *   --api   https://edutechexos-backend.onrender.com  (default)
- *   --aw    http://localhost:5600                      (default)
- *   --interval 5                                       (minutes, default 5)
+ * OPTIONS:
+ *   --email      your EduTechExOS login email (required)
+ *   --password   your EduTechExOS password (required)
+ *   --startup    register this script to run on Windows startup (one time)
+ *   --remove     remove Windows startup registration
+ *   --api        https://edutechexos-backend.onrender.com (default)
+ *   --aw         http://localhost:5600 (ActivityWatch URL, default)
+ *   --interval   sync interval in minutes (default: 5)
  */
 
 const https  = require('https');
 const http   = require('http');
 const url    = require('url');
+const fs     = require('fs');
+const path   = require('path');
+const os     = require('os');
+const { execSync } = require('child_process');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const args    = process.argv.slice(2);
 const getArg  = (flag) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : null; };
+const hasFlag = (flag) => args.includes(flag);
 
 const EMAIL    = getArg('--email')    || process.env.AW_EMAIL    || '';
 const PASSWORD = getArg('--password') || process.env.AW_PASSWORD || '';
@@ -31,18 +46,94 @@ const API_BASE = getArg('--api')      || process.env.AW_API_BASE || 'https://edu
 const AW_BASE  = getArg('--aw')       || process.env.AW_BASE     || 'http://localhost:5600';
 const INTERVAL = parseInt(getArg('--interval') || process.env.AW_INTERVAL || '5', 10);
 
+// ── Windows auto-startup helpers ──────────────────────────────────────────────
+function getStartupBatPath() {
+  // Windows Startup folder: runs on every user login
+  const startupDir = path.join(
+    os.homedir(),
+    'AppData', 'Roaming', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup'
+  );
+  return path.join(startupDir, 'edutechexos-agent.bat');
+}
+
+function registerStartup() {
+  if (os.platform() !== 'win32') {
+    console.log('[startup] Auto-startup registration is only supported on Windows.');
+    console.log('[startup] On macOS/Linux, add this to your shell profile or cron:');
+    console.log(`           node "${process.argv[1]}" --email ${EMAIL} --password "${PASSWORD}"`);
+    return;
+  }
+  const nodePath = process.execPath; // path to node.exe
+  const scriptPath = path.resolve(process.argv[1]);
+  const batPath = getStartupBatPath();
+
+  const batContent = [
+    '@echo off',
+    'rem EduTechExOS Desktop Activity Agent',
+    'rem Tracks VS Code, Chrome, Figma etc. and syncs to EduTechExOS admin.',
+    'rem Auto-generated — do not edit manually. Re-run setup to update.',
+    `start "" /B "${nodePath}" "${scriptPath}" --email "${EMAIL}" --password "${PASSWORD}" --api "${API_BASE}" --interval ${INTERVAL}`,
+  ].join('\r\n');
+
+  try {
+    fs.writeFileSync(batPath, batContent, 'utf8');
+    console.log(`[startup] ✅ Registered! The agent will start automatically every time Windows boots.`);
+    console.log(`[startup]    Startup file: ${batPath}`);
+    console.log(`[startup] Starting agent now…`);
+  } catch (err) {
+    console.error(`[startup] ❌ Failed to write startup file: ${err.message}`);
+    console.error(`[startup]    Try running as Administrator, or manually add the agent to startup.`);
+  }
+}
+
+function removeStartup() {
+  if (os.platform() !== 'win32') {
+    console.log('[startup] Not on Windows — nothing to remove.');
+    return;
+  }
+  const batPath = getStartupBatPath();
+  try {
+    if (fs.existsSync(batPath)) {
+      fs.unlinkSync(batPath);
+      console.log('[startup] ✅ Auto-startup removed.');
+    } else {
+      console.log('[startup] No startup registration found (already removed).');
+    }
+  } catch (err) {
+    console.error(`[startup] ❌ Failed to remove: ${err.message}`);
+  }
+}
+
+// Handle --startup and --remove before checking email/password
+if (hasFlag('--remove')) {
+  removeStartup();
+  process.exit(0);
+}
+
 if (!EMAIL || !PASSWORD) {
-  console.error('Error: --email and --password are required.');
-  console.error('Usage: node aw-sync.js --email you@example.com --password secret');
+  console.error('');
+  console.error('  EduTechExOS Desktop Activity Agent');
+  console.error('  ─────────────────────────────────');
+  console.error('  Usage:');
+  console.error('    node aw-sync.js --email you@edutechex.in --password yourpassword');
+  console.error('');
+  console.error('  First-time setup (auto-starts on every Windows boot):');
+  console.error('    node aw-sync.js --email you@edutechex.in --password yourpassword --startup');
+  console.error('');
   process.exit(1);
+}
+
+if (hasFlag('--startup')) {
+  registerStartup();
+  // Fall through — continue running the agent now
 }
 
 let authToken = null;
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
-function request(baseUrl, path, method = 'GET', body = null, headers = {}) {
+function request(baseUrl, urlPath, method = 'GET', body = null, headers = {}) {
   return new Promise((resolve, reject) => {
-    const parsed  = new url.URL(baseUrl + path);
+    const parsed  = new url.URL(baseUrl + urlPath);
     const isHttps = parsed.protocol === 'https:';
     const lib     = isHttps ? https : http;
     const opts    = {
@@ -92,7 +183,10 @@ async function getAWBuckets() {
 }
 
 async function queryEvents(bucketId, start, end) {
-  const res = await request(AW_BASE, `/api/0/buckets/${encodeURIComponent(bucketId)}/events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&limit=1000`);
+  const res = await request(
+    AW_BASE,
+    `/api/0/buckets/${encodeURIComponent(bucketId)}/events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&limit=1000`
+  );
   return res.status === 200 && Array.isArray(res.body) ? res.body : [];
 }
 
@@ -106,7 +200,6 @@ async function buildSummary() {
   const buckets = await getAWBuckets();
   const keys    = Object.keys(buckets);
 
-  // Find the right buckets by type
   const windowBucket = keys.find((k) => buckets[k].type === 'currentwindow' || k.includes('aw-watcher-window'));
   const afkBucket    = keys.find((k) => buckets[k].type === 'afkstatus'     || k.includes('aw-watcher-afk'));
 
@@ -115,46 +208,40 @@ async function buildSummary() {
     return null;
   }
 
-  // Today's date range (local midnight to now)
   const now        = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
   const endOfDay   = now.toISOString();
 
-  // Current window (most recent event)
   const currentEvent = await getCurrentWindow(windowBucket);
   const currentApp   = currentEvent?.data?.app   || currentEvent?.data?.title || '';
   const currentTitle = currentEvent?.data?.title  || '';
 
-  // Today's window events → app breakdown
   const windowEvents = await queryEvents(windowBucket, startOfDay, endOfDay);
-  const appMinutes   = {};
+  const appSeconds   = {};
   let totalActiveSec = 0;
 
   for (const ev of windowEvents) {
     const dur = ev.duration || 0;
     const app = ev.data?.app || ev.data?.title || 'Unknown';
-    appMinutes[app] = (appMinutes[app] || 0) + dur;
+    appSeconds[app] = (appSeconds[app] || 0) + dur;
     totalActiveSec += dur;
   }
 
-  const appBreakdown = Object.entries(appMinutes)
+  const appBreakdown = Object.entries(appSeconds)
     .map(([app, secs]) => ({ app, minutes: Math.round(secs / 60) }))
+    .filter(({ minutes }) => minutes > 0)
     .sort((a, b) => b.minutes - a.minutes)
     .slice(0, 15);
 
-  // AFK data
-  let isAfk           = false;
-  let totalAfkSec     = 0;
-  let totalActiveSec2 = totalActiveSec;
+  let isAfk       = false;
+  let totalAfkSec = 0;
 
   if (afkBucket) {
     const afkEvents = await queryEvents(afkBucket, startOfDay, endOfDay);
     const latestAfk = afkEvents[0];
     isAfk = latestAfk?.data?.status === 'afk';
-
     for (const ev of afkEvents) {
       if (ev.data?.status === 'afk') totalAfkSec += (ev.duration || 0);
-      else totalActiveSec2 = Math.max(totalActiveSec2, totalActiveSec);
     }
   }
 
@@ -168,7 +255,7 @@ async function buildSummary() {
   };
 }
 
-// ── Sync loop ─────────────────────────────────────────────────────────────────
+// ── Sync ──────────────────────────────────────────────────────────────────────
 async function sync() {
   try {
     const summary = await buildSummary();
@@ -191,7 +278,8 @@ async function sync() {
 
     if (res.body?.success) {
       const ts = new Date().toLocaleTimeString();
-      console.log(`[sync] ${ts} — app: ${summary.currentApp || '(none)'} | active: ${summary.totalActiveMinutes}m | afk: ${summary.isAfk ? 'yes' : 'no'}`);
+      const topApp = summary.appBreakdown[0];
+      console.log(`[${ts}] synced — top: ${topApp ? `${topApp.app} (${topApp.minutes}m)` : '(none)'} | total: ${summary.totalActiveMinutes}m | afk: ${summary.isAfk ? 'yes' : 'no'}`);
     } else {
       console.error('[sync] Server error:', res.body?.error || res.status);
     }
@@ -205,9 +293,9 @@ async function sync() {
   const ok = await login();
   if (!ok) process.exit(1);
 
-  console.log(`[aw-sync] Started. Syncing every ${INTERVAL} minute(s). Press Ctrl+C to stop.`);
+  console.log(`[agent] Started. Syncing every ${INTERVAL} minute(s). Admin can see your activity in EduTechExOS.`);
+  console.log(`[agent] Press Ctrl+C to stop.`);
 
-  await sync(); // run immediately on start
-
+  await sync();
   setInterval(sync, INTERVAL * 60 * 1000);
 })();

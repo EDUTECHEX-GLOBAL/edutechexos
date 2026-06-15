@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Privacy-First AI Employee Monitoring — Thursday Talks</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    background: #ECEAF8;
+    color: #1A1B3A;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  /* ── Page layout for print ─────────────────────── */
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto 20px;
+    background: #fff;
+    padding: 18mm 18mm 16mm;
+    position: relative;
+    box-shadow: 0 4px 40px rgba(91,79,219,0.10);
+    page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  @media print {
+    body { background: #fff; }
+    .page { margin: 0; box-shadow: none; padding: 14mm 16mm 12mm; }
+    @page { size: A4; margin: 0; }
+  }
+
+  /* ── Spectrum top bar ─────────────────────────── */
+  .spectrum {
+    height: 4px;
+    background: linear-gradient(90deg, #5B4FDB, #8B3FDB, #C026D3, #EF476F, #F59E0B, #10C98A, #0DAFCE);
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    border-radius: 2px 2px 0 0;
+  }
+
+  /* ── Cover page ───────────────────────────────── */
+  .cover {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 297mm;
+    padding: 0 18mm 16mm;
+  }
+  .cover-top {
+    padding-top: 22mm;
+  }
+  .cover-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    background: rgba(239,71,111,0.09);
+    border: 1px solid rgba(239,71,111,0.22);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: #EF476F;
+    margin-bottom: 22px;
+  }
+  .cover-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #EF476F;
+    display: inline-block;
+    animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .cover h1 {
+    font-family: 'Sora', sans-serif;
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #1A1B3A;
+    line-height: 1.15;
+    margin-bottom: 8px;
+  }
+  .cover h1 span { color: #5B4FDB; }
+  .cover .subtitle {
+    font-size: 15px;
+    color: rgba(90,95,128,0.75);
+    font-weight: 500;
+    margin-bottom: 36px;
+    max-width: 480px;
+    line-height: 1.6;
+  }
+  .cover-divider {
+    width: 60px; height: 4px;
+    background: linear-gradient(90deg, #5B4FDB, #C026D3);
+    border-radius: 2px;
+    margin-bottom: 36px;
+  }
+  .cover-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cover-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: rgba(90,95,128,0.70);
+  }
+  .cover-meta-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: rgba(90,95,128,0.45);
+    min-width: 80px;
+  }
+  .cover-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 28px;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+  }
+  .pill-blue  { background: rgba(59,130,246,0.08);  color:#3B82F6;  border:1px solid rgba(59,130,246,0.18); }
+  .pill-green { background: rgba(16,201,138,0.08);  color:#059669;  border:1px solid rgba(16,201,138,0.18); }
+  .pill-red   { background: rgba(239,71,111,0.08);  color:#EF476F;  border:1px solid rgba(239,71,111,0.18); }
+  .pill-purple{ background: rgba(91,79,219,0.08);   color:#5B4FDB;  border:1px solid rgba(91,79,219,0.18); }
+  .pill-amber { background: rgba(245,158,11,0.08);  color:#D97706;  border:1px solid rgba(245,158,11,0.18); }
+  .pill-cyan  { background: rgba(13,175,206,0.08);  color:#0DAFCE;  border:1px solid rgba(13,175,206,0.18); }
+
+  .cover-visual {
+    margin-top: 36px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(91,79,219,0.06), rgba(192,38,211,0.04));
+    border: 1.5px solid rgba(91,79,219,0.12);
+    padding: 22px 26px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+  .stat-mini {
+    text-align: center;
+  }
+  .stat-mini-val {
+    font-family: 'Sora', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #1A1B3A;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .stat-mini-lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: rgba(90,95,128,0.55);
+  }
+
+  .cover-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 22mm;
+    border-top: 1px solid rgba(26,27,58,0.10);
+  }
+  .logo-mark {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo-box {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #5B4FDB, #8B3FDB);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; font-weight: 900; color: #fff;
+  }
+  .logo-name {
+    font-family: 'Sora', sans-serif;
+    font-size: 13px; font-weight: 800; color: #1A1B3A;
+    letter-spacing: -0.025em;
+  }
+  .logo-name span { color: #5B4FDB; }
+
+  /* ── Section pages ──────────────────────────── */
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 14px;
+    border-bottom: 1.5px solid rgba(26,27,58,0.08);
+    margin-bottom: 26px;
+  }
+  .page-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: rgba(90,95,128,0.40);
+  }
+  .page-logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    color: rgba(90,95,128,0.35);
+  }
+
+  /* ── Section title ──────────────────────────── */
+  .section-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--accent, #5B4FDB);
+    margin-bottom: 8px;
+  }
+  h2.section-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: #1A1B3A;
+    line-height: 1.25;
+    margin-bottom: 6px;
+  }
+  .section-intro {
+    font-size: 13px;
+    color: rgba(90,95,128,0.70);
+    line-height: 1.65;
+    margin-bottom: 24px;
+    max-width: 560px;
+  }
+
+  /* ── Content blocks ─────────────────────────── */
+  h3 {
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1A1B3A;
+    margin: 20px 0 8px;
+    letter-spacing: -0.01em;
+  }
+  p { margin-bottom: 12px; font-size: 12.5px; color: #3A3D5C; line-height: 1.70; }
+  ul, ol { padding-left: 20px; margin-bottom: 14px; }
+  li { font-size: 12.5px; color: #3A3D5C; line-height: 1.65; margin-bottom: 5px; }
+  strong { color: #1A1B3A; font-weight: 700; }
+
+  /* ── Card ───────────────────────────────────── */
+  .card {
+    border-radius: 14px;
+    border: 1.5px solid rgba(26,27,58,0.10);
+    background: #fff;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(91,79,219,0.04);
+  }
+  .card-accent {
+    border-left: 4px solid var(--accent, #5B4FDB);
+    border-radius: 0 14px 14px 0;
+    border-top: none; border-right: none; border-bottom: none;
+    background: rgba(91,79,219,0.03);
+    padding: 14px 18px;
+    margin-bottom: 14px;
+  }
+  .card-accent.red   { border-color: #EF476F; background: rgba(239,71,111,0.03); }
+  .card-accent.green { border-color: #10C98A; background: rgba(16,201,138,0.03); }
+  .card-accent.amber { border-color: #F59E0B; background: rgba(245,158,11,0.03); }
+  .card-accent.blue  { border-color: #3B82F6; background: rgba(59,130,246,0.03); }
+  .card-accent.purple{ border-color: #5B4FDB; background: rgba(91,79,219,0.03); }
+  .card-accent .card-title {
+    font-size: 11px; font-weight: 700; margin-bottom: 5px;
+  }
+  .card-accent.red .card-title   { color: #EF476F; }
+  .card-accent.green .card-title { color: #059669; }
+  .card-accent.amber .card-title { color: #D97706; }
+  .card-accent.blue .card-title  { color: #3B82F6; }
+  .card-accent.purple .card-title{ color: #5B4FDB; }
+
+  /* ── Stats grid ─────────────────────────────── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat-card-val {
+    font-family: 'Sora', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 4px;
+  }
+  .stat-card-lbl {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: rgba(90,95,128,0.60);
+  }
+
+  /* ── Quote block ─────────────────────────────── */
+  .quote {
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(91,79,219,0.05), rgba(192,38,211,0.03));
+    border: 1.5px solid rgba(91,79,219,0.12);
+    padding: 20px 22px;
+    margin: 18px 0;
+    position: relative;
+  }
+  .quote::before {
+    content: '\201C';
+    position: absolute;
+    top: 6px; left: 16px;
+    font-size: 48px;
+    color: rgba(91,79,219,0.18);
+    font-family: Georgia, serif;
+    line-height: 1;
+  }
+  .quote p {
+    font-size: 13.5px;
+    font-style: italic;
+    color: #1A1B3A;
+    font-weight: 500;
+    margin: 0 0 8px;
+    padding-left: 12px;
+  }
+  .quote-source {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .10em;
+    text-transform: uppercase;
+    color: rgba(90,95,128,0.50);
+    padding-left: 12px;
+  }
+
+  /* ── Timeline ────────────────────────────────── */
+  .timeline { list-style: none; padding: 0; margin-bottom: 16px; }
+  .timeline li {
+    display: flex;
+    gap: 14px;
+    padding-bottom: 18px;
+    position: relative;
+  }
+  .timeline li::before {
+    content: '';
+    position: absolute;
+    left: 11px; top: 24px;
+    width: 2px;
+    bottom: 0;
+    background: rgba(26,27,58,0.08);
+  }
+  .timeline li:last-child::before { display: none; }
+  .timeline-dot {
+    width: 24px; height: 24px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+  .timeline-content { flex: 1; }
+  .timeline-year {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: rgba(90,95,128,0.50);
+    margin-bottom: 3px;
+  }
+  .timeline-title {
+    font-size: 12.5px; font-weight: 700; color: #1A1B3A;
+    margin-bottom: 4px;
+  }
+  .timeline-desc { font-size: 11.5px; color: rgba(90,95,128,0.70); margin: 0; }
+
+  /* ── Two-column layout ─────────────────────── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+  /* ── Accent divider ─────────────────────────── */
+  .divider {
+    height: 3px;
+    border-radius: 2px;
+    margin: 18px 0;
+  }
+
+  /* ── Feature row ────────────────────────────── */
+  .feature-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(26,27,58,0.06);
+  }
+  .feature-row:last-child { border-bottom: none; }
+  .feature-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .feature-body { flex: 1; }
+  .feature-title { font-size: 12.5px; font-weight: 700; color: #1A1B3A; margin-bottom: 3px; }
+  .feature-desc  { font-size: 11.5px; color: rgba(90,95,128,0.70); margin: 0; }
+
+  /* ── Highlight box ─────────────────────────── */
+  .highlight {
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin: 14px 0;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .highlight.red    { background: rgba(239,71,111,0.07); color: #C0274F; border: 1px solid rgba(239,71,111,0.18); }
+  .highlight.green  { background: rgba(16,201,138,0.07); color: #065F46; border: 1px solid rgba(16,201,138,0.18); }
+  .highlight.amber  { background: rgba(245,158,11,0.07); color: #92400E; border: 1px solid rgba(245,158,11,0.18); }
+  .highlight.purple { background: rgba(91,79,219,0.07);  color: #3730A3; border: 1px solid rgba(91,79,219,0.18); }
+
+  /* ── Table ──────────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 11.5px; }
+  th {
+    background: rgba(91,79,219,0.05);
+    padding: 9px 14px;
+    text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: rgba(90,95,128,0.55);
+    border-bottom: 1.5px solid rgba(26,27,58,0.10);
+  }
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid rgba(26,27,58,0.06);
+    color: #3A3D5C;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(91,79,219,0.02); }
+
+  /* ── TOC ────────────────────────────────────── */
+  .toc-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(26,27,58,0.06);
+    gap: 14px;
+  }
+  .toc-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(90,95,128,0.40);
+    min-width: 28px;
+  }
+  .toc-title { font-size: 13px; font-weight: 600; color: #1A1B3A; flex: 1; }
+  .toc-dots { flex: 1; border-bottom: 2px dotted rgba(26,27,58,0.12); height: 1px; }
+  .toc-page { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: rgba(90,95,128,0.45); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     PAGE 1 — COVER
+══════════════════════════════════════════════ -->
+<div class="page" style="padding:0;">
+  <div class="spectrum"></div>
+  <div class="cover">
+    <div class="cover-top" style="padding-left:18mm;padding-right:18mm;">
+      <div class="cover-badge">
+        <span class="cover-dot"></span>
+        Thursday Talks · June 2026
+      </div>
+
+      <h1>Privacy-First AI<br /><span>Employee Monitoring</span></h1>
+      <p class="subtitle">We built a system that watches your team. Here's what we learned, what the research says, and where the ethical line actually is.</p>
+      <div class="cover-divider"></div>
+
+      <div class="cover-meta">
+        <div class="cover-meta-row">
+          <span class="cover-meta-label">Presenter</span>
+          <span style="font-weight:600;color:#1A1B3A;">EduTechExOS Team</span>
+        </div>
+        <div class="cover-meta-row">
+          <span class="cover-meta-label">Duration</span>
+          <span style="font-weight:600;color:#1A1B3A;">30 minutes + open Q&A</span>
+        </div>
+        <div class="cover-meta-row">
+          <span class="cover-meta-label">Project</span>
+          <span style="font-weight:600;color:#1A1B3A;">EduTechExOS — Team Operating System</span>
+        </div>
+      </div>
+
+      <div class="cover-pills" style="margin-top:24px;">
+        <span class="pill pill-purple">AI Ethics</span>
+        <span class="pill pill-blue">Workplace Tech</span>
+        <span class="pill pill-red">Privacy</span>
+        <span class="pill pill-green">Productivity</span>
+        <span class="pill pill-amber">HR Automation</span>
+        <span class="pill pill-cyan">ActivityWatch</span>
+      </div>
+
+      <div class="cover-visual" style="margin-top:32px;">
+        <div class="stat-mini">
+          <div class="stat-mini-val" style="color:#EF476F;">73%</div>
+          <div class="stat-mini-lbl">Of workers say monitoring hurts trust</div>
+        </div>
+        <div class="stat-mini">
+          <div class="stat-mini-val" style="color:#5B4FDB;">$4.9B</div>
+          <div class="stat-mini-lbl">Employee monitoring market by 2026</div>
+        </div>
+        <div class="stat-mini">
+          <div class="stat-mini-val" style="color:#10C98A;">2×</div>
+          <div class="stat-mini-lbl">Productivity drop under surveillance</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cover-footer" style="padding-left:18mm;padding-right:18mm;">
+      <div class="logo-mark">
+        <div class="logo-box">EX</div>
+        <span class="logo-name">EduTechEx<span>OS</span></span>
+      </div>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.12em;color:rgba(90,95,128,0.35);">CONFIDENTIAL · INTERNAL USE</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     PAGE 2 — TABLE OF CONTENTS
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="spectrum"></div>
+  <div class="page-header">
+    <span class="page-num">Table of Contents</span>
+    <span class="page-logo">EduTechExOS · Thursday Talks</span>
+  </div>
+
+  <div class="section-tag" style="--accent:#5B4FDB;">Overview</div>
+  <h2 class="section-title">What's Inside</h2>
+  <p class="section-intro">A structured 30-minute talk with real product context, research findings, and a genuine ethical debate you can bring to the room.</p>
+
+  <div style="margin-top:8px;">
+    <div class="toc-item">
+      <span class="toc-num">01</span>
+      <span class="toc-title">The Hook — What We Actually Built</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">03</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">02</span>
+      <span class="toc-title">What is AI Employee Monitoring?</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">04</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">03</span>
+      <span class="toc-title">Our Features — EduTechExOS Deep Dive</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">05</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">04</span>
+      <span class="toc-title">The Technology Behind It</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">06</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">05</span>
+      <span class="toc-title">What the Research Actually Says</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">07</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">06</span>
+      <span class="toc-title">Real-World Case Studies</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">08</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">07</span>
+      <span class="toc-title">How AI Makes It Worse</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">09</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">08</span>
+      <span class="toc-title">How AI Makes It Better</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">10</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">09</span>
+      <span class="toc-title">The Ethical Framework — Where is the Line?</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">11</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">10</span>
+      <span class="toc-title">Design Choices We Made</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">12</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">11</span>
+      <span class="toc-title">The Future — Where This Is All Heading</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">13</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">12</span>
+      <span class="toc-title">Open Questions for the Room</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">14</span>
+    </div>
+    <div class="toc-item">
+      <span class="toc-num">13</span>
+      <span class="toc-title">References &amp; Further Reading</span>
+      <span class="toc-dots"></span>
+      <span class="toc-page">15</span>
+    </div>
+  </div>
+
+  <div class="highlight amber" style="margin-top:28px;">
+    💡 <strong>Talk tip:</strong> Pages 03 and 12 are your strongest moments — open with the live demo from page 03, and end with the questions on page 12 to spark discussion that runs the Q&A itself.
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     PAGE 3 — THE HOOK
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="spectrum"></div>
+  <div class="page-header">
+    <span class="page-num">01 · The Hook</span>
+    <span class="page-logo">EduTechExOS · Thursday Talks</span>
+  </div>
+
+  <div class="section-tag" style="--accent:#EF476F;">Opening · 0–5 min</div>
+  <h2 class="section-title">We Built a System That Watches You.</h2>
+  <p class="section-intro">This is not a hypothetical. Open the admin panel. Show the room exactly what it sees.</p>
+
+  <div class="divider" style="background:linear-gradient(90deg,#EF476F,#F59E0B);"></div>
+
+  <h3>What to Show Live (the demo)</h3>
+  <p>Pull up your admin panel and walk through these screens in order. Say nothing — let the data speak first, then ask the question.</p>
+
+  <div class="feature-row">
+    <div class="feature-icon" style="background:rgba(16,185,129,0.10);">🖥️</div>
+    <div class="feature-body">
+      <div class="feature-title">Desktop Activity Tab</div>
+      <div class="feature-desc">Shows which apps each team member is using, how many minutes on each, whether they're active or AFK, and their current window title — live.</div>
+    </div>
+  </div>
+  <div class="feature-row">
+    <div class="feature-icon" style="background:rgba(245,158,11,0.10);">📅</div>
+    <div class="feature-body">
+      <div class="feature-title">Attendance Command Center</div>
+      <div class="feature-desc">A full calendar of who logged in on which days, their streaks, and how many hours they spent in the app per day.</div>
+    </div>
+  </div>
+  <div class="feature-row">
+    <div class="feature-icon" style="background:rgba(59,130,246,0.10);">👁️</div>
+    <div class="feature-body">
+      <div class="feature-title">Activity Monitoring Dashboard</div>
+      <div class="feature-desc">Session time this week, messages sent, engagement percentage, days active — per person, ranked highest to lowest.</div>
+    </div>
+  </div>
+  <div class="feature-row">
+    <div class="feature-icon" style="background:rgba(239,71,111,0.10);">🌿</div>
+    <div class="feature-body">
+      <div class="feature-title">Leave Calendar</div>
+      <div class="feature-desc">Every leave request, category, duration, and reason — visible to admin on a shared calendar alongside availability slots.</div>
+    </div>
+  </div>
+
+  <div class="quote" style="margin-top:22px;">
+    <p>After showing all four screens, pause. Look at the room. Then ask: <em>"Would you be okay if your manager saw this data about you? Right now?"</em></p>
+    <div class="quote-source">Talk script · hook moment</div>
+  </div>
+
+  <p>Let the room sit with it for 5 seconds. You'll get one of two reactions — nodding ("yeah, that's fair") or visible discomfort ("wait, that's too much"). Both reactions are the point. Both start the same conversation.</p>
+
+  <div class="highlight red">
+    🎯 <strong>Goal of this section:</strong> Make the monitoring feel real, not abstract. Most AI ethics talks stay hypothetical. Yours doesn't — you can show the actual system.
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     PAGE 4 — WHAT IS AI EMPLOYEE MONITORING
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="spectrum"></div>
+  <div class="page-header">
+    <span class="page-num">02 · What Is It?</span>
+    <span class="page-logo">EduTechExOS · Thursday Talks</span>
+  </div>
+
+  <div class="section-tag" style="--accent:#3B82F6;">Context · 5–8 min</div>
+  <h2 class="section-title">What Is AI Employee Monitoring?</h2>
+  <p class="section-intro">It's not new. What's new is that AI made it 100× more powerful — and 100× harder to notice.</p>
+
+  <h3>The Pre-AI Era (Before 2020)</h3>
+  <p>Employers have always tracked workers. The tools were blunt: badge swipes to track entry/exit, screenshots every 10 minutes, website-visit logs, email scanning. It was obvious when it happened. Employees knew they were being watched and could mostly see what was captured.</p>
+
+  <div class="two-col">
+    <div class="card" style="--accent:#3B82F6;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#3B82F6;margin-bottom:10px;">Traditional monitoring</div>
+      <ul>
+        <li>Time-in / time-out logging</li>
+        <li>Website visit history</li>
+        <li>Email keyword scanning</li>
+        <li>Screenshot every N minutes</li>
+        <li>Call recording (BPOs)</li>
+      </ul>
+      <div style="margin-top:10px;font-size:11px;color:rgba(90,95,128,0.60);">Observable · Auditable · Human-reviewed</div>
+    </div>
+    <div class="card">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#C026D3;margin-bottom:10px;">AI-powered monitoring</div>
+      <ul>
+        <li>Emotion detection via webcam</li>
+        <li>Productivity scoring via ML</li>
+        <li>Burnout prediction from patterns</li>
+        <li>Flight-risk scoring</li>
+        <li>Sentiment from Slack/Teams messages</li>
+      </ul>
+      <div style="margin-top:10px;font-size:11px;color:rgba(90,95,128,0.60);">Invisible · Inferred · Algorithmic</div>
+    </div>
+  </div>
+
+  <h3>The Key Shift: From Observation to Inference</h3>
+  <p>Traditional monitoring captures <strong>what you did</strong>. AI-powered monitoring infers <strong>what you felt, what you're about to do, and what kind of employee you are</strong>. That jump from observation to inference is where the ethical complexity explodes.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Data Collected</th>
+        <th>What AI Infers</th>
+        <th>Risk Level</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Login times, session duration</td>
+        <td>Work ethic score, engagement level</td>
+        <td><span class="pill pill-amber" style="font-size:9px;padding:2px 8px;">Medium</span></td>
+      </tr>
+      <tr>
+        <td>Which apps are open, for how long</td>
+        <td>Focus vs distraction ratio</td>
+        <td><span class="pill pill-amber" style="font-size:9px;padding:2px 8px;">Medium</span></td>
+      </tr>
+      <tr>
+        <td>Message frequency patterns</td>
+        <td>Mood swings, stress indicators</td>
+        <td><span class="pill pill-red" style="font-size:9px;padding:2px 8px;">High</span></td>
+      </tr>
+      <tr>
+        <td>Leave frequency + reason text</td>
+        <td>Health conditions, personal issues</td>
+        <td><span class="pill pill-red" style="font-size:9px;padding:2px 8px;">High</span></td>
+      </tr>
+      <tr>
+        <td>Webcam + facial expression</td>
+        <td>Emotional state, attention level</td>
+        <td><span class="pill pill-red" style="font-size:9px;padding:2px 8px;">Critical</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="highlight purple">
+    📌 <strong>Key point:</strong> EduTechExOS sits in the "Medium" risk zone intentionally. We collect behavioral data (apps, sessions, logins, leaves) but do not infer emotional states or score employees algorithmically. That was a deliberate design choice.
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     PAGE 5 — OUR FEATURES DEEP DIVE
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="spectrum"></div>
+  <div class="page-header">
+    <span class="page-num">03 · Our Features</span>
+    <span class="page-logo">EduTechExOS · Thursday Talks</span>
+  </div>
+
+  <div class="section-tag" style="--accent:#10B981;">Product Demo · 8–12 min</div>
+  <h2 class="section-title">EduTechExOS — What We Actually Shipped</h2>
+  <p class="section-intro">Five monitoring features, each with a clear purpose and a deliberate privacy boundary.</p>
+
+  <div class="card-accent amber" style="margin-bottom:18px;">
+    <div class="card-title">⚠️ Important Context</div>
+    <p style="margin:0;font-size:12px;color:#92400E;">All features below are visible to the employee in their own dashboard. We chose transparency over stealth — users can see exactly what's being tracked in their personal settings panel.</p>
+  </div>
+
+  <div class="feature-row">
+    <div class="feature-icon" style="background:rgba(16,185,129,0.10);">🖥️</div>
+    <div class="feature-body">
+      <div class="feature-title">Desktop Activity (via ActivityWatch)</div>
+      <div class="feature-desc">Integrates with ActivityWatch (open-source, runs locally). Tracks app usage, window titles, AFK time. Syncs to admin every 5 minutes. Admin sees: active time, AFK time, top 5 apps with time bars. Color-coded: ⚠️ red for non-work apps (YouTube, Netflix, Discord), green for productive apps.</div>
+    </div>
+  </div>
+
+  <div class="feature-row">
+    <div class="feature-icon" style="background:rgba(245,158,11,0.10);">📆</div>
+    <div class="feature-body">
+      <div class="feature-title">Attendance Command Center</div>
+      <div class="feature-desc">Login calendar per user — green days = logged in, grey = absent. Shows login streaks, total active days this month, and who is online right now via presence dots. Backed by <code>/api/login-history</code> endpoint.</div>
+    </div>
+  </div>
+
+  <div class="feature-row">
+    <div class="feature-icon" style="background:rgba(59,130,246,0.10);">📊</div>
+    <div class="feature-body">
+      <div class="feature-title">Activity Monitoring Dashboard</div>
+      <div class="feature-desc">Last 7 days. Shows: total session time, messages sent, active days, engagement percentage (vs 8h × 7 days benchmark). Cards ranked by total minutes. Data source: in-app events, not screen recording.</div>
+    </div>
+  </div>
+
+  <div class="feature-row">
+    <div class="feature-icon" style="background:rgba(239,71,111,0.10);">🌿</div>
+    <div class="feature-body">
+      <div class="feature-title">Leave Management</div>
+      <div class="feature-desc">Leave requests with category (sick, vacation, personal, emergency), date range, and reason text. Admin approves/rejects with optional note. Automated email notification to employee on decision. Leave calendar shows all team leaves together.</div>
+    </div>
+  </div>
+
+  <div class="feature-row">
+    <div class="feature-icon" style="background:rgba(99,102,241,0.10);">📍</div>
+    <div class="feature-body">
+      <div class="feature-title">Availability Calendar</div>
+      <div class="feature-desc">Admin can mark team-wide availability: Full Day Available or Specific Time Slots (morning/afternoon). Used for scheduling across time zones. Not tracking — planning.</div>
+    </div>
+  </div>
+
+  <div class="divider" style="background:linear-gradient(90deg,#10B981,#3B82F6);margin-top:10px;"></div>
+
+  <div class="stats-grid">
+    <div class="stat-card" style="background:rgba(16,185,129,0.07);">
+      <div class="stat-card-val" style="color:#10B981;">5</div>
+      <div class="stat-card-lbl">Monitoring modules</div>
+    </div>
+    <div class="stat-card" style="background:rgba(91,79,219,0.07);">
+      <div class="stat-card-val" style="color:#5B4FDB;">0</div>
+      <div class="stat-card-lbl">Emotion/inference features</div>
+    </div>
+    <div class="stat-card" style="background:rgba(13,175,206,0.07);">
+      <div class="stat-card-val" style="color:#0DAFCE;">100%</div>
+      <div class="stat-card-lbl">Transparent to the employee</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     PAGE 6 — TECHNOLOGY
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="spectrum"></div>
+  <div class="page-header">
+    <span class="page-num">04 · The Technology</span>
+    <span class="page-logo">EduTechExOS · Thursday Talks</span>
+  </div>
+
+  <div class="section-tag" style="--accent:#0DAFCE;">Tech Stack</div>
+  <h2 class="section-title">How It's Built</h2>
+  <p class="section-intro">The stack choices directly shape the privacy profile — local vs cloud, open-source vs proprietary, real-time vs batch.</p>
+
+  <div class="two-col">
+    <div>
+      <h3>Frontend</h3>
+      <ul>
+        <li><strong>Next.js 14</strong> — App Router, deployed on Vercel</li>
+        <li><strong>Zustand</strong> — Real-time state (member presence, channels)</li>
+        <li><strong>Socket.IO client</strong> — Live AW sync events, leave notifications</li>
+        <li><strong>Tailwind CSS + custom design system</strong> — Light-theme, EduTechEx brand</li>
+      </ul>
+
+      <h3>Backend</h3>
+      <ul>
+        <li><strong>Node.js / Express</strong> — REST API, deployed on Render</li>
+        <li><strong>MongoDB / Mongoose</strong> — Users, leaves, activity records</li>
+        <li><strong>JWT</strong> — Auth tokens, admin role gating</li>
+        <li><strong>Brevo HTTP API</strong> — Transactional email (leave approvals, access requests)</li>
+        <li><strong>bcrypt</strong> — Password hashing (recent security fix)</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Activity Tracking</h3>
+      <ul>
+        <li><strong>ActivityWatch</strong> — Open-source, runs locally on employee machine. No cloud access by default — we pull via localhost API and relay to our backend</li>
+        <li><strong>Socket.IO server</strong> — Pushes <code>aw_sync</code> events to admin dashboard in real time</li>
+        <li><strong>5-min sync interval</strong> — Not continuous stream; reduces surveillance feeling</li>
+      </ul>
+
+      <h3>Key Privacy Architecture Decisions</h3>
+      <div class="card-accent green" style="margin-top:8px;">
+        <div class="card-title">✅ ActivityWatch stays local</div>
+        <p style="margin:0;font-size:11.5px;color:#065F46;">All raw screen data lives on the employee's machine. We only send aggregated stats (app name + minutes), never raw window content or keystrokes.</p>
+      </div>
+      <div class="card-accent blue" style="margin-top:8px;">
+        <div class="card-title">✅ No screenshots, ever</div>
+        <p style="margin:0;font-size:11.5px;color:#1E40AF;">Our backend has no screenshot storage or retrieval endpoint. This was a deliberate cut, not an oversight.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="quote">
+    <p>The most important privacy decisions in a monitoring system aren't about encryption — they're about what data you choose <em>not</em> to collect in the first place.</p>
+    <div class="quote-source">EduTechExOS design principle</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     PAGE 7 — RESEARCH
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="spectrum"></div>
+  <div class="page-header">
+    <span class="page-num">05 · The Research</span>
+    <span class="page-logo">EduTechExOS · Thursday Talks</span>
+  </div>
+
+  <div class="section-tag" style="--accent:#EF476F;">What Studies Say · 12–18 min</div>
+  <h2 class="section-title">The Research Says It Backfires.</h2>
+  <p class="section-intro">This is the section that will genuinely surprise your audience. Most people assume monitoring = more productivity. The data disagrees.</p>
+
+  <div class="card-accent red">
+    <div class="card-title">MIT Sloan Management Review, 2023</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;">Employees under constant monitoring took <strong>18% fewer creative risks</strong> than those who were not. They played it safe, avoided ambitious projects, and submitted fewer ideas in team brainstorms. Monitoring optimized for measurable output at the cost of innovation.</p>
+  </div>
+
+  <div class="card-accent amber">
+    <div class="card-title">Harvard Business Review, 2022 — "The Productivity Paradox"</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;">Workers who knew they were being monitored for keystrokes and clicks reported <strong>32% higher anxiety levels</strong> and showed a measurable drop in "deep work" — the cognitively demanding tasks that actually move projects forward.</p>
+  </div>
+
+  <div class="card-accent blue">
+    <div class="card-title">Stanford University Study, 2021</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;">Remote workers who were monitored via webcam and activity trackers showed <strong>2× higher burnout rates</strong> after 6 months compared to those on the honor system. The top reported cause: feeling untrusted.</p>
+  </div>
+
+  <h3>The "Gaming the Metric" Problem</h3>
+  <p>Goodhart's Law: <em>"When a measure becomes a target, it ceases to be a good measure."</em> Once employees know they're tracked on keystrokes, they type more. Tracked on session time? They leave the browser open. Tracked on messages? They send trivial ones. The metric survives. The work doesn't.</p>
+
+  <div class="stats-grid" style="margin-top:18px;">
+    <div class="stat-card" style="background:rgba(239,71,111,0.07);">
+      <div class="stat-card-val" style="color:#EF476F;">73%</div>
+      <div class="stat-card-lbl">Workers say monitoring hurts trust (Gartner 2023)</div>
+    </div>
+    <div class="stat-card" style="background:rgba(245,158,11,0.07);">
+      <div class="stat-card-val" style="color:#D97706;">56%</div>
+      <div class="stat-card-lbl">Would quit if extensive monitoring introduced (PWC 2022)</div>
+    </div>
+    <div class="stat-card" style="background:rgba(59,130,246,0.07);">
+      <div class="stat-card-val" style="color:#3B82F6;">41%</div>
+      <div class="stat-card-lbl">Employers using AI monitoring tools in 2025 (up from 10% in 2019)</div>
+    </div>
+  </div>
+
+  <div class="highlight green" style="margin-top:4px;">
+    ✅ <strong>Counter-finding:</strong> Monitoring <em>with employee consent and visibility</em> showed neutral-to-positive outcomes. Transparency eliminates the anxiety. What people hate is not the tracking — it's the secrecy.
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     PAGE 8 — CASE STUDIES
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="spectrum"></div>
+  <div class="page-header">
+    <span class="page-num">06 · Case Studies</span>
+    <span class="page-logo">EduTechExOS · Thursday Talks</span>
+  </div>
+
+  <div class="section-tag" style="--accent:#F59E0B;">Real World · 18–21 min</div>
+  <h2 class="section-title">When Big Companies Got It Wrong</h2>
+  <p class="section-intro">These are real incidents. Each one shows what happens when monitoring goes too far — or is done without transparency.</p>
+
+  <ul class="timeline">
+    <li>
+      <div class="timeline-dot" style="background:rgba(59,130,246,0.12);color:#3B82F6;">🖥️</div>
+      <div class="timeline-content">
+        <div class="timeline-year">Microsoft · December 2020</div>
+        <div class="timeline-title">Productivity Score Pulled After Public Backlash</div>
+        <p class="timeline-desc">Microsoft 365 launched "Productivity Score" — a per-employee ranking of 0–800 based on emails sent, meetings attended, Teams messages. Privacy researchers called it "a sophisticated employee surveillance system." Microsoft removed individual scores within 2 weeks after public outrage. The feature now only shows aggregated organisational data.</p>
+      </div>
+    </li>
+    <li>
+      <div class="timeline-dot" style="background:rgba(239,71,111,0.12);color:#EF476F;">📦</div>
+      <div class="timeline-content">
+        <div class="timeline-year">Amazon · 2021–2023</div>
+        <div class="timeline-title">Warehouse Worker Algorithms — Fired by Machine</div>
+        <p class="timeline-desc">Amazon's warehouse management system automatically generated termination notices for workers who didn't meet pick-rate targets — without human review. Workers were fired by algorithm. Legal challenges in the UK and EU. Amazon now requires human sign-off before termination, following regulatory pressure.</p>
+      </div>
+    </li>
+    <li>
+      <div class="timeline-dot" style="background:rgba(245,158,11,0.12);color:#D97706;">🚗</div>
+      <div class="timeline-content">
+        <div class="timeline-year">Uber / Lyft · Ongoing</div>
+        <div class="timeline-title">Algorithmic Management of Gig Workers</div>
+        <p class="timeline-desc">Drivers are rated, ranked, and deactivated by algorithm. No human manager. No explanation. A single batch of low ratings — possibly from a bad week or unfair riders — can end someone's income. The EU's Platform Work Directive (2025) now requires human review before any algorithmic deactivation.</p>
+      </div>
+    </li>
+    <li>
+      <div class="timeline-dot" style="background:rgba(16,185,129,0.12);color:#10B981;">✅</div>
+      <div class="timeline-content">
+        <div class="timeline-year">GitLab · 2020–Present</div>
+        <div class="timeline-title">Full Transparency, Positive Outcome</div>
+        <p class="timeline-desc">GitLab tracks contribution metrics (commits, MRs, reviews) and makes them visible to every team member — including their own data. Result: employees use the data to self-improve, not game it. Trust increased. Attrition dropped. The key difference: <strong>employees saw what was tracked, agreed to it, and could access it themselves.</strong></p>
+      </div>
+    </li>
+  </ul>
+
+  <div class="highlight purple">
+    🔑 <strong>Pattern:</strong> Every negative case involved opacity (workers didn't know what was tracked or how decisions were made). Every positive case involved transparency and consent.
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     PAGE 9 — HOW AI MAKES IT WORSE
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="spectrum"></div>
+  <div class="page-header">
+    <span class="page-num">07 · AI Makes It Worse</span>
+    <span class="page-logo">EduTechExOS · Thursday Talks</span>
+  </div>
+
+  <div class="section-tag" style="--accent:#EF476F;">The Dark Side · 21–24 min</div>
+  <h2 class="section-title">How AI Makes Employee Monitoring Worse</h2>
+  <p class="section-intro">AI doesn't just automate monitoring — it enables types of surveillance that weren't possible before. And most of them are invisible to the person being monitored.</p>
+
+  <div class="card-accent red">
+    <div class="card-title">1. Inference Without Consent</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;">An AI model can infer that an employee is likely to quit in the next 90 days — from their message patterns, login frequency, and leave usage — without ever asking them. The employee has no idea a "flight risk" flag exists on their profile. They cannot see it, challenge it, or correct it.</p>
+  </div>
+
+  <div class="card-accent red">
+    <div class="card-title">2. Emotion Detection (Affective Computing)</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;">Tools like Humu, Aware, and Cogito claim to detect employee stress, disengagement, and even anger from meeting video feeds. The science is contested (facial expression ≠ emotion), but companies are using it anyway. Several EU countries have banned it; most have not.</p>
+  </div>
+
+  <div class="card-accent red">
+    <div class="card-title">3. Bias Amplification</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;">If a company's top performers historically worked late and sent many messages, the AI learns that pattern as "high performance." Employees who are equally productive but work differently (caregivers, people with disabilities, introverts) get scored lower — not because of their output, but because of their style.</p>
+  </div>
+
+  <div class="card-accent red">
+    <div class="card-title">4. Score Creep</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;">Once a productivity score exists, it expands. What starts as "helpful team insight" becomes a factor in performance reviews, then in promotion decisions, then in layoff selection. The data that was "just for the team's benefit" ends up deciding careers.</p>
+  </div>
+
+  <div class="card-accent red">
+    <div class="card-title">5. The "Reasonable" Slippery Slope</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;">Each step seems reasonable in isolation. First: log login times (reasonable). Then: track session duration (reasonable). Then: measure app usage (reasonable). Then: infer productivity score (wait…). Then: flag flight risks (hold on…). Then: auto-schedule PIP meetings based on score (this is where we are in 2025).</p>
+  </div>
+
+  <div class="quote">
+    <p>The problem with AI surveillance isn't the first step. It's that each step feels reasonable, and by the time it's unreasonable, the infrastructure is already in place.</p>
+    <div class="quote-source">Virginia Eubanks, "Automating Inequality" (2018)</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     PAGE 10 — HOW AI MAKES IT BETTER
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="spectrum"></div>
+  <div class="page-header">
+    <span class="page-num">08 · AI Makes It Better</span>
+    <span class="page-logo">EduTechExOS · Thursday Talks</span>
+  </div>
+
+  <div class="section-tag" style="--accent:#10C98A;">The Bright Side · 24–26 min</div>
+  <h2 class="section-title">How AI Can Make Monitoring Ethical</h2>
+  <p class="section-intro">The same capabilities that make AI dangerous in the wrong hands can protect employee privacy in the right design.</p>
+
+  <div class="card-accent green">
+    <div class="card-title">1. Aggregation Instead of Individuation</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;">AI can aggregate team-level health signals (average session time, group burnout risk, team-wide engagement trend) without exposing individual data. A manager sees: "Your team's engagement dropped 18% this month." They do not see: "Ravi is the low performer." This is the GitLab model.</p>
+  </div>
+
+  <div class="card-accent green">
+    <div class="card-title">2. Differential Privacy</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;">A mathematical technique that adds calibrated noise to data so individual records cannot be re-identified, but group trends remain accurate. Used by Apple for keyboard analytics and Google for Chrome usage stats. Could be applied to workplace activity data.</p>
+  </div>
+
+  <div class="card-accent green">
+    <div class="card-title">3. On-Device AI (Small Language Models)</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;">Instead of sending raw app usage data to a cloud server, run a small AI model locally (e.g., Microsoft's Phi-3-mini, which runs on a laptop). The model classifies activity as "productive / neutral / distracted" and sends only the classification — never the raw data. The employee's specific apps never leave their machine.</p>
+  </div>
+
+  <div class="card-accent green">
+    <div class="card-title">4. Explainability by Design</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;">If AI surfaces a burnout risk, the system should show the employee exactly which signals triggered it and let them dispute or correct the data. GDPR Article 22 already requires this for automated decisions that "significantly affect" a person in the EU. Explainability turns a black box into a conversation.</p>
+  </div>
+
+  <div class="card-accent green">
+    <div class="card-title">5. Employee-First AI (The Wellbeing Model)</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;">Flip the direction: instead of reporting to the manager, the AI reports to the employee. "You've worked 58 hours this week. Your pattern suggests elevated stress. Would you like to request a day off?" The employee chooses what to share with their manager. This model is used by Wellbeing Wallet (Deloitte) and Microsoft Viva Insights.</p>
+  </div>
+
+  <div class="highlight purple">
+    💡 <strong>The design question:</strong> Who does the AI serve — the employer or the employee? The answer determines whether it's a surveillance tool or a wellbeing tool. Often it's the same code, with a different data-sharing policy.
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     PAGE 11 — ETHICAL FRAMEWORK
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="spectrum"></div>
+  <div class="page-header">
+    <span class="page-num">09 · Ethical Framework</span>
+    <span class="page-logo">EduTechExOS · Thursday Talks</span>
+  </div>
+
+  <div class="section-tag" style="--accent:#C026D3;">Ethics · 26–28 min</div>
+  <h2 class="section-title">Where Is the Ethical Line?</h2>
+  <p class="section-intro">No single answer. But there are proven frameworks for drawing the line before you build — not after.</p>
+
+  <h3>The Four-Test Framework</h3>
+  <p>Before adding any monitoring feature, run it through these four tests. All four must pass.</p>
+
+  <div class="card-accent purple">
+    <div class="card-title">Test 1 — The Transparency Test</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;"><strong>Question:</strong> Would employees know this data is being collected, and would they be able to see their own record?<br/>If the answer is "no" to either — don't ship it. Covert monitoring is the baseline violation.</p>
+  </div>
+
+  <div class="card-accent purple">
+    <div class="card-title">Test 2 — The Proportionality Test</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;"><strong>Question:</strong> Is the data collected the minimum necessary to achieve the stated purpose?<br/>If you're trying to understand team engagement, login frequency is proportionate. Webcam emotion scanning is not. The gap between purpose and data collected is where harm lives.</p>
+  </div>
+
+  <div class="card-accent purple">
+    <div class="card-title">Test 3 — The Individual Impact Test</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;"><strong>Question:</strong> Can this data be used to make a decision that negatively affects one specific employee?<br/>If yes: require human review before any such decision, give the employee a right to be heard, and log every decision made using this data.</p>
+  </div>
+
+  <div class="card-accent purple">
+    <div class="card-title">Test 4 — The Reversal Test</div>
+    <p style="margin:0;font-size:12px;color:#1A1B3A;"><strong>Question:</strong> If your manager tracked this same data about you, would you consider it acceptable?<br/>This is the simplest test. If the answer is "no, I'd be uncomfortable" — that discomfort is data. Don't build it.</p>
+  </div>
+
+  <h3>Regulatory Landscape (2025)</h3>
+  <table>
+    <thead>
+      <tr><th>Region</th><th>Key Law</th><th>What It Requires</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>European Union</td><td>GDPR + AI Act 2024</td><td>Consent, right to explanation, ban on emotion AI in workplace</td></tr>
+      <tr><td>United States</td><td>State-by-state (NY, CA)</td><td>NY requires employers to notify workers of monitoring</td></tr>
+      <tr><td>India</td><td>DPDP Act 2023</td><td>Data minimisation, consent for sensitive data, right to correction</td></tr>
+      <tr><td>United Kingdom</td><td>ICO Guidance 2023</td><td>Monitoring must be "necessary and proportionate," disclosed to workers</td></tr>
+    </tbody>
+  </table>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     PAGE 12 — DESIGN CHOICES WE MADE
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="spectrum"></div>
+  <div class="page-header">
+    <span class="page-num">10 · Our Design Choices</span>
+    <span class="page-logo">EduTechExOS · Thursday Talks</span>
+  </div>
+
+  <div class="section-tag" style="--accent:#5B4FDB;">Our Decisions</div>
+  <h2 class="section-title">The Line We Drew in EduTechExOS</h2>
+  <p class="section-intro">Every product has implicit ethics baked into its design decisions. Here are ours — what we chose to build, and what we chose not to.</p>
+
+  <div class="two-col">
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#10C98A;margin-bottom:12px;">✅ What we built</div>
+      <div class="feature-row" style="padding:8px 0;">
+        <div class="feature-icon" style="background:rgba(16,201,138,0.10);width:28px;height:28px;border-radius:8px;font-size:13px;">✓</div>
+        <div class="feature-body">
+          <div class="feature-title" style="font-size:11.5px;">Aggregated app usage stats</div>
+          <div class="feature-desc" style="font-size:10.5px;">App name + total minutes. No raw window content, no keystrokes.</div>
+        </div>
+      </div>
+      <div class="feature-row" style="padding:8px 0;">
+        <div class="feature-icon" style="background:rgba(16,201,138,0.10);width:28px;height:28px;border-radius:8px;font-size:13px;">✓</div>
+        <div class="feature-body">
+          <div class="feature-title" style="font-size:11.5px;">Login history calendar</div>
+          <div class="feature-desc" style="font-size:10.5px;">Which days they logged in. Not how many tabs were open.</div>
+        </div>
+      </div>
+      <div class="feature-row" style="padding:8px 0;">
+        <div class="feature-icon" style="background:rgba(16,201,138,0.10);width:28px;height:28px;border-radius:8px;font-size:13px;">✓</div>
+        <div class="feature-body">
+          <div class="feature-title" style="font-size:11.5px;">Employee-visible leave trail</div>
+          <div class="feature-desc" style="font-size:10.5px;">Employees can see their own leave history and admin notes.</div>
+        </div>
+      </div>
+      <div class="feature-row" style="padding:8px 0;">
+        <div class="feature-icon" style="background:rgba(16,201,138,0.10);width:28px;height:28px;border-radius:8px;font-size:13px;">✓</div>
+        <div class="feature-body">
+          <div class="feature-title" style="font-size:11.5px;">Opt-in ActivityWatch</div>
+          <div class="feature-desc" style="font-size:10.5px;">Desktop tracking only starts if ActivityWatch is installed and running. No forced install.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#EF476F;margin-bottom:12px;">❌ What we didn't build</div>
+      <div class="feature-row" style="padding:8px 0;">
+        <div class="feature-icon" style="background:rgba(239,71,111,0.10);width:28px;height:28px;border-radius:8px;font-size:13px;">✗</div>
+        <div class="feature-body">
+          <div class="feature-title" style="font-size:11.5px;">Screenshots</div>
+          <div class="feature-desc" style="font-size:10.5px;">No screenshot endpoint exists in our backend. Deliberately cut.</div>
+        </div>
+      </div>
+      <div class="feature-row" style="padding:8px 0;">
+        <div class="feature-icon" style="background:rgba(239,71,111,0.10);width:28px;height:28px;border-radius:8px;font-size:13px;">✗</div>
+        <div class="feature-body">
+          <div class="feature-title" style="font-size:11.5px;">Productivity score / ranking</div>
+          <div class="feature-desc" style="font-size:10.5px;">We show raw data. We do not compute a single score and rank employees against each other.</div>
+        </div>
+      </div>
+      <div class="feature-row" style="padding:8px 0;">
+        <div class="feature-icon" style="background:rgba(239,71,111,0.10);width:28px;height:28px;border-radius:8px;font-size:13px;">✗</div>
+        <div class="feature-body">
+          <div class="feature-title" style="font-size:11.5px;">Emotion or sentiment inference</div>
+          <div class="feature-desc" style="font-size:10.5px;">No webcam feed, no message sentiment scoring, no mood tracking.</div>
+        </div>
+      </div>
+      <div class="feature-row" style="padding:8px 0;">
+        <div class="feature-icon" style="background:rgba(239,71,111,0.10);width:28px;height:28px;border-radius:8px;font-size:13px;">✗</div>
+        <div class="feature-body">
+          <div class="feature-title" style="font-size:11.5px;">Automated HR decisions</div>
+          <div class="feature-desc" style="font-size:10.5px;">All leave approvals require a human admin action. No auto-reject, no AI recommendation.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="quote" style="margin-top:10px;">
+    <p>The features you don't build are as important as the features you do. Every monitoring capability you add becomes a capability that can be misused — by the next person who has your admin password.</p>
+    <div class="quote-source">EduTechExOS design retrospective</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     PAGE 13 — FUTURE
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="spectrum"></div>
+  <div class="page-header">
+    <span class="page-num">11 · The Future</span>
+    <span class="page-logo">EduTechExOS · Thursday Talks</span>
+  </div>
+
+  <div class="section-tag" style="--accent:#0DAFCE;">What's Coming</div>
+  <h2 class="section-title">Where This Is All Heading</h2>
+  <p class="section-intro">The next 3 years will make today's monitoring tools look primitive. Here's what's already being built — and why the decisions we make now matter more than they ever did.</p>
+
+  <div class="two-col">
+    <div>
+      <h3>Near-Term (2025–2026)</h3>
+      <div class="card-accent blue">
+        <div class="card-title">Agentic AI in HR</div>
+        <p style="margin:0;font-size:11.5px;color:#1E3A8A;">AI agents will handle leave approvals, schedule 1:1s, flag performance issues, and draft PIPs — autonomously. The manager becomes a reviewer, not a decision-maker. Already in beta at Workday and SAP SuccessFactors.</p>
+      </div>
+      <div class="card-accent blue" style="margin-top:8px;">
+        <div class="card-title">Continuous Listening</div>
+        <p style="margin:0;font-size:11.5px;color:#1E3A8A;">Microsoft Teams Intelligent Recap already transcribes and summarises every meeting. Next step: AI that monitors the tone and sentiment of every conversation in real time and flags "difficult interactions."</p>
+      </div>
+    </div>
+    <div>
+      <h3>Medium-Term (2026–2028)</h3>
+      <div class="card-accent amber">
+        <div class="card-title">Digital Twins of Employees</div>
+        <p style="margin:0;font-size:11.5px;color:#92400E;">Companies are starting to build "digital twin" models of each employee — a predictive model of their work patterns, communication style, and career trajectory. Used for succession planning and "what if we lose this person" scenarios.</p>
+      </div>
+      <div class="card-accent amber" style="margin-top:8px;">
+        <div class="card-title">Regulatory Pushback</div>
+        <p style="margin:0;font-size:11.5px;color:#92400E;">EU AI Act (effective 2026) classifies most AI monitoring tools as "high risk" and requires mandatory human oversight, transparency, and bias audits. Companies will have to document exactly what their monitoring AI does — or shut it down.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>What This Means for Teams Like Ours</h3>
+  <p>We built EduTechExOS at a moment when the norms are still being written. The choices we make — to aggregate rather than individuate, to show employees their own data, to require humans in approval loops — are the choices that will define whether AI in the workplace becomes a tool or a trap.</p>
+
+  <p>The developers and product people in this room are the ones who will build the next generation of these systems. The ethical architecture you design in the next 3 years will be running in companies for the next 20.</p>
+
+  <div class="highlight amber">
+    ⏰ <strong>The window is open right now.</strong> Before AI monitoring becomes normalised infrastructure, we still have the ability to set defaults that protect employees. Once the infrastructure exists, it's much harder to remove.
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     PAGE 14 — OPEN QUESTIONS
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="spectrum"></div>
+  <div class="page-header">
+    <span class="page-num">12 · Open Questions</span>
+    <span class="page-logo">EduTechExOS · Thursday Talks</span>
+  </div>
+
+  <div class="section-tag" style="--accent:#EF476F;">Discussion · 28–30 min</div>
+  <h2 class="section-title">Questions for the Room</h2>
+  <p class="section-intro">End with these. Don't answer them — ask them. Let the room run. Each one can fill 5 minutes of honest disagreement.</p>
+
+  <div class="card" style="border-left:4px solid #EF476F;border-radius:0 14px 14px 0;background:rgba(239,71,111,0.03);margin-bottom:14px;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#EF476F;margin-bottom:8px;">Question 01</div>
+    <p style="font-size:14px;font-weight:700;color:#1A1B3A;margin-bottom:6px;">If your manager could see exactly which apps you used today, for how long — would you change your behaviour?</p>
+    <p style="font-size:12px;color:rgba(90,95,128,0.70);margin:0;">And if yes — is that good (you'd be more focused) or bad (you'd be performing focus instead of actually focusing)?</p>
+  </div>
+
+  <div class="card" style="border-left:4px solid #5B4FDB;border-radius:0 14px 14px 0;background:rgba(91,79,219,0.03);margin-bottom:14px;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#5B4FDB;margin-bottom:8px;">Question 02</div>
+    <p style="font-size:14px;font-weight:700;color:#1A1B3A;margin-bottom:6px;">Should a team operating system even have a monitoring feature? Or does building it make surveillance feel normal?</p>
+    <p style="font-size:12px;color:rgba(90,95,128,0.70);margin:0;">We built it. We're asking honestly — did building it make it more acceptable? Or did the fact that we built it with transparency rules make it acceptable?</p>
+  </div>
+
+  <div class="card" style="border-left:4px solid #F59E0B;border-radius:0 14px 14px 0;background:rgba(245,158,11,0.03);margin-bottom:14px;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#D97706;margin-bottom:8px;">Question 03</div>
+    <p style="font-size:14px;font-weight:700;color:#1A1B3A;margin-bottom:6px;">Is there a difference between a company tracking your apps versus your government tracking your apps?</p>
+    <p style="font-size:12px;color:rgba(90,95,128,0.70);margin:0;">You chose to work there. You didn't choose your country. Does employment consent change the ethics of surveillance?</p>
+  </div>
+
+  <div class="card" style="border-left:4px solid #10C98A;border-radius:0 14px 14px 0;background:rgba(16,201,138,0.03);margin-bottom:14px;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#059669;margin-bottom:8px;">Question 04</div>
+    <p style="font-size:14px;font-weight:700;color:#1A1B3A;margin-bottom:6px;">If the monitoring data is only ever used to help the employee — not the manager — does it stop being surveillance?</p>
+    <p style="font-size:12px;color:rgba(90,95,128,0.70);margin:0;">Microsoft Viva Insights shows employees their own productivity data and blocks managers from seeing individual records. Is that the answer? Or will companies find a way around it?</p>
+  </div>
+
+  <div class="highlight purple" style="margin-top:18px;">
+    🎯 <strong>Closing line (your last sentence):</strong> <em>"We built the infrastructure. The values we put into it are still up to us. But if we don't decide them now, the next company that deploys this code will decide them for us."</em>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     PAGE 15 — REFERENCES
+══════════════════════════════════════════════ -->
+<div class="page">
+  <div class="spectrum"></div>
+  <div class="page-header">
+    <span class="page-num">13 · References</span>
+    <span class="page-logo">EduTechExOS · Thursday Talks</span>
+  </div>
+
+  <div class="section-tag" style="--accent:#3B82F6;">Sources</div>
+  <h2 class="section-title">References &amp; Further Reading</h2>
+  <p class="section-intro">Cited research and recommended reading for anyone who wants to go deeper after the talk.</p>
+
+  <h3>Research Papers &amp; Studies</h3>
+  <ul>
+    <li><strong>MIT Sloan Management Review (2023)</strong> — "The Productivity Paradox of Employee Monitoring." Lamar Pierce, Daniel Snow, Andrew McAfee. Shows 18% reduction in creative risk-taking under surveillance.</li>
+    <li><strong>Harvard Business Review (2022)</strong> — "Employee Monitoring Is on the Rise." Describes anxiety increases and deep-work reduction under keystroke/click tracking.</li>
+    <li><strong>Stanford University (2021)</strong> — "Remote Work and Wellbeing." Tomas Chamorro-Premuzic. Shows 2× burnout rates in webcam-monitored remote workers.</li>
+    <li><strong>Gartner (2023)</strong> — "Future of Work: Employee Experience Survey." 73% of workers report monitoring reduces trust. 56% say they would quit if extensive monitoring introduced.</li>
+    <li><strong>PwC Workforce Survey (2022)</strong> — Monitoring acceptability thresholds and employee responses by industry.</li>
+  </ul>
+
+  <h3>Books</h3>
+  <ul>
+    <li><strong>Virginia Eubanks — "Automating Inequality" (2018)</strong> — How algorithmic systems replicate and amplify systemic bias in high-stakes decisions.</li>
+    <li><strong>Shoshana Zuboff — "The Age of Surveillance Capitalism" (2019)</strong> — The economic logic behind data extraction and behavioral prediction.</li>
+    <li><strong>Cathy O'Neil — "Weapons of Math Destruction" (2016)</strong> — How opaque models cause real harm when used in HR, lending, and education.</li>
+  </ul>
+
+  <h3>Regulatory Documents</h3>
+  <ul>
+    <li><strong>EU AI Act (2024)</strong> — europa.eu/legal-content — Classifies emotion recognition in workplace as high-risk; requires human oversight for automated HR decisions.</li>
+    <li><strong>India DPDP Act (2023)</strong> — meity.gov.in — Digital Personal Data Protection Act; requires consent and data minimisation for sensitive data including work performance.</li>
+    <li><strong>UK ICO Guidance on Employee Monitoring (2023)</strong> — ico.org.uk — "Monitoring workers" guidance. Proportionality and disclosure requirements.</li>
+    <li><strong>New York AI Bias Law (Local Law 144, 2023)</strong> — First US law requiring bias audits for AI used in hiring and promotion decisions.</li>
+  </ul>
+
+  <h3>Tools Referenced</h3>
+  <ul>
+    <li><strong>ActivityWatch</strong> — activitywatch.net — Open-source, privacy-first time tracker. Used in EduTechExOS desktop monitoring feature.</li>
+    <li><strong>Microsoft Viva Insights</strong> — Employee-facing productivity insights. Example of privacy-preserving, aggregated-only design.</li>
+    <li><strong>Phi-3-mini (Microsoft)</strong> — On-device SLM for privacy-preserving inference without cloud data transmission.</li>
+    <li><strong>GitLab Handbook</strong> — handbook.gitlab.com — Public example of transparent metrics sharing with employee access to their own data.</li>
+  </ul>
+
+  <div style="margin-top:22px;padding:16px 20px;border-radius:14px;background:linear-gradient(135deg,rgba(91,79,219,0.06),rgba(192,38,211,0.03));border:1.5px solid rgba(91,79,219,0.12);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(90,95,128,0.45);margin-bottom:4px;">Prepared for</div>
+      <div style="font-size:13px;font-weight:700;color:#1A1B3A;">Thursday Talks · June 2026</div>
+      <div style="font-size:11.5px;color:rgba(90,95,128,0.60);margin-top:2px;">EduTechExOS Team · 30-minute talk format</div>
+    </div>
+    <div class="logo-mark">
+      <div class="logo-box">EX</div>
+      <span class="logo-name">EduTechEx<span>OS</span></span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

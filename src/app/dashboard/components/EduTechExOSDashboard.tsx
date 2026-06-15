@@ -904,44 +904,42 @@ export default function EduTechExOSDashboard() {
     return () => clearInterval(interval);
   }, [currentUserEmail, loadLocalNotifications]);
 
-  // Activity heartbeat — ping backend every 60 s so admin can see session time.
-  // Stops automatically if the endpoint returns 404 (backend not yet deployed).
+  // Activity heartbeat — ping backend every 30 s with current activity so admin sees live status.
   useEffect(() => {
     if (!currentUserEmail) return;
     const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
-    let endpointAvailable = true; // set false on first 404 to stop future pings
+    let endpointAvailable = true;
+
+    const getCurrentActivity = (): { currentActivity: string; currentPanel: string } => {
+      if (wikiOpen)     return { currentActivity: 'Writing in Wiki',      currentPanel: 'wiki'      };
+      if (kanbanOpen)   return { currentActivity: 'Managing Tasks',        currentPanel: 'kanban'    };
+      if (calendarOpen) return { currentActivity: 'Viewing Calendar',      currentPanel: 'calendar'  };
+      if (leaveOpen)    return { currentActivity: 'Viewing Leave',         currentPanel: 'leave'     };
+      const chName = channels.find((c) => c.id === activeChannel)?.name;
+      const label  = chName ? `#${chName}` : 'workspace';
+      return { currentActivity: `Viewing ${label}`, currentPanel: 'messages' };
+    };
+
     const ping = async () => {
       if (!endpointAvailable) return;
       const authData = localStorage.getItem('edutechex_token');
-      const token = authData
-        ? (() => {
-            try {
-              return JSON.parse(authData).token;
-            } catch {
-              return null;
-            }
-          })()
-        : null;
+      const token = authData ? (() => { try { return JSON.parse(authData).token; } catch { return null; } })() : null;
       if (!token) return;
       try {
+        const { currentActivity, currentPanel } = getCurrentActivity();
         const res = await fetch(`${API_BASE}/api/activity/heartbeat`, {
-          method: 'POST',
+          method:  'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ currentActivity, currentPanel }),
         });
-        // 404 = route doesn't exist yet on this backend build — stop pinging until next page load
-        if (res.status === 404) {
-          endpointAvailable = false;
-          clearInterval(intervalId);
-        }
-      } catch {
-        /* network error — will retry next tick */
-      }
+        if (res.status === 404) { endpointAvailable = false; clearInterval(intervalId); }
+      } catch { /* network error — will retry */ }
     };
 
-    ping(); // immediate first ping on mount
-    const intervalId = setInterval(ping, 60_000);
+    ping();
+    const intervalId = setInterval(ping, 30_000);
     return () => clearInterval(intervalId);
-  }, [currentUserEmail]);
+  }, [currentUserEmail, wikiOpen, kanbanOpen, calendarOpen, leaveOpen, activeChannel, channels]);
 
   // ── E2E DM encryption — register public key with server once per login ────────
   useEffect(() => {

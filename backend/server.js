@@ -436,6 +436,17 @@ const ResetCodeSchema = new mongoose.Schema({
 });
 const ResetCode = mongoose.model('ResetCode', ResetCodeSchema);
 
+// ── LoginOTP schema — 6-digit OTP issued after password check, valid 5 min ───
+const LoginOtpSchema = new mongoose.Schema({
+  email:     { type: String, required: true, index: true },
+  code:      { type: String, required: true },
+  expiresAt: { type: Date,   required: true },
+  // userPayload: the JWT claims to sign once OTP is verified
+  userPayload: { type: mongoose.Schema.Types.Mixed, required: true },
+});
+LoginOtpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // auto-cleanup
+const LoginOtp = mongoose.model('LoginOtp', LoginOtpSchema);
+
 const KanbanTaskSchema = new mongoose.Schema(
   {
     text:             { type: String, required: true },
@@ -457,6 +468,9 @@ const WikiPageSchema = new mongoose.Schema({
   title: { type: String, required: true },
   content: { type: String, required: true },
   createdBy: { type: String, index: true },
+  // isPrivate: true  → only the creator can see/delete it
+  // isPrivate: false → visible to all members of the channel (shared note)
+  isPrivate: { type: Boolean, default: true },
 }, {
   timestamps: true
 });
@@ -526,17 +540,20 @@ const AWActivitySchema = new mongoose.Schema({
 AWActivitySchema.index({ email: 1, dateStr: 1 }, { unique: true });
 const AWActivity = mongoose.model('AWActivity', AWActivitySchema);
 
-// ── ActivitySession schema — tracks app usage time per user per day ───────────
-// Heartbeat is sent every 60 s from the dashboard. Each ping adds up to 2 min
+// ── ActivitySession schema — tracks in-app session time per user per day ─────
+// Heartbeat is sent every 30 s from the dashboard. Each ping adds up to 1 min
 // (capped so a forgotten tab doesn't inflate counts).
 const ActivitySessionSchema = new mongoose.Schema({
-  email:          { type: String, required: true, index: true },
-  name:           { type: String, default: '' },
-  dateStr:        { type: String, required: true, index: true }, // YYYY-MM-DD IST
-  totalMinutes:   { type: Number, default: 0 },
-  lastHeartbeat:  { type: Date, default: null },
-  messageCount:   { type: Number, default: 0 },
-  taskCount:      { type: Number, default: 0 },
+  email:           { type: String, required: true, index: true },
+  name:            { type: String, default: '' },
+  dateStr:         { type: String, required: true, index: true }, // YYYY-MM-DD IST
+  totalMinutes:    { type: Number, default: 0 },
+  lastHeartbeat:   { type: Date, default: null },
+  messageCount:    { type: Number, default: 0 },
+  taskCount:       { type: Number, default: 0 },
+  // Live activity — what the user is doing right now
+  currentActivity: { type: String, default: '' }, // e.g. "Viewing #general"
+  currentPanel:    { type: String, default: '' }, // e.g. "messages", "wiki", "kanban"
 });
 ActivitySessionSchema.index({ email: 1, dateStr: 1 }, { unique: true });
 const ActivitySession = mongoose.model('ActivitySession', ActivitySessionSchema);
@@ -578,14 +595,15 @@ const UserSettingsSchema = new mongoose.Schema({
 }, { timestamps: true });
 const UserSettings = mongoose.model('UserSettings', UserSettingsSchema);
 
-// ── PinnedMessage schema — team-shared pins per channel ───────────────────────
+// ── PinnedMessage schema — per-user pins (private to each user) ───────────────
 const PinnedMessageSchema = new mongoose.Schema({
+  userEmail: { type: String, required: true, index: true },
   channelId: { type: String, required: true, index: true },
   messageId: { type: String, required: true },
   pinnedBy:  { type: String, required: true },
   pinnedAt:  { type: Date, default: Date.now },
 });
-PinnedMessageSchema.index({ channelId: 1, messageId: 1 }, { unique: true });
+PinnedMessageSchema.index({ userEmail: 1, channelId: 1, messageId: 1 }, { unique: true });
 const PinnedMessage = mongoose.model('PinnedMessage', PinnedMessageSchema);
 
 // ── UserKey schema — stores each user's ECDH public key for DM E2E encryption ──
@@ -733,30 +751,38 @@ app.post('/api/access-requests', authLimiter, async (req, res) => {
     // ── Email 1: credentials to the new user ──────────────────────────────
     sendBrevoEmail({
       to: [{ email: emailClean, name }],
-      subject: 'EduTechExOS — Your account has been created',
+      subject: 'Welcome to EduTechExOS — Your Login Credentials',
       html: `
-        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#FAF8F5;border-radius:12px;">
-          <div style="background:linear-gradient(135deg,#191E2F,#252D45);border-radius:10px;padding:24px;text-align:center;margin-bottom:24px;">
-            <h1 style="color:#fff;margin:0;font-size:22px;letter-spacing:-0.5px;">EduTechExOS</h1>
-            <p style="color:rgba(255,255,255,0.6);margin:6px 0 0;font-size:13px;">Team Operating System</p>
+        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+          <div style="text-align:center;margin-bottom:28px;">
+            <h1 style="color:#0A1128;margin:0 0 4px;font-size:26px;font-weight:900;letter-spacing:-0.5px;">EduTechExOS</h1>
+            <p style="color:#888;margin:0;font-size:13px;">Your Gateway to Excellence</p>
           </div>
-          <h2 style="color:#1E2636;font-size:18px;margin:0 0 12px;">Hi ${name}, your account is ready 👋</h2>
-          <p style="color:#4A5578;font-size:14px;line-height:1.6;margin:0 0 16px;">
-            Your EduTechExOS account has been created. You can sign in right now using the credentials below.
-            Your account is <strong>pending admin approval</strong> — you will have full access once the admin approves your request.
+
+          <p style="font-size:15px;color:#1E2636;margin:0 0 16px;">Hello ${name},</p>
+
+          <p style="font-size:14px;color:#4A5578;line-height:1.7;margin:0 0 20px;">
+            Welcome to <strong>EduTechExOS</strong>! Here are your login credentials:
           </p>
-          <div style="background:#fff;border:2px solid rgba(91,79,219,0.18);border-radius:10px;padding:20px;margin-bottom:20px;">
-            <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:#9BA6D3;text-transform:uppercase;letter-spacing:1px;">Your login credentials</p>
-            <p style="margin:6px 0;font-size:14px;color:#1E2636;"><strong>Email:</strong> ${emailClean}</p>
-            <p style="margin:6px 0;font-size:16px;color:#5B4FDB;font-weight:700;letter-spacing:0.04em;font-family:monospace;background:#ECEAF8;padding:8px 12px;border-radius:6px;"><strong>Password:</strong> ${plainPassword}</p>
-            <p style="margin:6px 0;font-size:13px;color:#4A5578;"><strong>Role:</strong> ${role}</p>
+
+          <div style="background:#F7F8FC;border:1px solid #E2E6F0;border-radius:8px;padding:20px;margin-bottom:20px;">
+            <p style="margin:0 0 10px;font-size:13px;color:#4A5578;"><strong>Email:</strong> ${emailClean}</p>
+            <p style="margin:0 0 10px;font-size:13px;color:#4A5578;"><strong>Password:</strong> <span style="font-family:monospace;font-size:15px;color:#0A1128;font-weight:700;background:#EEF0FB;padding:3px 8px;border-radius:4px;">${plainPassword}</span></p>
+            <p style="margin:0;font-size:13px;color:#4A5578;"><strong>Role:</strong> ${role}</p>
           </div>
-          <p style="color:#EF476F;font-size:13px;font-weight:600;margin:0 0 16px;">⚠ Please change this password after your first sign-in via your profile settings.</p>
-          <div style="text-align:center;margin:24px 0;">
-            <a href="${appUrl}/sign-up-login-screen" style="display:inline-block;background:#5B4FDB;color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;">Sign In to EduTechExOS →</a>
-          </div>
-          <p style="color:#7C859E;font-size:12px;line-height:1.5;text-align:center;">You'll receive full access once the admin approves your account.</p>
-          <hr style="border:none;border-top:1px solid rgba(62,74,137,0.10);margin:24px 0;" />
+
+          <p style="font-size:14px;color:#4A5578;margin:0 0 8px;">
+            You can log in at <a href="${appUrl}/sign-up-login-screen" style="color:#5B4FDB;">${appUrl}/sign-up-login-screen</a>
+          </p>
+          <p style="font-size:13px;color:#888;margin:0 0 20px;">We recommend changing your password after the first login.</p>
+
+          <p style="font-size:13px;color:#4A5578;margin:0 0 6px;">For more information, visit <a href="${appUrl}" style="color:#5B4FDB;">EduTechExOS</a>.</p>
+          <p style="font-size:13px;color:#4A5578;margin:0 0 20px;">If you have any questions, contact <a href="mailto:edutechexos121@gmail.com" style="color:#5B4FDB;">edutechexos121@gmail.com</a>.</p>
+
+          <p style="font-size:14px;color:#1E2636;margin:0 0 6px;">Thank you for being a part of EduTechExOS.</p>
+          <p style="font-size:14px;color:#1E2636;margin:0 0 28px;"><strong>Best Regards,<br/>The EduTechExOS Team</strong></p>
+
+          <hr style="border:none;border-top:1px solid #E8EAF0;margin:0 0 16px;" />
           <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS · Powered by EduTechEx</p>
         </div>`,
     }).catch(() => {});
@@ -766,17 +792,34 @@ app.post('/api/access-requests', authLimiter, async (req, res) => {
     if (adminEmail) {
       sendBrevoEmail({
         to: [{ email: adminEmail }],
-        subject: `EduTechExOS — New access request from ${name}`,
+        subject: `EduTechExOS — New user joined: ${name}`,
         html: `
-          <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;">
-            <h2 style="color:#1E2636;">New access request</h2>
-            <p style="color:#4A5578;font-size:14px;">A new user has requested access to EduTechExOS. They have been sent a temporary password and can sign in, but will see a restricted view until you approve.</p>
-            <div style="background:#F7F6F2;border-radius:8px;padding:16px;margin:16px 0;">
-              <p style="margin:4px 0;font-size:13px;"><strong>Name:</strong> ${name}</p>
-              <p style="margin:4px 0;font-size:13px;"><strong>Email:</strong> ${emailClean}</p>
-              <p style="margin:4px 0;font-size:13px;"><strong>Role:</strong> ${role}</p>
+          <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+            <div style="text-align:center;margin-bottom:28px;">
+              <h1 style="color:#0A1128;margin:0 0 4px;font-size:26px;font-weight:900;letter-spacing:-0.5px;">EduTechExOS</h1>
+              <p style="color:#888;margin:0;font-size:13px;">Your Gateway to Excellence</p>
             </div>
-            <p style="color:#4A5578;font-size:13px;">Log in to the admin panel to approve or reject this request.</p>
+
+            <p style="font-size:15px;color:#1E2636;margin:0 0 16px;">Hello Admin,</p>
+
+            <p style="font-size:14px;color:#4A5578;line-height:1.7;margin:0 0 20px;">
+              A new user has joined <strong>EduTechExOS</strong> and has been sent a temporary password. Their account is pending your approval.
+            </p>
+
+            <div style="background:#F7F8FC;border:1px solid #E2E6F0;border-radius:8px;padding:20px;margin-bottom:20px;">
+              <p style="margin:0 0 8px;font-size:13px;color:#4A5578;"><strong>Name:</strong> ${name}</p>
+              <p style="margin:0 0 8px;font-size:13px;color:#4A5578;"><strong>Email:</strong> ${emailClean}</p>
+              <p style="margin:0;font-size:13px;color:#4A5578;"><strong>Role:</strong> ${role}</p>
+            </div>
+
+            <p style="font-size:14px;color:#4A5578;margin:0 0 20px;">
+              Log in to the <a href="${appUrl}/sign-up-login-screen" style="color:#5B4FDB;">admin panel</a> to approve or reject this request.
+            </p>
+
+            <p style="font-size:14px;color:#1E2636;margin:0 0 6px;"><strong>Best Regards,<br/>The EduTechExOS System</strong></p>
+
+            <hr style="border:none;border-top:1px solid #E8EAF0;margin:24px 0 16px;" />
+            <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS · Powered by EduTechEx</p>
           </div>`,
       }).catch(() => {});
     }
@@ -1329,16 +1372,17 @@ app.get('/api/login-history', authMiddleware, async (req, res) => {
 
 // ─── Activity tracking endpoints ──────────────────────────────────────────────
 
-// POST /api/activity/heartbeat — dashboard pings every 60 s while active
-// Adds up to 2 minutes per ping (cap prevents idle tabs from inflating counts).
+// POST /api/activity/heartbeat — dashboard pings every 30 s while active
+// Sends currentActivity (e.g. "Viewing #general") so admin can see live status.
 app.post('/api/activity/heartbeat', authMiddleware, async (req, res) => {
   try {
     const email = req.user?.email?.toLowerCase();
     const name  = req.user?.name ?? '';
     if (!email) return res.status(401).json({ success: false });
 
+    const { currentActivity = '', currentPanel = '' } = req.body || {};
+
     const now = new Date();
-    // Build IST date string
     const istOffset = 5.5 * 60 * 60 * 1000;
     const istDate = new Date(now.getTime() + istOffset);
     const dateStr = istDate.toISOString().slice(0, 10);
@@ -1349,20 +1393,88 @@ app.post('/api/activity/heartbeat', authMiddleware, async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // Calculate minutes to add — cap at 2 min per ping regardless of gap
+    // Cap at 1 min per ping (ping is every 30 s)
     let minutesToAdd = 1;
     if (session.lastHeartbeat) {
-      const gapMs = now - new Date(session.lastHeartbeat);
-      const gapMin = gapMs / 60000;
-      minutesToAdd = Math.min(Math.round(gapMin), 2);
+      const gapMin = (now - new Date(session.lastHeartbeat)) / 60000;
+      minutesToAdd = Math.min(Math.round(gapMin), 1);
     }
 
     await ActivitySession.updateOne(
       { email, dateStr },
-      { $set: { lastHeartbeat: now, name }, $inc: { totalMinutes: minutesToAdd } }
+      {
+        $set:  { lastHeartbeat: now, name, currentActivity, currentPanel },
+        $inc:  { totalMinutes: minutesToAdd },
+      }
     );
 
+    // Broadcast live status so admin panel updates in real-time
+    io.emit('user_activity_update', {
+      email,
+      name,
+      currentActivity,
+      currentPanel,
+      lastSeen: now.toISOString(),
+    });
+
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// GET /api/activity/live — admin sees who is online right now (heartbeat in last 3 min)
+app.get('/api/activity/live', authMiddleware, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Admin only.' });
+    }
+    const threeMinAgo = new Date(Date.now() - 3 * 60 * 1000);
+    const istOffset   = 5.5 * 60 * 60 * 1000;
+    const todayStr    = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+
+    const active = await ActivitySession.find({
+      dateStr:       todayStr,
+      lastHeartbeat: { $gte: threeMinAgo },
+    }).lean();
+
+    const live = active.map((s) => ({
+      email:           s.email,
+      name:            s.name,
+      currentActivity: s.currentActivity || 'Active',
+      currentPanel:    s.currentPanel    || 'dashboard',
+      lastSeen:        s.lastHeartbeat,
+      todayMinutes:    s.totalMinutes    || 0,
+    }));
+
+    res.json({ success: true, live });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// GET /api/activity/history — admin only, returns all in-app sessions for a given date
+app.get('/api/activity/history', authMiddleware, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Admin only.' });
+    }
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const todayStr  = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+    const dateStr   = req.query.date || todayStr;
+
+    const sessions = await ActivitySession.find({ dateStr }).sort({ totalMinutes: -1 }).lean();
+    const rows = sessions.map((s) => ({
+      email:           s.email,
+      name:            s.name,
+      totalMinutes:    s.totalMinutes    || 0,
+      messageCount:    s.messageCount    || 0,
+      taskCount:       s.taskCount       || 0,
+      lastSeen:        s.lastHeartbeat,
+      currentActivity: s.currentActivity || '',
+      currentPanel:    s.currentPanel    || '',
+    }));
+    res.json({ success: true, sessions: rows });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
@@ -2776,24 +2888,25 @@ app.delete('/api/kanban/:id', async (req, res) => {
   }
 });
 
-// GET Wiki Pages (filtered by user)
+// GET Wiki Pages — returns user's own notes + everyone's shared notes
 app.get('/api/wikipages', async (req, res) => {
   try {
-    const requestingUser = getUserEmail(req);
-    const filter = requestingUser
-      ? { $or: [{ createdBy: requestingUser }, { createdBy: { $exists: false } }, { createdBy: null }] }
-      : {};
+    const userEmail = getUserEmail(req);
+    // Show: (a) notes the user created (private or shared) + (b) shared notes from others
+    const filter = userEmail
+      ? { $or: [{ createdBy: userEmail }, { isPrivate: false }, { isPrivate: { $exists: false } }, { createdBy: { $exists: false } }] }
+      : { $or: [{ isPrivate: false }, { isPrivate: { $exists: false } }, { createdBy: { $exists: false } }] };
     const pages = await WikiPage.find(filter).sort({ updatedAt: -1 }).lean();
-    const formatted = pages.map((p) => {
-      return {
-        id: p._id,
-        channelId: p.channelId,
-        title: p.title,
-        content: p.content,
-        createdAt: p.createdAt ? p.createdAt.toISOString() : new Date().toISOString(),
-        updatedAt: p.updatedAt ? p.updatedAt.toISOString() : new Date().toISOString(),
-      };
-    });
+    const formatted = pages.map((p) => ({
+      id: p._id,
+      channelId: p.channelId,
+      title: p.title,
+      content: p.content,
+      createdBy: p.createdBy ?? null,
+      isPrivate: p.isPrivate !== false, // default true for old records
+      createdAt: p.createdAt ? p.createdAt.toISOString() : new Date().toISOString(),
+      updatedAt: p.updatedAt ? p.updatedAt.toISOString() : new Date().toISOString(),
+    }));
     res.json({ success: true, pages: formatted });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
@@ -2803,22 +2916,23 @@ app.get('/api/wikipages', async (req, res) => {
 // POST/UPSERT Wiki Page
 app.post('/api/wikipages', async (req, res) => {
   try {
-    const { id, channelId, title, content } = req.body;
+    const { id, channelId, title, content, isPrivate } = req.body;
     const userEmail = getUserEmail(req);
-    const setFields = { channelId, title, content, updatedAt: new Date() };
+    const privacy = isPrivate !== false; // default to private
+    const setFields = { channelId, title, content, isPrivate: privacy, updatedAt: new Date() };
     const setOnInsertFields = userEmail ? { createdBy: userEmail } : {};
     const updated = await WikiPage.findOneAndUpdate(
       { _id: id },
       { $set: setFields, $setOnInsert: setOnInsertFields },
       { upsert: true, new: true }
     ).lean();
-    
     const { _id, ...rest } = updated;
     res.json({
       success: true,
       page: {
         ...rest,
         id: _id,
+        isPrivate: updated.isPrivate !== false,
         createdAt: updated.createdAt ? updated.createdAt.toISOString() : new Date().toISOString(),
         updatedAt: updated.updatedAt ? updated.updatedAt.toISOString() : new Date().toISOString(),
       }
@@ -2828,10 +2942,17 @@ app.post('/api/wikipages', async (req, res) => {
   }
 });
 
-// DELETE Wiki Page
+// DELETE Wiki Page — private notes: only owner can delete; shared notes: any member can delete
 app.delete('/api/wikipages/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const userEmail = getUserEmail(req);
+    const page = await WikiPage.findById(id).lean();
+    if (!page) return res.status(404).json({ success: false, error: 'Note not found.' });
+    // Block deletion of another user's private note
+    if (page.isPrivate && page.createdBy && userEmail && page.createdBy !== userEmail) {
+      return res.status(403).json({ success: false, error: 'You can only delete your own private notes.' });
+    }
     await WikiPage.findByIdAndDelete(id);
     res.json({ success: true });
   } catch (err) {
@@ -3182,10 +3303,11 @@ app.put('/api/settings', authMiddleware, async (req, res) => {
 
 // ─── Pinned Messages ──────────────────────────────────────────────────────────
 
-// GET /api/pinned — all pinned message IDs grouped by channel
+// GET /api/pinned — pinned message IDs for the logged-in user, grouped by channel
 app.get('/api/pinned', authMiddleware, async (req, res) => {
   try {
-    const pins = await PinnedMessage.find({}).sort({ pinnedAt: 1 }).lean();
+    const userEmail = req.user?.email?.toLowerCase();
+    const pins = await PinnedMessage.find({ userEmail }).sort({ pinnedAt: 1 }).lean();
     const grouped = {};
     pins.forEach((p) => {
       if (!grouped[p.channelId]) grouped[p.channelId] = [];
@@ -3197,33 +3319,31 @@ app.get('/api/pinned', authMiddleware, async (req, res) => {
   }
 });
 
-// POST /api/pinned — pin a message
+// POST /api/pinned — pin a message for the logged-in user only
 app.post('/api/pinned', authMiddleware, async (req, res) => {
   try {
     const { channelId, messageId } = req.body;
     if (!channelId || !messageId) {
       return res.status(400).json({ success: false, error: 'channelId and messageId are required.' });
     }
-    const pinnedBy = req.user?.email || 'unknown';
+    const userEmail = req.user?.email?.toLowerCase() || 'unknown';
     await PinnedMessage.findOneAndUpdate(
-      { channelId, messageId },
-      { $setOnInsert: { channelId, messageId, pinnedBy, pinnedAt: new Date() } },
+      { userEmail, channelId, messageId },
+      { $setOnInsert: { userEmail, channelId, messageId, pinnedBy: userEmail, pinnedAt: new Date() } },
       { upsert: true }
     );
-    // Broadcast so all clients show the pin in real-time
-    io.emit('message_pinned', { channelId, messageId });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
 });
 
-// DELETE /api/pinned/:channelId/:messageId — unpin a message
+// DELETE /api/pinned/:channelId/:messageId — unpin only the logged-in user's pin
 app.delete('/api/pinned/:channelId/:messageId', authMiddleware, async (req, res) => {
   try {
     const { channelId, messageId } = req.params;
-    await PinnedMessage.deleteOne({ channelId, messageId });
-    io.emit('message_unpinned', { channelId, messageId });
+    const userEmail = req.user?.email?.toLowerCase();
+    await PinnedMessage.deleteOne({ userEmail, channelId, messageId });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });

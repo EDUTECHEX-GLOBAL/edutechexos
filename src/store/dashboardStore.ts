@@ -104,6 +104,8 @@ export type WikiPage = {
   content: string;
   createdAt: string;
   updatedAt: string;
+  isPrivate?: boolean;  // true = only creator can see; false = shared with channel
+  createdBy?: string | null;
 };
 
 export type KanbanTask = {
@@ -205,11 +207,11 @@ type DashboardState = {
   deleteKanbanTask: (taskId: string) => void;
 
   wikiPages: Record<string, WikiPage[]>;
-  addWikiPage: (channelId: string, data: { title: string; content: string }) => void;
+  addWikiPage: (channelId: string, data: { title: string; content: string; isPrivate?: boolean }) => void;
   updateWikiPage: (
     channelId: string,
     pageId: string,
-    data: Partial<Pick<WikiPage, 'title' | 'content'>>
+    data: Partial<Pick<WikiPage, 'title' | 'content' | 'isPrivate'>>
   ) => void;
   deleteWikiPage: (channelId: string, pageId: string) => void;
   loadLocalWikiPages: () => Promise<void>;
@@ -809,6 +811,7 @@ export const useDashboardStore = create<DashboardState>()(
         const page: WikiPage = {
           id: tempId,
           ...data,
+          isPrivate: data.isPrivate !== false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -819,7 +822,7 @@ export const useDashboardStore = create<DashboardState>()(
         apiFetch(`${API_BASE}/api/wikipages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: tempId, channelId, title: data.title, content: data.content }),
+          body: JSON.stringify({ id: tempId, channelId, title: data.title, content: data.content, isPrivate: data.isPrivate !== false }),
         })
           .then((res) => res.json())
           .then((res) => {
@@ -858,6 +861,7 @@ export const useDashboardStore = create<DashboardState>()(
               channelId,
               title: currentPage.title,
               content: currentPage.content,
+              isPrivate: currentPage.isPrivate !== false,
             }),
           }).catch(() => {
             /* backend unavailable */
