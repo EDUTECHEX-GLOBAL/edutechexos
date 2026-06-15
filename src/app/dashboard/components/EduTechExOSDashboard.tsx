@@ -2406,62 +2406,54 @@ export default function EduTechExOSDashboard() {
               </motion.button>
             </div>
           )}
-        </div>
 
-        {/* ── Desktop Tracking Setup Banner ───────────────── */}
-        {!awBannerDismissed && (
-          <div style={{ margin: '0 8px 10px', borderRadius: 12, background: 'rgba(99,102,241,0.13)', border: '1px solid rgba(99,102,241,0.28)', padding: '12px 12px 10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '-0.01em' }}>
-                💻 Desktop Tracking
-              </span>
+          {/* ── Desktop Tracking Setup Banner ─────────────── */}
+          {!awBannerDismissed && (
+            <div style={{ margin: '16px 8px 8px', borderRadius: 12, background: 'rgba(99,102,241,0.13)', border: '1px solid rgba(99,102,241,0.28)', padding: '12px 12px 10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '-0.01em' }}>
+                  💻 Desktop Tracking
+                </span>
+                <button
+                  onClick={() => { setAwBannerDismissed(true); localStorage.setItem('aw_banner_dismissed', '1'); }}
+                  style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.30)', cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: 2 }}
+                >✕</button>
+              </div>
+              <p style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.48)', lineHeight: 1.5, marginBottom: 10 }}>
+                Shows admin your VS Code, Chrome &amp; Figma usage. One-time setup.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <a
+                  href="https://activitywatch.net"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ display: 'block', borderRadius: 8, background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.28)', padding: '7px 10px', fontSize: 10.5, fontWeight: 600, color: '#A5B4FC', textDecoration: 'none', textAlign: 'center' }}
+                >
+                  Step 1 — Install ActivityWatch →
+                </a>
+                <a
+                  href="/aw-sync.js"
+                  download="aw-sync.js"
+                  style={{ display: 'block', borderRadius: 8, background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.28)', padding: '7px 10px', fontSize: 10.5, fontWeight: 600, color: '#A5B4FC', textDecoration: 'none', textAlign: 'center' }}
+                >
+                  Step 2 — Download Agent ↓
+                </a>
+              </div>
+              <div style={{ marginTop: 8, borderRadius: 8, background: 'rgba(0,0,0,0.35)', padding: '9px 10px' }}>
+                <p style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.35)', marginBottom: 5 }}>Step 3 — Run once in terminal:</p>
+                <code style={{ fontSize: 9, color: '#10B981', wordBreak: 'break-all', display: 'block', lineHeight: 1.7 }}>
+                  {'node aw-sync.js \\\n  --email '}{currentUserEmail}{' \\\n  --password YOUR_PASS \\\n  --startup'}
+                </code>
+              </div>
               <button
                 onClick={() => { setAwBannerDismissed(true); localStorage.setItem('aw_banner_dismissed', '1'); }}
-                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.30)', cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: 2 }}
-              >✕</button>
-            </div>
-            <p style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.48)', lineHeight: 1.5, marginBottom: 10 }}>
-              Shows admin your VS Code, Chrome &amp; Figma usage. One-time setup.
-            </p>
-
-            {/* Step buttons */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <a
-                href="https://activitywatch.net"
-                target="_blank"
-                rel="noreferrer"
-                style={{ display: 'block', borderRadius: 8, background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.28)', padding: '7px 10px', fontSize: 10.5, fontWeight: 600, color: '#A5B4FC', textDecoration: 'none', textAlign: 'center' }}
+                style={{ marginTop: 9, width: '100%', borderRadius: 8, border: 'none', background: 'rgba(16,185,129,0.12)', color: 'rgba(16,185,129,0.75)', fontSize: 10.5, fontWeight: 700, padding: '7px 0', cursor: 'pointer' }}
               >
-                Step 1 — Install ActivityWatch →
-              </a>
-              <a
-                href="/aw-sync.js"
-                download="aw-sync.js"
-                style={{ display: 'block', borderRadius: 8, background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.28)', padding: '7px 10px', fontSize: 10.5, fontWeight: 600, color: '#A5B4FC', textDecoration: 'none', textAlign: 'center' }}
-              >
-                Step 2 — Download Agent ↓
-              </a>
+                ✓ I&apos;ve set it up
+              </button>
             </div>
-
-            {/* Command box */}
-            <div style={{ marginTop: 8, borderRadius: 8, background: 'rgba(0,0,0,0.35)', padding: '9px 10px' }}>
-              <p style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.35)', marginBottom: 5 }}>Step 3 — Run once in terminal:</p>
-              <code style={{ fontSize: 9, color: '#10B981', wordBreak: 'break-all', display: 'block', lineHeight: 1.7 }}>
-                node aw-sync.js{'\n'}
-                {'  '}--email {currentUserEmail}{'\n'}
-                {'  '}--password YOUR_PASS{'\n'}
-                {'  '}--startup
-              </code>
-            </div>
-
-            <button
-              onClick={() => { setAwBannerDismissed(true); localStorage.setItem('aw_banner_dismissed', '1'); }}
-              style={{ marginTop: 9, width: '100%', borderRadius: 8, border: 'none', background: 'rgba(16,185,129,0.12)', color: 'rgba(16,185,129,0.75)', fontSize: 10.5, fontWeight: 700, padding: '7px 0', cursor: 'pointer' }}
-            >
-              ✓ I've set it up
-            </button>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* ── Footer / User panel ─────────────────────────── */}
         <div className="sidebar-footer">
