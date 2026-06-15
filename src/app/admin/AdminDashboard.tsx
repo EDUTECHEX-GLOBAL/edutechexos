@@ -47,12 +47,26 @@ type AccessRequest = {
   id: string;
   name: string;
   email: string;
-  password: string;
   role: string;
   status: 'pending' | 'approved' | 'rejected';
   requestedAt: string;
 };
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+
+function LeaveStatusBadge({ status }: { status: string }) {
+  const cfg: Record<string, { color: string; bg: string; border: string }> = {
+    pending:  { color: '#F59E0B', bg: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.25)' },
+    approved: { color: '#10C98A', bg: 'rgba(16,201,138,0.10)',  border: 'rgba(16,201,138,0.25)' },
+    rejected: { color: '#EF476F', bg: 'rgba(239,71,111,0.10)',  border: 'rgba(239,71,111,0.25)' },
+  };
+  const c = cfg[status] ?? cfg.pending;
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, background: c.bg, border: `1px solid ${c.border}`, fontSize: 10, fontWeight: 700, color: c.color, textTransform: 'uppercase', letterSpacing: '.08em' }}>
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: c.color }} />
+      {status}
+    </span>
+  );
+}
 const MAX_ADMINS = 3;
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
 const systemEmails = [
@@ -740,15 +754,6 @@ export default function AdminPage() {
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <Link
-                href="/dashboard"
-                style={{ display: 'none' }}
-                className="md:inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all"
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.25)'; (e.currentTarget as HTMLElement).style.color = '#5B4FDB'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(26,27,58,0.15)'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
-              >
-                Workspace
-              </Link>
               <Link href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 20, border: '1.5px solid rgba(26,27,58,0.18)', background: '#FFFFFF', fontSize: 12, fontWeight: 600, color: '#5A5F80', textDecoration: 'none', transition: 'all .2s' }}
                 className="hidden md:inline-flex"
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.28)'; (e.currentTarget as HTMLElement).style.color = '#5B4FDB'; }}
@@ -759,7 +764,8 @@ export default function AdminPage() {
               <button
                 className="relative flex h-9 w-9 items-center justify-center rounded-xl transition-all"
                 style={{ color: '#9296B0', background: 'transparent', border: '1.5px solid rgba(26,27,58,0.15)' }}
-                title="Admin alerts"
+                title="Pending requests"
+                onClick={() => setActiveTab('requests')}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.06)'; (e.currentTarget as HTMLElement).style.color = '#EF476F'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#9296B0'; }}
               >
@@ -899,7 +905,7 @@ export default function AdminPage() {
                     Users
                   </h2>
                   <p style={{ fontSize: 13, color: 'rgba(90,95,128,0.65)' }}>
-                    Grant one controlled channel per person.
+                    Manage team members, roles, and channel access.
                   </p>
                 </div>
                 <label className="flex h-10 items-center gap-2 rounded-xl px-3.5 md:w-80 transition-all" style={{ border: '1.5px solid rgba(91,79,219,0.14)', background: '#ECEAF8' }}>
@@ -2042,21 +2048,6 @@ export default function AdminPage() {
                 const resolvedLeaves = leaves.filter(l => l.status !== 'pending');
                 const catColor: Record<string, string> = { sick: '#EF476F', vacation: '#10C98A', personal: '#5B4FDB', emergency: '#F59E0B', other: '#9BA6D3' };
                 const catLabel: Record<string, string> = { sick: 'Sick', vacation: 'Vacation', personal: 'Personal', emergency: 'Emergency', other: 'Other' };
-
-                function LeaveStatusBadge({ status }: { status: string }) {
-                  const cfg: Record<string, { color: string; bg: string; border: string }> = {
-                    pending:  { color: '#F59E0B', bg: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.25)' },
-                    approved: { color: '#10C98A', bg: 'rgba(16,201,138,0.10)',  border: 'rgba(16,201,138,0.25)' },
-                    rejected: { color: '#EF476F', bg: 'rgba(239,71,111,0.10)',  border: 'rgba(239,71,111,0.25)' },
-                  };
-                  const c = cfg[status] ?? cfg.pending;
-                  return (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, background: c.bg, border: `1px solid ${c.border}`, fontSize: 10, fontWeight: 700, color: c.color, textTransform: 'uppercase', letterSpacing: '.08em' }}>
-                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: c.color }} />
-                      {status}
-                    </span>
-                  );
-                }
 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
