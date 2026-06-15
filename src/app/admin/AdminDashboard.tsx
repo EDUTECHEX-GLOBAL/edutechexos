@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
@@ -126,7 +126,7 @@ export default function AdminPage() {
     return new Date(Date.now() + istOffset).toISOString().slice(0, 10);
   });
 
-  // Live in-app activity — users active in last 3 minutes
+  // Live in-app activity â€” users active in last 3 minutes
   type LiveUser = {
     email: string; name: string;
     currentActivity: string; currentPanel: string;
@@ -210,7 +210,7 @@ export default function AdminPage() {
     };
   }, [loadLocalMembers]);
 
-  // Helper — read the stored JWT token once
+  // Helper â€” read the stored JWT token once
   function getAdminToken(): string | null {
     try {
       return JSON.parse(localStorage.getItem('edutechex_token') ?? '').token ?? null;
@@ -224,7 +224,7 @@ export default function AdminPage() {
     loadLocalMembers?.();
 
     const token = getAdminToken();
-    if (!token) return; // not logged in — nothing to load
+    if (!token) return; // not logged in â€” nothing to load
 
     // Load access requests with a 20-second timeout so Render cold-starts don't block the UI
     const controller = new AbortController();
@@ -232,7 +232,7 @@ export default function AdminPage() {
 
     fetch(`${API_BASE}/api/access-requests`, {
       signal: controller.signal,
-      headers: { Authorization: `Bearer ${token}` }, // ← was missing (caused 403)
+      headers: { Authorization: `Bearer ${token}` }, // â† was missing (caused 403)
     })
       .then((r) => r.json())
       .then((data: { success: boolean; requests?: AccessRequest[] }) => {
@@ -268,7 +268,7 @@ export default function AdminPage() {
               }
             })
             .catch(() => {
-              /* silent — already showing cached */
+              /* silent â€” already showing cached */
             });
         }, 15_000);
       });
@@ -292,12 +292,12 @@ export default function AdminPage() {
     fetch(`${API_BASE}/api/activity/stats`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => (r.ok ? r.json() : null)) // 404 before backend deploys → null
+      .then((r) => (r.ok ? r.json() : null)) // 404 before backend deploys â†’ null
       .then((data: { success: boolean; stats?: ActivityStat[] } | null) => {
         if (data?.success && Array.isArray(data.stats)) setActivityStats(data.stats);
       })
       .catch(() => {
-        /* non-critical — section shows empty state */
+        /* non-critical â€” section shows empty state */
       })
       .finally(() => setActivityLoading(false));
   }, []);
@@ -328,7 +328,7 @@ export default function AdminPage() {
     return () => { socket.off('aw_sync', handler); };
   }, [fetchAwData]);
 
-  // ── Live in-app activity ──────────────────────────────────────────────────────
+  // â”€â”€ Live in-app activity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const fetchLiveUsers = useCallback(() => {
     const token = getAdminToken();
     if (!token) return;
@@ -363,7 +363,7 @@ export default function AdminPage() {
     return () => { socket.off('user_activity_update', handler); };
   }, []);
 
-  // ── In-app activity history (all sessions for a given date) ──────────────────
+  // â”€â”€ In-app activity history (all sessions for a given date) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const fetchHistory = useCallback((date?: string) => {
     const token = getAdminToken();
     if (!token) return;
@@ -464,7 +464,7 @@ export default function AdminPage() {
           body: JSON.stringify({ role: newRoleVal }),
         });
       } catch {
-        /* non-critical — local update already applied */
+        /* non-critical â€” local update already applied */
       }
     }
     toast.success(`Role updated to ${newRoleVal} for ${memberName}`);
@@ -518,7 +518,7 @@ export default function AdminPage() {
     const colors = ['#3E4A89', '#9BA6D3', '#7c3aed', '#a78bfa', '#2A3568', '#c4b5fd'];
     const color = colors[Math.floor(Math.random() * colors.length)];
 
-    // ── Persist to backend first so the member survives page refresh ──────────
+    // â”€â”€ Persist to backend first so the member survives page refresh â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try {
       const token = getAdminToken();
       const res = await fetch(`${API_BASE}/api/members`, {
@@ -541,7 +541,7 @@ export default function AdminPage() {
         if (newRole !== 'Admin' && newExtraChannels.length > 0)
           setMemberWorkspaceChannels(data.member.id, newExtraChannels);
         const pwd = data.generatedPassword ?? '';
-        toast.success(`${cleanName} added! Password: ${pwd} — sent to their email.`, { duration: 8000 });
+        toast.success(`${cleanName} added! Password: ${pwd} â€” sent to their email.`, { duration: 8000 });
         // Send welcome email with credentials
         if (pwd) {
           fetch(`${API_BASE}/api/email`, {
@@ -559,7 +559,7 @@ export default function AdminPage() {
         return;
       }
     } catch {
-      // Backend unreachable — add locally only (temporary, won't persist)
+      // Backend unreachable â€” add locally only (temporary, won't persist)
       const tempId = `member-${cleanName
         .toLowerCase()
         .replace(/[^a-z]/g, '')
@@ -575,7 +575,7 @@ export default function AdminPage() {
       });
       if (newRole !== 'Admin' && newExtraChannels.length > 0)
         setMemberWorkspaceChannels(tempId, newExtraChannels);
-      toast.warning(`${cleanName} added locally — backend unreachable, won't persist.`);
+      toast.warning(`${cleanName} added locally â€” backend unreachable, won't persist.`);
     }
 
     setNewName('');
@@ -616,7 +616,7 @@ export default function AdminPage() {
       const data = await res.json();
       if (!res.ok || !data.success) { toast.error(data.error ?? 'Failed to update leave.'); return; }
       setLeaves(prev => prev.map(l => l.id === leaveId ? { ...l, status, adminNote: leaveNotes[leaveId] ?? '' } : l));
-      toast.success(`Leave ${status === 'approved' ? 'approved' : 'rejected'} — user has been notified.`);
+      toast.success(`Leave ${status === 'approved' ? 'approved' : 'rejected'} â€” user has been notified.`);
     } catch { toast.error('Network error.'); }
     finally { setLeaveActionLoading(null); }
   }
@@ -629,7 +629,7 @@ export default function AdminPage() {
 
     const selectedChannels = requestChannelsByReq[request.id] ?? [];
 
-    // Build member object up-front — used in both online and offline paths
+    // Build member object up-front â€” used in both online and offline paths
     const MEMBER_COLORS = ['#3E4A89', '#9BA6D3', '#7c3aed', '#a78bfa', '#2A3568', '#c4b5fd'];
     const initials = request.name
       .split(' ')
@@ -645,7 +645,7 @@ export default function AdminPage() {
           MEMBER_COLORS.length
       ];
 
-    // ── Persist approval to backend (cross-device) ──────────────────────────
+    // â”€â”€ Persist approval to backend (cross-device) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try {
       const authData = localStorage.getItem('edutechex_token');
       const token = authData ? JSON.parse(authData).token : null;
@@ -664,10 +664,10 @@ export default function AdminPage() {
         return;
       }
 
-      // Sync from backend — gets the newly approved member with correct channelIds
+      // Sync from backend â€” gets the newly approved member with correct channelIds
       loadLocalMembers?.();
     } catch {
-      // Backend unreachable — still approve locally so the list updates
+      // Backend unreachable â€” still approve locally so the list updates
       const fallbackId = makeMemberId(request.name);
       addMember({
         id: fallbackId,
@@ -681,7 +681,7 @@ export default function AdminPage() {
       if (selectedChannels.length > 0) setMemberWorkspaceChannels(fallbackId, selectedChannels);
     }
 
-    // ── Update local UI state + localStorage fallback ───────────────────────
+    // â”€â”€ Update local UI state + localStorage fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const nextRequests = accessRequests.map((item) =>
       item.id === request.id ? { ...item, status: 'approved' as const } : item
     );
@@ -707,7 +707,7 @@ export default function AdminPage() {
         return;
       }
     } catch {
-      // Backend unreachable — still update locally
+      // Backend unreachable â€” still update locally
     }
 
     const nextRequests = accessRequests.map((r) =>
@@ -821,10 +821,10 @@ export default function AdminPage() {
     <AdminGuard>
       <div className="min-h-screen" style={{ background: '#ECEAF8', fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
 
-        {/* ── Spectrum bar ─────────────────────────────────────────────── */}
+        {/* â”€â”€ Spectrum bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="spectrum-bar fixed top-0 left-0 right-0 z-50 pointer-events-none" />
 
-        {/* ── Header ──────────────────────────────────────────────────────── */}
+        {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <header className="sticky top-[3px] z-40" style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(26,27,58,0.14)', boxShadow: '0 2px 16px rgba(91,79,219,0.06)' }}>
           <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-6 lg:px-8">
             <div className="flex items-center gap-4">
@@ -874,7 +874,7 @@ export default function AdminPage() {
         </header>
 
         <main className="mx-auto max-w-[1500px] px-6 py-10 lg:px-8">
-          {/* ── Page hero ───────────────────────────────────────────────── */}
+          {/* â”€â”€ Page hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <section className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: '#EF476F', marginBottom: 8 }}>
@@ -884,7 +884,7 @@ export default function AdminPage() {
                 Workspace Control Center
               </h1>
               <p style={{ fontSize: 14, color: 'rgba(90,95,128,0.75)', lineHeight: 1.65, maxWidth: 560 }}>
-                Manage people, channel access, broadcast emails, and monitor team activity — all in one place.
+                Manage people, channel access, broadcast emails, and monitor team activity â€” all in one place.
               </p>
             </div>
             <button
@@ -897,7 +897,7 @@ export default function AdminPage() {
             </button>
           </section>
 
-          {/* ── Stat cards ──────────────────────────────────────────────── */}
+          {/* â”€â”€ Stat cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {statCards.map(({ label, value, icon: Icon, accent, accentBg, gradient }) => (
               <div
@@ -927,7 +927,7 @@ export default function AdminPage() {
             ))}
           </section>
 
-          {/* ── Tab navigation ──────────────────────────────────────────── */}
+          {/* â”€â”€ Tab navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <div className="mb-6 flex gap-2 overflow-x-auto rounded-2xl p-1.5" style={{ background: '#FFFFFF', border: '1.5px solid rgba(26,27,58,0.14)', boxShadow: '0 2px 8px rgba(91,79,219,0.04)' }}>
             {TABS.map((tab) => {
               const isActive = activeTab === tab.id;
@@ -979,9 +979,9 @@ export default function AdminPage() {
             })}
           </div>
 
-          {/* ════════════════════════════════════════════════════════════
+          {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               TAB: PEOPLE
-          ════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'people' && (
             <div className="overflow-hidden rounded-2xl" style={{ background: '#FFFFFF', border: '1.5px solid rgba(26,27,58,0.15)', boxShadow: '0 4px 16px rgba(91,79,219,0.06)', animation: 'slide-deck 0.4s cubic-bezier(0.22,1,0.36,1)' }}>
               {/* People tab top accent */}
@@ -1187,7 +1187,7 @@ export default function AdminPage() {
                                     toast.success(`${member.name} was removed from the workspace.`);
                                     loadLocalMembers?.();
                                   } else if (r.status === 404) {
-                                    // Both endpoints missing (very old deploy) — remove locally
+                                    // Both endpoints missing (very old deploy) â€” remove locally
                                     removeMember(member.id);
                                     toast.success(`${member.name} was removed from the workspace.`);
                                     loadLocalMembers?.();
@@ -1208,7 +1208,7 @@ export default function AdminPage() {
                                       toast.success(`${member.name} was removed from the workspace.`);
                                       loadLocalMembers?.();
                                     } else if (res.status === 404) {
-                                      // DB record already gone — try system endpoint (covers
+                                      // DB record already gone â€” try system endpoint (covers
                                       // hardcoded members that were also registered via sign-up)
                                       // or just remove from local state if truly gone.
                                       await doSystemRemove().catch(async () => {
@@ -1241,9 +1241,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ════════════════════════════════════════════════════════════
+          {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               TAB: REQUESTS
-          ════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'requests' && (
             <div className="space-y-6">
               {/* Tab top accent */}
@@ -1289,7 +1289,7 @@ export default function AdminPage() {
                       {extraChannels.length > 0 && (
                         <div style={{ marginBottom: 12, borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.14)', background: '#ECEAF8', padding: '10px 12px' }}>
                           <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)', marginBottom: 8 }}>
-                            Assign channels · #general is always included
+                            Assign channels Â· #general is always included
                           </p>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             {extraChannels.map((c) => {
@@ -1428,9 +1428,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ════════════════════════════════════════════════════════════
+          {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               TAB: CHANNELS
-          ════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'channels' && (
             <div className="space-y-4">
               {/* Top accent */}
@@ -1445,7 +1445,7 @@ export default function AdminPage() {
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', fontFamily: "'JetBrains Mono', monospace" }}>#general</p>
                       <p style={{ fontSize: 11, color: 'rgba(90,95,128,0.65)', marginTop: 2 }}>
-                        Default channel — every user is automatically added.
+                        Default channel â€” every user is automatically added.
                       </p>
                     </div>
                   </div>
@@ -1542,9 +1542,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ════════════════════════════════════════════════════════════
+          {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               TAB: BROADCAST
-          ════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'broadcast' && (
             <div className="mx-auto max-w-2xl">
               <div style={{ borderRadius: 20, border: '1.5px solid rgba(192,38,211,0.14)', background: '#FFFFFF', padding: 24, boxShadow: '0 4px 24px rgba(192,38,211,0.08)' }}>
@@ -1573,7 +1573,7 @@ export default function AdminPage() {
                       type="text"
                       value={broadcastSubject}
                       onChange={(e) => setBroadcastSubject(e.target.value)}
-                      placeholder="e.g. Team update — June 2026"
+                      placeholder="e.g. Team update â€” June 2026"
                       maxLength={150}
                       style={{ height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.18)', background: '#ECEAF8', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
                       onFocus={e => { e.target.style.borderColor = 'rgba(192,38,211,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(192,38,211,0.10)'; }}
@@ -1588,7 +1588,7 @@ export default function AdminPage() {
                     <textarea
                       value={broadcastMessage}
                       onChange={(e) => setBroadcastMessage(e.target.value)}
-                      placeholder="Write your message here. Plain text — line breaks are preserved."
+                      placeholder="Write your message here. Plain text â€” line breaks are preserved."
                       rows={7}
                       maxLength={2000}
                       style={{ width: '100%', resize: 'none', borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.18)', background: '#ECEAF8', padding: '12px 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6, transition: 'border-color .2s, box-shadow .2s' }}
@@ -1627,8 +1627,8 @@ export default function AdminPage() {
 
                   {broadcastLastSent && (
                     <div style={{ borderRadius: 12, border: '1.5px solid rgba(16,201,138,0.20)', background: 'rgba(16,201,138,0.06)', padding: '12px 16px', fontSize: 12, fontWeight: 500, color: '#059669' }}>
-                      ✓ Last sent at {broadcastLastSent.at} · &ldquo;{broadcastLastSent.subject}
-                      &rdquo; → {broadcastLastSent.count} members
+                      âœ“ Last sent at {broadcastLastSent.at} Â· &ldquo;{broadcastLastSent.subject}
+                      &rdquo; â†’ {broadcastLastSent.count} members
                     </div>
                   )}
 
@@ -1642,7 +1642,7 @@ export default function AdminPage() {
                   >
                     {broadcastSending ? (
                       <>
-                        <RefreshCw size={15} className="animate-spin" /> Sending…
+                        <RefreshCw size={15} className="animate-spin" /> Sendingâ€¦
                       </>
                     ) : (
                       <>
@@ -1655,9 +1655,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ════════════════════════════════════════════════════════════
+          {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               TAB: ACTIVITY
-          ════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'activity' && (
             <div className="space-y-8">
               {/* Top accent */}
@@ -1667,7 +1667,7 @@ export default function AdminPage() {
                 <div className="mb-6 flex items-center justify-between">
                   <div>
                     <p style={{ marginBottom: 4, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase', color: '#3B82F6' }}>
-                      Last 7 days · With user permission
+                      Last 7 days Â· With user permission
                     </p>
                     <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A' }}>
                       <Eye size={20} style={{ color: '#3B82F6' }} />
@@ -1675,13 +1675,13 @@ export default function AdminPage() {
                     </h2>
                     <p style={{ marginTop: 4, fontSize: 13, color: 'rgba(90,95,128,0.70)', lineHeight: 1.6 }}>
                       In-app session time, messages sent, and engagement per team member. Users can
-                      see exactly what is tracked in Settings → Privacy.
+                      see exactly what is tracked in Settings â†’ Privacy.
                     </p>
                     <Link href="/admin/activity" style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: '#3B82F6', textDecoration: 'none' }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline'; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none'; }}
                     >
-                      View full activity report →
+                      View full activity report â†’
                     </Link>
                   </div>
                   <button
@@ -1719,7 +1719,7 @@ export default function AdminPage() {
 
                 {activityLoading ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '64px 0', fontSize: 13, color: 'rgba(90,95,128,0.65)' }}>
-                    <RefreshCw size={16} style={{ marginRight: 8 }} className="animate-spin" /> Loading activity data…
+                    <RefreshCw size={16} style={{ marginRight: 8 }} className="animate-spin" /> Loading activity dataâ€¦
                   </div>
                 ) : activityStats.length === 0 ? (
                   <div style={{ borderRadius: 16, border: '1.5px dashed rgba(59,130,246,0.20)', background: 'rgba(59,130,246,0.03)', padding: '40px 32px', textAlign: 'center', fontSize: 13, color: 'rgba(90,95,128,0.65)' }}>
@@ -1816,9 +1816,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ════════════════════════════════════════════════════════════
+          {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               TAB: ATTENDANCE COMMAND CENTER
-          ════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'attendance' && (
             <div>
               {/* Attendance hero banner */}
@@ -1826,7 +1826,7 @@ export default function AdminPage() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: '#D48C00', marginBottom: 6 }}>
-                      Admin · Real-time tracking
+                      Admin Â· Real-time tracking
                     </p>
                     <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: '#1A1B3A', marginBottom: 4 }}>
                       Attendance Command Center
@@ -1876,407 +1876,249 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ════════════════════════════════════════════════════════════
+          {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               TAB: DESKTOP ACTIVITY
-          ════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'desktop' && (() => {
             const istOffset = 5.5 * 60 * 60 * 1000;
-            const todayIST = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+            const todayIST  = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+            const viewDate  = awDate; // single date for all data
 
             const panelIcon: Record<string, string> = {
-              messages: '💬', wiki: '📖', kanban: '✅', calendar: '📅',
-              leave: '🌴', dashboard: '🏠', ai: '✨',
+              messages: 'ðŸ’¬', wiki: 'ðŸ“–', kanban: 'âœ…', calendar: 'ðŸ“…',
+              leave: 'ðŸŒ´', dashboard: 'ðŸ ', ai: 'âœ¨',
             };
-            const fmtMins = (m: number) => m < 60 ? `${m}m` : `${Math.floor(m/60)}h ${m%60}m`;
-            const secsAgo = (iso: string) => {
+
+            const fmt = (m: number) => m <= 0 ? '0m' : m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`;
+            const ago = (iso: string | null | undefined) => {
+              if (!iso) return 'never';
               const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
-              return s < 60 ? `${s}s ago` : `${Math.round(s/60)}m ago`;
+              if (s < 60) return `${s}s ago`;
+              if (s < 3600) return `${Math.round(s / 60)}m ago`;
+              return `${Math.round(s / 3600)}h ago`;
             };
+
+            const DISTRACTIONS = ['youtube','netflix','discord','spotify','instagram','facebook','twitter','reddit','tiktok','whatsapp'];
+            const isDistraction = (app: string) => DISTRACTIONS.some(d => app.toLowerCase().includes(d));
+
+            // Merge all data sources into one object per member
+            type MergedMember = {
+              email: string; name: string; initials: string; color: string; role: string;
+              status: 'live' | 'away' | 'offline';
+              currentActivity: string; currentPanel: string;
+              lastSeen: string | null;
+              todayMinutes: number; messageCount: number; taskCount: number;
+              appBreakdown: { app: string; minutes: number }[];
+              totalActiveMinutes: number; isAfk: boolean; agentConnected: boolean;
+            };
+
+            const merged: MergedMember[] = members.map((m) => {
+              const live    = liveUsers.find(u => u.email.toLowerCase()    === m.email.toLowerCase());
+              const history = historyUsers.find(u => u.email.toLowerCase() === m.email.toLowerCase());
+              const aw      = awRecords.find(r => r.email.toLowerCase()    === m.email.toLowerCase());
+              const status: 'live' | 'away' | 'offline' = live ? 'live' : (history?.totalMinutes ?? 0) > 0 ? 'away' : 'offline';
+              return {
+                email:              m.email,
+                name:               m.name,
+                initials:           (m.initials ?? m.name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)) || '?',
+                color:              m.color ?? '#6366f1',
+                role:               m.role ?? '',
+                status,
+                currentActivity:    live?.currentActivity || (history?.currentActivity ?? ''),
+                currentPanel:       live?.currentPanel    || (history?.currentPanel    ?? ''),
+                lastSeen:           live?.lastSeen        || (history?.lastSeen        ?? null),
+                todayMinutes:       history?.totalMinutes ?? (live?.todayMinutes ?? 0),
+                messageCount:       history?.messageCount ?? 0,
+                taskCount:          history?.taskCount    ?? 0,
+                appBreakdown:       aw?.appBreakdown      ?? [],
+                totalActiveMinutes: aw?.totalActiveMinutes ?? 0,
+                isAfk:              aw?.isAfk ?? false,
+                agentConnected:     !!aw,
+              };
+            }).sort((a, b) => {
+              const order: Record<string, number> = { live: 0, away: 1, offline: 2 };
+              return order[a.status] - order[b.status] || b.todayMinutes - a.todayMinutes;
+            });
+
+            const liveCount    = merged.filter(m => m.status === 'live').length;
+            const teamMinutes  = merged.reduce((s, m) => s + m.todayMinutes, 0);
+            const agentCount   = merged.filter(m => m.agentConnected).length;
+
+            const refreshAll = () => { fetchLiveUsers(); fetchHistory(viewDate); fetchAwData(viewDate); };
 
             return (
-            <div className="space-y-6">
-              <div style={{ height: 3, background: 'linear-gradient(90deg, #10B981, #0DAFCE)', borderRadius: 3 }} />
+            <div style={{ padding: '28px 28px 40px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+              <style>{`
+                @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(1.4)} }
+                .live-dot { animation: pulse-dot 1.8s ease-in-out infinite; }
+              `}</style>
 
-              {/* ── Live Now panel ─────────────────────────────────────────────── */}
-              <div style={{ borderRadius: 16, border: '1.5px solid rgba(16,185,129,0.22)', background: '#fff', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid rgba(16,185,129,0.10)', background: 'rgba(16,185,129,0.04)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981', boxShadow: '0 0 0 3px rgba(16,185,129,0.25)', animation: 'pulse 2s infinite' }} />
-                    <span style={{ fontSize: 13, fontWeight: 800, color: '#065F46', letterSpacing: '-0.01em' }}>Live Now</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: 'rgba(16,185,129,0.12)', color: '#10B981' }}>
-                      {liveUsers.length} online
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={fetchLiveUsers}
-                    style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: '#10B981', background: 'none', border: 'none', cursor: 'pointer' }}
-                  >
-                    <RefreshCw size={12} className={liveLoading ? 'animate-spin' : ''} />
-                    Refresh
-                  </button>
-                </div>
-
-                {liveUsers.length === 0 ? (
-                  <div style={{ padding: '32px', textAlign: 'center', color: 'rgba(90,95,128,0.55)', fontSize: 13 }}>
-                    {liveLoading ? 'Loading…' : 'No users active in the last 3 minutes.'}
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {liveUsers.map((u, i) => {
-                      const member = members.find((m) => m.email.toLowerCase() === u.email.toLowerCase());
-                      const initials = (member?.initials ?? u.name.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2)) || '??';
-                      const color = member?.color ?? '#6366f1';
-                      const icon = panelIcon[u.currentPanel] ?? '🖥️';
-                      return (
-                        <div
-                          key={u.email}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px',
-                            borderBottom: i < liveUsers.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none',
-                          }}
-                        >
-                          {/* Avatar with green dot */}
-                          <div style={{ position: 'relative', flexShrink: 0 }}>
-                            <div style={{ width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#fff', background: color }}>
-                              {initials}
-                            </div>
-                            <div style={{ position: 'absolute', bottom: -2, right: -2, width: 10, height: 10, borderRadius: '50%', background: '#10B981', border: '2px solid #fff' }} />
-                          </div>
-
-                          {/* Name + activity */}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', marginBottom: 2 }}>{u.name || u.email}</p>
-                            <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.70)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {icon} {u.currentActivity}
-                            </p>
-                          </div>
-
-                          {/* Today time */}
-                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                            <p style={{ fontSize: 12, fontWeight: 700, color: '#10B981' }}>{fmtMins(u.todayMinutes)} today</p>
-                            <p style={{ fontSize: 10, color: 'rgba(90,95,128,0.50)' }}>{secsAgo(u.lastSeen)}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* ── Desktop App Usage (ActivityWatch) ───────────────────────────── */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-                  <div>
-                    <p style={{ marginBottom: 2, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase', color: '#6366F1' }}>
-                      {awDate === todayIST ? 'Today' : awDate} · Desktop apps
-                    </p>
-                    <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A', margin: 0 }}>
-                      💻 Desktop App Usage
-                    </h2>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <input
-                      type="date"
-                      value={awDate}
-                      max={todayIST}
-                      onChange={e => { const d = e.target.value; setAwDate(d); fetchAwData(d); }}
-                      style={{ borderRadius: 10, border: '1.5px solid rgba(99,102,241,0.25)', background: '#FFFFFF', padding: '7px 12px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', outline: 'none', cursor: 'pointer' }}
-                    />
-                    <button type="button" onClick={() => fetchAwData()}
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 10, border: '1.5px solid rgba(99,102,241,0.25)', background: '#FFFFFF', padding: '8px 16px', fontSize: 11, fontWeight: 600, color: '#6366F1', cursor: 'pointer' }}
-                    >
-                      <RefreshCw size={13} className={awLoading ? 'animate-spin' : ''} /> Refresh
-                    </button>
-                  </div>
-                </div>
-
-                {/* Per-user cards */}
-                {(() => {
-                  const syncedEmails = new Set(awRecords.map((r) => r.email.toLowerCase()));
-                  const notConnected = members.filter((m) => !syncedEmails.has(m.email.toLowerCase()));
-
-                  const fmtTime = (m: number) => {
-                    if (m <= 0) return '—';
-                    if (m < 60) return `${m}m`;
-                    return `${Math.floor(m / 60)}h ${m % 60}m`;
-                  };
-
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                      {/* Connected users with real data */}
-                      {awLoading ? (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0', fontSize: 13, color: 'rgba(90,95,128,0.60)' }}>
-                          <RefreshCw size={15} style={{ marginRight: 8 }} className="animate-spin" /> Loading desktop data…
-                        </div>
-                      ) : awRecords.length > 0 ? awRecords
-                          .sort((a, b) => (b.totalActiveMinutes ?? 0) - (a.totalActiveMinutes ?? 0))
-                          .map((rec) => {
-                            const member   = members.find((m) => m.email.toLowerCase() === rec.email.toLowerCase());
-                            const initials = member?.initials ?? (rec.name.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2) || '??');
-                            const color    = member?.color ?? '#6366f1';
-                            const isLive   = liveUsers.some((l) => l.email.toLowerCase() === rec.email.toLowerCase());
-                            const isAfkNow = rec.isAfk;
-                            const isStale  = rec.lastSync && (Date.now() - new Date(rec.lastSync).getTime()) > 15 * 60 * 1000;
-                            const topApps  = (rec.appBreakdown ?? []).slice(0, 8);
-                            const maxMins  = topApps[0]?.minutes || 1;
-                            const lastSyncLabel = rec.lastSync
-                              ? (() => { const d = Math.round((Date.now() - new Date(rec.lastSync).getTime()) / 60000); return d < 2 ? 'just now' : `${d}m ago`; })()
-                              : '—';
-
-                            return (
-                              <div key={rec.email} style={{ borderRadius: 16, border: '1.5px solid rgba(99,102,241,0.14)', background: '#FFFFFF', padding: '18px 22px', boxShadow: '0 2px 10px rgba(99,102,241,0.04)' }}>
-                                {/* Header row */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: topApps.length > 0 ? 16 : 0 }}>
-                                  <div style={{ position: 'relative', flexShrink: 0 }}>
-                                    <div style={{ width: 38, height: 38, borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#fff', background: color }}>
-                                      {initials}
-                                    </div>
-                                    {isLive && <div style={{ position: 'absolute', bottom: -2, right: -2, width: 10, height: 10, borderRadius: '50%', background: '#10B981', border: '2px solid #fff' }} />}
-                                  </div>
-                                  <div style={{ flex: 1 }}>
-                                    <p style={{ fontSize: 14, fontWeight: 800, color: '#1A1B3A', margin: 0, letterSpacing: '-0.01em' }}>
-                                      {rec.name || rec.email}
-                                    </p>
-                                    <p style={{ fontSize: 11, color: 'rgba(90,95,128,0.55)', margin: 0, marginTop: 1 }}>
-                                      {fmtTime(rec.totalActiveMinutes)} active · {fmtTime(rec.totalAfkMinutes)} AFK · synced {lastSyncLabel}
-                                    </p>
-                                  </div>
-                                  <span style={{
-                                    fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
-                                    background: isAfkNow ? 'rgba(245,158,11,0.12)' : isStale ? 'rgba(90,95,128,0.10)' : 'rgba(99,102,241,0.10)',
-                                    color:      isAfkNow ? '#D97706'               : isStale ? '#64748B'               : '#6366F1',
-                                  }}>
-                                    {isAfkNow ? '🟡 AFK' : isStale ? '⚫ Idle' : '🟢 Tracking'}
-                                  </span>
-                                </div>
-
-                                {/* App breakdown bars — the main display */}
-                                {topApps.length > 0 && (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                                    {topApps.map(({ app, minutes }) => {
-                                      const pct     = Math.max(4, Math.round((minutes / maxMins) * 100));
-                                      const timeStr = fmtTime(minutes);
-                                      const isDistraction = ['YouTube', 'Netflix', 'Discord', 'Spotify', 'Instagram', 'Facebook', 'Twitter', 'Reddit', 'TikTok', 'Whatsapp']
-                                        .some((w) => app.toLowerCase().includes(w.toLowerCase()));
-                                      const barColor = isDistraction
-                                        ? 'linear-gradient(90deg,#EF476F,#F59E0B)'
-                                        : 'linear-gradient(90deg,#6366F1,#8B5CF6)';
-
-                                      return (
-                                        <div key={app}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                                            <span style={{ fontSize: 12, fontWeight: isDistraction ? 700 : 500, color: isDistraction ? '#EF476F' : '#1A1B3A', width: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                              {isDistraction && '⚠ '}{app}
-                                            </span>
-                                            <span style={{ fontSize: 11, fontWeight: 700, color: isDistraction ? '#EF476F' : '#6366F1', width: 56, textAlign: 'right', flexShrink: 0 }}>
-                                              {timeStr}
-                                            </span>
-                                            <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(99,102,241,0.08)', overflow: 'hidden' }}>
-                                              <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: barColor, transition: 'width .4s ease' }} />
-                                            </div>
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })
-                        : null}
-
-                      {/* Not-connected users */}
-                      {notConnected.length > 0 && (
-                        <div style={{ borderRadius: 16, border: '1.5px dashed rgba(99,102,241,0.20)', background: 'rgba(99,102,241,0.02)', padding: '18px 22px' }}>
-                          <p style={{ fontSize: 12, fontWeight: 700, color: 'rgba(90,95,128,0.70)', marginBottom: 8 }}>
-                            🔌 {notConnected.length} member{notConnected.length > 1 ? 's' : ''} not connected yet
-                          </p>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-                            {notConnected.map((m) => (
-                              <div key={m.email} style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#FFFFFF', border: '1.5px solid rgba(26,27,58,0.10)', borderRadius: 10, padding: '6px 12px' }}>
-                                <div style={{ width: 22, height: 22, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9.5, fontWeight: 800, color: '#fff', background: m.color ?? '#94A3B8' }}>
-                                  {m.initials || m.name?.[0] || '?'}
-                                </div>
-                                <span style={{ fontSize: 12, fontWeight: 600, color: '#1A1B3A' }}>{m.name}</span>
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Setup instructions */}
-                          <details style={{ borderRadius: 10, background: 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.12)' }}>
-                            <summary style={{ padding: '10px 14px', fontSize: 12, fontWeight: 700, color: '#6366F1', cursor: 'pointer', userSelect: 'none' }}>
-                              📋 How to connect the tracking agent (one-time setup per device)
-                            </summary>
-                            <div style={{ padding: '0 14px 14px' }}>
-                              <ol style={{ margin: '8px 0 0', padding: '0 0 0 18px', fontSize: 12, color: 'rgba(90,95,128,0.80)', lineHeight: 2.2 }}>
-                                <li>Install <strong>Node.js</strong> from <code style={{ fontSize: 11, background: 'rgba(99,102,241,0.08)', padding: '1px 5px', borderRadius: 4 }}>nodejs.org</code> (already installed if you use VS Code terminal)</li>
-                                <li>Install <strong>ActivityWatch</strong> from <code style={{ fontSize: 11, background: 'rgba(99,102,241,0.08)', padding: '1px 5px', borderRadius: 4 }}>activitywatch.net</code> — it runs silently in the system tray and tracks which app is in focus</li>
-                                <li>Download <code style={{ fontSize: 11, background: 'rgba(99,102,241,0.08)', padding: '1px 5px', borderRadius: 4 }}>aw-sync.js</code> from the admin and run this command <strong>once</strong>:
-                                  <div style={{ margin: '8px 0', background: '#1A1B3A', borderRadius: 8, padding: '10px 14px', fontFamily: 'monospace', fontSize: 11, color: '#10B981', wordBreak: 'break-all' }}>
-                                    node aw-sync.js --email YOUR_EMAIL --password YOUR_PASSWORD --startup
-                                  </div>
-                                  The <code style={{ fontSize: 11, background: 'rgba(0,0,0,0.06)', padding: '1px 4px', borderRadius: 3, color: '#1A1B3A' }}>--startup</code> flag auto-registers the agent to run on every Windows boot — no manual steps after this.
-                                </li>
-                                <li>Data appears in this panel within 5 minutes ✅</li>
-                              </ol>
-                            </div>
-                          </details>
-                        </div>
-                      )}
-
-                      {/* Empty state — no AW data at all and no members to show */}
-                      {awRecords.length === 0 && members.length === 0 && !awLoading && (
-                        <div style={{ borderRadius: 16, border: '1.5px dashed rgba(99,102,241,0.20)', background: 'rgba(99,102,241,0.02)', padding: '48px 32px', textAlign: 'center' }}>
-                          <p style={{ fontSize: 24, marginBottom: 12 }}>💻</p>
-                          <p style={{ fontSize: 14, fontWeight: 700, color: 'rgba(90,95,128,0.70)', marginBottom: 4 }}>No desktop data yet</p>
-                          <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.50)' }}>Ask team members to set up the tracking agent using the instructions above.</p>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              <div style={{ height: 1, background: 'rgba(26,27,58,0.08)', borderRadius: 1 }} />
-
-              {/* ── Team Activity History ─────────────────────────────────────────── */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
                 <div>
-                  <p style={{ marginBottom: 2, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase', color: '#10B981' }}>
-                    {historyDate === todayIST ? 'Today' : historyDate} · In-app time
+                  <p style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: '#10B981', marginBottom: 6, fontFamily: 'monospace' }}>
+                    {viewDate === todayIST ? 'Live Â· Today' : viewDate} Â· Team Overview
                   </p>
-                  <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A', margin: 0 }}>
-                    <Monitor size={18} style={{ color: '#10B981' }} /> Team Activity
+                  <h2 style={{ fontSize: 26, fontWeight: 900, color: '#1A1B3A', margin: '0 0 14px', letterSpacing: '-0.025em' }}>
+                    Team Activity
                   </h2>
+                  {/* Quick-stat chips */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(16,185,129,0.10)', borderRadius: 20, padding: '5px 12px' }}>
+                      <span className="live-dot" style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: '#10B981' }} />
+                      <span style={{ fontSize: 12, fontWeight: 800, color: '#065F46' }}>{liveCount} online now</span>
+                    </div>
+                    <div style={{ background: 'rgba(99,102,241,0.09)', borderRadius: 20, padding: '5px 12px' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#4338CA' }}>{fmt(teamMinutes)} team total</span>
+                    </div>
+                    <div style={{ background: 'rgba(13,175,206,0.09)', borderRadius: 20, padding: '5px 12px' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#0E7490' }}>{agentCount}/{members.length} agents connected</span>
+                    </div>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input
-                    type="date"
-                    value={historyDate}
-                    max={todayIST}
-                    onChange={e => {
-                      const d = e.target.value;
-                      setHistoryDate(d);
-                      fetchHistory(d);
-                    }}
-                    style={{ borderRadius: 10, border: '1.5px solid rgba(16,185,129,0.22)', background: '#FFFFFF', padding: '7px 12px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', outline: 'none', cursor: 'pointer' }}
+                    type="date" value={viewDate} max={todayIST}
+                    onChange={e => { const d = e.target.value; setAwDate(d); setHistoryDate(d); fetchHistory(d); fetchAwData(d); }}
+                    style={{ borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', background: '#fff', padding: '8px 12px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', outline: 'none' }}
                   />
-                  <button
-                    type="button"
-                    onClick={() => fetchHistory()}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 10, border: '1.5px solid rgba(16,185,129,0.22)', background: '#FFFFFF', padding: '8px 16px', fontSize: 11, fontWeight: 600, color: '#10B981', cursor: 'pointer' }}
-                  >
-                    <RefreshCw size={13} className={historyLoading ? 'animate-spin' : ''} /> Refresh
+                  <button type="button" onClick={refreshAll}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', background: '#fff', padding: '8px 14px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', cursor: 'pointer' }}>
+                    <RefreshCw size={13} className={(awLoading || historyLoading || liveLoading) ? 'animate-spin' : ''} />
+                    Refresh
                   </button>
                 </div>
               </div>
 
-              {/* Summary chips */}
-              {historyUsers.length > 0 && (() => {
-                const teamTotal = historyUsers.reduce((s, u) => s + u.totalMinutes, 0);
-                const teamMessages = historyUsers.reduce((s, u) => s + u.messageCount, 0);
-                const teamTasks = historyUsers.reduce((s, u) => s + u.taskCount, 0);
-                const top = historyUsers[0];
-                return (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
-                    {[
-                      { label: 'Team time', value: teamTotal >= 60 ? `${Math.floor(teamTotal/60)}h ${teamTotal%60}m` : `${teamTotal}m`, color: '#10B981', bg: 'rgba(16,185,129,0.07)' },
-                      { label: 'Top member', value: (top.name || top.email).split(' ')[0], color: '#6366F1', bg: 'rgba(99,102,241,0.07)' },
-                      { label: 'Messages sent', value: String(teamMessages), color: '#0DAFCE', bg: 'rgba(13,175,206,0.07)' },
-                      { label: 'Tasks updated', value: String(teamTasks), color: '#D97706', bg: 'rgba(245,158,11,0.07)' },
-                    ].map(({ label, value, color, bg }) => (
-                      <div key={label} style={{ borderRadius: 12, background: bg, padding: '11px 14px' }}>
-                        <p style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.10em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.55)', marginBottom: 3 }}>{label}</p>
-                        <p style={{ fontSize: 15, fontWeight: 800, color, lineHeight: 1 }}>{value}</p>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
+              {/* â”€â”€ Member cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              {merged.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(90,95,128,0.50)', fontSize: 13 }}>
+                  No team members yet.
+                </div>
+              ) : merged.map((person) => {
+                const isLive    = person.status === 'live';
+                const isAway    = person.status === 'away';
+                const topApps   = person.appBreakdown.slice(0, 6);
+                const maxMins   = topApps[0]?.minutes || 1;
+                const inAppPct  = Math.min(100, Math.round((person.todayMinutes / 480) * 100));
+                const icon      = panelIcon[person.currentPanel] ?? 'ðŸ–¥ï¸';
 
-              {/* Member rows */}
-              {historyLoading ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '56px 0', fontSize: 13, color: 'rgba(90,95,128,0.65)' }}>
-                  <RefreshCw size={16} style={{ marginRight: 8 }} className="animate-spin" /> Loading…
-                </div>
-              ) : historyUsers.length === 0 ? (
-                <div style={{ borderRadius: 16, border: '1.5px dashed rgba(16,185,129,0.22)', background: 'rgba(16,185,129,0.03)', padding: '56px 32px', textAlign: 'center' }}>
-                  <Monitor size={32} style={{ margin: '0 auto 12px', color: 'rgba(16,185,129,0.35)' }} />
-                  <p style={{ fontSize: 14, fontWeight: 600, color: 'rgba(90,95,128,0.70)', marginBottom: 4 }}>No activity recorded yet</p>
-                  <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.50)' }}>Activity is tracked automatically whenever a team member is logged in to EduTechExOS.</p>
-                </div>
-              ) : (
-                <div style={{ borderRadius: 16, border: '1.5px solid rgba(26,27,58,0.08)', background: '#FFFFFF', overflow: 'hidden' }}>
-                  {historyUsers.map((u, i) => {
-                    const member = members.find((m) => m.email.toLowerCase() === u.email.toLowerCase());
-                    const initials = (member?.initials ?? u.name.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2)) || '??';
-                    const color = member?.color ?? '#6366f1';
-                    const icon = panelIcon[u.currentPanel] ?? '🖥️';
-                    const pct = Math.min(100, Math.round((u.totalMinutes / 480) * 100));
-                    const isLive = liveUsers.some((l) => l.email.toLowerCase() === u.email.toLowerCase());
-                    const fmtMin = (m: number) => m < 60 ? `${m}m` : `${Math.floor(m/60)}h ${m%60}m`;
-                    return (
-                      <div
-                        key={u.email}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px',
-                          borderBottom: i < historyUsers.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none',
-                        }}
-                      >
-                        {/* Avatar */}
-                        <div style={{ position: 'relative', flexShrink: 0 }}>
-                          <div style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#fff', background: color }}>
-                            {initials}
-                          </div>
-                          {isLive && (
-                            <div style={{ position: 'absolute', bottom: -2, right: -2, width: 10, height: 10, borderRadius: '50%', background: '#10B981', border: '2px solid #fff' }} />
+                const borderColor = isLive ? 'rgba(16,185,129,0.30)' : isAway ? 'rgba(245,158,11,0.25)' : 'rgba(26,27,58,0.08)';
+                const statusDot   = isLive ? '#10B981' : isAway ? '#F59E0B' : '#CBD5E1';
+                const statusLabel = isLive ? 'Online now' : isAway ? `Last seen ${ago(person.lastSeen)}` : 'Not active today';
+                const statusBg    = isLive ? 'rgba(16,185,129,0.10)' : isAway ? 'rgba(245,158,11,0.10)' : 'rgba(203,213,225,0.30)';
+                const statusFg    = isLive ? '#065F46' : isAway ? '#92400E' : '#94A3B8';
+
+                return (
+                  <div key={person.email} style={{ borderRadius: 18, border: `1.5px solid ${borderColor}`, background: '#fff', overflow: 'hidden', boxShadow: isLive ? '0 4px 20px rgba(16,185,129,0.08)' : '0 1px 4px rgba(26,27,58,0.04)', transition: 'box-shadow .2s' }}>
+
+                    {/* Card top row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 22px', borderBottom: (isLive || isAway) && (person.currentActivity || topApps.length > 0) ? '1px solid rgba(26,27,58,0.06)' : 'none' }}>
+                      {/* Avatar */}
+                      <div style={{ position: 'relative', flexShrink: 0 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900, color: '#fff', background: person.color }}>
+                          {person.initials}
+                        </div>
+                        <div style={{ position: 'absolute', bottom: -2, right: -2, width: 12, height: 12, borderRadius: '50%', background: statusDot, border: '2.5px solid #fff' }} className={isLive ? 'live-dot' : ''} />
+                      </div>
+
+                      {/* Name + status */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 15, fontWeight: 800, color: '#1A1B3A', letterSpacing: '-0.01em' }}>{person.name}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(90,95,128,0.45)', textTransform: 'uppercase', letterSpacing: '.08em' }}>{person.role}</span>
+                          <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 9px', borderRadius: 20, background: statusBg, color: statusFg }}>
+                            {statusLabel}
+                          </span>
+                          {!person.agentConnected && (
+                            <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'rgba(99,102,241,0.09)', color: '#6366F1' }}>
+                              ðŸ’» Agent not set up
+                            </span>
                           )}
                         </div>
+                        {person.currentActivity && (
+                          <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.65)', margin: 0 }}>
+                            {icon} {person.currentActivity}
+                          </p>
+                        )}
+                      </div>
 
-                        {/* Name + progress */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                            <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', margin: 0 }}>{u.name || u.email}</p>
-                            {isLive && (
-                              <span style={{ fontSize: 10, fontWeight: 700, color: '#10B981', background: 'rgba(16,185,129,0.10)', padding: '1px 7px', borderRadius: 20 }}>Live</span>
-                            )}
-                            {u.currentActivity && (
-                              <span style={{ fontSize: 11, color: 'rgba(90,95,128,0.55)' }}>{icon} {u.currentActivity}</span>
-                            )}
-                          </div>
-                          <div style={{ height: 5, borderRadius: 3, background: 'rgba(16,185,129,0.10)', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: 'linear-gradient(90deg,#10B981,#0DAFCE)', transition: 'width .4s' }} />
-                          </div>
+                      {/* Stats */}
+                      <div style={{ display: 'flex', gap: 18, flexShrink: 0, textAlign: 'center' }}>
+                        <div>
+                          <p style={{ fontSize: 16, fontWeight: 900, color: '#10B981', lineHeight: 1, margin: 0 }}>{fmt(person.todayMinutes)}</p>
+                          <p style={{ fontSize: 9.5, color: 'rgba(90,95,128,0.45)', marginTop: 3 }}>in-app</p>
                         </div>
-
-                        {/* Stats */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
-                          <div style={{ textAlign: 'center' }}>
-                            <p style={{ fontSize: 13, fontWeight: 800, color: '#10B981', lineHeight: 1 }}>{fmtMin(u.totalMinutes)}</p>
-                            <p style={{ fontSize: 9.5, color: 'rgba(90,95,128,0.50)', marginTop: 2 }}>time</p>
-                          </div>
-                          <div style={{ textAlign: 'center' }}>
-                            <p style={{ fontSize: 13, fontWeight: 800, color: '#0DAFCE', lineHeight: 1 }}>{u.messageCount}</p>
-                            <p style={{ fontSize: 9.5, color: 'rgba(90,95,128,0.50)', marginTop: 2 }}>msgs</p>
-                          </div>
-                          <div style={{ textAlign: 'center' }}>
-                            <p style={{ fontSize: 13, fontWeight: 800, color: '#6366F1', lineHeight: 1 }}>{u.taskCount}</p>
-                            <p style={{ fontSize: 9.5, color: 'rgba(90,95,128,0.50)', marginTop: 2 }}>tasks</p>
-                          </div>
+                        <div>
+                          <p style={{ fontSize: 16, fontWeight: 900, color: '#6366F1', lineHeight: 1, margin: 0 }}>{person.messageCount}</p>
+                          <p style={{ fontSize: 9.5, color: 'rgba(90,95,128,0.45)', marginTop: 3 }}>msgs</p>
+                        </div>
+                        <div>
+                          <p style={{ fontSize: 16, fontWeight: 900, color: '#F59E0B', lineHeight: 1, margin: 0 }}>{person.taskCount}</p>
+                          <p style={{ fontSize: 9.5, color: 'rgba(90,95,128,0.45)', marginTop: 3 }}>tasks</p>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                    </div>
+
+                    {/* In-app time bar */}
+                    {person.todayMinutes > 0 && (
+                      <div style={{ padding: '10px 22px', borderBottom: topApps.length > 0 ? '1px solid rgba(26,27,58,0.06)' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(90,95,128,0.40)', textTransform: 'uppercase', letterSpacing: '.08em', whiteSpace: 'nowrap' }}>In-app</span>
+                        <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'rgba(16,185,129,0.10)' }}>
+                          <div style={{ height: '100%', borderRadius: 3, width: `${inAppPct}%`, background: 'linear-gradient(90deg,#10B981,#0DAFCE)', transition: 'width .5s' }} />
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#10B981', whiteSpace: 'nowrap' }}>{inAppPct}% of workday</span>
+                      </div>
+                    )}
+
+                    {/* Desktop app breakdown */}
+                    {topApps.length > 0 && (
+                      <div style={{ padding: '14px 22px 16px' }}>
+                        <p style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.40)', marginBottom: 10 }}>
+                          Desktop Apps â€” {fmt(person.totalActiveMinutes)} tracked
+                          {person.isAfk && <span style={{ marginLeft: 8, color: '#D97706', fontWeight: 700 }}>Â· AFK now</span>}
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {topApps.map(({ app, minutes }) => {
+                            const pct      = Math.max(3, Math.round((minutes / maxMins) * 100));
+                            const isDist   = isDistraction(app);
+                            const barColor = isDist ? 'linear-gradient(90deg,#EF476F,#F59E0B)' : 'linear-gradient(90deg,#6366F1,#818CF8)';
+                            return (
+                              <div key={app} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <span style={{ width: 150, fontSize: 12, fontWeight: isDist ? 700 : 500, color: isDist ? '#EF476F' : '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                  {isDist ? 'âš  ' : ''}{app}
+                                </span>
+                                <div style={{ flex: 1, height: 7, borderRadius: 4, background: isDist ? 'rgba(239,71,111,0.09)' : 'rgba(99,102,241,0.09)' }}>
+                                  <div style={{ height: '100%', borderRadius: 4, width: `${pct}%`, background: barColor, transition: 'width .5s' }} />
+                                </div>
+                                <span style={{ width: 52, fontSize: 11, fontWeight: 700, color: isDist ? '#EF476F' : '#6366F1', textAlign: 'right', flexShrink: 0 }}>
+                                  {fmt(minutes)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* No agent state â€” only for away/offline without AW data */}
+                    {!person.agentConnected && (isLive || isAway) && (
+                      <div style={{ padding: '10px 22px 14px', background: 'rgba(99,102,241,0.03)' }}>
+                        <p style={{ fontSize: 11, color: 'rgba(90,95,128,0.55)', margin: 0 }}>
+                          No desktop app data â€” ask this member to set up the tracking agent from their sidebar.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           );
           })()}
 
-          {/* ════════════════════════════════════════════════════════════
+          {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               TAB: AVAILABILITY CALENDAR
-          ════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'availability' && (
             <div className="p-6">
               <div style={{ height: 3, background: 'linear-gradient(90deg, #6366f1, #8B5CF6)', borderRadius: 3, marginBottom: 24 }} />
@@ -2284,9 +2126,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ════════════════════════════════════════════════════════════
+          {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               TAB: LEAVES
-          ════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'leaves' && (
             <div className="space-y-6 p-6">
               <div style={{ height: 3, background: 'linear-gradient(90deg, #F59E0B, #FBBF24)', borderRadius: 3, marginBottom: 8 }} />
@@ -2303,7 +2145,7 @@ export default function AdminPage() {
 
               {leavesLoading ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, gap: 10, color: 'rgba(90,95,128,0.55)', fontSize: 13 }}>
-                  <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Loading leave requests…
+                  <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Loading leave requestsâ€¦
                   <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                 </div>
               ) : leaves.length === 0 ? (
@@ -2324,7 +2166,7 @@ export default function AdminPage() {
                     {pendingLeaves.length > 0 && (
                       <div>
                         <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(90,95,128,0.45)', letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 12 }}>
-                          Awaiting action · {pendingLeaves.length}
+                          Awaiting action Â· {pendingLeaves.length}
                         </p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                           {pendingLeaves.map(leave => (
@@ -2332,7 +2174,7 @@ export default function AdminPage() {
                               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                   <div style={{ width: 40, height: 40, borderRadius: 12, background: `${catColor[leave.leaveCategory] ?? '#9BA6D3'}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16 }}>
-                                    {{ sick: '🤒', vacation: '🌴', personal: '👤', emergency: '⚡', other: '📋' }[leave.leaveCategory] ?? '📋'}
+                                    {{ sick: 'ðŸ¤’', vacation: 'ðŸŒ´', personal: 'ðŸ‘¤', emergency: 'âš¡', other: 'ðŸ“‹' }[leave.leaveCategory] ?? 'ðŸ“‹'}
                                   </div>
                                   <div>
                                     <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#1A1B3A' }}>{leave.name}</p>
@@ -2343,9 +2185,9 @@ export default function AdminPage() {
                               </div>
 
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px', marginBottom: 12 }}>
-                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Type:</strong> {leave.type === 'instant' ? '⚡ Emergency' : '📅 Planned'}</span>
+                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Type:</strong> {leave.type === 'instant' ? 'âš¡ Emergency' : 'ðŸ“… Planned'}</span>
                                 <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Category:</strong> {catLabel[leave.leaveCategory] ?? leave.leaveCategory}</span>
-                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Date:</strong> {leave.type === 'instant' ? `${leave.startDate} · ${leave.duration === 'half' ? 'Half day' : 'Full day'}` : `${leave.startDate}${leave.endDate ? ` → ${leave.endDate}` : ''}`}</span>
+                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Date:</strong> {leave.type === 'instant' ? `${leave.startDate} Â· ${leave.duration === 'half' ? 'Half day' : 'Full day'}` : `${leave.startDate}${leave.endDate ? ` â†’ ${leave.endDate}` : ''}`}</span>
                               </div>
 
                               <div style={{ background: 'rgba(26,27,58,0.03)', borderRadius: 10, padding: '10px 12px', marginBottom: 14, fontSize: 13, color: '#4A5578', lineHeight: 1.5 }}>
@@ -2355,7 +2197,7 @@ export default function AdminPage() {
                               {/* Admin note input */}
                               <input
                                 type="text"
-                                placeholder="Optional note to the member…"
+                                placeholder="Optional note to the memberâ€¦"
                                 value={leaveNotes[leave.id] ?? ''}
                                 onChange={e => setLeaveNotes(prev => ({ ...prev, [leave.id]: e.target.value }))}
                                 style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid rgba(26,27,58,0.12)', fontSize: 12.5, color: '#1A1B3A', background: '#fff', outline: 'none', marginBottom: 12, boxSizing: 'border-box' }}
@@ -2389,15 +2231,15 @@ export default function AdminPage() {
                     {resolvedLeaves.length > 0 && (
                       <div>
                         <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(90,95,128,0.45)', letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 12 }}>
-                          Resolved · {resolvedLeaves.length}
+                          Resolved Â· {resolvedLeaves.length}
                         </p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {resolvedLeaves.map(leave => (
                             <div key={leave.id} style={{ borderRadius: 14, border: '1.5px solid rgba(26,27,58,0.08)', background: '#FAFAFA', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                              <div style={{ fontSize: 20 }}>{{ sick: '🤒', vacation: '🌴', personal: '👤', emergency: '⚡', other: '📋' }[leave.leaveCategory] ?? '📋'}</div>
+                              <div style={{ fontSize: 20 }}>{{ sick: 'ðŸ¤’', vacation: 'ðŸŒ´', personal: 'ðŸ‘¤', emergency: 'âš¡', other: 'ðŸ“‹' }[leave.leaveCategory] ?? 'ðŸ“‹'}</div>
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1A1B3A' }}>{leave.name} <span style={{ fontWeight: 400, color: 'rgba(90,95,128,0.55)', fontSize: 11 }}>— {leave.type === 'instant' ? 'Emergency' : 'Planned'} · {catLabel[leave.leaveCategory]}</span></p>
-                                <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'rgba(90,95,128,0.55)' }}>{leave.startDate}{leave.endDate ? ` → ${leave.endDate}` : ''} · {leave.reason}</p>
+                                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1A1B3A' }}>{leave.name} <span style={{ fontWeight: 400, color: 'rgba(90,95,128,0.55)', fontSize: 11 }}>â€” {leave.type === 'instant' ? 'Emergency' : 'Planned'} Â· {catLabel[leave.leaveCategory]}</span></p>
+                                <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'rgba(90,95,128,0.55)' }}>{leave.startDate}{leave.endDate ? ` â†’ ${leave.endDate}` : ''} Â· {leave.reason}</p>
                                 {leave.adminNote && <p style={{ margin: '3px 0 0', fontSize: 11, color: leave.status === 'approved' ? '#10C98A' : '#EF476F', fontStyle: 'italic' }}>Note: {leave.adminNote}</p>}
                               </div>
                               <LeaveStatusBadge status={leave.status} />
@@ -2412,9 +2254,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ════════════════════════════════════════════════════════════
+          {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               TAB: LEAVE CALENDAR
-          ════════════════════════════════════════════════════════════ */}
+          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'leave-calendar' && (
             <div className="p-6">
               <div style={{ height: 3, background: 'linear-gradient(90deg, #10C98A, #059669)', borderRadius: 3, marginBottom: 24 }} />
@@ -2423,7 +2265,7 @@ export default function AdminPage() {
           )}
         </main>
 
-        {/* ── Add user modal ───────────────────────────────────────────── */}
+        {/* â”€â”€ Add user modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {showAddModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" style={{ background: 'rgba(26,27,58,0.28)' }}>
             <form
@@ -2508,12 +2350,12 @@ export default function AdminPage() {
                     </div>
                   ) : extraChannels.length === 0 ? (
                     <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.18)', background: '#ECEAF8', padding: '12px 14px', fontSize: 12, color: 'rgba(90,95,128,0.55)' }}>
-                      #general only — no project channels created yet
+                      #general only â€” no project channels created yet
                     </div>
                   ) : (
                     <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: '#ECEAF8', padding: '12px 14px' }}>
                       <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.55)', marginBottom: 10 }}>
-                        #general is always included · pick up to 3 more
+                        #general is always included Â· pick up to 3 more
                       </p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {extraChannels.map((c) => {
