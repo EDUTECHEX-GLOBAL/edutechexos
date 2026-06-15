@@ -801,7 +801,7 @@ app.get('/api/access-requests', authMiddleware, async (req, res) => {
   }
   try {
     const requests = await AccessRequest.find({}).sort({ requestedAt: -1 }).lean();
-    const formatted = requests.map(({ _id, __v, ...rest }) => ({
+    const formatted = requests.map(({ _id, __v, password, ...rest }) => ({
       ...rest,
       id: _id.toString(),
       requestedAt: rest.requestedAt instanceof Date ? rest.requestedAt.toISOString() : rest.requestedAt,
@@ -1852,8 +1852,18 @@ app.post('/api/auth/login', async (req, res) => {
     if (!request) {
       return res.status(401).json({ success: false, error: 'invalid', message: 'Invalid credentials. Use an approved user account.' });
     }
-    if (!(await bcrypt.compare(password, request.password))) {
+    // Support both bcrypt-hashed and legacy plain-text passwords (migration path).
+    // On plain-text match, immediately re-hash and save so the account self-heals.
+    const bcryptMatch = await bcrypt.compare(password, request.password).catch(() => false);
+    const plainMatch  = !bcryptMatch && request.password === password;
+    if (!bcryptMatch && !plainMatch) {
       return res.status(401).json({ success: false, error: 'invalid', message: 'Invalid credentials. Use an approved user account.' });
+    }
+    if (plainMatch) {
+      // Silently upgrade the stored password to a bcrypt hash
+      bcrypt.hash(password, 10).then((h) =>
+        AccessRequest.findOneAndUpdate({ email: emailClean }, { $set: { password: h } })
+      ).catch(() => {});
     }
     if (request.status === 'rejected') {
       return res.status(401).json({ success: false, error: 'rejected', message: 'Your access request was declined. Contact admin.' });
@@ -2060,11 +2070,14 @@ app.post('/api/auth/change-password', async (req, res) => {
     if (!request) {
       return res.status(404).json({ success: false, error: 'Account not found.' });
     }
-    if (request.password !== currentPassword) {
+    const passwordMatch = await bcrypt.compare(currentPassword, request.password)
+      .catch(() => false); // if stored value isn't a valid hash (legacy plain-text), fall back
+    const legacyMatch = !passwordMatch && request.password === currentPassword;
+    if (!passwordMatch && !legacyMatch) {
       return res.status(401).json({ success: false, error: 'Current password is incorrect.' });
     }
 
-    await AccessRequest.findOneAndUpdate({ email: emailClean }, { $set: { password: newPassword } });
+    await AccessRequest.findOneAndUpdate({ email: emailClean }, { $set: { password: await bcrypt.hash(newPassword, 10) } });
     res.json({ success: true, message: 'Password changed successfully.' });
   } catch (err) {
     console.error('[change-password]', err);
@@ -2461,7 +2474,7 @@ app.get('/api/members/export', authMiddleware, async (req, res) => {
         email:     m.email,
         role:      m.role,
         status:    'approved',
-        password:  m.password || '',
+        password:  '(hidden)',
         createdAt: m.requestedAt ? new Date(m.requestedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '',
       });
     });
