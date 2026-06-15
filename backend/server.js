@@ -1981,12 +1981,56 @@ app.post('/api/auth/reset-password', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Password must be at least 6 characters.' });
     }
 
-    await AccessRequest.findOneAndUpdate({ email: emailClean }, { $set: { password: newPassword } });
+    await AccessRequest.findOneAndUpdate({ email: emailClean }, { $set: { password: await bcrypt.hash(newPassword, 10) } });
     await ResetCode.findByIdAndUpdate(resetCode._id, { $set: { used: true } });
 
     res.json({ success: true, message: 'Password reset successfully. You can now sign in.' });
   } catch (err) {
     console.error('[reset-password]', err);
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// POST /api/admin/set-password — admin sets/creates a DB user's password directly
+// Body: { email, password, name?, role?, status? }
+// Creates the account (approved) if it doesn't exist yet.
+app.post('/api/admin/set-password', authMiddleware, async (req, res) => {
+  if (!req.user || req.user.role !== 'Admin') {
+    return res.status(403).json({ success: false, error: 'Admin access required.' });
+  }
+  try {
+    const { email, password, name, role, status } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'email and password are required.' });
+    }
+    const emailClean = String(email).trim().toLowerCase();
+    if (password.length < 4) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 4 characters.' });
+    }
+    // Block shadowing hardcoded system accounts
+    if (VALID_ACCOUNTS.some((a) => a.email === emailClean)) {
+      return res.status(409).json({ success: false, error: 'Cannot override a system account via this endpoint.' });
+    }
+    const hashed = await bcrypt.hash(String(password), 10);
+    const existing = await AccessRequest.findOne({ email: emailClean }).lean();
+    if (existing) {
+      await AccessRequest.findOneAndUpdate(
+        { email: emailClean },
+        { $set: { password: hashed, ...(role ? { role } : {}), ...(status ? { status } : {}), ...(name ? { name } : {}) } }
+      );
+      return res.json({ success: true, action: 'updated', email: emailClean });
+    }
+    // Create new approved account
+    const newUser = new AccessRequest({
+      name: name || emailClean.split('@')[0],
+      email: emailClean,
+      password: hashed,
+      role: role || 'Member',
+      status: status || 'approved',
+    });
+    await newUser.save();
+    return res.json({ success: true, action: 'created', email: emailClean });
+  } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
 });
