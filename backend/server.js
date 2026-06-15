@@ -762,7 +762,7 @@ app.post('/api/access-requests', authLimiter, async (req, res) => {
     }).catch(() => {});
 
     // ── Email 2: alert to the admin ────────────────────────────────────────
-    const adminEmail = (VALID_ACCOUNTS.find(a => a.role === 'Admin') || {}).email;
+    const adminEmail = process.env.ADMIN_NOTIFY_EMAIL || (VALID_ACCOUNTS.find(a => a.role === 'Admin') || {}).email;
     if (adminEmail) {
       sendBrevoEmail({
         to: [{ email: adminEmail }],
@@ -1019,8 +1019,8 @@ app.post('/api/leaves', authMiddleware, async (req, res) => {
     const saved = await leave.save();
     const { _id, __v, ...rest } = saved.toObject();
 
-    // Notify admin via email
-    const adminEmail = (VALID_ACCOUNTS.find(a => a.role === 'Admin') || {}).email;
+    // Notify admin via email — use real inbox from env, fall back to system account email
+    const adminEmail = process.env.ADMIN_NOTIFY_EMAIL || (VALID_ACCOUNTS.find(a => a.role === 'Admin') || {}).email;
     const appUrl = process.env.APP_URL || 'https://edutechexos.vercel.app';
     const typeLabel  = type === 'instant' ? 'Emergency / Instant' : 'Planned';
     const catLabel   = { sick: 'Sick', vacation: 'Vacation', personal: 'Personal', emergency: 'Emergency', other: 'Other' }[leaveCategory] || leaveCategory;
