@@ -92,6 +92,7 @@ export default function AdminPage() {
     setMemberWorkspaceChannels,
     setMemberRole,
     loadLocalMembers,
+    loadWorkspaceChannels,
   } = useDashboardStore();
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -103,6 +104,7 @@ export default function AdminPage() {
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [requestChannelsByReq, setRequestChannelsByReq] = useState<Record<string, string[]>>({});
   const [promoteLoadingId, setPromoteLoadingId] = useState<string | null>(null);
+  const [channelPopoverId, setChannelPopoverId] = useState<string | null>(null);
   const [activityStats, setActivityStats] = useState<ActivityStat[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [broadcastSubject, setBroadcastSubject] = useState('');
@@ -247,8 +249,9 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    // Primary: load members + access requests from backend
+    // Primary: load members + channels fresh from backend
     loadLocalMembers?.();
+    loadWorkspaceChannels?.();
 
     const token = getAdminToken();
     if (!token) return; // not logged in â€” nothing to load
@@ -511,10 +514,6 @@ export default function AdminPage() {
 
   function handleChannelToggle(memberId: string, channelId: string, checked: boolean) {
     const current = getExtraChannels(memberId).map((c) => c.id);
-    if (checked && current.length >= 3) {
-      toast.error('Max 3 channels per user. Remove one first.');
-      return;
-    }
     const next = checked
       ? [...new Set([...current, channelId])]
       : current.filter((id) => id !== channelId);
@@ -524,8 +523,8 @@ export default function AdminPage() {
     if (channel) {
       toast.success(
         checked
-          ? `${member?.name ?? 'User'} added to #${channel.name}.`
-          : `${member?.name ?? 'User'} removed from #${channel.name}.`
+          ? `${member?.name ?? 'User'} added to #${channel.name}`
+          : `${member?.name ?? 'User'} removed from #${channel.name}`
       );
     }
   }
@@ -1079,6 +1078,7 @@ export default function AdminPage() {
                   <tbody>
                     {filteredMembers.map((member) => {
                       const memberExtraChannels = getExtraChannels(member.id);
+                      const isPrivileged = member.role === 'Admin' || member.role === 'Manager';
                       const isAdminMember = member.role === 'Admin';
                       return (
                         <tr key={member.id} style={{ borderBottom: '1px solid rgba(91,79,219,0.05)', transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(91,79,219,0.03)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
@@ -1140,62 +1140,99 @@ export default function AdminPage() {
                               {member.status}
                             </span>
                           </td>
+                          {/* Current access */}
                           <td className="px-5 py-4">
                             <div className="flex flex-wrap gap-1.5">
-                              {isAdminMember ? (
+                              {isPrivileged ? (
                                 <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, letterSpacing: '.06em', background: 'rgba(26,27,58,0.14)', color: '#5B4FDB', border: '1px solid rgba(26,27,58,0.22)' }}>All channels</span>
                               ) : (
                                 <>
                                   <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'rgba(13,175,206,0.08)', color: '#0DAFCE', border: '1px solid rgba(13,175,206,0.18)' }}>#general</span>
                                   {memberExtraChannels.length > 0 ? (
                                     memberExtraChannels.map((ec) => (
-                                      <span key={ec.id} style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'rgba(26,27,58,0.14)', color: '#5B4FDB', border: '1px solid rgba(26,27,58,0.22)' }}>#{ec.name}</span>
+                                      <span key={ec.id} style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'rgba(91,79,219,0.10)', color: '#5B4FDB', border: '1px solid rgba(91,79,219,0.18)' }}>#{ec.name}</span>
                                     ))
                                   ) : (
-                                    <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'rgba(245,158,11,0.08)', color: '#D48C00', border: '1px solid rgba(245,158,11,0.18)' }}>Needs assignment</span>
+                                    <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'rgba(245,158,11,0.08)', color: '#D48C00', border: '1px solid rgba(245,158,11,0.18)' }}>No extra channels</span>
                                   )}
                                 </>
                               )}
                             </div>
                           </td>
+                          {/* Channel access — popover */}
                           <td className="px-5 py-4">
-                            {isAdminMember ? (
-                              <span className="text-xs text-ink-light italic">Full access</span>
+                            {isPrivileged ? (
+                              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(90,95,128,0.50)', fontStyle: 'italic' }}>Full access</span>
+                            ) : systemEmails.includes(member.email.toLowerCase()) ? (
+                              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(90,95,128,0.50)', fontStyle: 'italic' }}>System member</span>
                             ) : (
-                              <div className="flex flex-col gap-1.5">
-                                <span style={{ fontSize: 10, fontWeight: 700, color: memberExtraChannels.length >= 3 ? '#EF476F' : 'rgba(90,95,128,0.55)', marginBottom: 2 }}>
-                                  {memberExtraChannels.length}/3 channels
-                                </span>
-                                {extraChannels.map((c) => {
-                                  const checked = memberExtraChannels.some((ec) => ec.id === c.id);
-                                  const atCap = !checked && memberExtraChannels.length >= 3;
-                                  return (
-                                    <label
-                                      key={c.id}
-                                      className="flex items-center gap-2 select-none group"
-                                      style={{ cursor: atCap ? 'not-allowed' : 'pointer', opacity: atCap ? 0.45 : 1 }}
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={checked}
-                                        disabled={atCap}
-                                        onChange={(e) =>
-                                          handleChannelToggle(member.id, c.id, e.target.checked)
-                                        }
-                                        className="h-3.5 w-3.5 rounded border-border accent-primary cursor-pointer"
-                                      />
-                                      <span
-                                        className={`text-xs font-semibold transition-colors ${checked ? 'text-primary' : 'text-ink-light group-hover:text-foreground'}`}
-                                      >
-                                        #{c.name}
+                              <div style={{ position: 'relative' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setChannelPopoverId(channelPopoverId === member.id ? null : member.id)}
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                    padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                                    background: channelPopoverId === member.id ? 'rgba(91,79,219,0.14)' : 'rgba(91,79,219,0.07)',
+                                    color: '#5B4FDB', border: '1.5px solid rgba(91,79,219,0.22)',
+                                    cursor: 'pointer', transition: 'all .15s',
+                                  }}
+                                >
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                                  {memberExtraChannels.length > 0 ? `${memberExtraChannels.length} channel${memberExtraChannels.length > 1 ? 's' : ''}` : 'Assign channels'}
+                                </button>
+                                {channelPopoverId === member.id && (
+                                  <div
+                                    style={{
+                                      position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
+                                      background: '#fff', borderRadius: 12,
+                                      border: '1.5px solid rgba(91,79,219,0.18)',
+                                      boxShadow: '0 12px 40px rgba(91,79,219,0.16), 0 2px 8px rgba(0,0,0,0.08)',
+                                      padding: '14px 16px', minWidth: 220,
+                                    }}
+                                  >
+                                    <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.10em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.55)', marginBottom: 10 }}>
+                                      Channel access for {member.name.split(' ')[0]}
+                                    </p>
+                                    {/* #general is always on */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', opacity: 0.5 }}>
+                                      <span style={{ width: 16, height: 16, borderRadius: 4, background: '#0DAFCE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
                                       </span>
-                                    </label>
-                                  );
-                                })}
-                                {extraChannels.length === 0 && (
-                                  <span className="text-xs text-ink-light italic">
-                                    No extra channels
-                                  </span>
+                                      <span style={{ fontSize: 12, fontWeight: 600, color: '#1A1B3A' }}>#general <span style={{ fontSize: 10, color: 'rgba(90,95,128,0.50)' }}>(always on)</span></span>
+                                    </div>
+                                    {extraChannels.length === 0 ? (
+                                      <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.60)', marginTop: 6 }}>No extra channels in workspace.</p>
+                                    ) : extraChannels.map((c) => {
+                                      const checked = memberExtraChannels.some((ec) => ec.id === c.id);
+                                      return (
+                                        <label
+                                          key={c.id}
+                                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', cursor: 'pointer', borderTop: '1px solid rgba(91,79,219,0.06)' }}
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={checked}
+                                            onChange={(e) => handleChannelToggle(member.id, c.id, e.target.checked)}
+                                            style={{ width: 15, height: 15, accentColor: '#5B4FDB', cursor: 'pointer' }}
+                                          />
+                                          <span style={{ fontSize: 13, fontWeight: checked ? 700 : 500, color: checked ? '#5B4FDB' : '#4A5578' }}>
+                                            #{c.name}
+                                          </span>
+                                          {checked && (
+                                            <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 700, color: '#5B4FDB', background: 'rgba(91,79,219,0.10)', padding: '2px 6px', borderRadius: 4 }}>ON</span>
+                                          )}
+                                        </label>
+                                      );
+                                    })}
+                                    <button
+                                      type="button"
+                                      onClick={() => setChannelPopoverId(null)}
+                                      style={{ marginTop: 10, width: '100%', padding: '7px', borderRadius: 8, background: 'rgba(91,79,219,0.10)', color: '#5B4FDB', fontSize: 11, fontWeight: 700, border: '1px solid rgba(91,79,219,0.18)', cursor: 'pointer' }}
+                                    >
+                                      Done
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             )}
