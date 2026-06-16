@@ -3168,8 +3168,6 @@ app.post('/api/email', async (req, res) => {
 
 // ─── Webhook CRUD ─────────────────────────────────────────────────────────────
 
-const crypto = require('crypto');
-
 function generateWebhookToken() {
   return crypto.randomBytes(24).toString('hex'); // 48-char hex token
 }
