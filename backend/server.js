@@ -2071,7 +2071,8 @@ app.post('/api/auth/login', async (req, res) => {
         );
         io.emit('login_status_updated', { email: emailClean, dateStr, loggedIn: true });
       } catch (_) {}
-      return res.json({ success: true, user: hardcoded, token });
+      const { password: _pw, ...safeUser } = hardcoded;
+      return res.json({ success: true, user: safeUser, token });
     }
 
     // 2. Check DB access requests
