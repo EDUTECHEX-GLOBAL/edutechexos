@@ -2408,49 +2408,73 @@ export default function EduTechExOSDashboard() {
           )}
 
           {/* ── Desktop Tracking Setup Banner ─────────────── */}
-          {!awBannerDismissed && (
+          {/* Shows until ActivityWatch is actually detected as running */}
+          {awStatus !== 'connected' && (
             <div style={{ margin: '16px 8px 8px', borderRadius: 12, background: 'rgba(99,102,241,0.13)', border: '1px solid rgba(99,102,241,0.28)', padding: '12px 12px 10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '-0.01em' }}>
-                  💻 Desktop Tracking
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#EF476F', flexShrink: 0, boxShadow: '0 0 6px rgba(239,71,111,0.6)' }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '-0.01em', flex: 1 }}>
+                  💻 Desktop Tracking Not Active
                 </span>
-                <button
-                  onClick={() => { setAwBannerDismissed(true); localStorage.setItem('aw_banner_dismissed', '1'); }}
-                  style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.30)', cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: 2 }}
-                >✕</button>
               </div>
               <p style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.48)', lineHeight: 1.5, marginBottom: 10 }}>
-                Shows admin your VS Code, Chrome &amp; Figma usage. One-time setup.
+                Complete 3 steps below so admin can see your VS Code, Chrome &amp; Figma activity.
               </p>
+
+              {/* Step 1 */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <a
-                  href="https://activitywatch.net"
+                  href="https://activitywatch.net/downloads/"
                   target="_blank"
                   rel="noreferrer"
-                  style={{ display: 'block', borderRadius: 8, background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.28)', padding: '7px 10px', fontSize: 10.5, fontWeight: 600, color: '#A5B4FC', textDecoration: 'none', textAlign: 'center' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, borderRadius: 8, background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.28)', padding: '8px 10px', fontSize: 10.5, fontWeight: 600, color: '#A5B4FC', textDecoration: 'none' }}
                 >
-                  Step 1 — Install ActivityWatch →
+                  <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(99,102,241,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#A5B4FC', flexShrink: 0 }}>1</span>
+                  Download &amp; Install ActivityWatch →
                 </a>
+
+                {/* Step 2 */}
                 <a
                   href="/aw-sync.js"
                   download="aw-sync.js"
-                  style={{ display: 'block', borderRadius: 8, background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.28)', padding: '7px 10px', fontSize: 10.5, fontWeight: 600, color: '#A5B4FC', textDecoration: 'none', textAlign: 'center' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, borderRadius: 8, background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.28)', padding: '8px 10px', fontSize: 10.5, fontWeight: 600, color: '#A5B4FC', textDecoration: 'none' }}
                 >
-                  Step 2 — Download Agent ↓
+                  <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(99,102,241,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#A5B4FC', flexShrink: 0 }}>2</span>
+                  Download aw-sync.js Agent ↓
                 </a>
               </div>
-              <div style={{ marginTop: 8, borderRadius: 8, background: 'rgba(0,0,0,0.35)', padding: '9px 10px' }}>
-                <p style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.35)', marginBottom: 5 }}>Step 3 — Run once in terminal:</p>
-                <code style={{ fontSize: 9, color: '#10B981', wordBreak: 'break-all', display: 'block', lineHeight: 1.7 }}>
-                  {'node aw-sync.js \\\n  --email '}{currentUserEmail}{' \\\n  --password YOUR_PASS \\\n  --startup'}
-                </code>
+
+              {/* Step 3 — terminal command */}
+              <div style={{ marginTop: 8, borderRadius: 8, background: 'rgba(0,0,0,0.40)', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 10px 8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>
+                  <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(99,102,241,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#A5B4FC', flexShrink: 0 }}>3</span>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.40)', fontWeight: 600 }}>Open terminal in the folder where you saved aw-sync.js and run:</span>
+                </div>
+                <div style={{ background: 'rgba(0,0,0,0.35)', borderRadius: 6, padding: '8px 10px', position: 'relative' }}>
+                  <code style={{ fontSize: 9.5, color: '#10B981', display: 'block', lineHeight: 1.9, whiteSpace: 'pre', fontFamily: 'monospace' }}>{`node aw-sync.js ^\n  --email ${currentUserEmail} ^\n  --password YOUR_PASSWORD ^\n  --startup`}</code>
+                  <button
+                    onClick={() => {
+                      const cmd = `node aw-sync.js --email ${currentUserEmail} --password YOUR_PASSWORD --startup`;
+                      navigator.clipboard?.writeText(cmd).then(() => {
+                        const el = document.getElementById('aw-copy-btn');
+                        if (el) { el.textContent = 'Copied!'; setTimeout(() => { if (el) el.textContent = 'Copy'; }, 2000); }
+                      });
+                    }}
+                    id="aw-copy-btn"
+                    style={{ position: 'absolute', top: 6, right: 6, fontSize: 9, fontWeight: 700, color: '#A5B4FC', background: 'rgba(99,102,241,0.20)', border: '1px solid rgba(99,102,241,0.30)', borderRadius: 4, padding: '2px 7px', cursor: 'pointer' }}
+                  >Copy</button>
+                </div>
+                <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 6, lineHeight: 1.5 }}>
+                  Replace <span style={{ color: '#F59E0B' }}>YOUR_PASSWORD</span> with your EduTechExOS login password. The <span style={{ color: '#A5B4FC' }}>--startup</span> flag makes it run automatically every time Windows starts.
+                </p>
               </div>
-              <button
-                onClick={() => { setAwBannerDismissed(true); localStorage.setItem('aw_banner_dismissed', '1'); }}
-                style={{ marginTop: 9, width: '100%', borderRadius: 8, border: 'none', background: 'rgba(16,185,129,0.12)', color: 'rgba(16,185,129,0.75)', fontSize: 10.5, fontWeight: 700, padding: '7px 0', cursor: 'pointer' }}
-              >
-                ✓ I&apos;ve set it up
-              </button>
+
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 5, padding: '6px 8px', borderRadius: 7, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.15)' }}>
+                <span style={{ fontSize: 11 }}>⚠️</span>
+                <span style={{ fontSize: 9.5, color: 'rgba(245,158,11,0.70)', lineHeight: 1.4 }}>
+                  Make sure <strong style={{ color: 'rgba(245,158,11,0.85)' }}>ActivityWatch is open</strong> before running the command. This banner disappears automatically once connected.
+                </span>
+              </div>
             </div>
           )}
         </div>
