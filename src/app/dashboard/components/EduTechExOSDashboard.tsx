@@ -2046,8 +2046,8 @@ export default function EduTechExOSDashboard() {
             whileTap={{ scale: 0.94 }}
             className="rail-logo-wrap"
             style={{
-              background: 'linear-gradient(135deg,#4A5ADF 0%,#3547C8 100%)',
-              boxShadow: '0 2px 10px rgba(74,90,223,0.40)',
+              background: 'linear-gradient(135deg,#5B6CF8 0%,#7B52E8 100%)',
+              boxShadow: '0 4px 16px rgba(91,108,248,0.50)',
             }}
           >
             <AppLogo size={18} />
@@ -3749,27 +3749,55 @@ export default function EduTechExOSDashboard() {
 
       {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• RIGHT ICON RAIL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <nav className="workspace-right-rail">
-        {/* Top section — moved from left rail */}
-        {[
-          { icon: CalendarCheck, label: 'Avail.',  action: () => setAvailabilityOpen(true) },
-          { icon: CalendarX,     label: 'Leave',   action: () => setLeaveOpen(true)        },
-          { icon: Zap,           label: 'Integr.', action: () => setIntegrationsOpen(true) },
-          ...(isAdmin ? [{ icon: BarChart2, label: 'Analytics', action: () => setAnalyticsOpen(true) }] : []),
-        ].map(({ icon: Icon, label, action }) => (
-          <motion.button key={label} whileTap={{ scale: 0.88 }} onClick={action} className="rail-btn">
-            <Icon size={18} strokeWidth={1.8} />
-            <span className="rail-label">{label}</span>
+        {/* Calendar / workspace tools — teal accent */}
+        <motion.button whileTap={{ scale: 0.88 }} onClick={() => setAvailabilityOpen(true)} className="rail-btn"
+          style={{ color: 'rgba(34,211,238,0.60)' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#67E8F9'; e.currentTarget.style.background = 'rgba(20,184,166,0.14)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(34,211,238,0.60)'; e.currentTarget.style.background = 'transparent'; }}
+        >
+          <CalendarCheck size={18} strokeWidth={1.8} />
+          <span className="rail-label">Avail.</span>
+        </motion.button>
+
+        <motion.button whileTap={{ scale: 0.88 }} onClick={() => setLeaveOpen(true)} className="rail-btn"
+          style={{ color: 'rgba(251,191,36,0.55)' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#FCD34D'; e.currentTarget.style.background = 'rgba(245,158,11,0.12)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(251,191,36,0.55)'; e.currentTarget.style.background = 'transparent'; }}
+        >
+          <CalendarX size={18} strokeWidth={1.8} />
+          <span className="rail-label">Leave</span>
+        </motion.button>
+
+        <motion.button whileTap={{ scale: 0.88 }} onClick={() => setIntegrationsOpen(true)} className="rail-btn"
+          style={{ color: 'rgba(167,139,250,0.55)' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#C4B5FD'; e.currentTarget.style.background = 'rgba(139,92,246,0.14)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(167,139,250,0.55)'; e.currentTarget.style.background = 'transparent'; }}
+        >
+          <Zap size={18} strokeWidth={1.8} />
+          <span className="rail-label">Integr.</span>
+        </motion.button>
+
+        {isAdmin && (
+          <motion.button whileTap={{ scale: 0.88 }} onClick={() => setAnalyticsOpen(true)} className="rail-btn"
+            style={{ color: 'rgba(52,211,153,0.55)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#6EE7B7'; e.currentTarget.style.background = 'rgba(16,185,129,0.12)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(52,211,153,0.55)'; e.currentTarget.style.background = 'transparent'; }}
+          >
+            <BarChart2 size={18} strokeWidth={1.8} />
+            <span className="rail-label">Analytics</span>
           </motion.button>
-        ))}
+        )}
 
         <div className="rail-divider" />
 
-        {/* Channel tools — Pinned + Saved */}
+        {/* Channel tools — Pinned + Saved (amber when active) */}
         <motion.button
           whileTap={{ scale: 0.88 }}
           onClick={() => setRightSidePanel(rightSidePanel === 'pinned' ? null : 'pinned')}
-          className={`rail-btn${rightSidePanel === 'pinned' ? ' active' : ''}`}
-          style={rightSidePanel === 'pinned' ? { background: 'rgba(245,158,11,0.15)', color: '#b45309' } : {}}
+          className="rail-btn"
+          style={rightSidePanel === 'pinned'
+            ? { background: 'rgba(245,158,11,0.16)', color: '#FCD34D' }
+            : { color: 'rgba(251,191,36,0.50)' }}
         >
           <Pin size={18} strokeWidth={2} />
           <span className="rail-label">Pinned</span>
@@ -3778,14 +3806,16 @@ export default function EduTechExOSDashboard() {
         <motion.button
           whileTap={{ scale: 0.88 }}
           onClick={() => setRightSidePanel(rightSidePanel === 'bookmarked' ? null : 'bookmarked')}
-          className={`rail-btn${rightSidePanel === 'bookmarked' ? ' active' : ''}`}
-          style={rightSidePanel === 'bookmarked' ? { background: 'rgba(245,158,11,0.15)', color: '#b45309' } : {}}
+          className="rail-btn"
+          style={rightSidePanel === 'bookmarked'
+            ? { background: 'rgba(245,158,11,0.16)', color: '#FCD34D' }
+            : { color: 'rgba(251,191,36,0.45)' }}
         >
           <Bookmark size={18} strokeWidth={2} />
           <span className="rail-label">Saved</span>
         </motion.button>
 
-        {/* Bottom: Copilot */}
+        {/* Bottom: Copilot — purple accent, more prominent */}
         <div style={{ marginTop: 'auto' }}>
           <motion.button
             whileTap={{ scale: 0.9 }}
@@ -3794,8 +3824,10 @@ export default function EduTechExOSDashboard() {
               if (next === 'ai') trackEvent('ai_copilot_opened', { channel: channel?.name });
               setRightPanel(next);
             }}
-            className={`rail-btn${rightPanel === 'ai' ? ' active' : ''}`}
-            style={rightPanel === 'ai' ? { color: '#7c3aed', background: 'rgba(124,58,237,0.12)' } : {}}
+            className="rail-btn"
+            style={rightPanel === 'ai'
+              ? { color: '#C4B5FD', background: 'rgba(139,92,246,0.22)', border: '1px solid rgba(139,92,246,0.30)' }
+              : { color: 'rgba(167,139,250,0.70)', background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.18)' }}
           >
             <Bot size={18} strokeWidth={2} />
             <span className="rail-label">Copilot</span>
