@@ -49,7 +49,7 @@ type AccessRequest = {
   name: string;
   email: string;
   role: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'invited' | 'approved' | 'rejected';
   requestedAt: string;
 };
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
@@ -57,6 +57,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend
 function LeaveStatusBadge({ status }: { status: string }) {
   const cfg: Record<string, { color: string; bg: string; border: string }> = {
     pending:  { color: '#F59E0B', bg: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.25)' },
+    invited:  { color: '#818CF8', bg: 'rgba(129,140,248,0.10)', border: 'rgba(129,140,248,0.30)' },
     approved: { color: '#10C98A', bg: 'rgba(16,201,138,0.10)',  border: 'rgba(16,201,138,0.25)' },
     rejected: { color: '#EF476F', bg: 'rgba(239,71,111,0.10)',  border: 'rgba(239,71,111,0.25)' },
   };
@@ -719,6 +720,27 @@ export default function AdminPage() {
     toast.success(`${request.name} approved. They can sign in now.`);
   }
 
+  async function sendInvite(request: AccessRequest) {
+    const token = getAdminToken();
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ email: request.email, name: request.name, role: request.role, requestId: request.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? 'Failed to send invite.'); return; }
+
+      // Update local state to show 'invited' badge immediately
+      const updated = accessRequests.map((r) => r.id === request.id ? { ...r, status: 'invited' as const } : r);
+      setAccessRequests(updated);
+      localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify(updated));
+      toast.success(`Invite sent to ${request.email} — link expires in 4.5 hours.`);
+    } catch {
+      toast.error('Could not reach server. Try again.');
+    }
+  }
+
   async function rejectRequest(requestId: string) {
     try {
       const token = getAdminToken();
@@ -1355,15 +1377,20 @@ export default function AdminPage() {
                         </div>
                       )}
                       <div className="flex gap-2">
+                        {/* Primary action: Send Invite (replaced old Approve) */}
                         <button
                           type="button"
-                          onClick={() => approveRequest(request)}
-                          style={{ display: 'flex', height: 36, flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, background: 'linear-gradient(135deg, #10C98A, #059669)', color: '#FFFFFF', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', border: 'none', cursor: 'pointer', transition: 'all .2s', boxShadow: '0 3px 12px rgba(16,201,138,0.22)' }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(16,201,138,0.30)'; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 3px 12px rgba(16,201,138,0.22)'; }}
+                          onClick={() => sendInvite(request)}
+                          disabled={request.status === 'invited'}
+                          style={{ display: 'flex', height: 36, flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, background: request.status === 'invited' ? 'rgba(129,140,248,0.12)' : 'linear-gradient(135deg, #6366f1, #4f46e5)', color: request.status === 'invited' ? '#818CF8' : '#FFFFFF', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', border: request.status === 'invited' ? '1.5px solid rgba(129,140,248,0.35)' : 'none', cursor: request.status === 'invited' ? 'default' : 'pointer', transition: 'all .2s', boxShadow: request.status === 'invited' ? 'none' : '0 3px 12px rgba(99,102,241,0.28)' }}
+                          onMouseEnter={e => { if (request.status !== 'invited') { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(99,102,241,0.38)'; } }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = request.status === 'invited' ? 'none' : '0 3px 12px rgba(99,102,241,0.28)'; }}
                         >
-                          <CheckCircle2 size={13} />
-                          Approve
+                          {request.status === 'invited' ? (
+                            <><CheckCircle2 size={13} /> Invite Sent</>
+                          ) : (
+                            <><Mail size={13} /> Send Invite</>
+                          )}
                         </button>
                         <button
                           type="button"

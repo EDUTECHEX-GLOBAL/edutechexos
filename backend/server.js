@@ -737,6 +737,21 @@ const MeetingAccessSchema = new mongoose.Schema({
 MeetingAccessSchema.index({ messageId: 1, channelId: 1 }, { unique: true });
 const MeetingAccess = mongoose.model('MeetingAccess', MeetingAccessSchema);
 
+// ── Invite tokens — one-time secure links for account creation ────────────────
+const InviteTokenSchema = new mongoose.Schema({
+  email:     { type: String, required: true, lowercase: true, index: true },
+  name:      { type: String, required: true },
+  role:      { type: String, default: 'Member' },
+  requestId: { type: String },           // links back to the AccessRequest _id
+  token:     { type: String, required: true, unique: true },
+  expiresAt: { type: Date, required: true, index: { expireAfterSeconds: 0 } },
+  used:      { type: Boolean, default: false },
+  usedAt:    { type: Date },
+  createdBy: { type: String },           // admin email who sent the invite
+  createdAt: { type: Date, default: Date.now },
+});
+const InviteToken = mongoose.model('InviteToken', InviteTokenSchema);
+
 // ── Revoked-email set — populated immediately when admin deletes a user.
 // Blocks their JWT on every subsequent API call without a DB round-trip.
 // Resets on server restart, but deleted users can't log in again (DB record gone)
@@ -3560,6 +3575,146 @@ app.delete('/api/channels/:id', authMiddleware, async (req, res) => {
     await logAudit(req, 'channel.deleted', '', '', { channelId: req.params.id, name: channel.name });
     res.json({ success: true });
   } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// ── Invite Token routes ───────────────────────────────────────────────────────
+
+// POST /api/admin/invite — admin sends a one-time invite link to a user
+app.post('/api/admin/invite', requireAdmin, async (req, res) => {
+  try {
+    const { email, name, role, requestId } = req.body;
+    if (!email || !name) return res.status(400).json({ success: false, error: 'email and name are required.' });
+    const emailClean = String(email).trim().toLowerCase();
+
+    // Invalidate any existing unused tokens for this email so only the latest link works
+    await InviteToken.deleteMany({ email: emailClean, used: false });
+
+    const token     = crypto.randomBytes(32).toString('hex'); // 64-char hex
+    const expiresAt = new Date(Date.now() + 4.5 * 60 * 60 * 1000); // 4.5 hours
+
+    await new InviteToken({
+      email: emailClean, name, role: role || 'Member',
+      requestId: requestId || null,
+      token, expiresAt, createdBy: req.user.email,
+    }).save();
+
+    // Mark the access request as 'invited' so admin sees the status change
+    if (requestId) {
+      await AccessRequest.findByIdAndUpdate(requestId, { $set: { status: 'invited' } });
+    }
+
+    const appUrl    = process.env.APP_URL || 'https://edutechexos.vercel.app';
+    const inviteUrl = `${appUrl}/invite?token=${token}`;
+    const expireStr = expiresAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+
+    await sendBrevoEmail({
+      to: [{ email: emailClean, name }],
+      subject: `You're invited to EduTechExOS Workspace`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#FAF8F5;border-radius:12px;">
+          <div style="background:linear-gradient(135deg,#191E2F,#252D45);border-radius:10px;padding:28px;text-align:center;margin-bottom:24px;">
+            <h1 style="color:#fff;margin:0;font-size:22px;letter-spacing:-0.5px;">EduTechExOS</h1>
+            <p style="color:rgba(255,255,255,0.55);margin:6px 0 0;font-size:13px;">Team Operating System</p>
+          </div>
+          <h2 style="color:#1E2636;font-size:20px;margin:0 0 10px;">Hello ${name}! 👋</h2>
+          <p style="color:#4A5578;font-size:14px;line-height:1.65;margin:0 0 20px;">
+            You have been invited to join the <strong>EduTechExOS</strong> workspace by the admin.<br/>
+            Click the button below to set your password and activate your account.
+          </p>
+          <div style="background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:16px 20px;margin-bottom:20px;">
+            <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#9BA6D3;text-transform:uppercase;letter-spacing:1px;">Your invite details</p>
+            <p style="margin:6px 0;font-size:13px;color:#4A5578;"><strong>Email:</strong> ${emailClean}</p>
+            <p style="margin:6px 0;font-size:13px;color:#4A5578;"><strong>Role:</strong> ${role || 'Member'}</p>
+            <p style="margin:6px 0;font-size:13px;color:#EF476F;"><strong>⏰ Link expires:</strong> Today at ${expireStr} IST (4.5 hours)</p>
+          </div>
+          <div style="text-align:center;margin:28px 0;">
+            <a href="${inviteUrl}" style="display:inline-block;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;text-decoration:none;padding:15px 36px;border-radius:10px;font-size:15px;font-weight:700;letter-spacing:0.3px;box-shadow:0 4px 15px rgba(99,102,241,0.35);">
+              Accept Invite &amp; Set Password →
+            </a>
+          </div>
+          <p style="color:#94a3b8;font-size:12px;text-align:center;line-height:1.6;">
+            This link is personal — do not share it.<br/>
+            It can only be used once and expires in 4.5 hours.
+          </p>
+          <hr style="border:none;border-top:1px solid #E2E8F0;margin:24px 0;"/>
+          <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS · Powered by EduTechEx</p>
+        </div>`,
+    });
+
+    await logAudit(req, 'member.invited', emailClean, name, { role, expiresAt });
+    res.json({ success: true, message: `Invite sent to ${emailClean}` });
+  } catch (err) {
+    console.error('[/api/admin/invite]', err);
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// GET /api/invite/validate?token=xxx — public, validates an invite token
+app.get('/api/invite/validate', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ success: false, error: 'token is required.' });
+
+    const invite = await InviteToken.findOne({ token: String(token) }).lean();
+    if (!invite)       return res.status(404).json({ success: false, error: 'Invalid invite link.' });
+    if (invite.used)   return res.status(410).json({ success: false, error: 'This invite has already been used.' });
+    if (invite.expiresAt < new Date()) return res.status(410).json({ success: false, error: 'This invite link has expired. Ask the admin to resend.' });
+
+    res.json({ success: true, email: invite.email, name: invite.name, role: invite.role, expiresAt: invite.expiresAt.toISOString() });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// POST /api/invite/accept — user sets their password via invite link
+app.post('/api/invite/accept', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ success: false, error: 'token and password are required.' });
+    if (String(password).length < 8) return res.status(400).json({ success: false, error: 'Password must be at least 8 characters.' });
+
+    const invite = await InviteToken.findOne({ token: String(token) }).lean();
+    if (!invite)       return res.status(404).json({ success: false, error: 'Invalid invite link.' });
+    if (invite.used)   return res.status(410).json({ success: false, error: 'This invite has already been used.' });
+    if (invite.expiresAt < new Date()) return res.status(410).json({ success: false, error: 'This invite link has expired. Ask the admin to resend.' });
+
+    const hashed = await bcrypt.hash(String(password), 12);
+
+    // Approve the access request (upsert — handles case where no DB record existed)
+    await AccessRequest.findOneAndUpdate(
+      { email: invite.email },
+      { $set: { status: 'approved', password: hashed, name: invite.name, role: invite.role } },
+      { upsert: true, new: true }
+    );
+
+    // Mark token as used
+    await InviteToken.findOneAndUpdate({ token: String(token) }, { $set: { used: true, usedAt: new Date() } });
+
+    // Broadcast so admin dashboard refreshes instantly
+    io.emit('access_approved', { email: invite.email });
+    io.emit('member_updated', { email: invite.email, status: 'approved' });
+
+    // Notify admin
+    const adminEmail = process.env.ADMIN_NOTIFY_EMAIL || (VALID_ACCOUNTS.find(a => a.role === 'Admin') || {}).email;
+    const appUrl = process.env.APP_URL || 'https://edutechexos.vercel.app';
+    if (adminEmail) {
+      sendBrevoEmail({
+        to: [{ email: adminEmail }],
+        subject: `✅ ${invite.name} accepted their invite`,
+        html: `<div style="font-family:Arial,sans-serif;max-width:480px;padding:24px;background:#F8FAFC;border-radius:10px;">
+          <h2 style="color:#1E2636;margin:0 0 12px;">New team member joined 🎉</h2>
+          <p style="color:#4A5578;font-size:14px;"><strong>${invite.name}</strong> (${invite.email}) accepted their invite and set their password.</p>
+          <p style="color:#4A5578;font-size:14px;">Role: <strong>${invite.role}</strong></p>
+          <a href="${appUrl}/admin" style="display:inline-block;margin-top:16px;background:#3E4A89;color:#fff;text-decoration:none;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;">View in Admin Panel →</a>
+        </div>`,
+      }).catch(() => {});
+    }
+
+    res.json({ success: true, message: 'Account activated! You can now sign in.' });
+  } catch (err) {
+    console.error('[/api/invite/accept]', err);
     res.status(500).json({ success: false, error: String(err) });
   }
 });
