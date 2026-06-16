@@ -3719,6 +3719,47 @@ app.post('/api/invite/accept', async (req, res) => {
   }
 });
 
+// ── POST /api/admin/migrate-encrypt — one-time migration: encrypts all plain-text messages ──
+app.post('/api/admin/migrate-encrypt', requireAdmin, async (req, res) => {
+  try {
+    if (!_encKey()) {
+      return res.status(500).json({ success: false, error: 'ENCRYPTION_KEY is not set or invalid on this server.' });
+    }
+
+    // Find all messages where text does NOT start with 'enc:'
+    const plainMessages = await Message.find(
+      { text: { $exists: true, $not: /^enc:/ } },
+      { _id: 1, text: 1 }
+    ).lean();
+
+    if (plainMessages.length === 0) {
+      return res.json({ success: true, message: 'All messages are already encrypted.', encrypted: 0 });
+    }
+
+    const ops = plainMessages
+      .filter(m => m.text && typeof m.text === 'string')
+      .map(m => ({
+        updateOne: {
+          filter: { _id: m._id },
+          update: { $set: { text: encryptField(m.text) } },
+        },
+      }));
+
+    const result = await Message.bulkWrite(ops, { ordered: false });
+    console.log(`[migrate-encrypt] Encrypted ${result.modifiedCount} messages by admin ${req.user.email}`);
+
+    res.json({
+      success: true,
+      message: `Successfully encrypted ${result.modifiedCount} message(s).`,
+      encrypted: result.modifiedCount,
+      total: plainMessages.length,
+    });
+  } catch (err) {
+    console.error('[migrate-encrypt]', err);
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
 // ── GET /api/audit-log — admin-only immutable action history ─────────────────
 app.get('/api/audit-log', authMiddleware, async (req, res) => {
   if (!req.user || req.user.role !== 'Admin') {
