@@ -60,8 +60,43 @@ function makeRateLimiter({ windowMs, max, message }) {
   };
 }
 // nodemailer replaced by Brevo HTTP API (no IP-whitelist issues)
-const jwt = require('jsonwebtoken');
+const jwt    = require('jsonwebtoken');
+const crypto = require('crypto');
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+
+// ── AES-256-GCM encryption helpers ───────────────────────────────────────────
+// ENCRYPTION_KEY env var must be exactly 64 hex chars (32 bytes).
+// Generate once: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+function _encKey() {
+  const hex = process.env.ENCRYPTION_KEY || '';
+  return hex.length === 64 ? Buffer.from(hex, 'hex') : null;
+}
+function encryptField(text) {
+  const key = _encKey();
+  if (!key || !text || typeof text !== 'string') return text;
+  const iv     = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const enc    = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
+  const tag    = cipher.getAuthTag();
+  return `enc:${iv.toString('hex')}:${tag.toString('hex')}:${enc.toString('hex')}`;
+}
+function decryptField(val) {
+  if (!val || typeof val !== 'string' || !val.startsWith('enc:')) return val;
+  try {
+    const key = _encKey();
+    if (!key) return val;
+    const parts = val.split(':');
+    // format: enc:<iv>:<tag>:<enc>  — but enc itself may contain colons if base64; use fixed-position split
+    const iv  = Buffer.from(parts[1], 'hex');
+    const tag = Buffer.from(parts[2], 'hex');
+    const enc = Buffer.from(parts.slice(3).join(':'), 'hex');
+    const dec = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    dec.setAuthTag(tag);
+    return Buffer.concat([dec.update(enc), dec.final()]).toString('utf8');
+  } catch {
+    return val; // graceful fallback for old un-encrypted records
+  }
+}
 
 const JWT_SECRET = process.env.JWT_SECRET || 'edutechexos-jwt-secret-2026';
 const JWT_EXPIRY = '7d';
@@ -271,7 +306,8 @@ cron.schedule('30 2 * * *', async () => {
   console.log('[digest] Running daily email digest…');
   try {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const msgs = await Message.find({ timestamp: { $gte: since } }).sort({ timestamp: 1 }).lean();
+    const msgs = (await Message.find({ timestamp: { $gte: since } }).sort({ timestamp: 1 }).lean())
+      .map(m => ({ ...m, text: decryptField(m.text) }));
     if (!msgs.length) { console.log('[digest] No messages in last 24 h — skipping.'); return; }
 
     // Group by channelId, skip DM rooms
@@ -577,6 +613,34 @@ const RemovedMemberSchema = new mongoose.Schema({
   removedAt: { type: Date, default: Date.now },
 });
 const RemovedMember = mongoose.model('RemovedMember', RemovedMemberSchema);
+
+// ── AuditLog schema — every admin action leaves a permanent, immutable record ──
+const AuditLogSchema = new mongoose.Schema({
+  adminEmail:  { type: String, required: true },
+  adminName:   { type: String, default: '' },
+  action:      { type: String, required: true }, // e.g. 'leave.approved', 'member.removed'
+  target:      { type: String, default: '' },    // email of the affected user
+  targetName:  { type: String, default: '' },
+  details:     { type: mongoose.Schema.Types.Mixed, default: {} },
+  timestamp:   { type: Date, default: Date.now, index: true },
+});
+AuditLogSchema.index({ timestamp: -1 });
+const AuditLog = mongoose.model('AuditLog', AuditLogSchema);
+
+async function logAudit(req, action, target = '', targetName = '', details = {}) {
+  try {
+    await AuditLog.create({
+      adminEmail: req.user?.email  || 'system',
+      adminName:  req.user?.name   || '',
+      action,
+      target,
+      targetName,
+      details,
+    });
+  } catch (e) {
+    console.error('[audit] Failed to log:', e.message);
+  }
+}
 
 // ── UserSettings schema — stores per-user preferences synced across devices ─────
 const UserSettingsSchema = new mongoose.Schema({
@@ -893,6 +957,11 @@ app.patch('/api/access-requests/:id', authMiddleware, async (req, res) => {
     if (status === 'approved') io.emit('access_approved', { email: rest.email });
     if (status === 'rejected') io.emit('access_rejected', { email: rest.email });
 
+    // Audit
+    if (status === 'approved') await logAudit(req, 'member.approved', rest.email, rest.name, { role: rest.role });
+    else if (status === 'rejected') await logAudit(req, 'member.rejected', rest.email, rest.name, {});
+    else if (role !== undefined) await logAudit(req, 'member.role_changed', rest.email, rest.name, { role });
+
     // ── Email notifications on approval / rejection ────────────────────────
     const appUrl = process.env.APP_URL || 'https://edutechexos.vercel.app';
     if (status === 'approved') {
@@ -1036,6 +1105,8 @@ app.delete('/api/access-requests/:id', authMiddleware, async (req, res) => {
     io.emit('member_removed', { memberId: `member-${id}` });
     io.emit('user_forcefully_removed', { email: removedEmail.toLowerCase() });
 
+    await logAudit(req, 'member.removed', removedEmail, target.name || '', {});
+
     res.json({ success: true, removedEmail });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
@@ -1136,6 +1207,11 @@ app.patch('/api/leaves/:id', authMiddleware, async (req, res) => {
     ).lean();
     if (!updated) return res.status(404).json({ success: false, error: 'Leave not found.' });
     const { _id, __v, ...rest } = updated;
+
+    // Audit
+    await logAudit(req, `leave.${status}`, rest.email, rest.name, {
+      leaveId: _id.toString(), type: rest.type, startDate: rest.startDate, adminNote: adminNote || '',
+    });
 
     // Emit to the user's browser
     io.emit('leave_updated', { leaveId: _id.toString(), email: rest.email, status, adminNote: rest.adminNote });
@@ -2356,6 +2432,7 @@ function formatMessage(msg, requestingUser) {
   return {
     ...rest,
     id: _id.toString(),
+    text: decryptField(rest.text),
     timestamp: rest.timestamp instanceof Date ? rest.timestamp.toISOString() : rest.timestamp,
     ...(rest.editedAt ? { editedAt: rest.editedAt instanceof Date ? rest.editedAt.toISOString() : rest.editedAt } : {}),
   };
@@ -2669,6 +2746,8 @@ app.post('/api/messages', async (req, res) => {
     if (userEmail && !messageData.senderEmail) {
       messageData.senderEmail = userEmail;
     }
+    // Encrypt message body at rest
+    if (messageData.text) messageData.text = encryptField(messageData.text);
     const newMessage = new Message({
       ...messageData,
       clientId: id,
@@ -2731,6 +2810,8 @@ app.patch('/api/messages/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body; // { text, editedAt } | { reactions } | { poll }
+    // Re-encrypt edited text before storing
+    if (updates.text !== undefined) updates.text = encryptField(updates.text);
 
     const updated = await Message.findByIdAndUpdate(
       id,
@@ -2779,7 +2860,7 @@ app.get('/api/search', authMiddleware, async (req, res) => {
     const results = [
       ...msgDocs.map(d => ({
         type: 'message', id: String(d._id), channelId: d.channelId,
-        text: d.text, sender: d.sender, timestamp: d.timestamp, score: d.score,
+        text: decryptField(d.text), sender: d.sender, timestamp: d.timestamp, score: d.score,
       })),
       ...wikiDocs.map(d => ({
         type: 'wiki', id: String(d._id), channelId: d.channelId,
@@ -2799,11 +2880,13 @@ app.get('/api/search', authMiddleware, async (req, res) => {
     if (String(err).includes('text index')) {
       const q = String(req.query.q || '').trim();
       const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      const msgs = await Message.find({ text: re }).limit(20).lean();
+      // Fallback: load recent messages, decrypt, then regex-match in app
+      const allMsgs = await Message.find({}).sort({ timestamp: -1 }).limit(500).lean();
+      const matched = allMsgs.filter(d => re.test(decryptField(d.text) || '')).slice(0, 20);
       return res.json({
         success: true,
-        results: msgs.map(d => ({ type: 'message', id: String(d._id), channelId: d.channelId, text: d.text, sender: d.sender, timestamp: d.timestamp })),
-        total: msgs.length,
+        results: matched.map(d => ({ type: 'message', id: String(d._id), channelId: d.channelId, text: decryptField(d.text), sender: d.sender, timestamp: d.timestamp })),
+        total: matched.length,
       });
     }
     res.status(500).json({ success: false, error: String(err) });
@@ -3388,6 +3471,7 @@ app.post('/api/channels', authMiddleware, async (req, res) => {
     const saved = await channel.save();
     const { _id, __v, ...rest } = saved.toObject();
     io.emit('channel_created', { ...rest, id: _id });
+    await logAudit(req, 'channel.created', '', '', { channelId: _id, name: id });
     res.json({ success: true, channel: { ...rest, id: _id } });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
@@ -3425,7 +3509,24 @@ app.delete('/api/channels/:id', authMiddleware, async (req, res) => {
     if (channel.isDefault) return res.status(400).json({ success: false, error: 'Default channels cannot be deleted.' });
     await WorkspaceChannel.findByIdAndDelete(req.params.id);
     io.emit('channel_deleted', { channelId: req.params.id });
+    await logAudit(req, 'channel.deleted', '', '', { channelId: req.params.id, name: channel.name });
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
+// ── GET /api/audit-log — admin-only immutable action history ─────────────────
+app.get('/api/audit-log', authMiddleware, async (req, res) => {
+  if (!req.user || req.user.role !== 'Admin') {
+    return res.status(403).json({ success: false, error: 'Admin access required.' });
+  }
+  try {
+    const limit  = Math.min(parseInt(req.query.limit) || 200, 500);
+    const before = req.query.before ? new Date(req.query.before) : null;
+    const filter = before ? { timestamp: { $lt: before } } : {};
+    const logs   = await AuditLog.find(filter).sort({ timestamp: -1 }).limit(limit).lean();
+    res.json({ success: true, logs: logs.map(({ _id, __v, ...l }) => ({ ...l, id: _id.toString() })) });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }

@@ -19,6 +19,7 @@ import {
   Send,
   Settings,
   ShieldCheck,
+  ScrollText,
   Trash2,
   UserPlus,
   Users,
@@ -112,7 +113,7 @@ export default function AdminPage() {
     at: string;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<
-    'people' | 'requests' | 'channels' | 'broadcast' | 'activity' | 'attendance' | 'desktop' | 'availability' | 'leaves' | 'leave-calendar'
+    'people' | 'requests' | 'channels' | 'broadcast' | 'activity' | 'attendance' | 'desktop' | 'availability' | 'leaves' | 'leave-calendar' | 'audit'
   >('people');
   type AWRecord = {
     email: string; name: string; currentApp: string; currentTitle: string;
@@ -134,6 +135,7 @@ export default function AdminPage() {
   };
   const [liveUsers, setLiveUsers] = useState<LiveUser[]>([]);
   const [liveLoading, setLiveLoading] = useState(false);
+  const [expandedDesktopEmail, setExpandedDesktopEmail] = useState<string | null>(null);
 
   type HistoryUser = {
     email: string; name: string;
@@ -146,6 +148,29 @@ export default function AdminPage() {
     return new Date(Date.now() + istOffset).toISOString().slice(0, 10);
   });
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  type AuditEntry = {
+    id: string; adminEmail: string; adminName: string;
+    action: string; target: string; targetName: string;
+    details: Record<string, unknown>; timestamp: string;
+  };
+  const [auditLogs, setAuditLogs]       = useState<AuditEntry[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+
+  const fetchAuditLog = useCallback(async () => {
+    const raw = localStorage.getItem('edutechex_token');
+    if (!raw) return;
+    setAuditLoading(true);
+    try {
+      const { token } = JSON.parse(raw);
+      const r = await fetch('https://edutechexos-backend.onrender.com/api/audit-log?limit=200', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await r.json();
+      if (data.success) setAuditLogs(data.logs);
+    } catch { /* network error */ }
+    finally { setAuditLoading(false); }
+  }, []);
 
   type LeaveRecord = {
     id: string; email: string; name: string;
@@ -381,6 +406,10 @@ export default function AdminPage() {
   useEffect(() => {
     if (activeTab === 'desktop') fetchHistory();
   }, [activeTab, fetchHistory]);
+
+  useEffect(() => {
+    if (activeTab === 'audit') fetchAuditLog();
+  }, [activeTab, fetchAuditLog]);
 
   const workspaceChannels = useMemo(
     () => channels.filter((c) => !c.id.startsWith('member-')),
@@ -813,6 +842,7 @@ export default function AdminPage() {
     { id: 'availability' as const, Icon: CalendarDays, label: 'Availability', badge: 0,                accent: '#6366f1', accentBg: 'rgba(99,102,241,0.10)',  accentBorder: 'rgba(99,102,241,0.22)',  animClass: 'click-cell-bloom' },
     { id: 'leaves' as const,         Icon: CalendarX,    label: 'Leaves',         badge: leaves.filter(l => l.status === 'pending').length, accent: '#F59E0B', accentBg: 'rgba(245,158,11,0.10)', accentBorder: 'rgba(245,158,11,0.22)', animClass: 'click-cell-bloom' },
     { id: 'leave-calendar' as const,  Icon: CalendarDays, label: 'Leave Calendar', badge: 0,                                                     accent: '#10C98A', accentBg: 'rgba(16,201,138,0.10)', accentBorder: 'rgba(16,201,138,0.22)', animClass: 'click-cell-bloom' },
+    { id: 'audit' as const,           Icon: ScrollText,   label: 'Audit Log',      badge: 0,                                                     accent: '#6366F1', accentBg: 'rgba(99,102,241,0.10)',  accentBorder: 'rgba(99,102,241,0.22)',  animClass: 'click-bar-rise' },
   ];
 
   const activeTabMeta = TABS.find(t => t.id === activeTab)!;
@@ -1946,11 +1976,16 @@ export default function AdminPage() {
 
             const refreshAll = () => { fetchLiveUsers(); fetchHistory(viewDate); fetchAwData(viewDate); };
 
+            const toggleExpand = (email: string) =>
+              setExpandedDesktopEmail(prev => prev === email ? null : email);
+
             return (
-            <div style={{ padding: '28px 28px 40px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div style={{ padding: '24px 24px 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
               <style>{`
-                @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(1.4)} }
-                .live-dot { animation: pulse-dot 1.8s ease-in-out infinite; }
+                @keyframes pdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(1.5)}}
+                .pdot{animation:pdot 1.8s ease-in-out infinite;}
+                .drow{transition:background .15s;}
+                .drow:hover{background:rgba(99,102,241,0.04)!important;}
               `}</style>
 
               {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
@@ -1990,128 +2025,156 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* â”€â”€ Member cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-              {merged.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(90,95,128,0.50)', fontSize: 13 }}>
-                  No team members yet.
+              {/* ── Member list (accordion) ──────────────────────────────────── */}
+              <div style={{ borderRadius: 18, border: '1.5px solid rgba(26,27,58,0.09)', background: '#fff', overflow: 'hidden', boxShadow: '0 2px 12px rgba(26,27,58,0.04)' }}>
+
+                {/* Column headers */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 60px 60px 60px 28px', gap: 0, padding: '9px 20px', background: 'rgba(26,27,58,0.03)', borderBottom: '1px solid rgba(26,27,58,0.07)' }}>
+                  {['Member', 'Status', 'Time', 'Msgs', 'Tasks', ''].map((h) => (
+                    <span key={h} style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.45)' }}>{h}</span>
+                  ))}
                 </div>
-              ) : merged.map((person) => {
-                const isLive    = person.status === 'live';
-                const isAway    = person.status === 'away';
-                const topApps   = person.appBreakdown.slice(0, 6);
-                const maxMins   = topApps[0]?.minutes || 1;
-                const inAppPct  = Math.min(100, Math.round((person.todayMinutes / 480) * 100));
-                const icon      = panelIcon[person.currentPanel] ?? 'ðŸ–¥ï¸';
 
-                const borderColor = isLive ? 'rgba(16,185,129,0.30)' : isAway ? 'rgba(245,158,11,0.25)' : 'rgba(26,27,58,0.08)';
-                const statusDot   = isLive ? '#10B981' : isAway ? '#F59E0B' : '#CBD5E1';
-                const statusLabel = isLive ? 'Online now' : isAway ? `Last seen ${ago(person.lastSeen)}` : 'Not active today';
-                const statusBg    = isLive ? 'rgba(16,185,129,0.10)' : isAway ? 'rgba(245,158,11,0.10)' : 'rgba(203,213,225,0.30)';
-                const statusFg    = isLive ? '#065F46' : isAway ? '#92400E' : '#94A3B8';
+                {merged.length === 0 ? (
+                  <div style={{ padding: '48px 0', textAlign: 'center', color: 'rgba(90,95,128,0.45)', fontSize: 13 }}>No team members yet.</div>
+                ) : merged.map((person, idx) => {
+                  const isLive     = person.status === 'live';
+                  const isAway     = person.status === 'away';
+                  const isExpanded = expandedDesktopEmail === person.email;
+                  const topApps    = person.appBreakdown.slice(0, 8);
+                  const maxMins    = topApps[0]?.minutes || 1;
+                  const inAppPct   = Math.min(100, Math.round((person.todayMinutes / 480) * 100));
+                  const icon       = panelIcon[person.currentPanel] || '🖥️';
+                  const dotColor   = isLive ? '#10B981' : isAway ? '#F59E0B' : '#CBD5E1';
+                  const statusText = isLive ? 'Online' : isAway ? ago(person.lastSeen) : 'Offline';
+                  const statusFg   = isLive ? '#059669' : isAway ? '#B45309' : '#94A3B8';
 
-                return (
-                  <div key={person.email} style={{ borderRadius: 18, border: `1.5px solid ${borderColor}`, background: '#fff', overflow: 'hidden', boxShadow: isLive ? '0 4px 20px rgba(16,185,129,0.08)' : '0 1px 4px rgba(26,27,58,0.04)', transition: 'box-shadow .2s' }}>
-
-                    {/* Card top row */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 22px', borderBottom: (isLive || isAway) && (person.currentActivity || topApps.length > 0) ? '1px solid rgba(26,27,58,0.06)' : 'none' }}>
-                      {/* Avatar */}
-                      <div style={{ position: 'relative', flexShrink: 0 }}>
-                        <div style={{ width: 44, height: 44, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900, color: '#fff', background: person.color }}>
-                          {person.initials}
+                  return (
+                    <div key={person.email}>
+                      {/* ── Collapsed row ── */}
+                      <div
+                        className="drow"
+                        onClick={() => toggleExpand(person.email)}
+                        style={{
+                          display: 'grid', gridTemplateColumns: '1fr 120px 60px 60px 60px 28px',
+                          alignItems: 'center', padding: '13px 20px', cursor: 'pointer',
+                          borderBottom: isExpanded ? 'none' : idx < merged.length - 1 ? '1px solid rgba(26,27,58,0.06)' : 'none',
+                          background: isExpanded ? 'rgba(99,102,241,0.03)' : '#fff',
+                        }}
+                      >
+                        {/* Name + avatar */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                          <div style={{ position: 'relative', flexShrink: 0 }}>
+                            <div style={{ width: 34, height: 34, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#fff', background: person.color }}>
+                              {person.initials}
+                            </div>
+                            <div className={isLive ? 'pdot' : ''} style={{ position: 'absolute', bottom: -2, right: -2, width: 10, height: 10, borderRadius: '50%', background: dotColor, border: '2px solid #fff' }} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{person.name}</p>
+                            <p style={{ fontSize: 10.5, color: 'rgba(90,95,128,0.50)', margin: 0 }}>{person.role}</p>
+                          </div>
                         </div>
-                        <div style={{ position: 'absolute', bottom: -2, right: -2, width: 12, height: 12, borderRadius: '50%', background: statusDot, border: '2.5px solid #fff' }} className={isLive ? 'live-dot' : ''} />
+
+                        {/* Status */}
+                        <span style={{ fontSize: 11, fontWeight: 700, color: statusFg }}>{statusText}</span>
+
+                        {/* Time */}
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#10B981' }}>{fmt(person.todayMinutes)}</span>
+
+                        {/* Msgs */}
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#6366F1' }}>{person.messageCount}</span>
+
+                        {/* Tasks */}
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B' }}>{person.taskCount}</span>
+
+                        {/* Chevron */}
+                        <span style={{ fontSize: 14, color: 'rgba(90,95,128,0.35)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▾</span>
                       </div>
 
-                      {/* Name + status */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 15, fontWeight: 800, color: '#1A1B3A', letterSpacing: '-0.01em' }}>{person.name}</span>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(90,95,128,0.45)', textTransform: 'uppercase', letterSpacing: '.08em' }}>{person.role}</span>
-                          <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 9px', borderRadius: 20, background: statusBg, color: statusFg }}>
-                            {statusLabel}
-                          </span>
-                          {!person.agentConnected && (
-                            <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: 'rgba(99,102,241,0.09)', color: '#6366F1' }}>
-                              ðŸ’» Agent not set up
-                            </span>
+                      {/* ── Expanded detail panel ── */}
+                      {isExpanded && (
+                        <div style={{ borderTop: '1px solid rgba(99,102,241,0.10)', borderBottom: idx < merged.length - 1 ? '1px solid rgba(26,27,58,0.06)' : 'none', background: 'rgba(99,102,241,0.02)', padding: '20px 22px 22px' }}>
+
+                          {/* Current activity */}
+                          {person.currentActivity && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+                              <span style={{ fontSize: 18 }}>{icon}</span>
+                              <div>
+                                <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(90,95,128,0.50)', textTransform: 'uppercase', letterSpacing: '.10em', margin: 0 }}>Right now</p>
+                                <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', margin: 0 }}>{person.currentActivity}</p>
+                              </div>
+                            </div>
                           )}
-                        </div>
-                        {person.currentActivity && (
-                          <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.65)', margin: 0 }}>
-                            {icon} {person.currentActivity}
-                          </p>
-                        )}
-                      </div>
 
-                      {/* Stats */}
-                      <div style={{ display: 'flex', gap: 18, flexShrink: 0, textAlign: 'center' }}>
-                        <div>
-                          <p style={{ fontSize: 16, fontWeight: 900, color: '#10B981', lineHeight: 1, margin: 0 }}>{fmt(person.todayMinutes)}</p>
-                          <p style={{ fontSize: 9.5, color: 'rgba(90,95,128,0.45)', marginTop: 3 }}>in-app</p>
-                        </div>
-                        <div>
-                          <p style={{ fontSize: 16, fontWeight: 900, color: '#6366F1', lineHeight: 1, margin: 0 }}>{person.messageCount}</p>
-                          <p style={{ fontSize: 9.5, color: 'rgba(90,95,128,0.45)', marginTop: 3 }}>msgs</p>
-                        </div>
-                        <div>
-                          <p style={{ fontSize: 16, fontWeight: 900, color: '#F59E0B', lineHeight: 1, margin: 0 }}>{person.taskCount}</p>
-                          <p style={{ fontSize: 9.5, color: 'rgba(90,95,128,0.45)', marginTop: 3 }}>tasks</p>
-                        </div>
-                      </div>
-                    </div>
+                          {/* Quick stats */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
+                            {[
+                              { label: 'In-app time', value: fmt(person.todayMinutes), color: '#10B981', bg: 'rgba(16,185,129,0.08)' },
+                              { label: 'Messages sent', value: String(person.messageCount), color: '#6366F1', bg: 'rgba(99,102,241,0.08)' },
+                              { label: 'Tasks updated', value: String(person.taskCount), color: '#F59E0B', bg: 'rgba(245,158,11,0.08)' },
+                            ].map(({ label, value, color, bg }) => (
+                              <div key={label} style={{ borderRadius: 12, background: bg, padding: '12px 14px' }}>
+                                <p style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.50)', margin: '0 0 4px' }}>{label}</p>
+                                <p style={{ fontSize: 20, fontWeight: 900, color, margin: 0, lineHeight: 1 }}>{value}</p>
+                              </div>
+                            ))}
+                          </div>
 
-                    {/* In-app time bar */}
-                    {person.todayMinutes > 0 && (
-                      <div style={{ padding: '10px 22px', borderBottom: topApps.length > 0 ? '1px solid rgba(26,27,58,0.06)' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(90,95,128,0.40)', textTransform: 'uppercase', letterSpacing: '.08em', whiteSpace: 'nowrap' }}>In-app</span>
-                        <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'rgba(16,185,129,0.10)' }}>
-                          <div style={{ height: '100%', borderRadius: 3, width: `${inAppPct}%`, background: 'linear-gradient(90deg,#10B981,#0DAFCE)', transition: 'width .5s' }} />
-                        </div>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#10B981', whiteSpace: 'nowrap' }}>{inAppPct}% of workday</span>
-                      </div>
-                    )}
+                          {/* In-app time bar */}
+                          {person.todayMinutes > 0 && (
+                            <div style={{ marginBottom: 20 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.45)' }}>In-app (EduTechExOS)</span>
+                                <span style={{ fontSize: 10, fontWeight: 700, color: '#10B981' }}>{inAppPct}% of workday</span>
+                              </div>
+                              <div style={{ height: 8, borderRadius: 4, background: 'rgba(16,185,129,0.12)' }}>
+                                <div style={{ height: '100%', borderRadius: 4, width: `${inAppPct}%`, background: 'linear-gradient(90deg,#10B981,#0DAFCE)', transition: 'width .5s' }} />
+                              </div>
+                            </div>
+                          )}
 
-                    {/* Desktop app breakdown */}
-                    {topApps.length > 0 && (
-                      <div style={{ padding: '14px 22px 16px' }}>
-                        <p style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.40)', marginBottom: 10 }}>
-                          Desktop Apps â€” {fmt(person.totalActiveMinutes)} tracked
-                          {person.isAfk && <span style={{ marginLeft: 8, color: '#D97706', fontWeight: 700 }}>Â· AFK now</span>}
-                        </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {topApps.map(({ app, minutes }) => {
-                            const pct      = Math.max(3, Math.round((minutes / maxMins) * 100));
-                            const isDist   = isDistraction(app);
-                            const barColor = isDist ? 'linear-gradient(90deg,#EF476F,#F59E0B)' : 'linear-gradient(90deg,#6366F1,#818CF8)';
-                            return (
-                              <div key={app} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <span style={{ width: 150, fontSize: 12, fontWeight: isDist ? 700 : 500, color: isDist ? '#EF476F' : '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                  {isDist ? 'âš  ' : ''}{app}
-                                </span>
-                                <div style={{ flex: 1, height: 7, borderRadius: 4, background: isDist ? 'rgba(239,71,111,0.09)' : 'rgba(99,102,241,0.09)' }}>
-                                  <div style={{ height: '100%', borderRadius: 4, width: `${pct}%`, background: barColor, transition: 'width .5s' }} />
-                                </div>
-                                <span style={{ width: 52, fontSize: 11, fontWeight: 700, color: isDist ? '#EF476F' : '#6366F1', textAlign: 'right', flexShrink: 0 }}>
-                                  {fmt(minutes)}
+                          {/* Desktop app breakdown */}
+                          {topApps.length > 0 ? (
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.45)' }}>Desktop Apps</span>
+                                <span style={{ fontSize: 10.5, fontWeight: 700, color: '#6366F1' }}>
+                                  {fmt(person.totalActiveMinutes)} tracked
+                                  {person.isAfk && <span style={{ marginLeft: 8, color: '#D97706' }}> · AFK now</span>}
                                 </span>
                               </div>
-                            );
-                          })}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                {topApps.map(({ app, minutes }) => {
+                                  const pct    = Math.max(4, Math.round((minutes / maxMins) * 100));
+                                  const isDist = isDistraction(app);
+                                  return (
+                                    <div key={app} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                      <span style={{ width: 140, fontSize: 12, fontWeight: isDist ? 700 : 500, color: isDist ? '#EF476F' : '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                        {isDist ? '⚠ ' : ''}{app}
+                                      </span>
+                                      <div style={{ flex: 1, height: 8, borderRadius: 4, background: isDist ? 'rgba(239,71,111,0.10)' : 'rgba(99,102,241,0.10)' }}>
+                                        <div style={{ height: '100%', borderRadius: 4, width: `${pct}%`, background: isDist ? 'linear-gradient(90deg,#EF476F,#F59E0B)' : 'linear-gradient(90deg,#6366F1,#818CF8)', transition: 'width .5s' }} />
+                                      </div>
+                                      <span style={{ width: 48, fontSize: 12, fontWeight: 700, color: isDist ? '#EF476F' : '#6366F1', textAlign: 'right', flexShrink: 0 }}>{fmt(minutes)}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ borderRadius: 10, border: '1.5px dashed rgba(99,102,241,0.20)', padding: '14px 16px', background: 'rgba(99,102,241,0.03)' }}>
+                              <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.55)', margin: 0 }}>
+                                💻 Desktop app tracking not set up — ask this member to follow the setup banner in their sidebar.
+                              </p>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    )}
-
-                    {/* No agent state â€” only for away/offline without AW data */}
-                    {!person.agentConnected && (isLive || isAway) && (
-                      <div style={{ padding: '10px 22px 14px', background: 'rgba(99,102,241,0.03)' }}>
-                        <p style={{ fontSize: 11, color: 'rgba(90,95,128,0.55)', margin: 0 }}>
-                          No desktop app data â€” ask this member to set up the tracking agent from their sidebar.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           );
           })()}
@@ -2261,6 +2324,134 @@ export default function AdminPage() {
             <div className="p-6">
               <div style={{ height: 3, background: 'linear-gradient(90deg, #10C98A, #059669)', borderRadius: 3, marginBottom: 24 }} />
               <AdminLeaveCalendar />
+            </div>
+          )}
+
+          {/* ══════════════════════════════════════════════════════════════
+              TAB: AUDIT LOG
+          ══════════════════════════════════════════════════════════════ */}
+          {activeTab === 'audit' && (
+            <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div style={{ height: 3, background: 'linear-gradient(90deg,#6366F1,#818CF8)', borderRadius: 3 }} />
+
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                  <h2 style={{ fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 800, color: '#1A1B3A', margin: 0, letterSpacing: '-0.02em' }}>
+                    Audit Log
+                  </h2>
+                  <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'rgba(90,95,128,0.60)' }}>
+                    Every admin action is permanently recorded here. Immutable and time-stamped.
+                  </p>
+                </div>
+                <button
+                  onClick={fetchAuditLog}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', background: '#fff', fontSize: 12, fontWeight: 600, color: 'rgba(90,95,128,0.70)', cursor: 'pointer' }}
+                >
+                  <RefreshCw size={13} style={auditLoading ? { animation: 'spin 1s linear infinite' } : {}} />
+                  Refresh
+                </button>
+              </div>
+
+              {/* Legend */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {[
+                  { prefix: 'member',  label: 'Member', color: '#6366F1' },
+                  { prefix: 'leave',   label: 'Leave',  color: '#F59E0B' },
+                  { prefix: 'channel', label: 'Channel',color: '#0DAFCE' },
+                ].map(({ prefix, label, color }) => (
+                  <span key={prefix} style={{ fontSize: 10.5, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: `${color}18`, color, border: `1px solid ${color}33` }}>
+                    {label}
+                  </span>
+                ))}
+              </div>
+
+              {/* Log entries */}
+              {auditLoading ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'rgba(90,95,128,0.55)', fontSize: 13, padding: '48px 0', justifyContent: 'center' }}>
+                  <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Loading audit log…
+                </div>
+              ) : auditLogs.length === 0 ? (
+                <div style={{ borderRadius: 16, border: '1.5px dashed rgba(99,102,241,0.20)', background: 'rgba(99,102,241,0.02)', padding: '52px 32px', textAlign: 'center' }}>
+                  <ScrollText size={28} style={{ margin: '0 auto 12px', color: 'rgba(99,102,241,0.30)' }} />
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(90,95,128,0.60)', margin: 0 }}>No admin actions recorded yet</p>
+                  <p style={{ margin: '4px 0 0', fontSize: 11.5, color: 'rgba(90,95,128,0.40)' }}>Actions will appear here as soon as any admin takes one.</p>
+                </div>
+              ) : (
+                <div style={{ borderRadius: 16, border: '1.5px solid rgba(26,27,58,0.08)', background: '#fff', overflow: 'hidden', boxShadow: '0 2px 12px rgba(26,27,58,0.04)' }}>
+                  {/* Column headers */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 180px 200px', padding: '9px 20px', background: 'rgba(26,27,58,0.03)', borderBottom: '1px solid rgba(26,27,58,0.07)' }}>
+                    {['When', 'Action', 'Admin', 'Affected'].map(h => (
+                      <span key={h} style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.45)' }}>{h}</span>
+                    ))}
+                  </div>
+
+                  {auditLogs.map((log, idx) => {
+                    const [category] = log.action.split('.');
+                    const colorMap: Record<string, string> = { member: '#6366F1', leave: '#F59E0B', channel: '#0DAFCE' };
+                    const accent = colorMap[category] || '#94A3B8';
+                    const actionLabel = log.action
+                      .replace('member.approved',    'Member approved')
+                      .replace('member.rejected',    'Member rejected')
+                      .replace('member.removed',     'Member removed')
+                      .replace('member.role_changed','Role changed')
+                      .replace('leave.approved',     'Leave approved')
+                      .replace('leave.rejected',     'Leave rejected')
+                      .replace('channel.created',    'Channel created')
+                      .replace('channel.deleted',    'Channel deleted')
+                      .replace(/\./g, ' ');
+                    const when = new Date(log.timestamp);
+                    const dateStr = when.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                    const timeStr = when.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+                    return (
+                      <div
+                        key={log.id}
+                        style={{
+                          display: 'grid', gridTemplateColumns: '160px 1fr 180px 200px',
+                          alignItems: 'center', padding: '12px 20px',
+                          borderBottom: idx < auditLogs.length - 1 ? '1px solid rgba(26,27,58,0.05)' : 'none',
+                        }}
+                      >
+                        {/* When */}
+                        <div>
+                          <p style={{ margin: 0, fontSize: 11.5, fontWeight: 700, color: '#1A1B3A' }}>{timeStr}</p>
+                          <p style={{ margin: 0, fontSize: 10.5, color: 'rgba(90,95,128,0.50)' }}>{dateStr}</p>
+                        </div>
+
+                        {/* Action */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: accent, flexShrink: 0, display: 'inline-block' }} />
+                          <span style={{ fontSize: 12.5, fontWeight: 700, color: accent }}>{actionLabel}</span>
+                          {log.details && Object.keys(log.details).length > 0 && (
+                            <span style={{ fontSize: 10.5, color: 'rgba(90,95,128,0.45)', marginLeft: 4 }}>
+                              {Object.entries(log.details).filter(([k]) => !['leaveId'].includes(k)).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Admin */}
+                        <div>
+                          <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#1A1B3A' }}>{log.adminName || log.adminEmail}</p>
+                          <p style={{ margin: 0, fontSize: 10.5, color: 'rgba(90,95,128,0.45)' }}>{log.adminEmail}</p>
+                        </div>
+
+                        {/* Affected */}
+                        <div>
+                          {log.target ? (
+                            <>
+                              <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#1A1B3A' }}>{log.targetName || log.target}</p>
+                              <p style={{ margin: 0, fontSize: 10.5, color: 'rgba(90,95,128,0.45)' }}>{log.target}</p>
+                            </>
+                          ) : (
+                            <span style={{ fontSize: 11, color: 'rgba(90,95,128,0.30)' }}>—</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </main>
