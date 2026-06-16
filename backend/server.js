@@ -98,7 +98,11 @@ function decryptField(val) {
   }
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'edutechexos-jwt-secret-2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('[FATAL] JWT_SECRET environment variable is not set. Refusing to start.');
+  process.exit(1);
+}
 const JWT_EXPIRY = '7d';
 
 // ── Brevo HTTP API helper (no SMTP / no IP whitelist needed) ─────────────────
@@ -764,6 +768,19 @@ function getUserEmail(req) {
   if (req.query.userEmail) return String(req.query.userEmail).toLowerCase();
   if (req.body && req.body.userEmail) return String(req.body.userEmail).toLowerCase();
   return null;
+}
+
+// Hard gate — returns 401 if no valid JWT, 403 if account is pending approval.
+function requireAuth(req, res, next) {
+  if (!req.user) return res.status(401).json({ success: false, error: 'Authentication required.' });
+  if (req.user.status === 'pending') return res.status(403).json({ success: false, error: 'Account pending approval.' });
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (!req.user) return res.status(401).json({ success: false, error: 'Authentication required.' });
+  if (req.user.role !== 'Admin') return res.status(403).json({ success: false, error: 'Admin access required.' });
+  next();
 }
 
 // --- 3. API Endpoints ---
@@ -1810,11 +1827,12 @@ app.post('/api/admin/broadcast-email', authMiddleware, async (req, res) => {
 });
 
 // POST /api/meeting-access — create/get meeting access record
-app.post('/api/meeting-access', authMiddleware, async (req, res) => {
+app.post('/api/meeting-access', requireAuth, async (req, res) => {
   try {
-    const { messageId, channelId, hostEmail, allowedEmails } = req.body;
-    if (!messageId || !channelId || !hostEmail) {
-      return res.status(400).json({ success: false, error: 'messageId, channelId, and hostEmail are required.' });
+    const { messageId, channelId, allowedEmails } = req.body;
+    const hostEmail = req.user.email; // always trust the JWT, never the body
+    if (!messageId || !channelId) {
+      return res.status(400).json({ success: false, error: 'messageId and channelId are required.' });
     }
     const doc = await MeetingAccess.findOneAndUpdate(
       { messageId, channelId },
@@ -2014,7 +2032,14 @@ app.post('/api/auth/login', async (req, res) => {
 
     // 1. Check hardcoded accounts first (skip if admin has removed this system member)
     const isSystemRemoved = await RemovedMember.exists({ email: emailClean });
-    const hardcoded = isSystemRemoved ? null : VALID_ACCOUNTS.find((a) => a.email === emailClean && a.password === password);
+    const hardcoded = isSystemRemoved ? null : VALID_ACCOUNTS.find((a) => {
+      if (a.email !== emailClean || !a.password) return false;
+      try {
+        const b1 = Buffer.from(String(password));
+        const b2 = Buffer.from(a.password);
+        return b1.length === b2.length && crypto.timingSafeEqual(b1, b2);
+      } catch { return false; }
+    });
     if (hardcoded) {
       const token = jwt.sign(
         { email: hardcoded.email, name: hardcoded.name, role: hardcoded.role },
@@ -2380,7 +2405,14 @@ async function sendDigestEmails(since) {
 }
 
 // POST /api/digest — manual trigger (admin / testing)
-app.post('/api/digest', async (req, res) => {
+app.post('/api/digest', authMiddleware, async (req, res) => {
+  // Allow admin users OR an external cron service presenting the shared secret
+  const isAdmin = req.user && req.user.role === 'Admin';
+  const cronSecret = process.env.CRON_SECRET;
+  const hasCronKey = cronSecret && req.headers['x-cron-secret'] === cronSecret;
+  if (!isAdmin && !hasCronKey) {
+    return res.status(403).json({ success: false, error: 'Admin access or cron secret required.' });
+  }
   try {
     const since = req.body.since ? new Date(req.body.since) : undefined;
     const result = await sendDigestEmails(since);
@@ -2439,7 +2471,7 @@ function formatMessage(msg, requestingUser) {
 }
 
 // ── OG Link Preview unfurl ───────────────────────────────────────────────────
-app.get('/api/og', async (req, res) => {
+app.get('/api/og', requireAuth, async (req, res) => {
   const url = String(req.query.url || '');
   if (!url || !/^https?:\/\//i.test(url)) {
     return res.status(400).json({ success: false, error: 'Valid URL required' });
@@ -2691,7 +2723,7 @@ app.get('/api/members/export', authMiddleware, async (req, res) => {
 //   2. (no channelId) → last PAGE_SIZE messages per channel for initial load
 const PAGE_SIZE = 50;
 
-app.get('/api/messages', async (req, res) => {
+app.get('/api/messages', requireAuth, async (req, res) => {
   try {
     const requestingUser = getUserEmail(req);
     const { channelId, before, limit } = req.query;
@@ -2738,7 +2770,7 @@ app.get('/api/messages', async (req, res) => {
 });
 
 // POST Message
-app.post('/api/messages', async (req, res) => {
+app.post('/api/messages', requireAuth, async (req, res) => {
   try {
     const { id, ...messageData } = req.body;
     const userEmail = getUserEmail(req);
@@ -2771,7 +2803,7 @@ app.post('/api/messages', async (req, res) => {
 });
 
 // DELETE Message — soft-delete by default; ?hard=true for admin permanent delete
-app.delete('/api/messages/:id', async (req, res) => {
+app.delete('/api/messages/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { scope, userEmail, hard } = req.query;
@@ -2806,12 +2838,16 @@ app.delete('/api/messages/:id', async (req, res) => {
 });
 
 // PATCH Message — partial update: text edit, reactions, poll votes
-app.patch('/api/messages/:id', async (req, res) => {
+app.patch('/api/messages/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body; // { text, editedAt } | { reactions } | { poll }
-    // Re-encrypt edited text before storing
-    if (updates.text !== undefined) updates.text = encryptField(updates.text);
+    // Whitelist allowed fields to prevent arbitrary field injection
+    const { text, editedAt, reactions, poll } = req.body;
+    const updates = {};
+    if (text     !== undefined) updates.text     = encryptField(text);
+    if (editedAt !== undefined) updates.editedAt = editedAt;
+    if (reactions !== undefined) updates.reactions = reactions;
+    if (poll     !== undefined) updates.poll     = poll;
 
     const updated = await Message.findByIdAndUpdate(
       id,
@@ -2894,7 +2930,7 @@ app.get('/api/search', authMiddleware, async (req, res) => {
 });
 
 // GET Kanban Tasks (filtered by user)
-app.get('/api/kanban', async (req, res) => {
+app.get('/api/kanban', requireAuth, async (req, res) => {
   try {
     const requestingUser = getUserEmail(req);
     const filter = requestingUser
@@ -2913,7 +2949,7 @@ app.get('/api/kanban', async (req, res) => {
 });
 
 // POST Kanban Task
-app.post('/api/kanban', async (req, res) => {
+app.post('/api/kanban', requireAuth, async (req, res) => {
   try {
     const userEmail = getUserEmail(req);
     const body = { ...req.body };
@@ -2937,12 +2973,23 @@ app.post('/api/kanban', async (req, res) => {
 });
 
 // PATCH Kanban Task (update status or other fields)
-app.patch('/api/kanban/:id', async (req, res) => {
+app.patch('/api/kanban/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    // Whitelist allowed fields
+    const { title, description, status, assigneeEmail, dueDate, priority, tags, completedAt } = req.body;
+    const updates = {};
+    if (title         !== undefined) updates.title         = title;
+    if (description   !== undefined) updates.description   = description;
+    if (status        !== undefined) updates.status        = status;
+    if (assigneeEmail !== undefined) updates.assigneeEmail = assigneeEmail;
+    if (dueDate       !== undefined) updates.dueDate       = dueDate;
+    if (priority      !== undefined) updates.priority      = priority;
+    if (tags          !== undefined) updates.tags          = tags;
+    if (completedAt   !== undefined) updates.completedAt   = completedAt;
     const updated = await KanbanTask.findByIdAndUpdate(
       id,
-      { $set: req.body },
+      { $set: updates },
       { new: true }
     ).lean();
     if (!updated) return res.status(404).json({ success: false, error: 'Task not found' });
@@ -2961,7 +3008,7 @@ app.patch('/api/kanban/:id', async (req, res) => {
 });
 
 // DELETE Kanban Task
-app.delete('/api/kanban/:id', async (req, res) => {
+app.delete('/api/kanban/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     await KanbanTask.findByIdAndDelete(id);
@@ -2972,7 +3019,7 @@ app.delete('/api/kanban/:id', async (req, res) => {
 });
 
 // GET Wiki Pages — returns user's own notes + everyone's shared notes
-app.get('/api/wikipages', async (req, res) => {
+app.get('/api/wikipages', requireAuth, async (req, res) => {
   try {
     const userEmail = getUserEmail(req);
     // Show: (a) notes the user created (private or shared) + (b) shared notes from others
@@ -2997,7 +3044,7 @@ app.get('/api/wikipages', async (req, res) => {
 });
 
 // POST/UPSERT Wiki Page
-app.post('/api/wikipages', async (req, res) => {
+app.post('/api/wikipages', requireAuth, async (req, res) => {
   try {
     const { id, channelId, title, content, isPrivate } = req.body;
     const userEmail = getUserEmail(req);
@@ -3026,7 +3073,7 @@ app.post('/api/wikipages', async (req, res) => {
 });
 
 // DELETE Wiki Page — private notes: only owner can delete; shared notes: any member can delete
-app.delete('/api/wikipages/:id', async (req, res) => {
+app.delete('/api/wikipages/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const userEmail = getUserEmail(req);
@@ -3046,7 +3093,7 @@ app.delete('/api/wikipages/:id', async (req, res) => {
 // ─── Bookmarks ────────────────────────────────────────────────────────────────
 
 // GET Bookmarks for the authenticated user
-app.get('/api/bookmarks', async (req, res) => {
+app.get('/api/bookmarks', requireAuth, async (req, res) => {
   try {
     const userEmail = getUserEmail(req);
     if (!userEmail) {
@@ -3065,7 +3112,7 @@ app.get('/api/bookmarks', async (req, res) => {
 });
 
 // POST Bookmark (toggle — if exists, remove; otherwise add)
-app.post('/api/bookmarks/toggle', async (req, res) => {
+app.post('/api/bookmarks/toggle', requireAuth, async (req, res) => {
   try {
     const userEmail = getUserEmail(req);
     const { messageId, channelId, text, sender, timestamp } = req.body;
@@ -3086,7 +3133,7 @@ app.post('/api/bookmarks/toggle', async (req, res) => {
 });
 
 // DELETE Bookmark
-app.delete('/api/bookmarks/:id', async (req, res) => {
+app.delete('/api/bookmarks/:id', requireAuth, async (req, res) => {
   try {
     const userEmail = getUserEmail(req);
     const { id } = req.params;
@@ -3103,7 +3150,7 @@ app.delete('/api/bookmarks/:id', async (req, res) => {
 // ─── Notifications ────────────────────────────────────────────────────────────
 
 // GET Notifications (for a specific recipient email)
-app.get('/api/notifications', async (req, res) => {
+app.get('/api/notifications', requireAuth, async (req, res) => {
   try {
     const email = getUserEmail(req) || req.query.email;
     const query = email
@@ -3122,7 +3169,7 @@ app.get('/api/notifications', async (req, res) => {
 });
 
 // POST Notification
-app.post('/api/notifications', async (req, res) => {
+app.post('/api/notifications', requireAuth, async (req, res) => {
   try {
     // Normalise recipientEmails to lowercase so the GET query matches correctly
     const body = {
@@ -3148,7 +3195,7 @@ app.post('/api/notifications', async (req, res) => {
 // ─── Generic email relay endpoint ─────────────────────────────────────────────
 // Called by Vercel server actions so ALL emails go through Render's stable IP.
 // POST /api/email  { to, subject, htmlContent }
-app.post('/api/email', async (req, res) => {
+app.post('/api/email', requireAuth, async (req, res) => {
   try {
     const { to, subject, htmlContent } = req.body;
     if (!to || !subject || !htmlContent) {
@@ -3179,7 +3226,7 @@ async function postBotMessage(channelId, text) {
     sender:   'EduTechExOS Bot',
     initials: 'EB',
     color:    '#4f46e5',
-    text,
+    text:     encryptField(text),
     timestamp: new Date(),
   });
   const saved = await msg.save();
@@ -3280,11 +3327,14 @@ app.post('/webhook/github/:token', express.json({ type: '*/*' }), async (req, re
     const hook = await Webhook.findOne({ token: req.params.token, type: 'github', active: true }).lean();
     if (!hook) return res.status(404).json({ error: 'Webhook not found or inactive' });
 
-    // Optionally verify HMAC signature
+    // Optionally verify HMAC signature using timing-safe comparison
     if (hook.secret) {
-      const sig = req.headers['x-hub-signature-256'];
+      const sig = req.headers['x-hub-signature-256'] || '';
       const expected = 'sha256=' + crypto.createHmac('sha256', hook.secret).update(JSON.stringify(req.body)).digest('hex');
-      if (sig !== expected) return res.status(401).json({ error: 'Invalid signature' });
+      const sigBuf = Buffer.from(sig);
+      const expBuf = Buffer.from(expected);
+      const valid = sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf);
+      if (!valid) return res.status(401).json({ error: 'Invalid signature' });
     }
 
     const event   = req.headers['x-github-event'] || 'push';
@@ -3455,7 +3505,7 @@ app.get('/api/channels', authMiddleware, async (req, res) => {
 // POST /api/channels — admin creates a new workspace channel
 app.post('/api/channels', authMiddleware, async (req, res) => {
   try {
-    if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    if (!req.user || req.user.role !== 'Admin') return res.status(403).json({ success: false, error: 'Only admins can create channels.' });
     const { name, description } = req.body;
     if (!name) return res.status(400).json({ success: false, error: 'name is required.' });
     const id = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -3547,6 +3597,12 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 10002;
 httpServer.listen(PORT, () => {
   console.log(`Backend Server running on port ${PORT}`);
+
+  // Pre-populate revoked set from DB so removed users are blocked even after restart.
+  RemovedMember.find({}).lean().then((docs) => {
+    docs.forEach((d) => revokedEmails.add(d.email.toLowerCase()));
+    if (docs.length) console.log(`[startup] ${docs.length} revoked email(s) loaded`);
+  }).catch(() => {});
 
   // Ping /health every 14 min to prevent Render free tier from sleeping.
   // Uses https.get (Node 16 safe) rather than the global fetch (Node 18+).
