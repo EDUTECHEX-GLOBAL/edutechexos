@@ -105,6 +105,7 @@ export default function LoginForm({
       // Admin logged in from the regular page — just send them to /admin
       const token = jwtToken || `mock-jwt-${Date.now()}`;
       localStorage.setItem('edutechex_token', JSON.stringify({ user: loginAccount, token }));
+      document.cookie = 'auth_session=1; path=/; max-age=604800; SameSite=Lax';
       toast.success(`Welcome back, ${loginAccount.name.split(' ')[0]}!`);
       identifyUser(loginAccount.email, loginAccount.name);
       trackEvent('login', { role: loginAccount.role });
@@ -128,6 +129,7 @@ export default function LoginForm({
 
     const token = jwtToken || `mock-jwt-${Date.now()}`;
     localStorage.setItem('edutechex_token', JSON.stringify({ user: loginAccount, token }));
+    document.cookie = 'auth_session=1; path=/; max-age=604800; SameSite=Lax';
 
     const today = new Date().toISOString().split('T')[0];
     const trackKey = `edutechex_logins_${loginAccount.email}`;
