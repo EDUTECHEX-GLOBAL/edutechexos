@@ -184,15 +184,22 @@ export async function publishPublicKey(publicKeyJwk: JsonWebKey, token: string):
   }
 }
 
+// Cache emails that returned 404 so we don't hammer the API on every render
+const noKeyCache = new Set<string>();
+
 export async function fetchPartnerPublicKey(partnerEmail: string, token: string): Promise<JsonWebKey | null> {
   if (publicKeyCache.has(partnerEmail)) return publicKeyCache.get(partnerEmail)!;
+  if (noKeyCache.has(partnerEmail)) return null; // already confirmed no key — stop retrying
   try {
     const res = await fetch(`${API_BASE}/api/keys/${encodeURIComponent(partnerEmail)}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      noKeyCache.add(partnerEmail); // don't retry until page reload
+      return null;
+    }
     const data = await res.json();
-    if (!data.success || !data.publicKey) return null;
+    if (!data.success || !data.publicKey) { noKeyCache.add(partnerEmail); return null; }
     const jwk: JsonWebKey = JSON.parse(data.publicKey);
     publicKeyCache.set(partnerEmail, jwk);
     return jwk;

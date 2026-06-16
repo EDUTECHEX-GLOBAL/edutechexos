@@ -14,7 +14,14 @@ function getToken(): string | null {
   catch { return null; }
 }
 
+// ActivityWatch runs on the user's local machine (localhost:5600).
+// Calling it from a deployed origin (Vercel) is always blocked by the browser's
+// CORS policy — only attempt it when the app itself is running on localhost.
+const IS_LOCALHOST = typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 async function awFetch(path: string, timeout = 4000): Promise<Response | null> {
+  if (!IS_LOCALHOST) return null; // skip silently on deployed app — aw-sync.js handles it
   try {
     const ctrl = new AbortController();
     const id   = setTimeout(() => ctrl.abort(), timeout);
@@ -27,6 +34,7 @@ async function awFetch(path: string, timeout = 4000): Promise<Response | null> {
 }
 
 async function isAWRunning(): Promise<boolean> {
+  if (!IS_LOCALHOST) return false;
   const res = await awFetch('/api/0/info');
   return !!res?.ok;
 }
