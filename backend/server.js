@@ -59,7 +59,7 @@ function makeRateLimiter({ windowMs, max, message }) {
     next();
   };
 }
-// nodemailer replaced by Brevo HTTP API (no IP-whitelist issues)
+const nodemailer = require('nodemailer');
 const jwt    = require('jsonwebtoken');
 const crypto = require('crypto');
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
@@ -105,37 +105,44 @@ if (!JWT_SECRET) {
 }
 const JWT_EXPIRY = '7d';
 
-// ── Brevo HTTP API helper (no SMTP / no IP whitelist needed) ─────────────────
+// ── Brevo SMTP helper (no IP allowlist required — SMTP relay bypasses it) ────
 // Supports: to (array of {email,name?}), bcc (optional array), subject, html.
-// Use bcc for bulk sends — one API call, one email credit, no cross-leakage.
-async function sendBrevoEmail({ to, bcc, subject, html }) {
-  const apiKey = process.env.BREVO_API_KEY;
-  if (!apiKey) { console.error('[Brevo] BREVO_API_KEY not set'); return { ok: false, brevoError: 'NOT_CONFIGURED' }; }
-
-  const fromRaw  = process.env.SMTP_FROM || 'EduTechExOS <edutechexos121@gmail.com>';
-  const fromEmail = (fromRaw.match(/<(.+)>/) || [])[1] || fromRaw.trim();
-  const fromName  = fromRaw.replace(/<.*>/, '').trim() || 'EduTechExOS';
-
-  const toList = Array.isArray(to) ? to : [{ email: String(to) }];
-  const bccCount = Array.isArray(bcc) ? bcc.length : 0;
-  const totalRecipients = toList.length + bccCount;
-  console.log(`[Brevo] Sending "${subject}" → ${totalRecipients} recipient(s)`);
-
-  const payload = { sender: { name: fromName, email: fromEmail }, to: toList, subject, htmlContent: html };
-  if (Array.isArray(bcc) && bcc.length > 0) payload.bcc = bcc;
-
-  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: { 'api-key': apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+let _smtpTransporter = null;
+function getTransporter() {
+  if (_smtpTransporter) return _smtpTransporter;
+  _smtpTransporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
   });
-  if (!res.ok) {
-    const b = await res.text();
-    console.error('[Brevo] FAILED', res.status, b);
-    return { ok: false, brevoError: `${res.status}: ${b}` };
+  return _smtpTransporter;
+}
+
+async function sendBrevoEmail({ to, bcc, subject, html }) {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.error('[Mail] SMTP_USER or SMTP_PASS not set');
+    return { ok: false, brevoError: 'NOT_CONFIGURED' };
   }
-  console.log(`[Brevo] OK — queued for ${totalRecipients} recipient(s)`);
-  return { ok: true };
+
+  const from = process.env.SMTP_FROM || 'EduTechExOS <ac2bb9001@smtp-brevo.com>';
+  const toList = Array.isArray(to) ? to : [{ email: String(to) }];
+  const toStr  = toList.map(r => r.name ? `"${r.name}" <${r.email}>` : r.email).join(', ');
+  const bccStr = Array.isArray(bcc) ? bcc.map(r => r.email || r).join(', ') : undefined;
+  const totalRecipients = toList.length + (Array.isArray(bcc) ? bcc.length : 0);
+
+  console.log(`[Mail] Sending "${subject}" → ${totalRecipients} recipient(s)`);
+  try {
+    await getTransporter().sendMail({ from, to: toStr, bcc: bccStr, subject, html });
+    console.log(`[Mail] OK — delivered to ${totalRecipients} recipient(s)`);
+    return { ok: true };
+  } catch (err) {
+    console.error('[Mail] FAILED', err.message);
+    return { ok: false, brevoError: err.message };
+  }
 }
 
 const app = express();
