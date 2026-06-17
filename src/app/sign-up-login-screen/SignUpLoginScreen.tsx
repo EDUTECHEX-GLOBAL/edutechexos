@@ -1,10 +1,13 @@
 'use client';
 
 import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AuthCard from './components/AuthCard';
 
-export default function SignUpLoginScreen() {
+function SignUpLoginScreen() {
+  const searchParams = useSearchParams();
+  const isSignup = searchParams.get('mode') === 'signup';
   return (
     <div className="w-full min-h-screen overflow-hidden" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif", background: '#ECEAF8' }}>
       <style>{`
@@ -226,11 +229,11 @@ export default function SignUpLoginScreen() {
               <div style={{ marginBottom: 28 }}>
                 <div style={{ width: 36, height: 2, background: 'linear-gradient(90deg, #5B4FDB, transparent)', borderRadius: 1, opacity: 0.60, marginBottom: 16 }} />
                 <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(1.6rem, 3vw, 2.1rem)', fontWeight: 800, color: '#1A1B3A', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 8 }}>
-                  Sign in to your<br />
-                  <span style={{ background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>workspace</span>
+                  {isSignup ? 'Request access to' : 'Sign in to your'}<br />
+                  <span style={{ background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{isSignup ? 'EduTechExOS' : 'workspace'}</span>
                 </h2>
                 <p style={{ fontSize: 13, color: 'rgba(90,95,128,0.70)', fontWeight: 400, lineHeight: 1.6 }}>
-                  Use your institutional credentials to continue.
+                  {isSignup ? 'Submit your details and an admin will review your request.' : 'Use your institutional credentials to continue.'}
                 </p>
               </div>
 
@@ -283,5 +286,13 @@ export default function SignUpLoginScreen() {
         </section>
       </main>
     </div>
+  );
+}
+
+export default function SignUpLoginScreenPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignUpLoginScreen />
+    </Suspense>
   );
 }

@@ -264,13 +264,15 @@ export default function LandingHero() {
 
           {/* CTA row */}
           <div className="h-in h-d4 flex flex-col sm:flex-row gap-3" style={{ marginBottom: '2.8rem' }}>
-            <Link href="/sign-up-login-screen?mode=user" className="hero-cta-primary">
-              Enter System
+            <Link href="/sign-up-login-screen" className="hero-cta-primary">
+              Sign In
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
                 <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </Link>
-            <a href="#features" className="hero-cta-ghost">Explore features</a>
+            <Link href="/sign-up-login-screen?mode=signup" className="hero-cta-ghost">
+              Request Access
+            </Link>
           </div>
 
         </div>

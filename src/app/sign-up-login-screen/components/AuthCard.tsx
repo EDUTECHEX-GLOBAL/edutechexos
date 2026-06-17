@@ -1,49 +1,27 @@
 ﻿'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { useSearchParams } from 'next/navigation';
 import LoginForm from './LoginForm';
 import SignupForm from './SignupForm';
 
 export default function AuthCard({ darkMode = false }: { darkMode?: boolean }) {
   const searchParams = useSearchParams();
-  const authMode = searchParams.get('mode') === 'admin' ? 'admin' : 'user';
-  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
-  const isAdminMode = authMode === 'admin';
+  const mode = searchParams.get('mode');
+  const authMode = mode === 'admin' ? 'admin' : 'user';
+  const isSignup = mode === 'signup';
 
-  /* ── Dark (tablet) mode — bare form, no outer card ──────────────── */
+  /* ── Dark mode — used on the sign-in page ────────────────────────── */
   if (darkMode) {
     return (
       <div className="w-full animate-fade-up">
-        {/* Tabs */}
-        {!isAdminMode && (
-          <div
-            className="flex mb-5 rounded-xl overflow-hidden"
-            style={{ border: '1px solid rgba(255,255,255,0.10)' }}
-          >
-            {(['login', 'signup'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className="flex-1 py-2.5 text-xs font-bold tracking-wide transition-all duration-300"
-                style={{
-                  backgroundColor: activeTab === tab ? 'rgba(255,255,255,0.12)' : 'transparent',
-                  color: activeTab === tab ? '#ffffff' : 'rgba(180,200,255,0.55)',
-                  borderBottom:
-                    activeTab === tab
-                      ? '2px solid rgba(180,210,255,0.60)'
-                      : '2px solid transparent',
-                }}
-              >
-                {tab === 'login' ? 'Sign in' : 'Create account'}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'login' ? (
-          <LoginForm authMode={authMode} onSwitchToSignup={() => setActiveTab('signup')} darkMode />
+        {isSignup ? (
+          <SignupForm onSwitchToLogin={() => {
+            window.location.href = '/sign-up-login-screen';
+          }} />
         ) : (
-          <SignupForm onSwitchToLogin={() => setActiveTab('login')} />
+          <LoginForm authMode={authMode} onSwitchToSignup={() => {
+            window.location.href = '/sign-up-login-screen?mode=signup';
+          }} darkMode />
         )}
       </div>
     );
@@ -62,29 +40,15 @@ export default function AuthCard({ darkMode = false }: { darkMode?: boolean }) {
           boxShadow: '0 8px 48px rgba(0,0,0,0.06), 0 0 40px -8px rgba(62,74,137,0.12)',
         }}
       >
-        <div className="flex" style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-          {(isAdminMode ? ['login'] : ['login', 'signup']).map((tab) => (
-            <button
-              key={`tab-${tab}`}
-              onClick={() => setActiveTab(tab as 'login' | 'signup')}
-              className={`flex-1 py-4 text-sm font-bold tracking-wide transition-all duration-300 ${
-                activeTab === tab ? 'text-foreground' : 'text-ink-light hover:text-ink'
-              }`}
-              style={{
-                backgroundColor: activeTab === tab ? 'rgba(255,255,255,0.3)' : 'transparent',
-                borderBottom: activeTab === tab ? '2px solid #3E4A89' : '2px solid transparent',
-              }}
-            >
-              {tab === 'login' ? 'Sign in' : 'Create account'}
-            </button>
-          ))}
-        </div>
-
         <div className="p-8 animate-fade-up">
-          {activeTab === 'login' ? (
-            <LoginForm authMode={authMode} onSwitchToSignup={() => setActiveTab('signup')} />
+          {isSignup ? (
+            <SignupForm onSwitchToLogin={() => {
+              window.location.href = '/sign-up-login-screen';
+            }} />
           ) : (
-            <SignupForm onSwitchToLogin={() => setActiveTab('login')} />
+            <LoginForm authMode={authMode} onSwitchToSignup={() => {
+              window.location.href = '/sign-up-login-screen?mode=signup';
+            }} />
           )}
         </div>
       </div>
