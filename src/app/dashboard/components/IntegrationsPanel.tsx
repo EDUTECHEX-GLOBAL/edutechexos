@@ -199,7 +199,7 @@ export default function IntegrationsPanel({
                   <input
                     value={form.name}
                     onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="e.g. GitHub "” skillnaav"
+                    placeholder="e.g. GitHub "" skillnaav"
                     className="w-full text-sm border border-[rgba(62,74,137,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A3568]"
                     required
                   />
@@ -285,7 +285,7 @@ export default function IntegrationsPanel({
                 <div className="rounded-xl border border-dashed border-[rgba(62,74,137,0.12)] p-4 text-center">
                   <p className="text-sm text-[#7C859E] mb-2">No GitHub integrations yet</p>
                   <p className="text-xs text-[#7C859E]">
-                    Create one above, then add the URL to your GitHub repo â†’ Settings â†’ Webhooks
+                    Create one above, then add the URL to your GitHub repo â†' Settings â†' Webhooks
                   </p>
                 </div>
               )}
@@ -311,7 +311,7 @@ export default function IntegrationsPanel({
                   </p>
                   <ol className="text-xs text-[#7C859E] space-y-0.5 list-decimal list-inside">
                     <li>
-                      Go to your repo â†’ <strong>Settings â†’ Webhooks â†’ Add webhook</strong>
+                      Go to your repo â†' <strong>Settings â†' Webhooks â†' Add webhook</strong>
                     </li>
                     <li>
                       Paste the webhook URL above into <strong>Payload URL</strong>
@@ -323,7 +323,7 @@ export default function IntegrationsPanel({
                       Select events: <strong>Pushes, Pull requests, Issues, Releases</strong>
                     </li>
                     <li>
-                      Click <strong>Add webhook</strong> "” done!
+                      Click <strong>Add webhook</strong> "" done!
                     </li>
                   </ol>
                 </div>
@@ -340,7 +340,7 @@ export default function IntegrationsPanel({
                 <span className="text-xs bg-[rgba(62,74,137,0.08)] text-[#7C859E] px-2 py-0.5 rounded-full">
                   {genericWebhooks.length}
                 </span>
-                <span className="text-xs text-[#7C859E]">"” Zapier, Make, IFTTT, any tool</span>
+                <span className="text-xs text-[#7C859E]">"" Zapier, Make, IFTTT, any tool</span>
               </div>
 
               {genericWebhooks.length === 0 && (
