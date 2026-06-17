@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Activity,
+  AlertTriangle,
   Bell,
   CalendarDays,
   CalendarX,
@@ -57,8 +58,9 @@ type InviteLogEntry = {
   name: string;
   email: string;
   role: string;
-  status: 'sent' | 'error';
+  status: 'sent' | 'warn' | 'error';
   message: string;
+  inviteUrl?: string;
   at: string;
 };
 type CsvRow = { name: string; email: string; role: string };
@@ -753,7 +755,12 @@ export default function AdminPage() {
       const updated = accessRequests.map((r) => r.id === request.id ? { ...r, status: 'invited' as const } : r);
       setAccessRequests(updated);
       localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify(updated));
-      toast.success(`Invite sent to ${request.email} — link expires in 4.5 hours.`);
+      if (data.emailSent === false && data.inviteUrl) {
+        toast.warning(`Email delivery failed. Copy the invite link and share it manually with ${request.email}.`);
+        setInviteLog((prev) => [{ name: request.name, email: request.email, role: request.role, status: 'warn' as const, message: 'Email failed — share link manually', inviteUrl: data.inviteUrl, at: new Date().toISOString() }, ...prev]);
+      } else {
+        toast.success(`Invite sent to ${request.email} — link expires in 4.5 hours.`);
+      }
     } catch {
       toast.error('Could not reach server. Try again.');
     }
@@ -774,6 +781,10 @@ export default function AdminPage() {
       if (!res.ok) {
         setInviteLog((prev) => [{ ...entry, status: 'error' as const, message: data.error ?? 'Failed', at: new Date().toISOString() }, ...prev]);
         toast.error(data.error ?? 'Failed to send invite.');
+      } else if (data.emailSent === false && data.inviteUrl) {
+        setInviteLog((prev) => [{ ...entry, status: 'warn' as const, message: 'Email failed — share link manually', inviteUrl: data.inviteUrl, at: new Date().toISOString() }, ...prev]);
+        toast.warning(`Email delivery failed. The invite link is shown below — copy and send it to ${entry.email}.`);
+        setInviteName(''); setInviteEmail(''); setInviteRole('Developer');
       } else {
         setInviteLog((prev) => [{ ...entry, status: 'sent' as const, message: 'Invite sent (expires in 4.5h)', at: new Date().toISOString() }, ...prev]);
         toast.success(`Invite sent to ${entry.email}`);
@@ -812,7 +823,9 @@ export default function AdminPage() {
             body: JSON.stringify(row),
           });
           const data = await res.json();
-          return { ...row, status: res.ok ? ('sent' as const) : ('error' as const), message: res.ok ? 'Invite sent (expires in 4.5h)' : (data.error ?? 'Failed'), at: new Date().toISOString() };
+          if (!res.ok) return { ...row, status: 'error' as const, message: data.error ?? 'Failed', at: new Date().toISOString() };
+          if (data.emailSent === false && data.inviteUrl) return { ...row, status: 'warn' as const, message: 'Email failed — share link manually', inviteUrl: data.inviteUrl, at: new Date().toISOString() };
+          return { ...row, status: 'sent' as const, message: 'Invite sent (expires in 4.5h)', at: new Date().toISOString() };
         } catch {
           return { ...row, status: 'error' as const, message: 'Network error', at: new Date().toISOString() };
         }
@@ -1689,15 +1702,28 @@ export default function AdminPage() {
                       {['Name', 'Email', 'Role', 'Status', 'Sent at'].map((h) => <span key={h} style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.45)' }}>{h}</span>)}
                     </div>
                     {inviteLog.map((entry, i) => (
-                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 90px 1fr 120px', padding: '10px 16px', borderBottom: i < inviteLog.length - 1 ? '1px solid rgba(26,27,58,0.06)' : 'none', background: i % 2 === 0 ? '#fff' : 'rgba(26,27,58,0.015)', alignItems: 'center' }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#1A1B3A' }}>{entry.name}</span>
-                        <span style={{ fontSize: 11, color: 'rgba(90,95,128,0.70)', fontFamily: "'JetBrains Mono', monospace" }}>{entry.email}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#5B4FDB' }}>{entry.role}</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 700, color: entry.status === 'sent' ? '#10C98A' : '#EF476F' }}>
-                          {entry.status === 'sent' ? <CheckCircle2 size={12} /> : <X size={12} />}
-                          {entry.status === 'sent' ? 'Sent' : entry.message}
-                        </span>
-                        <span style={{ fontSize: 10.5, color: 'rgba(90,95,128,0.45)', fontFamily: "'JetBrains Mono', monospace" }}>{new Date(entry.at).toLocaleTimeString()}</span>
+                      <div key={i} style={{ borderBottom: i < inviteLog.length - 1 ? '1px solid rgba(26,27,58,0.06)' : 'none', background: i % 2 === 0 ? '#fff' : 'rgba(26,27,58,0.015)' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 90px 1fr 120px', padding: '10px 16px', alignItems: 'center' }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#1A1B3A' }}>{entry.name}</span>
+                          <span style={{ fontSize: 11, color: 'rgba(90,95,128,0.70)', fontFamily: "'JetBrains Mono', monospace" }}>{entry.email}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#5B4FDB' }}>{entry.role}</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 700, color: entry.status === 'sent' ? '#10C98A' : entry.status === 'warn' ? '#F59E0B' : '#EF476F' }}>
+                            {entry.status === 'sent' ? <CheckCircle2 size={12} /> : entry.status === 'warn' ? <AlertTriangle size={12} /> : <X size={12} />}
+                            {entry.status === 'sent' ? 'Email sent' : entry.status === 'warn' ? 'Email failed' : entry.message}
+                          </span>
+                          <span style={{ fontSize: 10.5, color: 'rgba(90,95,128,0.45)', fontFamily: "'JetBrains Mono', monospace" }}>{new Date(entry.at).toLocaleTimeString()}</span>
+                        </div>
+                        {entry.status === 'warn' && entry.inviteUrl && (
+                          <div style={{ margin: '0 16px 10px', padding: '8px 12px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.20)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 10.5, color: '#92400E', fontWeight: 600, flexShrink: 0 }}>Share this link:</span>
+                            <span style={{ fontSize: 10, color: '#78350F', fontFamily: "'JetBrains Mono', monospace", wordBreak: 'break-all', flex: 1 }}>{entry.inviteUrl}</span>
+                            <button
+                              type="button"
+                              onClick={() => { navigator.clipboard.writeText(entry.inviteUrl ?? ''); toast.success('Link copied!'); }}
+                              style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5, background: '#F59E0B', color: '#fff', border: 'none', cursor: 'pointer' }}
+                            >Copy</button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -3610,7 +3610,7 @@ app.post('/api/admin/invite', requireAdmin, async (req, res) => {
     const inviteUrl = `${appUrl}/invite?token=${token}`;
     const expireStr = expiresAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
 
-    await sendBrevoEmail({
+    const emailResult = await sendBrevoEmail({
       to: [{ email: emailClean, name }],
       subject: `You're invited to EduTechExOS Workspace`,
       html: `
@@ -3628,11 +3628,11 @@ app.post('/api/admin/invite', requireAdmin, async (req, res) => {
             <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#9BA6D3;text-transform:uppercase;letter-spacing:1px;">Your invite details</p>
             <p style="margin:6px 0;font-size:13px;color:#4A5578;"><strong>Email:</strong> ${emailClean}</p>
             <p style="margin:6px 0;font-size:13px;color:#4A5578;"><strong>Role:</strong> ${role || 'Member'}</p>
-            <p style="margin:6px 0;font-size:13px;color:#EF476F;"><strong>⏰ Link expires:</strong> Today at ${expireStr} IST (4.5 hours)</p>
+            <p style="margin:6px 0;font-size:13px;color:#EF476F;"><strong>&#x23F0; Link expires:</strong> Today at ${expireStr} IST (4.5 hours)</p>
           </div>
           <div style="text-align:center;margin:28px 0;">
             <a href="${inviteUrl}" style="display:inline-block;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;text-decoration:none;padding:15px 36px;border-radius:10px;font-size:15px;font-weight:700;letter-spacing:0.3px;box-shadow:0 4px 15px rgba(99,102,241,0.35);">
-              Accept Invite &amp; Set Password →
+              Accept Invite &amp; Set Password &#x2192;
             </a>
           </div>
           <p style="color:#94a3b8;font-size:12px;text-align:center;line-height:1.6;">
@@ -3640,12 +3640,17 @@ app.post('/api/admin/invite', requireAdmin, async (req, res) => {
             It can only be used once and expires in 4.5 hours.
           </p>
           <hr style="border:none;border-top:1px solid #E2E8F0;margin:24px 0;"/>
-          <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS · Powered by EduTechEx</p>
+          <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS - Powered by EduTechEx</p>
         </div>`,
     });
 
-    await logAudit(req, 'member.invited', emailClean, name, { role, expiresAt });
-    res.json({ success: true, message: `Invite sent to ${emailClean}` });
+    const emailSent = emailResult && emailResult.ok === true;
+    if (!emailSent) {
+      console.warn('[/api/admin/invite] Email delivery failed for', emailClean, emailResult?.brevoError || '');
+    }
+
+    await logAudit(req, 'member.invited', emailClean, name, { role, expiresAt, emailSent });
+    res.json({ success: true, emailSent, inviteUrl, message: emailSent ? `Invite sent to ${emailClean}` : `Invite link created — email delivery failed. Share the link manually.` });
   } catch (err) {
     console.error('[/api/admin/invite]', err);
     res.status(500).json({ success: false, error: String(err) });
