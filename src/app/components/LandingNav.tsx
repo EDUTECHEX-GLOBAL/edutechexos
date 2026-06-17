@@ -41,9 +41,9 @@ export default function LandingNav() {
         .nav-link-item:hover::after { width: 100%; }
 
         .nav-cta-ghost {
-          padding: 8px 18px; font-size: 9.5px; font-weight: 700; letter-spacing: .22em;
+          padding: 9px 22px; font-size: 9.5px; font-weight: 700; letter-spacing: .22em;
           text-transform: uppercase; font-family: 'JetBrains Mono', monospace;
-          color: #5A5F80; border: 1.5px solid rgba(26,27,58,0.24);
+          color: #5A5F80; border: 1px solid rgba(26,27,58,0.24);
           border-radius: 8px; text-decoration: none;
           background: transparent;
           transition: all .25s cubic-bezier(.22,1,.36,1);
@@ -132,8 +132,11 @@ export default function LandingNav() {
             <Link href="/sign-up-login-screen?mode=admin&redirect=/admin" className="nav-cta-ghost">
               Admin
             </Link>
-            <Link href="/sign-up-login-screen?mode=user" className="nav-cta-primary">
-              Sign In
+            <Link href="/sign-up-login-screen?mode=user" className="nav-cta-ghost">
+              Sign In here
+            </Link>
+            <Link href="/sign-up-login-screen?mode=signup" className="nav-cta-primary">
+              Create Account
             </Link>
           </div>
 
@@ -188,22 +191,32 @@ export default function LandingNav() {
               </a>
             ))}
             <div style={{ height: 1, background: 'rgba(26,27,58,0.14)', margin: '8px 0' }} />
-            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <Link
+                  href="/sign-up-login-screen?mode=admin&redirect=/admin"
+                  className="nav-cta-ghost"
+                  style={{ flex: 1, textAlign: 'center', display: 'block', padding: '12px 0' }}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Admin
+                </Link>
+                <Link
+                  href="/sign-up-login-screen?mode=user"
+                  className="nav-cta-ghost"
+                  style={{ flex: 1, textAlign: 'center', display: 'block', padding: '12px 0' }}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Sign In
+                </Link>
+              </div>
               <Link
-                href="/sign-up-login-screen?mode=admin&redirect=/admin"
-                className="nav-cta-ghost"
-                style={{ flex: 1, textAlign: 'center', display: 'block', padding: '12px 0' }}
-                onClick={() => setMobileOpen(false)}
-              >
-                Admin
-              </Link>
-              <Link
-                href="/sign-up-login-screen?mode=user"
+                href="/sign-up-login-screen?mode=signup"
                 className="nav-cta-primary"
-                style={{ flex: 1, textAlign: 'center', display: 'block', padding: '12px 0' }}
+                style={{ textAlign: 'center', display: 'block', padding: '12px 0' }}
                 onClick={() => setMobileOpen(false)}
               >
-                Sign In
+                Create Account
               </Link>
             </div>
           </div>

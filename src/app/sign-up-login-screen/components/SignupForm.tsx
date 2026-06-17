@@ -9,7 +9,7 @@ type SignupFormData = { name: string; email: string; role: string };
 const roles = ['Developer', 'Designer', 'Manager', 'Other'];
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
-const ALLOWED_DOMAIN = 'edutechex.in';
+const ALLOWED_DOMAIN = 'edutechex.com';
 
 type AccessRequest = SignupFormData & {
   id: string;
@@ -157,7 +157,7 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
             <input
               type="email"
               autoComplete="email"
-              placeholder="you@edutechex.in"
+              placeholder="you@edutechex.com"
               className={`input-ivy w-full pl-12 pr-4 py-4 text-sm text-[#0A1128] font-medium placeholder:text-[#0A1128]/20 ${errors.email ? 'border-red-300 bg-red-50/30' : ''}`}
               style={{
                 ...inputIvyStyle,

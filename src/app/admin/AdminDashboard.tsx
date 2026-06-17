@@ -1511,7 +1511,7 @@ export default function AdminPage() {
                 return !q || r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q) || r.role.toLowerCase().includes(q);
               });
 
-            const isInternal = (email: string) => email.toLowerCase().endsWith('@edutechex.in');
+            const isInternal = (email: string) => email.toLowerCase().endsWith('@edutechex.com');
 
             return (
               <div className="card-premium p-6" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -1583,7 +1583,7 @@ export default function AdminPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px 16px', marginBottom: 14 }}>
                       {[
                         { label: 'Role', value: viewingRequest.role },
-                        { label: 'Type', value: isInternal(viewingRequest.email) ? 'Internal (@edutechex.in)' : 'External' },
+                        { label: 'Type', value: isInternal(viewingRequest.email) ? 'Internal (@edutechex.com)' : 'External' },
                         { label: 'Status', value: statusCfg[viewingRequest.status]?.label ?? viewingRequest.status },
                       ].map(({ label, value }) => (
                         <div key={label}>
@@ -1745,7 +1745,7 @@ export default function AdminPage() {
                   <form onSubmit={sendDirectInvite} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     {[
                       { label: 'Full name', value: inviteName, setter: setInviteName, placeholder: 'Riya Sharma', type: 'text' },
-                      { label: 'Email', value: inviteEmail, setter: setInviteEmail, placeholder: 'riya@edutechex.in', type: 'email' },
+                      { label: 'Email', value: inviteEmail, setter: setInviteEmail, placeholder: 'riya@edutechex.com', type: 'email' },
                     ].map(({ label, value, setter, placeholder, type }) => (
                       <label key={label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>{label}</span>
@@ -1768,9 +1768,9 @@ export default function AdminPage() {
                   <div style={{ height: 3, background: 'linear-gradient(90deg,#6366f1,#8B3FDB)', borderRadius: 3, marginBottom: 20 }} />
                   <h3 style={{ fontFamily: "'Sora',sans-serif", fontSize: 16, fontWeight: 800, color: '#1A1B3A', margin: '0 0 4px', letterSpacing: '-0.02em' }}>Bulk invite via CSV</h3>
                   <p style={{ margin: '0 0 16px', fontSize: 12, color: 'rgba(90,95,128,0.60)' }}>
-                    One row per person: <code style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, background: 'rgba(91,79,219,0.08)', padding: '1px 5px', borderRadius: 4 }}>Name, email@edutechex.in, Role</code>
+                    One row per person: <code style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, background: 'rgba(91,79,219,0.08)', padding: '1px 5px', borderRadius: 4 }}>Name, email@edutechex.com, Role</code>
                   </p>
-                  <textarea value={csvText} onChange={(e) => { setCsvText(e.target.value); parseCSV(e.target.value); }} placeholder="Priya Nair, priya@edutechex.in, Designer" rows={6} style={{ width: '100%', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.14)', background: '#ECEAF8', padding: '10px 12px', fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: '#1A1B3A', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+                  <textarea value={csvText} onChange={(e) => { setCsvText(e.target.value); parseCSV(e.target.value); }} placeholder="Priya Nair, priya@edutechex.com, Designer" rows={6} style={{ width: '100%', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.14)', background: '#ECEAF8', padding: '10px 12px', fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: '#1A1B3A', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
                   {csvParsed.length > 0 && (
                     <div style={{ marginTop: 14, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.10)', overflow: 'hidden' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 90px', padding: '7px 12px', background: 'rgba(26,27,58,0.04)', borderBottom: '1px solid rgba(26,27,58,0.08)' }}>
@@ -2883,7 +2883,7 @@ export default function AdminPage() {
                     type="email"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder="priya@edutechex.in"
+                    placeholder="priya@edutechex.com"
                     style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: '#ECEAF8', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
                     onFocus={e => { e.target.style.borderColor = 'rgba(91,79,219,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(26,27,58,0.15)'; }}
                     onBlur={e => { e.target.style.borderColor = 'rgba(26,27,58,0.24)'; e.target.style.boxShadow = 'none'; }}

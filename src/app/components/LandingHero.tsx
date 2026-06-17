@@ -271,7 +271,7 @@ export default function LandingHero() {
               </svg>
             </Link>
             <Link href="/sign-up-login-screen?mode=signup" className="hero-cta-ghost">
-              Request Access
+              Create Account
             </Link>
           </div>
 
