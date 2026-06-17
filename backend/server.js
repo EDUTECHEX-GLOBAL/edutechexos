@@ -123,24 +123,87 @@ function getTransporter() {
 }
 
 async function sendBrevoEmail({ to, bcc, subject, html }) {
+  const toList = Array.isArray(to) ? to : [{ email: String(to) }];
+  const totalRecipients = toList.length + (Array.isArray(bcc) ? bcc.length : 0);
+  console.log(`[Mail] Sending "${subject}" → ${totalRecipients} recipient(s)`);
+
+  // Try Brevo HTTP API first if API key is present
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const fromConfig = process.env.SMTP_FROM || 'EduTechExOS <edutechexos121@gmail.com>';
+      let senderEmail = 'edutechexos121@gmail.com';
+      let senderName = 'EduTechExOS';
+      const match = fromConfig.match(/(.*)<(.*)>/);
+      if (match) {
+        senderName = match[1].trim();
+        senderEmail = match[2].trim();
+      } else if (fromConfig.includes('@')) {
+        senderEmail = fromConfig.trim();
+      }
+
+      const payload = {
+        sender: { name: senderName, email: senderEmail },
+        to: toList.map(r => ({ email: r.email, name: r.name || '' })),
+        subject: subject,
+        htmlContent: html
+      };
+
+      if (Array.isArray(bcc) && bcc.length > 0) {
+        payload.bcc = bcc.map(r => ({ email: typeof r === 'string' ? r : r.email }));
+      }
+
+      const postData = JSON.stringify(payload);
+      const https = require('https');
+      
+      const apiResult = await new Promise((resolve, reject) => {
+        const req = https.request('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'api-key': process.env.BREVO_API_KEY,
+            'content-type': 'application/json',
+            'content-length': Buffer.byteLength(postData)
+          }
+        }, (res) => {
+          let data = '';
+          res.on('data', chunk => { data += chunk; });
+          res.on('end', () => {
+            resolve({ statusCode: res.statusCode, body: data });
+          });
+        });
+
+        req.on('error', err => reject(err));
+        req.write(postData);
+        req.end();
+      });
+
+      if (apiResult.statusCode >= 200 && apiResult.statusCode < 300) {
+        console.log(`[Mail] OK (via HTTP API) — delivered to ${totalRecipients} recipient(s)`);
+        return { ok: true };
+      } else {
+        console.warn(`[Mail] HTTP API returned status ${apiResult.statusCode}: ${apiResult.body}. Falling back to SMTP...`);
+      }
+    } catch (err) {
+      console.warn(`[Mail] HTTP API call failed: ${err.message}. Falling back to SMTP...`);
+    }
+  }
+
+  // SMTP Fallback
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.error('[Mail] SMTP_USER or SMTP_PASS not set');
+    console.error('[Mail] SMTP_USER or SMTP_PASS not set, and HTTP API was not available/failed');
     return { ok: false, brevoError: 'NOT_CONFIGURED' };
   }
 
   const from = process.env.SMTP_FROM || 'EduTechExOS <ac2bb9001@smtp-brevo.com>';
-  const toList = Array.isArray(to) ? to : [{ email: String(to) }];
   const toStr  = toList.map(r => r.name ? `"${r.name}" <${r.email}>` : r.email).join(', ');
   const bccStr = Array.isArray(bcc) ? bcc.map(r => r.email || r).join(', ') : undefined;
-  const totalRecipients = toList.length + (Array.isArray(bcc) ? bcc.length : 0);
 
-  console.log(`[Mail] Sending "${subject}" → ${totalRecipients} recipient(s)`);
   try {
     await getTransporter().sendMail({ from, to: toStr, bcc: bccStr, subject, html });
-    console.log(`[Mail] OK — delivered to ${totalRecipients} recipient(s)`);
+    console.log(`[Mail] OK (via SMTP) — delivered to ${totalRecipients} recipient(s)`);
     return { ok: true };
   } catch (err) {
-    console.error('[Mail] FAILED', err.message);
+    console.error('[Mail] SMTP FAILED', err.message);
     return { ok: false, brevoError: err.message };
   }
 }
