@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Mic, MicOff, Square, Send, Trash2, Sparkles, Volume2, Loader2 } from 'lucide-react';
 import { smartUpload } from '@/lib/uploadToFirebase';
@@ -9,7 +9,7 @@ interface VoiceRecorderProps {
 
 type Mode = 'idle' | 'recording' | 'preview' | 'ai-connecting' | 'ai-listening' | 'ai-speaking';
 
-// â”€â”€ Classic voice note recorder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€ Classic voice note recorder â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 function useVoiceNote(onSend: (url: string) => void) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [duration, setDuration] = useState(0);
@@ -90,7 +90,7 @@ function useVoiceNote(onSend: (url: string) => void) {
   return { start, stop, send, discard, previewUrl, duration };
 }
 
-// â”€â”€ OpenAI Realtime API voice-to-voice AI tutor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€ OpenAI Realtime API voice-to-voice AI tutor â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 function useAIVoice() {
   const [transcript, setTranscript] = useState('');
   const [aiResponse, setAiResponse] = useState('');
@@ -218,7 +218,7 @@ function useAIVoice() {
   return { connect, startListening, stopListening, disconnect, transcript, aiResponse };
 }
 
-// â”€â”€ Main VoiceRecorder component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€ Main VoiceRecorder component â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 export default function VoiceRecorder({ onSend }: VoiceRecorderProps) {
   const [mode, setMode] = useState<Mode>('idle');
   const voiceNote = useVoiceNote(onSend);

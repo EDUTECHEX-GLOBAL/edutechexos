@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import React, { useState, useEffect } from 'react';
 import { Users, Flame, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Mic,
@@ -32,7 +32,7 @@ interface VideoCallModalProps {
   currentUserName?: string;
 }
 
-// â”€â”€ Fallback local-only call (no LiveKit credentials) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€ Fallback local-only call (no LiveKit credentials) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 function LocalOnlyCall({ channelName, onClose }: { channelName: string; onClose: () => void }) {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -172,7 +172,7 @@ function LocalOnlyCall({ channelName, onClose }: { channelName: string; onClose:
   );
 }
 
-// â”€â”€ LiveKit-powered multi-participant call â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€ LiveKit-powered multi-participant call â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 function LiveKitCall({
   token,
   serverUrl,
@@ -203,7 +203,7 @@ function LiveKitCall({
         </button>
       </div>
 
-      {/* LiveKit VideoConference "” full-featured UI with grid, controls, chat */}
+      {/* LiveKit VideoConference "" full-featured UI with grid, controls, chat */}
       <LiveKitRoom
         token={token}
         serverUrl={serverUrl}
@@ -220,7 +220,7 @@ function LiveKitCall({
   );
 }
 
-// â”€â”€ Main component "” detects LiveKit credentials, falls back gracefully â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€ Main component "" detects LiveKit credentials, falls back gracefully â"€â"€â"€â"€â"€â"€â"€â"€
 export default function VideoCallModal({
   channelName,
   onClose,

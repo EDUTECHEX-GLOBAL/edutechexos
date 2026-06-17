@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 /**
  * ScreenRecorder component
@@ -8,8 +8,8 @@
  * - Shows preview of the recorded video and provides a Send button.
  *
  * Props:
- *   onSend: (blob: Blob) => void "“ callback invoked with the recorded video blob.
- *   includeWebcam?: boolean "“ if true, captures webcam and overlays it on the screen recording.
+ *   onSend: (blob: Blob) => void "" callback invoked with the recorded video blob.
+ *   includeWebcam?: boolean "" if true, captures webcam and overlays it on the screen recording.
  */
 interface ScreenRecorderProps {
   onSend: (blob: Blob) => void;
@@ -64,10 +64,10 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
         webcamVideo.srcObject = webcamStream;
         webcamVideo.play();
 
-        // Draw loop "“ draw screen then overlay webcam picture"‘in"‘picture
+        // Draw loop "" draw screen then overlay webcam picture"'in"'picture
         const draw = () => {
           ctx.drawImage(
-            // Screen video element "“ use an off"‘screen video element
+            // Screen video element "" use an off"'screen video element
             (() => {
               const v = document.createElement('video');
               v.srcObject = screenStream;
@@ -79,7 +79,7 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
             canvas.width,
             canvas.height
           );
-          // Webcam overlay (bottom"‘right corner, 20% of width)
+          // Webcam overlay (bottom"'right corner, 20% of width)
           const overlayW = canvas.width * 0.2;
           const overlayH =
             (overlayW * (webcamVideo.videoHeight ?? 1)) / (webcamVideo.videoWidth ?? 1);
@@ -160,7 +160,7 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
         <div className="mt-4">
           <video src={previewUrl} controls className="w-full rounded" />
           <p className="text-sm text-gray-600 mt-1">
-            Preview "“ send will happen automatically after stop.
+            Preview "" send will happen automatically after stop.
           </p>
         </div>
       )}

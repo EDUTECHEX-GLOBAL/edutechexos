@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import React, { useMemo, useState } from 'react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { X, Mail, Copy, Check, Hash, MessageSquare, Send } from 'lucide-react';
@@ -47,7 +47,7 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
 
   const [copied, setCopied] = useState(false);
 
-  // Channels this member belongs to "” must be before the early return
+  // Channels this member belongs to "" must be before the early return
   const memberChannels = useMemo(
     () =>
       member
@@ -58,7 +58,7 @@ export default function UserProfileModal({ member, onClose }: UserProfileModalPr
     [channels, member]
   );
 
-  // Last 3 messages from this member (scan all channels) "” must be before the early return
+  // Last 3 messages from this member (scan all channels) "" must be before the early return
   const recentMessages = useMemo(() => {
     if (!member) return [];
 

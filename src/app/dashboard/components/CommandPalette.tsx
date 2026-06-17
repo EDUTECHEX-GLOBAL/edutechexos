@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { Command, Hash, User, Moon, Sun, Bell, Search, ChevronRight } from 'lucide-react';

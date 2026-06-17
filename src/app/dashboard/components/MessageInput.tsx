@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
@@ -309,7 +309,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [message]);
 
-  // Typing indicator "” updates local state AND broadcasts via socket
+  // Typing indicator "" updates local state AND broadcasts via socket
   const handleTyping = useCallback(() => {
     if (!currentUser?.name) return;
     setTyping(channelId, currentUser.name, true);
@@ -486,7 +486,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
             if (e) URL.revokeObjectURL(e.url);
             return { kind, blob, mimeType, url: URL.createObjectURL(blob) };
           });
-          toast.success(`Voice note ready "” review before sending`);
+          toast.success(`Voice note ready "" review before sending`);
         }
       };
       mediaRecorderRef.current = recorder;
@@ -504,7 +504,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
         (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError');
       toast.error(
         isDenied
-          ? `Browser blocked ${kind} access "” allow permissions.`
+          ? `Browser blocked ${kind} access "" allow permissions.`
           : `Could not start ${kind} recording.`
       );
     }
