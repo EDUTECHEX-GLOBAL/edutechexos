@@ -2790,29 +2790,37 @@ app.post('/api/messages', requireAuth, async (req, res) => {
   try {
     const { id, ...messageData } = req.body;
     const userEmail = getUserEmail(req);
-    // Attach senderEmail from auth if not already provided
     if (userEmail && !messageData.senderEmail) {
       messageData.senderEmail = userEmail;
     }
-    // Encrypt message body at rest
+
+    // Keep the pre-encryption text for the socket broadcast.
+    // For DMs the client already applied E2E encryption before sending — we preserve
+    // that layer so the receiving client can do its ECDH decrypt.
+    // For channel messages we broadcast plaintext so clients see the message immediately.
+    const preSaveText = messageData.text;
+
+    // Encrypt at rest (AES-256-GCM server-side)
     if (messageData.text) messageData.text = encryptField(messageData.text);
-    const newMessage = new Message({
-      ...messageData,
-      clientId: id,
-    });
+    const newMessage = new Message({ ...messageData, clientId: id });
     const savedMsg = await newMessage.save();
     const { _id, __v, ...rest } = savedMsg.toObject();
-    const payload = {
+
+    const base = {
       ...rest,
       id: _id.toString(),
       timestamp: rest.timestamp instanceof Date ? rest.timestamp.toISOString() : rest.timestamp,
       ...(rest.editedAt ? { editedAt: rest.editedAt instanceof Date ? rest.editedAt.toISOString() : rest.editedAt } : {}),
     };
 
-    // Broadcast to all clients subscribed to this channel room (including sender)
-    io.to(payload.channelId).emit('new_message', { channelId: payload.channelId, message: payload });
+    // Socket broadcast — always send with decrypted / pre-encryption text so every
+    // connected client can display the message without needing to hit the DB.
+    // DMs: send the E2E-encrypted form (client will ECDH-decrypt it).
+    // Channels: send plaintext.
+    const socketPayload = { ...base, text: preSaveText };
+    io.to(base.channelId).emit('new_message', { channelId: base.channelId, message: socketPayload });
 
-    res.json({ success: true, message: payload });
+    res.json({ success: true, message: base });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
@@ -2860,6 +2868,7 @@ app.patch('/api/messages/:id', requireAuth, async (req, res) => {
     // Whitelist allowed fields to prevent arbitrary field injection
     const { text, editedAt, reactions, poll } = req.body;
     const updates = {};
+    const plainText = text; // keep pre-encryption text for broadcast
     if (text     !== undefined) updates.text     = encryptField(text);
     if (editedAt !== undefined) updates.editedAt = editedAt;
     if (reactions !== undefined) updates.reactions = reactions;
@@ -2876,17 +2885,18 @@ app.patch('/api/messages/:id', requireAuth, async (req, res) => {
     }
 
     const { _id, __v, ...rest } = updated;
-    const payload = {
+    const base = {
       ...rest,
       id: _id.toString(),
       timestamp: rest.timestamp instanceof Date ? rest.timestamp.toISOString() : rest.timestamp,
       ...(rest.editedAt ? { editedAt: rest.editedAt instanceof Date ? rest.editedAt.toISOString() : rest.editedAt } : {}),
     };
 
-    // Real-time broadcast so other clients see the change immediately
-    io.to(payload.channelId).emit('message_updated', { channelId: payload.channelId, message: payload });
+    // Broadcast with decrypted text — same reason as POST: clients must display immediately
+    const socketPayload = text !== undefined ? { ...base, text: plainText } : base;
+    io.to(base.channelId).emit('message_updated', { channelId: base.channelId, message: socketPayload });
 
-    res.json({ success: true, message: payload });
+    res.json({ success: true, message: base });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
@@ -3242,7 +3252,7 @@ async function postBotMessage(channelId, text) {
     sender:   'EduTechExOS Bot',
     initials: 'EB',
     color:    '#4f46e5',
-    text:     encryptField(text),
+    text:     encryptField(text), // encrypted at rest
     timestamp: new Date(),
   });
   const saved = await msg.save();
@@ -3250,6 +3260,7 @@ async function postBotMessage(channelId, text) {
   const payload = {
     ...rest,
     id: _id.toString(),
+    text,  // broadcast plaintext so clients display immediately
     timestamp: rest.timestamp instanceof Date ? rest.timestamp.toISOString() : rest.timestamp,
   };
   io.to(channelId).emit('new_message', { channelId, message: payload });
