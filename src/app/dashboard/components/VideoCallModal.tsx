@@ -32,7 +32,7 @@ interface VideoCallModalProps {
   currentUserName?: string;
 }
 
-// -”-”- Fallback local-only call (no LiveKit credentials) -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-
+// â”€â”€ Fallback local-only call (no LiveKit credentials) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function LocalOnlyCall({ channelName, onClose }: { channelName: string; onClose: () => void }) {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -74,35 +74,35 @@ function LocalOnlyCall({ channelName, onClose }: { channelName: string; onClose:
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   return (
-    <div className=-fixed inset-0 z-[300] flex flex-col bg-[#191E2F]->
-      <div className=-flex items-center justify-between px-6 py-4 bg-[rgba(25,30,47,0.60)] backdrop-blur-sm shrink-0->
-        <div className=-flex items-center gap-3->
-          <div className=-h-2 w-2 rounded-full bg-green-400 animate-pulse- />
-          <span className=-text-sm font-semibold text-white->#{channelName}</span>
+    <div className="fixed inset-0 z-[300] flex flex-col bg-[#191E2F]">
+      <div className="flex items-center justify-between px-6 py-4 bg-[rgba(25,30,47,0.60)] backdrop-blur-sm shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+          <span className="text-sm font-semibold text-white">#{channelName}</span>
         </div>
-        <div className=-flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-full->
-          <div className=-h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse- />
-          <span className=-text-xs font-mono font-bold text-slate-200->{fmt(duration)}</span>
+        <div className="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-full">
+          <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-xs font-mono font-bold text-slate-200">{fmt(duration)}</span>
         </div>
-        <div className=-flex items-center gap-2 text-[#7C859E]->
+        <div className="flex items-center gap-2 text-[#7C859E]">
           <Users size={16} />
-          <span className=-text-xs font-medium->1 participant</span>
+          <span className="text-xs font-medium">1 participant</span>
         </div>
       </div>
 
-      <div className=-flex-1 relative flex items-center justify-center overflow-hidden bg-[#191E2F]->
+      <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-[#191E2F]">
         {cameraPermissionDenied ? (
-          <div className=-flex flex-col items-center justify-center gap-5 text-center px-8->
-            <div className=-h-24 w-24 rounded-3xl bg-slate-800 flex items-center justify-center border border-[rgba(62,74,137,0.15)]->
-              <Camera size={40} className=-text-[#7C859E]- strokeWidth={1.5} />
+          <div className="flex flex-col items-center justify-center gap-5 text-center px-8">
+            <div className="h-24 w-24 rounded-3xl bg-slate-800 flex items-center justify-center border border-[rgba(62,74,137,0.15)]">
+              <Camera size={40} className="text-[#7C859E]" strokeWidth={1.5} />
             </div>
             <div>
-              <p className=-text-base font-bold text-[#9BA6D3]->Camera access denied</p>
-              <p className=-text-sm text-[#7C859E] mt-1 max-w-xs leading-relaxed->
+              <p className="text-base font-bold text-[#9BA6D3]">Camera access denied</p>
+              <p className="text-sm text-[#7C859E] mt-1 max-w-xs leading-relaxed">
                 Allow camera and microphone access in your browser settings to start the video call.
               </p>
             </div>
-            <div className=-rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-[#C4CAE0] max-w-xs->
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-[#C4CAE0] max-w-xs">
               <strong>Tip:</strong> Add <code>LIVEKIT_API_KEY</code> and{' '}
               <code>LIVEKIT_API_SECRET</code> to enable multi-participant calls via LiveKit.
             </div>
@@ -118,19 +118,19 @@ function LocalOnlyCall({ channelName, onClose }: { channelName: string; onClose:
           />
         )}
         {!cameraPermissionDenied && !cameraEnabled && (
-          <div className=-absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#191E2F]->
-            <div className=-h-24 w-24 rounded-full bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center shadow-2xl->
-              <span className=-text-3xl font-black text-white->You</span>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#191E2F]">
+            <div className="h-24 w-24 rounded-full bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center shadow-2xl">
+              <span className="text-3xl font-black text-white">You</span>
             </div>
-            <p className=-text-sm font-medium text-[#7C859E]->Camera is off</p>
+            <p className="text-sm font-medium text-[#7C859E]">Camera is off</p>
           </div>
         )}
-        <div className=-absolute bottom-24 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-full bg-slate-800/80 backdrop-blur-sm border border-[rgba(62,74,137,0.15)]/50->
-          <p className=-text-xs font-semibold text-[#9BA6D3]->Waiting for others to join...</p>
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-full bg-slate-800/80 backdrop-blur-sm border border-[rgba(62,74,137,0.15)]/50">
+          <p className="text-xs font-semibold text-[#9BA6D3]">Waiting for others to join...</p>
         </div>
       </div>
 
-      <div className=-flex items-center justify-center gap-4 py-6 bg-[rgba(25,30,47,0.60)] backdrop-blur-sm shrink-0->
+      <div className="flex items-center justify-center gap-4 py-6 bg-[rgba(25,30,47,0.60)] backdrop-blur-sm shrink-0">
         <button
           onClick={() => {
             streamRef.current?.getAudioTracks().forEach((t) => {
@@ -147,9 +147,9 @@ function LocalOnlyCall({ channelName, onClose }: { channelName: string; onClose:
             stopStream();
             onClose();
           }}
-          className=-h-16 w-16 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center shadow-xl shadow-red-900/50-
+          className="h-16 w-16 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center shadow-xl shadow-red-900/50"
         >
-          <PhoneOff size={24} className=-text-white- strokeWidth={2.5} />
+          <PhoneOff size={24} className="text-white" strokeWidth={2.5} />
         </button>
         <button
           onClick={() => {
@@ -172,7 +172,7 @@ function LocalOnlyCall({ channelName, onClose }: { channelName: string; onClose:
   );
 }
 
-// -”-”- LiveKit-powered multi-participant call -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-
+// â”€â”€ LiveKit-powered multi-participant call â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function LiveKitCall({
   token,
   serverUrl,
@@ -185,25 +185,25 @@ function LiveKitCall({
   onClose: () => void;
 }) {
   return (
-    <div className=-fixed inset-0 z-[300] flex flex-col bg-[#191E2F]->
+    <div className="fixed inset-0 z-[300] flex flex-col bg-[#191E2F]">
       {/* Header */}
-      <div className=-flex items-center justify-between px-6 py-3 bg-[rgba(25,30,47,0.80)] backdrop-blur-sm shrink-0 border-b border-[rgba(62,74,137,0.15)]->
-        <div className=-flex items-center gap-3->
-          <div className=-h-2 w-2 rounded-full bg-green-400 animate-pulse- />
-          <span className=-text-sm font-semibold text-white->#{channelName}</span>
-          <span className=-rounded-full bg-[rgba(62,74,137,0.08)]0/20 px-2 py-0.5 text-[10px] font-bold text-indigo-300 uppercase tracking-wide->
+      <div className="flex items-center justify-between px-6 py-3 bg-[rgba(25,30,47,0.80)] backdrop-blur-sm shrink-0 border-b border-[rgba(62,74,137,0.15)]">
+        <div className="flex items-center gap-3">
+          <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+          <span className="text-sm font-semibold text-white">#{channelName}</span>
+          <span className="rounded-full bg-[rgba(62,74,137,0.08)]0/20 px-2 py-0.5 text-[10px] font-bold text-indigo-300 uppercase tracking-wide">
             LiveKit
           </span>
         </div>
         <button
           onClick={onClose}
-          className=-h-9 w-9 rounded-xl bg-red-600 hover:bg-red-500 flex items-center justify-center transition-colors-
+          className="h-9 w-9 rounded-xl bg-red-600 hover:bg-red-500 flex items-center justify-center transition-colors"
         >
-          <PhoneOff size={16} className=-text-white- strokeWidth={2.5} />
+          <PhoneOff size={16} className="text-white" strokeWidth={2.5} />
         </button>
       </div>
 
-      {/* LiveKit VideoConference -” full-featured UI with grid, controls, chat */}
+      {/* LiveKit VideoConference "” full-featured UI with grid, controls, chat */}
       <LiveKitRoom
         token={token}
         serverUrl={serverUrl}
@@ -211,7 +211,7 @@ function LiveKitCall({
         video
         audio
         onDisconnected={onClose}
-        className=-flex-1-
+        className="flex-1"
       >
         <VideoConference />
         <RoomAudioRenderer />
@@ -220,7 +220,7 @@ function LiveKitCall({
   );
 }
 
-// -”-”- Main component -” detects LiveKit credentials, falls back gracefully -”-”-”-”-”-”-”-”-
+// â”€â”€ Main component "” detects LiveKit credentials, falls back gracefully â”€â”€â”€â”€â”€â”€â”€â”€
 export default function VideoCallModal({
   channelName,
   onClose,
@@ -258,10 +258,10 @@ export default function VideoCallModal({
 
   if (isConnecting) {
     return (
-      <div className=-fixed inset-0 z-[300] flex items-center justify-center bg-[#191E2F]->
-        <div className=-flex flex-col items-center gap-4->
-          <div className=-h-12 w-12 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin- />
-          <p className=-text-sm font-semibold text-[#9BA6D3]->Connecting to room...</p>
+      <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#191E2F]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin" />
+          <p className="text-sm font-semibold text-[#9BA6D3]">Connecting to room...</p>
         </div>
       </div>
     );

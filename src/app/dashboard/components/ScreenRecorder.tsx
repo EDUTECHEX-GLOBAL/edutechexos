@@ -8,8 +8,8 @@
  * - Shows preview of the recorded video and provides a Send button.
  *
  * Props:
- *   onSend: (blob: Blob) => void -“ callback invoked with the recorded video blob.
- *   includeWebcam?: boolean -“ if true, captures webcam and overlays it on the screen recording.
+ *   onSend: (blob: Blob) => void "“ callback invoked with the recorded video blob.
+ *   includeWebcam?: boolean "“ if true, captures webcam and overlays it on the screen recording.
  */
 interface ScreenRecorderProps {
   onSend: (blob: Blob) => void;
@@ -34,7 +34,7 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
 
   const startRecording = async () => {
     try {
-      // 1ï¸-ƒ£ Capture screen (with audio if available)
+      // 1ï¸âƒ£ Capture screen (with audio if available)
       const screenStream = await (navigator.mediaDevices as any).getDisplayMedia({
         video: true,
         audio: true,
@@ -43,7 +43,7 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
       let finalStream: MediaStream;
 
       if (includeWebcam) {
-        // 2ï¸-ƒ£ Capture webcam video (audio not needed, already captured from screen)
+        // 2ï¸âƒ£ Capture webcam video (audio not needed, already captured from screen)
         const webcamStream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: false,
@@ -64,10 +64,10 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
         webcamVideo.srcObject = webcamStream;
         webcamVideo.play();
 
-        // Draw loop -“ draw screen then overlay webcam picture-‘in-‘picture
+        // Draw loop "“ draw screen then overlay webcam picture"‘in"‘picture
         const draw = () => {
           ctx.drawImage(
-            // Screen video element -“ use an off-‘screen video element
+            // Screen video element "“ use an off"‘screen video element
             (() => {
               const v = document.createElement('video');
               v.srcObject = screenStream;
@@ -79,7 +79,7 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
             canvas.width,
             canvas.height
           );
-          // Webcam overlay (bottom-‘right corner, 20% of width)
+          // Webcam overlay (bottom"‘right corner, 20% of width)
           const overlayW = canvas.width * 0.2;
           const overlayH =
             (overlayW * (webcamVideo.videoHeight ?? 1)) / (webcamVideo.videoWidth ?? 1);
@@ -139,28 +139,28 @@ const ScreenRecorder: React.FC<ScreenRecorderProps> = ({ onSend, includeWebcam =
   };
 
   return (
-    <div className=-p-4 bg-white rounded-lg shadow-md max-w-md mx-auto->
-      <h3 className=-text-lg font-medium mb-3->Screen Recorder</h3>
+    <div className="p-4 bg-white rounded-lg shadow-md max-w-md mx-auto">
+      <h3 className="text-lg font-medium mb-3">Screen Recorder</h3>
       {recording ? (
         <button
           onClick={stopRecording}
-          className=-px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-
+          className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
         >
           Stop Recording
         </button>
       ) : (
         <button
           onClick={startRecording}
-          className=-px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
         >
           Start Screen Capture
         </button>
       )}
       {previewUrl && (
-        <div className=-mt-4->
-          <video src={previewUrl} controls className=-w-full rounded- />
-          <p className=-text-sm text-gray-600 mt-1->
-            Preview -“ send will happen automatically after stop.
+        <div className="mt-4">
+          <video src={previewUrl} controls className="w-full rounded" />
+          <p className="text-sm text-gray-600 mt-1">
+            Preview "“ send will happen automatically after stop.
           </p>
         </div>
       )}

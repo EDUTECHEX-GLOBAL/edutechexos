@@ -143,7 +143,7 @@ export default function AdminPage() {
     return new Date(Date.now() + istOffset).toISOString().slice(0, 10);
   });
 
-  // Live in-app activity -” users active in last 3 minutes
+  // Live in-app activity "” users active in last 3 minutes
   type LiveUser = {
     email: string; name: string;
     currentActivity: string; currentPanel: string;
@@ -265,7 +265,7 @@ export default function AdminPage() {
     };
   }, [loadLocalMembers]);
 
-  // Helper -” read the stored JWT token once
+  // Helper "” read the stored JWT token once
   function getAdminToken(): string | null {
     try {
       return JSON.parse(localStorage.getItem('edutechex_token') ?? '').token ?? null;
@@ -280,7 +280,7 @@ export default function AdminPage() {
     loadWorkspaceChannels?.();
 
     const token = getAdminToken();
-    if (!token) return; // not logged in -” nothing to load
+    if (!token) return; // not logged in "” nothing to load
 
     // Load access requests with a 20-second timeout so Render cold-starts don't block the UI
     const controller = new AbortController();
@@ -288,7 +288,7 @@ export default function AdminPage() {
 
     fetch(`${API_BASE}/api/access-requests`, {
       signal: controller.signal,
-      headers: { Authorization: `Bearer ${token}` }, // -† was missing (caused 403)
+      headers: { Authorization: `Bearer ${token}` }, // â† was missing (caused 403)
     })
       .then((r) => r.json())
       .then((data: { success: boolean; requests?: AccessRequest[] }) => {
@@ -324,7 +324,7 @@ export default function AdminPage() {
               }
             })
             .catch(() => {
-              /* silent -” already showing cached */
+              /* silent "” already showing cached */
             });
         }, 15_000);
       });
@@ -348,12 +348,12 @@ export default function AdminPage() {
     fetch(`${API_BASE}/api/activity/stats`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => (r.ok ? r.json() : null)) // 404 before backend deploys -†’ null
+      .then((r) => (r.ok ? r.json() : null)) // 404 before backend deploys â†’ null
       .then((data: { success: boolean; stats?: ActivityStat[] } | null) => {
         if (data?.success && Array.isArray(data.stats)) setActivityStats(data.stats);
       })
       .catch(() => {
-        /* non-critical -” section shows empty state */
+        /* non-critical "” section shows empty state */
       })
       .finally(() => setActivityLoading(false));
   }, []);
@@ -384,7 +384,7 @@ export default function AdminPage() {
     return () => { socket.off('aw_sync', handler); };
   }, [fetchAwData]);
 
-  // -”-”- Live in-app activity -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-
+  // â”€â”€ Live in-app activity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const fetchLiveUsers = useCallback(() => {
     const token = getAdminToken();
     if (!token) return;
@@ -419,7 +419,7 @@ export default function AdminPage() {
     return () => { socket.off('user_activity_update', handler); };
   }, []);
 
-  // -”-”- In-app activity history (all sessions for a given date) -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-
+  // â”€â”€ In-app activity history (all sessions for a given date) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const fetchHistory = useCallback((date?: string) => {
     const token = getAdminToken();
     if (!token) return;
@@ -510,7 +510,7 @@ export default function AdminPage() {
     // Optimistic local update
     setMemberRole(memberId, newRoleVal);
 
-    // Persist to backend for DB members (id looks like -member-<24-char-hex>-)
+    // Persist to backend for DB members (id looks like "member-<24-char-hex>")
     const rawId = memberId.replace('member-', '');
     if (rawId.length === 24) {
       try {
@@ -524,7 +524,7 @@ export default function AdminPage() {
           body: JSON.stringify({ role: newRoleVal }),
         });
       } catch {
-        /* non-critical -” local update already applied */
+        /* non-critical "” local update already applied */
       }
     }
     toast.success(`Role updated to ${newRoleVal} for ${memberName}`);
@@ -574,7 +574,7 @@ export default function AdminPage() {
     const colors = ['#3E4A89', '#9BA6D3', '#7c3aed', '#a78bfa', '#2A3568', '#c4b5fd'];
     const color = colors[Math.floor(Math.random() * colors.length)];
 
-    // -”-”- Persist to backend first so the member survives page refresh -”-”-”-”-”-”-”-”-”-”-
+    // â”€â”€ Persist to backend first so the member survives page refresh â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try {
       const token = getAdminToken();
       const res = await fetch(`${API_BASE}/api/members`, {
@@ -597,7 +597,7 @@ export default function AdminPage() {
         if (newRole !== 'Admin' && newExtraChannels.length > 0)
           setMemberWorkspaceChannels(data.member.id, newExtraChannels);
         const pwd = data.generatedPassword ?? '';
-        toast.success(`${cleanName} added! Password: ${pwd} -” sent to their email.`, { duration: 8000 });
+        toast.success(`${cleanName} added! Password: ${pwd} "” sent to their email.`, { duration: 8000 });
         // Send welcome email with credentials
         if (pwd) {
           fetch(`${API_BASE}/api/email`, {
@@ -606,7 +606,7 @@ export default function AdminPage() {
             body: JSON.stringify({
               to: [{ email: emailClean, name: cleanName }],
               subject: `Welcome to ${process.env.NEXT_PUBLIC_APP_NAME || 'SkillNaav'}!`,
-              htmlContent: `<p>Hello ${cleanName},</p><p>Welcome to SkillNaav! Here are your login credentials:</p><p>Email: ${emailClean}<br/>Password: ${pwd}</p><p>You can log in at <a href=-https://www.skillnaav.com/user/login->https://www.skillnaav.com/user/login</a>.</p><p>For more information, visit SkillNaav.</p><p>If you have any questions, contact skillnaav@gmail.com.</p>`
+              htmlContent: `<p>Hello ${cleanName},</p><p>Welcome to SkillNaav! Here are your login credentials:</p><p>Email: ${emailClean}<br/>Password: ${pwd}</p><p>You can log in at <a href="https://www.skillnaav.com/user/login">https://www.skillnaav.com/user/login</a>.</p><p>For more information, visit SkillNaav.</p><p>If you have any questions, contact skillnaav@gmail.com.</p>`
             })
           });
         }
@@ -615,7 +615,7 @@ export default function AdminPage() {
         return;
       }
     } catch {
-      // Backend unreachable -” add locally only (temporary, won't persist)
+      // Backend unreachable "” add locally only (temporary, won't persist)
       const tempId = `member-${cleanName
         .toLowerCase()
         .replace(/[^a-z]/g, '')
@@ -631,7 +631,7 @@ export default function AdminPage() {
       });
       if (newRole !== 'Admin' && newExtraChannels.length > 0)
         setMemberWorkspaceChannels(tempId, newExtraChannels);
-      toast.warning(`${cleanName} added locally -” backend unreachable, won't persist.`);
+      toast.warning(`${cleanName} added locally "” backend unreachable, won't persist.`);
     }
 
     setNewName('');
@@ -672,7 +672,7 @@ export default function AdminPage() {
       const data = await res.json();
       if (!res.ok || !data.success) { toast.error(data.error ?? 'Failed to update leave.'); return; }
       setLeaves(prev => prev.map(l => l.id === leaveId ? { ...l, status, adminNote: leaveNotes[leaveId] ?? '' } : l));
-      toast.success(`Leave ${status === 'approved' ? 'approved' : 'rejected'} -” user has been notified.`);
+      toast.success(`Leave ${status === 'approved' ? 'approved' : 'rejected'} "” user has been notified.`);
     } catch { toast.error('Network error.'); }
     finally { setLeaveActionLoading(null); }
   }
@@ -685,7 +685,7 @@ export default function AdminPage() {
 
     const selectedChannels = requestChannelsByReq[request.id] ?? [];
 
-    // Build member object up-front -” used in both online and offline paths
+    // Build member object up-front "” used in both online and offline paths
     const MEMBER_COLORS = ['#3E4A89', '#9BA6D3', '#7c3aed', '#a78bfa', '#2A3568', '#c4b5fd'];
     const initials = request.name
       .split(' ')
@@ -701,7 +701,7 @@ export default function AdminPage() {
           MEMBER_COLORS.length
       ];
 
-    // -”-”- Persist approval to backend (cross-device) -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-
+    // â”€â”€ Persist approval to backend (cross-device) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try {
       const authData = localStorage.getItem('edutechex_token');
       const token = authData ? JSON.parse(authData).token : null;
@@ -720,10 +720,10 @@ export default function AdminPage() {
         return;
       }
 
-      // Sync from backend -” gets the newly approved member with correct channelIds
+      // Sync from backend "” gets the newly approved member with correct channelIds
       loadLocalMembers?.();
     } catch {
-      // Backend unreachable -” still approve locally so the list updates
+      // Backend unreachable "” still approve locally so the list updates
       const fallbackId = makeMemberId(request.name);
       addMember({
         id: fallbackId,
@@ -737,7 +737,7 @@ export default function AdminPage() {
       if (selectedChannels.length > 0) setMemberWorkspaceChannels(fallbackId, selectedChannels);
     }
 
-    // -”-”- Update local UI state + localStorage fallback -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-
+    // â”€â”€ Update local UI state + localStorage fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const nextRequests = accessRequests.map((item) =>
       item.id === request.id ? { ...item, status: 'approved' as const } : item
     );
@@ -893,7 +893,7 @@ export default function AdminPage() {
         return;
       }
     } catch {
-      // Backend unreachable -” still update locally
+      // Backend unreachable "” still update locally
     }
 
     const nextRequests = accessRequests.map((r) =>
@@ -1007,49 +1007,49 @@ export default function AdminPage() {
 
   return (
     <AdminGuard>
-      <div className=-admin-control-root min-h-screen- style={{ fontFamily: -'Plus Jakarta Sans', 'Inter', sans-serif- }}>
+      <div className="admin-control-root min-h-screen" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
 
-        {/* -”-”- Spectrum bar -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”- */}
-        <div className=-spectrum-bar fixed top-0 left-0 right-0 z-50 pointer-events-none- />
+        {/* â”€â”€ Spectrum bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <div className="spectrum-bar fixed top-0 left-0 right-0 z-50 pointer-events-none" />
 
-        {/* -”-”- Header -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”- */}
-        <header className=-sticky top-[3px] z-40- style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(26,27,58,0.14)', boxShadow: '0 2px 16px rgba(91,79,219,0.06)' }}>
-          <div className=-mx-auto flex h-16 max-w-[1500px] items-center justify-between px-6 lg:px-8->
-            <div className=-flex items-center gap-4->
-              <Link href=-/- className=-flex items-center gap-2.5 no-underline->
-                <div className=-w-8 h-8 rounded-lg flex items-center justify-center shadow-md- style={{ background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', boxShadow: '0 4px 14px rgba(91,79,219,0.28)' }}>
+        {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <header className="sticky top-[3px] z-40" style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(26,27,58,0.14)', boxShadow: '0 2px 16px rgba(91,79,219,0.06)' }}>
+          <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-6 lg:px-8">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="flex items-center gap-2.5 no-underline">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md" style={{ background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', boxShadow: '0 4px 14px rgba(91,79,219,0.28)' }}>
                   <span style={{ fontSize: 9, fontWeight: 900, color: '#FFFFFF' }}>EX</span>
                 </div>
-                <span style={{ fontFamily: -'Sora', 'Plus Jakarta Sans', sans-serif-, fontSize: 16, fontWeight: 800, color: '#1A1B3A', letterSpacing: '-0.025em' }}>
+                <span style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 16, fontWeight: 800, color: '#1A1B3A', letterSpacing: '-0.025em' }}>
                   EduTechEx<span style={{ color: '#5B4FDB' }}>OS</span>
                 </span>
               </Link>
-              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: 8, background: 'rgba(239,71,111,0.08)', border: '1px solid rgba(239,71,111,0.18)', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: '#EF476F', fontFamily: -'JetBrains Mono', monospace- }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: 8, background: 'rgba(239,71,111,0.08)', border: '1px solid rgba(239,71,111,0.18)', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: '#EF476F', fontFamily: "'JetBrains Mono', monospace" }}>
                 Admin control
               </span>
             </div>
-            <div className=-flex items-center gap-3->
-              <Link href=-/dashboard- style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 20, border: '1.5px solid rgba(26,27,58,0.18)', background: '#FFFFFF', fontSize: 12, fontWeight: 600, color: '#5A5F80', textDecoration: 'none', transition: 'all .2s' }}
-                className=-hidden md:inline-flex-
+            <div className="flex items-center gap-3">
+              <Link href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 20, border: '1.5px solid rgba(26,27,58,0.18)', background: '#FFFFFF', fontSize: 12, fontWeight: 600, color: '#5A5F80', textDecoration: 'none', transition: 'all .2s' }}
+                className="hidden md:inline-flex"
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.28)'; (e.currentTarget as HTMLElement).style.color = '#5B4FDB'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(26,27,58,0.18)'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
               >
                 Workspace
               </Link>
               <button
-                className=-relative flex h-9 w-9 items-center justify-center rounded-xl transition-all-
+                className="relative flex h-9 w-9 items-center justify-center rounded-xl transition-all"
                 style={{ color: '#9296B0', background: 'transparent', border: '1.5px solid rgba(26,27,58,0.15)' }}
-                title=-Pending requests-
+                title="Pending requests"
                 onClick={() => setActiveTab('requests')}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.06)'; (e.currentTarget as HTMLElement).style.color = '#EF476F'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#9296B0'; }}
               >
                 <Bell size={17} />
                 {pendingRequests.length > 0 && (
-                  <span className=-absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-white- style={{ background: '#EF476F' }} />
+                  <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-white" style={{ background: '#EF476F' }} />
                 )}
               </button>
-              <div className=-flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold- style={{ background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', color: '#FFFFFF', boxShadow: '0 2px 10px rgba(91,79,219,0.25)' }}>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold" style={{ background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', color: '#FFFFFF', boxShadow: '0 2px 10px rgba(91,79,219,0.25)' }}>
                 {(adminUser?.name ?? 'Admin')
                   .split(' ')
                   .map((p) => p[0])
@@ -1061,71 +1061,71 @@ export default function AdminPage() {
           </div>
         </header>
 
-        <main className=-mx-auto max-w-[1500px] px-6 py-10 lg:px-8->
-          {/* -”-”- Page hero -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”- */}
-          <section className=-mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between->
+        <main className="mx-auto max-w-[1500px] px-6 py-10 lg:px-8">
+          {/* â”€â”€ Page hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          <section className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p style={{ fontFamily: -'JetBrains Mono', monospace-, fontSize: 10, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: '#7C3AED', marginBottom: 8 }}>
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: '#7C3AED', marginBottom: 8 }}>
                 Admin control
               </p>
-              <h1 style={{ fontFamily: -'Sora', 'Plus Jakarta Sans', sans-serif-, fontSize: 'clamp(1.8rem, 3vw, 2.8rem)', fontWeight: 800, letterSpacing: '-0.03em', color: '#1A1B3A', marginBottom: 8 }}>
+              <h1 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.8rem)', fontWeight: 800, letterSpacing: '-0.03em', color: '#1A1B3A', marginBottom: 8 }}>
                 Workspace Control Center
               </h1>
               <p style={{ fontSize: 14, color: 'rgba(90,95,128,0.75)', lineHeight: 1.65, maxWidth: 560 }}>
-                Manage people, channel access, broadcast emails, and monitor team activity -” all in one place.
+                Manage people, channel access, broadcast emails, and monitor team activity "” all in one place.
               </p>
             </div>
             <button
-              type=-button-
+              type="button"
               onClick={() => setShowAddModal(true)}
-              className=-btn-primary px-5 py-3 text-sm whitespace-nowrap-
+              className="btn-primary px-5 py-3 text-sm whitespace-nowrap"
             >
               <UserPlus size={16} />
               Add user
             </button>
           </section>
 
-          {/* -”-”- Stat cards -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”- */}
-          <section className=-mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4->
+          {/* â”€â”€ Stat cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {statCards.map(({ label, value, icon: Icon, accent, accentBg, gradient }) => (
               <div
                 key={label}
-                className=-relative overflow-hidden rounded-2xl p-5 transition-all duration-300-
+                className="relative overflow-hidden rounded-2xl p-5 transition-all duration-300"
                 style={{ background: '#FFFFFF', border: `1.5px solid ${accent}18`, boxShadow: `0 2px 8px ${accent}0A`, cursor: 'default' }}
                 onMouseEnter={e => { const el = e.currentTarget; el.style.boxShadow = `0 12px 40px ${accent}16`; el.style.borderColor = `${accent}30`; el.style.transform = 'translateY(-2px)'; }}
                 onMouseLeave={e => { const el = e.currentTarget; el.style.boxShadow = `0 2px 8px ${accent}0A`; el.style.borderColor = `${accent}18`; el.style.transform = 'translateY(0)'; }}
               >
                 {/* Left accent strip */}
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: gradient, borderRadius: '3px 0 0 3px' }} />
-                <div className=-mb-4 flex items-center justify-between->
+                <div className="mb-4 flex items-center justify-between">
                   <div style={{ width: 42, height: 42, borderRadius: 12, background: gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 14px ${accent}28` }}>
                     <Icon size={19} style={{ color: '#FFFFFF' }} />
                   </div>
-                  <span style={{ fontFamily: -'JetBrains Mono', monospace-, fontSize: 9, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: accent, background: accentBg, padding: '3px 8px', borderRadius: 20 }}>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: accent, background: accentBg, padding: '3px 8px', borderRadius: 20 }}>
                     Live
                   </span>
                 </div>
-                <p style={{ fontFamily: -'JetBrains Mono', monospace-, fontSize: 9.5, fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.65)', marginBottom: 4 }}>
+                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.65)', marginBottom: 4 }}>
                   {label}
                 </p>
-                <p style={{ fontFamily: -'Sora', 'Plus Jakarta Sans', sans-serif-, fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', color: '#1A1B3A', lineHeight: 1 }}>
+                <p style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', color: '#1A1B3A', lineHeight: 1 }}>
                   {value}
                 </p>
               </div>
             ))}
           </section>
 
-          {/* -”-”- Tab navigation -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”- */}
-          <div className=-mb-6 flex gap-2 overflow-x-auto rounded-2xl p-1.5- style={{ background: '#FFFFFF', border: '1.5px solid rgba(26,27,58,0.14)', boxShadow: '0 2px 8px rgba(91,79,219,0.04)' }}>
+          {/* â”€â”€ Tab navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          <div className="mb-6 flex gap-2 overflow-x-auto rounded-2xl p-1.5" style={{ background: '#FFFFFF', border: '1.5px solid rgba(26,27,58,0.14)', boxShadow: '0 2px 8px rgba(91,79,219,0.04)' }}>
             {TABS.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
-                  type=-button-
+                  type="button"
                   onClick={() => {
                     setActiveTab(tab.id);
-                    const btn = document.querySelector(`[data-tab=-${tab.id}-]`) as HTMLElement;
+                    const btn = document.querySelector(`[data-tab="${tab.id}"]`) as HTMLElement;
                     if (btn) {
                       btn.classList.remove(tab.animClass);
                       void btn.offsetWidth;
@@ -1134,17 +1134,17 @@ export default function AdminPage() {
                     }
                   }}
                   data-tab={tab.id}
-                  className=-flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-250-
+                  className="flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-250"
                   style={isActive ? {
                     background: tab.accentBg,
                     color: tab.accent,
                     border: `1.5px solid ${tab.accentBorder}`,
                     boxShadow: `0 2px 12px ${tab.accent}18`,
-                    fontFamily: -'Plus Jakarta Sans', sans-serif-,
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
                   } : {
                     color: 'rgba(90,95,128,0.70)',
                     border: '1.5px solid transparent',
-                    fontFamily: -'Plus Jakarta Sans', sans-serif-,
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
                   }}
                   onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(91,79,219,0.04)'; }}
                   onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
@@ -1167,29 +1167,29 @@ export default function AdminPage() {
             })}
           </div>
 
-          {/* ------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: PEOPLE
-          ------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'people' && (
-            <div className=-card-premium overflow-hidden- style={{ animation: 'slide-deck 0.4s cubic-bezier(0.22,1,0.36,1)' }}>
+            <div className="card-premium overflow-hidden" style={{ animation: 'slide-deck 0.4s cubic-bezier(0.22,1,0.36,1)' }}>
               {/* People tab top accent */}
               <div style={{ height: 3, background: 'linear-gradient(90deg, #5B4FDB, #7B6FEB, #8B3FDB)', borderRadius: '8px 8px 0 0' }} />
-              <div className=-flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between- style={{ borderBottom: '1px solid rgba(26,27,58,0.14)' }}>
+              <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between" style={{ borderBottom: '1px solid rgba(26,27,58,0.14)' }}>
                 <div>
-                  <h2 style={{ fontFamily: -'Sora', 'Plus Jakarta Sans', sans-serif-, fontSize: 17, fontWeight: 700, color: '#1A1B3A', letterSpacing: '-0.02em', marginBottom: 2 }}>
+                  <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 17, fontWeight: 700, color: '#1A1B3A', letterSpacing: '-0.02em', marginBottom: 2 }}>
                     Users
                   </h2>
                   <p style={{ fontSize: 13, color: 'rgba(90,95,128,0.65)' }}>
                     Manage team members, roles, and channel access.
                   </p>
                 </div>
-                <label className=-flex h-10 items-center gap-2 rounded-xl px-3.5 md:w-80 transition-all- style={{ border: '1.5px solid rgba(91,79,219,0.14)', background: '#ECEAF8' }}>
+                <label className="flex h-10 items-center gap-2 rounded-xl px-3.5 md:w-80 transition-all" style={{ border: '1.5px solid rgba(91,79,219,0.14)', background: '#ECEAF8' }}>
                   <Search size={15} style={{ color: '#9296B0' }} />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder=-Search people-
-                    className=-min-w-0 flex-1 bg-transparent text-sm outline-none-
+                    placeholder="Search people"
+                    className="min-w-0 flex-1 bg-transparent text-sm outline-none"
                     style={{ color: '#1A1B3A' }}
                   />
                 </label>
@@ -1221,7 +1221,7 @@ export default function AdminPage() {
                               <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', margin: '2px 0 0' }}>Channel Access</p>
                             </div>
                           </div>
-                          <button type=-button- onClick={() => setChannelPopoverId(null)} style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <button type="button" onClick={() => setChannelPopoverId(null)} style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <X size={16} />
                           </button>
                         </div>
@@ -1258,7 +1258,7 @@ export default function AdminPage() {
                               {/* Toggle switch */}
                               <div style={{ position: 'relative', width: 40, height: 22, flexShrink: 0 }}>
                                 <input
-                                  type=-checkbox-
+                                  type="checkbox"
                                   checked={checked}
                                   onChange={(e) => handleChannelToggle(modalMember.id, c.id, e.target.checked)}
                                   style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', margin: 0, cursor: 'pointer', zIndex: 1 }}
@@ -1273,10 +1273,10 @@ export default function AdminPage() {
                       </div>
                       {/* Footer */}
                       <div style={{ padding: '12px 24px 20px', borderTop: '1px solid rgba(91,79,219,0.08)', display: 'flex', gap: 8 }}>
-                        <button type=-button- onClick={() => setChannelPopoverId(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, background: 'rgba(90,95,128,0.08)', color: '#5A5F80', fontSize: 13, fontWeight: 700, border: '1px solid rgba(90,95,128,0.14)', cursor: 'pointer' }}>
+                        <button type="button" onClick={() => setChannelPopoverId(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, background: 'rgba(90,95,128,0.08)', color: '#5A5F80', fontSize: 13, fontWeight: 700, border: '1px solid rgba(90,95,128,0.14)', cursor: 'pointer' }}>
                           Cancel
                         </button>
-                        <button type=-button- onClick={() => setChannelPopoverId(null)} style={{ flex: 2, padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg, #5B4FDB, #7B6FEB)', color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(91,79,219,0.30)' }}>
+                        <button type="button" onClick={() => setChannelPopoverId(null)} style={{ flex: 2, padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg, #5B4FDB, #7B6FEB)', color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(91,79,219,0.30)' }}>
                           Save Access
                         </button>
                       </div>
@@ -1285,12 +1285,12 @@ export default function AdminPage() {
                 );
               })()}
 
-              <div className=-overflow-x-auto scrollbar-thin->
-                <table className=-w-full min-w-[700px] text-left->
+              <div className="overflow-x-auto scrollbar-thin">
+                <table className="w-full min-w-[700px] text-left">
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(26,27,58,0.10)', background: 'rgba(91,79,219,0.02)' }}>
                       {['Member', 'Role', 'Status', 'Channels', ''].map((h) => (
-                        <th key={h} style={{ padding: '11px 20px', fontFamily: -'JetBrains Mono', monospace-, fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.55)' }}>
+                        <th key={h} style={{ padding: '11px 20px', fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.55)' }}>
                           {h}
                         </th>
                       ))}
@@ -1312,38 +1312,38 @@ export default function AdminPage() {
                       return (
                         <tr key={member.id} style={{ borderBottom: '1px solid rgba(91,79,219,0.05)', transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(91,79,219,0.025)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                           {/* Member */}
-                          <td className=-px-5 py-3.5->
-                            <div className=-flex items-center gap-3->
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-3">
                               <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(135deg, ${member.color}, ${member.color}bb)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0, boxShadow: `0 2px 8px ${member.color}30` }}>
                                 {member.initials}
                               </div>
-                              <div className=-min-w-0->
-                                <p className=-truncate text-sm font-semibold- style={{ color: '#1A1B3A' }}>{member.name}</p>
-                                <p className=-truncate text-xs- style={{ color: 'rgba(90,95,128,0.60)' }}>{member.email}</p>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold" style={{ color: '#1A1B3A' }}>{member.name}</p>
+                                <p className="truncate text-xs" style={{ color: 'rgba(90,95,128,0.60)' }}>{member.email}</p>
                               </div>
                             </div>
                           </td>
                           {/* Role */}
-                          <td className=-px-5 py-3.5->
+                          <td className="px-5 py-3.5">
                             {systemEmails.includes(member.email.toLowerCase()) ? (
                               <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, background: rc.bg, color: rc.color, border: `1px solid ${rc.border}` }}>
                                 {member.role}
                               </span>
                             ) : (
-                              <div className=-flex flex-col gap-1.5->
+                              <div className="flex flex-col gap-1.5">
                                 <select
                                   value={member.role}
                                   onChange={(e) => handleRoleChange(member.id, member.name, e.target.value)}
                                   style={{ height: 32, borderRadius: 8, border: `1.5px solid ${rc.border}`, background: rc.bg, padding: '0 8px', fontSize: 12, fontWeight: 600, color: rc.color, outline: 'none', cursor: 'pointer' }}
                                 >
-                                  <option value=-Developer->Developer</option>
-                                  <option value=-Designer->Designer</option>
-                                  <option value=-Lead->Lead</option>
-                                  <option value=-Manager->Manager</option>
-                                  <option value=-Admin->Admin</option>
+                                  <option value="Developer">Developer</option>
+                                  <option value="Designer">Designer</option>
+                                  <option value="Lead">Lead</option>
+                                  <option value="Manager">Manager</option>
+                                  <option value="Admin">Admin</option>
                                 </select>
                                 {!isAdminMember && canAddMoreAdmins && (
-                                  <button type=-button- onClick={() => promoteToAdmin(member)} disabled={promoteLoadingId === member.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, background: 'transparent', color: '#5B4FDB', fontSize: 10, fontWeight: 700, border: '1px solid rgba(91,79,219,0.22)', cursor: 'pointer', opacity: promoteLoadingId === member.id ? 0.5 : 1, width: 'fit-content' }}>
+                                  <button type="button" onClick={() => promoteToAdmin(member)} disabled={promoteLoadingId === member.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, background: 'transparent', color: '#5B4FDB', fontSize: 10, fontWeight: 700, border: '1px solid rgba(91,79,219,0.22)', cursor: 'pointer', opacity: promoteLoadingId === member.id ? 0.5 : 1, width: 'fit-content' }}>
                                     <ShieldCheck size={10} />
                                     {promoteLoadingId === member.id ? 'Promoting…' : 'Make Admin'}
                                   </button>
@@ -1352,17 +1352,17 @@ export default function AdminPage() {
                             )}
                           </td>
                           {/* Status */}
-                          <td className=-px-5 py-3.5->
+                          <td className="px-5 py-3.5">
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: member.status === 'online' ? '#0BA868' : '#5A5F80' }}>
                               <span style={{ width: 7, height: 7, borderRadius: '50%', background: member.status === 'online' ? '#10C98A' : member.status === 'away' ? '#F59E0B' : '#D4D0CC', boxShadow: member.status === 'online' ? '0 0 6px rgba(16,201,138,0.60)' : 'none', flexShrink: 0 }} />
                               {member.status ?? 'offline'}
                             </span>
                           </td>
                           {/* Channels */}
-                          <td className=-px-5 py-3.5->
+                          <td className="px-5 py-3.5">
                             {isPrivileged ? (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, background: 'rgba(91,79,219,0.08)', color: '#5B4FDB', border: '1px solid rgba(91,79,219,0.18)' }}>
-                                <svg width=-10- height=-10- viewBox=-0 0 24 24- fill=-none- stroke=-currentColor- strokeWidth=-2.5-><path d=-M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z-/></svg>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                                 All channels
                               </span>
                             ) : (
@@ -1380,20 +1380,20 @@ export default function AdminPage() {
                                 )}
                                 {!systemEmails.includes(member.email.toLowerCase()) && (
                                   <button
-                                    type=-button-
+                                    type="button"
                                     onClick={() => setChannelPopoverId(member.id)}
                                     style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: 'rgba(91,79,219,0.07)', color: '#5B4FDB', border: '1.5px dashed rgba(91,79,219,0.30)', cursor: 'pointer', transition: 'all .15s' }}
                                   >
-                                    <svg width=-9- height=-9- viewBox=-0 0 24 24- fill=-none- stroke=-currentColor- strokeWidth=-3- strokeLinecap=-round-><path d=-M12 5v14M5 12h14-/></svg>
+                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
                                     Manage
                                   </button>
                                 )}
                               </div>
                             )}
                           </td>
-                          <td className=-px-5 py-4 text-right->
+                          <td className="px-5 py-4 text-right">
                             <button
-                              type=-button-
+                              type="button"
                               onClick={async () => {
                                 if (
                                   !confirm(
@@ -1431,7 +1431,7 @@ export default function AdminPage() {
                                     toast.success(`${member.name} was removed from the workspace.`);
                                     loadLocalMembers?.();
                                   } else if (r.status === 404) {
-                                    // Both endpoints missing (very old deploy) -” remove locally
+                                    // Both endpoints missing (very old deploy) "” remove locally
                                     removeMember(member.id);
                                     toast.success(`${member.name} was removed from the workspace.`);
                                     loadLocalMembers?.();
@@ -1452,7 +1452,7 @@ export default function AdminPage() {
                                       toast.success(`${member.name} was removed from the workspace.`);
                                       loadLocalMembers?.();
                                     } else if (res.status === 404) {
-                                      // DB record already gone -” try system endpoint (covers
+                                      // DB record already gone "” try system endpoint (covers
                                       // hardcoded members that were also registered via sign-up)
                                       // or just remove from local state if truly gone.
                                       await doSystemRemove().catch(async () => {
@@ -1470,8 +1470,8 @@ export default function AdminPage() {
                                   toast.error('Could not reach the server. Please try again.');
                                 }
                               }}
-                              className=-inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-light transition-all hover:bg-[rgba(244,63,94,0.10)] hover:text-[#f43f5e]-
-                              title=-Remove user-
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-ink-light transition-all hover:bg-[rgba(244,63,94,0.10)] hover:text-[#f43f5e]"
+                              title="Remove user"
                             >
                               <Trash2 size={15} />
                             </button>
@@ -1485,9 +1485,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: REQUESTS
-          ------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'requests' && (() => {
             const statusCfg: Record<string, { label: string; color: string; bg: string; border: string }> = {
               pending:  { label: 'Pending',  color: '#F59E0B', bg: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.25)' },
@@ -1514,13 +1514,13 @@ export default function AdminPage() {
             const isInternal = (email: string) => email.toLowerCase().endsWith('@edutechex.in');
 
             return (
-              <div className=-card-premium p-6- style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div className="card-premium p-6" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div style={{ height: 3, background: 'linear-gradient(90deg,#EF476F,#F57A98)', borderRadius: 3 }} />
 
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                   <div>
-                    <h2 style={{ fontFamily: -'Sora',sans-serif-, fontSize: 17, fontWeight: 800, color: '#1A1B3A', margin: 0 }}>
+                    <h2 style={{ fontFamily: "'Sora',sans-serif", fontSize: 17, fontWeight: 800, color: '#1A1B3A', margin: 0 }}>
                       User Requests
                     </h2>
                     <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.55)', margin: '2px 0 0' }}>
@@ -1531,8 +1531,8 @@ export default function AdminPage() {
                   <div style={{ position: 'relative' }}>
                     <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'rgba(90,95,128,0.40)' }} />
                     <input
-                      type=-text-
-                      placeholder=-Search users...-
+                      type="text"
+                      placeholder="Search users..."
                       value={requestSearch}
                       onChange={e => setRequestSearch(e.target.value)}
                       style={{ paddingLeft: 30, paddingRight: 12, height: 34, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.10)', background: '#F7F8FC', fontSize: 12, color: '#1A1B3A', outline: 'none', width: 200 }}
@@ -1545,7 +1545,7 @@ export default function AdminPage() {
                   {(['all', 'pending', 'invited', 'approved', 'rejected'] as const).map(f => (
                     <button
                       key={f}
-                      type=-button-
+                      type="button"
                       onClick={() => setRequestFilter(f)}
                       style={{ height: 28, padding: '0 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, textTransform: 'capitalize', cursor: 'pointer', transition: 'all .15s',
                         background: requestFilter === f ? '#1A1B3A' : 'rgba(26,27,58,0.05)',
@@ -1573,10 +1573,10 @@ export default function AdminPage() {
                         </div>
                         <div>
                           <p style={{ fontSize: 15, fontWeight: 700, color: '#1A1B3A', margin: 0 }}>{viewingRequest.name}</p>
-                          <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.65)', margin: '2px 0 0', fontFamily: -'JetBrains Mono',monospace- }}>{viewingRequest.email}</p>
+                          <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.65)', margin: '2px 0 0', fontFamily: "'JetBrains Mono',monospace" }}>{viewingRequest.email}</p>
                         </div>
                       </div>
-                      <button type=-button- onClick={() => setViewingRequest(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(90,95,128,0.50)', padding: 4 }}>
+                      <button type="button" onClick={() => setViewingRequest(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(90,95,128,0.50)', padding: 4 }}>
                         <X size={16} />
                       </button>
                     </div>
@@ -1595,8 +1595,8 @@ export default function AdminPage() {
                     {shownPasswords[viewingRequest.id] && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(16,201,138,0.06)', border: '1px solid rgba(16,201,138,0.22)', borderRadius: 8 }}>
                         <span style={{ fontSize: 10, fontWeight: 700, color: '#065F46', flexShrink: 0 }}>Generated password:</span>
-                        <span style={{ fontFamily: -'JetBrains Mono',monospace-, fontSize: 12, color: '#065F46', flex: 1 }}>{shownPasswords[viewingRequest.id]}</span>
-                        <button type=-button- onClick={() => { navigator.clipboard.writeText(shownPasswords[viewingRequest.id]); toast.success('Copied!'); }} style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5, background: '#10C98A', color: '#fff', border: 'none', cursor: 'pointer' }}>Copy</button>
+                        <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: '#065F46', flex: 1 }}>{shownPasswords[viewingRequest.id]}</span>
+                        <button type="button" onClick={() => { navigator.clipboard.writeText(shownPasswords[viewingRequest.id]); toast.success('Copied!'); }} style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5, background: '#10C98A', color: '#fff', border: 'none', cursor: 'pointer' }}>Copy</button>
                       </div>
                     )}
                   </div>
@@ -1638,7 +1638,7 @@ export default function AdminPage() {
                             </div>
                             <div style={{ minWidth: 0 }}>
                               <p style={{ fontSize: 12.5, fontWeight: 700, color: '#1A1B3A', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{request.name}</p>
-                              <p style={{ fontSize: 10.5, color: 'rgba(90,95,128,0.60)', margin: '1px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: -'JetBrains Mono',monospace- }}>{request.email}</p>
+                              <p style={{ fontSize: 10.5, color: 'rgba(90,95,128,0.60)', margin: '1px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'JetBrains Mono',monospace" }}>{request.email}</p>
                             </div>
                           </div>
 
@@ -1663,8 +1663,8 @@ export default function AdminPage() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             {/* View */}
                             <button
-                              type=-button-
-                              title=-View details-
+                              type="button"
+                              title="View details"
                               onClick={() => setViewingRequest(viewingRequest?.id === request.id ? null : request)}
                               style={{ width: 30, height: 30, borderRadius: 8, border: '1.5px solid rgba(26,27,58,0.10)', background: viewingRequest?.id === request.id ? 'rgba(99,102,241,0.10)' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: viewingRequest?.id === request.id ? '#6366f1' : 'rgba(90,95,128,0.55)', transition: 'all .15s', flexShrink: 0 }}
                             >
@@ -1674,7 +1674,7 @@ export default function AdminPage() {
                             {/* Approve */}
                             {internal ? (
                               <button
-                                type=-button-
+                                type="button"
                                 title={request.status === 'approved' ? 'Already approved' : 'Generate password and email credentials'}
                                 onClick={() => canApprove && generatePasswordForRequest(request)}
                                 disabled={!canApprove || generatingFor === request.id}
@@ -1684,11 +1684,11 @@ export default function AdminPage() {
                                   opacity: !canApprove && request.status !== 'approved' ? 0.45 : 1,
                                 }}
                               >
-                                {generatingFor === request.id ? <><RefreshCw size={11} className=-animate-spin- /> Working</> : request.status === 'approved' ? <><CheckCircle2 size={11} /> Approved</> : <><KeyRound size={11} /> Gen. Password</>}
+                                {generatingFor === request.id ? <><RefreshCw size={11} className="animate-spin" /> Working</> : request.status === 'approved' ? <><CheckCircle2 size={11} /> Approved</> : <><KeyRound size={11} /> Gen. Password</>}
                               </button>
                             ) : (
                               <button
-                                type=-button-
+                                type="button"
                                 title={request.status === 'invited' ? 'Invite already sent' : request.status === 'approved' ? 'Already approved' : 'Send invite link'}
                                 onClick={() => canApprove && sendInvite(request)}
                                 disabled={!canApprove}
@@ -1704,7 +1704,7 @@ export default function AdminPage() {
 
                             {/* Revoke */}
                             <button
-                              type=-button-
+                              type="button"
                               title={isRevoked ? 'Already revoked' : 'Revoke access'}
                               onClick={() => !isRevoked && request.status !== 'pending' && rejectRequest(request.id)}
                               disabled={isRevoked || request.status === 'pending'}
@@ -1724,9 +1724,9 @@ export default function AdminPage() {
             );
           })()}
 
-          {/* ------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: CHANNELS
-          ------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {/* TAB: INVITE GENERATOR */}
           {activeTab === 'invites' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -1738,9 +1738,9 @@ export default function AdminPage() {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                <div className=-card-premium- style={{ padding: '24px 28px' }}>
+                <div className="card-premium" style={{ padding: '24px 28px' }}>
                   <div style={{ height: 3, background: 'linear-gradient(90deg,#10C98A,#059669)', borderRadius: 3, marginBottom: 20 }} />
-                  <h3 style={{ fontFamily: -'Sora',sans-serif-, fontSize: 16, fontWeight: 800, color: '#1A1B3A', margin: '0 0 4px', letterSpacing: '-0.02em' }}>Send a single invite</h3>
+                  <h3 style={{ fontFamily: "'Sora',sans-serif", fontSize: 16, fontWeight: 800, color: '#1A1B3A', margin: '0 0 4px', letterSpacing: '-0.02em' }}>Send a single invite</h3>
                   <p style={{ margin: '0 0 20px', fontSize: 12, color: 'rgba(90,95,128,0.60)' }}>Fill in the details and we will email a secure activation link.</p>
                   <form onSubmit={sendDirectInvite} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     {[
@@ -1748,29 +1748,29 @@ export default function AdminPage() {
                       { label: 'Email', value: inviteEmail, setter: setInviteEmail, placeholder: 'riya@edutechex.in', type: 'email' },
                     ].map(({ label, value, setter, placeholder, type }) => (
                       <label key={label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.65)', fontFamily: -'JetBrains Mono', monospace- }}>{label}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>{label}</span>
                         <input type={type} required value={value} onChange={(e) => setter(e.target.value)} placeholder={placeholder} style={{ height: 40, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.14)', background: '#ECEAF8', padding: '0 12px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none' }} />
                       </label>
                     ))}
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.65)', fontFamily: -'JetBrains Mono', monospace- }}>Role</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>Role</span>
                       <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} style={{ height: 40, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.14)', background: '#ECEAF8', padding: '0 12px', fontSize: 13, fontWeight: 600, color: '#1A1B3A', outline: 'none' }}>
                         {['Developer', 'Designer', 'Lead', 'Manager', 'Admin'].map((r) => <option key={r} value={r}>{r}</option>)}
                       </select>
                     </label>
-                    <button type=-submit- disabled={inviteSubmitting} style={{ height: 42, borderRadius: 12, background: inviteSubmitting ? 'rgba(16,201,138,0.35)' : 'linear-gradient(135deg,#10C98A,#059669)', color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: inviteSubmitting ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 14px rgba(16,201,138,0.28)', transition: 'all .2s', marginTop: 4 }}>
+                    <button type="submit" disabled={inviteSubmitting} style={{ height: 42, borderRadius: 12, background: inviteSubmitting ? 'rgba(16,201,138,0.35)' : 'linear-gradient(135deg,#10C98A,#059669)', color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: inviteSubmitting ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 14px rgba(16,201,138,0.28)', transition: 'all .2s', marginTop: 4 }}>
                       <Mail size={14} /> {inviteSubmitting ? 'Sending...' : 'Send Invite Link'}
                     </button>
                   </form>
                 </div>
 
-                <div className=-card-premium- style={{ padding: '24px 28px' }}>
+                <div className="card-premium" style={{ padding: '24px 28px' }}>
                   <div style={{ height: 3, background: 'linear-gradient(90deg,#6366f1,#8B3FDB)', borderRadius: 3, marginBottom: 20 }} />
-                  <h3 style={{ fontFamily: -'Sora',sans-serif-, fontSize: 16, fontWeight: 800, color: '#1A1B3A', margin: '0 0 4px', letterSpacing: '-0.02em' }}>Bulk invite via CSV</h3>
+                  <h3 style={{ fontFamily: "'Sora',sans-serif", fontSize: 16, fontWeight: 800, color: '#1A1B3A', margin: '0 0 4px', letterSpacing: '-0.02em' }}>Bulk invite via CSV</h3>
                   <p style={{ margin: '0 0 16px', fontSize: 12, color: 'rgba(90,95,128,0.60)' }}>
-                    One row per person: <code style={{ fontFamily: -'JetBrains Mono', monospace-, fontSize: 11, background: 'rgba(91,79,219,0.08)', padding: '1px 5px', borderRadius: 4 }}>Name, email@edutechex.in, Role</code>
+                    One row per person: <code style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, background: 'rgba(91,79,219,0.08)', padding: '1px 5px', borderRadius: 4 }}>Name, email@edutechex.in, Role</code>
                   </p>
-                  <textarea value={csvText} onChange={(e) => { setCsvText(e.target.value); parseCSV(e.target.value); }} placeholder=-Priya Nair, priya@edutechex.in, Designer- rows={6} style={{ width: '100%', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.14)', background: '#ECEAF8', padding: '10px 12px', fontSize: 12, fontFamily: -'JetBrains Mono', monospace-, color: '#1A1B3A', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+                  <textarea value={csvText} onChange={(e) => { setCsvText(e.target.value); parseCSV(e.target.value); }} placeholder="Priya Nair, priya@edutechex.in, Designer" rows={6} style={{ width: '100%', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.14)', background: '#ECEAF8', padding: '10px 12px', fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: '#1A1B3A', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
                   {csvParsed.length > 0 && (
                     <div style={{ marginTop: 14, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.10)', overflow: 'hidden' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 90px', padding: '7px 12px', background: 'rgba(26,27,58,0.04)', borderBottom: '1px solid rgba(26,27,58,0.08)' }}>
@@ -1779,26 +1779,26 @@ export default function AdminPage() {
                       {csvParsed.map((row, i) => (
                         <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 90px', padding: '8px 12px', borderBottom: i < csvParsed.length - 1 ? '1px solid rgba(26,27,58,0.06)' : 'none', background: i % 2 === 0 ? '#fff' : 'rgba(26,27,58,0.015)' }}>
                           <span style={{ fontSize: 12, fontWeight: 600, color: '#1A1B3A' }}>{row.name}</span>
-                          <span style={{ fontSize: 11, color: 'rgba(90,95,128,0.70)', fontFamily: -'JetBrains Mono', monospace- }}>{row.email}</span>
+                          <span style={{ fontSize: 11, color: 'rgba(90,95,128,0.70)', fontFamily: "'JetBrains Mono', monospace" }}>{row.email}</span>
                           <span style={{ fontSize: 11, fontWeight: 700, color: '#5B4FDB' }}>{row.role}</span>
                         </div>
                       ))}
                     </div>
                   )}
-                  <button type=-button- disabled={csvParsed.length === 0 || csvSending} onClick={sendBulkInvites} style={{ marginTop: 14, width: '100%', height: 42, borderRadius: 12, background: (csvParsed.length === 0 || csvSending) ? 'rgba(99,102,241,0.25)' : 'linear-gradient(135deg,#6366f1,#4f46e5)', color: (csvParsed.length === 0 || csvSending) ? 'rgba(255,255,255,0.60)' : '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: (csvParsed.length === 0 || csvSending) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all .2s' }}>
+                  <button type="button" disabled={csvParsed.length === 0 || csvSending} onClick={sendBulkInvites} style={{ marginTop: 14, width: '100%', height: 42, borderRadius: 12, background: (csvParsed.length === 0 || csvSending) ? 'rgba(99,102,241,0.25)' : 'linear-gradient(135deg,#6366f1,#4f46e5)', color: (csvParsed.length === 0 || csvSending) ? 'rgba(255,255,255,0.60)' : '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: (csvParsed.length === 0 || csvSending) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all .2s' }}>
                     <Send size={14} /> {csvSending ? 'Sending...' : 'Send ' + String(csvParsed.length > 0 ? csvParsed.length + ' ' : '') + 'Invite' + String(csvParsed.length !== 1 ? 's' : '')}
                   </button>
                 </div>
               </div>
 
               {inviteLog.length > 0 && (
-                <div className=-card-premium- style={{ padding: '24px 28px' }}>
+                <div className="card-premium" style={{ padding: '24px 28px' }}>
                   <div style={{ height: 3, background: 'linear-gradient(90deg,#F59E0B,#D97706)', borderRadius: 3, marginBottom: 20 }} />
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                    <h3 style={{ fontFamily: -'Sora',sans-serif-, fontSize: 16, fontWeight: 800, color: '#1A1B3A', margin: 0 }}>
+                    <h3 style={{ fontFamily: "'Sora',sans-serif", fontSize: 16, fontWeight: 800, color: '#1A1B3A', margin: 0 }}>
                       Invite log <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(90,95,128,0.50)', marginLeft: 6 }}>this session</span>
                     </h3>
-                    <button type=-button- onClick={() => setInviteLog([])} style={{ fontSize: 11, fontWeight: 600, color: 'rgba(90,95,128,0.55)', background: 'none', border: '1.5px solid rgba(26,27,58,0.12)', borderRadius: 8, padding: '4px 12px', cursor: 'pointer' }}>Clear</button>
+                    <button type="button" onClick={() => setInviteLog([])} style={{ fontSize: 11, fontWeight: 600, color: 'rgba(90,95,128,0.55)', background: 'none', border: '1.5px solid rgba(26,27,58,0.12)', borderRadius: 8, padding: '4px 12px', cursor: 'pointer' }}>Clear</button>
                   </div>
                   <div style={{ borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.08)', overflow: 'hidden' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 90px 1fr 120px', padding: '8px 16px', background: 'rgba(26,27,58,0.03)', borderBottom: '1px solid rgba(26,27,58,0.07)' }}>
@@ -1808,20 +1808,20 @@ export default function AdminPage() {
                       <div key={i} style={{ borderBottom: i < inviteLog.length - 1 ? '1px solid rgba(26,27,58,0.06)' : 'none', background: i % 2 === 0 ? '#fff' : 'rgba(26,27,58,0.015)' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 90px 1fr 120px', padding: '10px 16px', alignItems: 'center' }}>
                           <span style={{ fontSize: 12, fontWeight: 600, color: '#1A1B3A' }}>{entry.name}</span>
-                          <span style={{ fontSize: 11, color: 'rgba(90,95,128,0.70)', fontFamily: -'JetBrains Mono', monospace- }}>{entry.email}</span>
+                          <span style={{ fontSize: 11, color: 'rgba(90,95,128,0.70)', fontFamily: "'JetBrains Mono', monospace" }}>{entry.email}</span>
                           <span style={{ fontSize: 11, fontWeight: 700, color: '#5B4FDB' }}>{entry.role}</span>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 700, color: entry.status === 'sent' ? '#10C98A' : entry.status === 'warn' ? '#F59E0B' : '#EF476F' }}>
                             {entry.status === 'sent' ? <CheckCircle2 size={12} /> : entry.status === 'warn' ? <AlertTriangle size={12} /> : <X size={12} />}
                             {entry.status === 'sent' ? 'Email sent' : entry.status === 'warn' ? 'Email failed' : entry.message}
                           </span>
-                          <span style={{ fontSize: 10.5, color: 'rgba(90,95,128,0.45)', fontFamily: -'JetBrains Mono', monospace- }}>{new Date(entry.at).toLocaleTimeString()}</span>
+                          <span style={{ fontSize: 10.5, color: 'rgba(90,95,128,0.45)', fontFamily: "'JetBrains Mono', monospace" }}>{new Date(entry.at).toLocaleTimeString()}</span>
                         </div>
                         {entry.status === 'warn' && entry.inviteUrl && (
                           <div style={{ margin: '0 16px 10px', padding: '8px 12px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.20)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontSize: 10.5, color: '#92400E', fontWeight: 600, flexShrink: 0 }}>Share this link:</span>
-                            <span style={{ fontSize: 10, color: '#78350F', fontFamily: -'JetBrains Mono', monospace-, wordBreak: 'break-all', flex: 1 }}>{entry.inviteUrl}</span>
+                            <span style={{ fontSize: 10, color: '#78350F', fontFamily: "'JetBrains Mono', monospace", wordBreak: 'break-all', flex: 1 }}>{entry.inviteUrl}</span>
                             <button
-                              type=-button-
+                              type="button"
                               onClick={() => { navigator.clipboard.writeText(entry.inviteUrl ?? ''); toast.success('Link copied!'); }}
                               style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5, background: '#F59E0B', color: '#fff', border: 'none', cursor: 'pointer' }}
                             >Copy</button>
@@ -1836,20 +1836,20 @@ export default function AdminPage() {
           )}
 
           {activeTab === 'channels' && (
-            <div className=-card-premium space-y-4 p-6->
+            <div className="card-premium space-y-4 p-6">
               {/* Top accent */}
               <div style={{ height: 3, background: 'linear-gradient(90deg, #0DAFCE, #3B82F6)', borderRadius: 3 }} />
               {/* General channel */}
               <div style={{ borderRadius: 16, border: '1.5px solid rgba(13,175,206,0.16)', background: '#FFFFFF', padding: 20, boxShadow: '0 2px 12px rgba(13,175,206,0.06)' }}>
-                <div className=-flex items-center justify-between gap-3->
-                  <div className=-flex items-center gap-3->
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
                     <div style={{ width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(13,175,206,0.10)', border: '1.5px solid rgba(13,175,206,0.20)' }}>
                       <Hash size={16} style={{ color: '#0DAFCE' }} />
                     </div>
                     <div>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', fontFamily: -'JetBrains Mono', monospace- }}>#general</p>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', fontFamily: "'JetBrains Mono', monospace" }}>#general</p>
                       <p style={{ fontSize: 11, color: 'rgba(90,95,128,0.65)', marginTop: 2 }}>
-                        Default channel -” every user is automatically added.
+                        Default channel "” every user is automatically added.
                       </p>
                     </div>
                   </div>
@@ -1865,7 +1865,7 @@ export default function AdminPage() {
                   <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(90,95,128,0.70)' }}>No project channels yet.</p>
                 </div>
               ) : (
-                <div className=-grid gap-4 sm:grid-cols-2 xl:grid-cols-3->
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {extraChannels.map((channel) => {
                     const channelMembers = getChannelMembers(channel.id);
                     return (
@@ -1873,13 +1873,13 @@ export default function AdminPage() {
                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 28px rgba(13,175,206,0.12)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(13,175,206,0.28)'; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 10px rgba(13,175,206,0.06)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(13,175,206,0.14)'; }}
                       >
-                        <div className=-mb-4 flex items-start justify-between gap-3->
-                          <div className=-flex min-w-0 items-center gap-3->
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
                             <div style={{ width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(13,175,206,0.10)', border: '1.5px solid rgba(13,175,206,0.20)', flexShrink: 0 }}>
                               <Hash size={16} style={{ color: '#0DAFCE' }} />
                             </div>
                             <div style={{ minWidth: 0 }}>
-                              <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: -'JetBrains Mono', monospace- }}>
+                              <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'JetBrains Mono', monospace" }}>
                                 #{channel.name}
                               </p>
                               <p style={{ marginTop: 2, fontSize: 11, color: 'rgba(90,95,128,0.65)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
@@ -1898,7 +1898,7 @@ export default function AdminPage() {
                             channelMembers.map((member) => (
                               <button
                                 key={`${channel.id}-${member.id}`}
-                                type=-button-
+                                type="button"
                                 onClick={() => handleChannelToggle(member.id, channel.id, false)}
                                 style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 8, border: '1.5px solid rgba(26,27,58,0.18)', background: '#ECEAF8', padding: '3px 10px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: '#5A5F80', cursor: 'pointer', transition: 'all .15s' }}
                                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.30)'; (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.06)'; (e.currentTarget as HTMLElement).style.color = '#EF476F'; }}
@@ -1922,14 +1922,14 @@ export default function AdminPage() {
 
                         {/* Grant access */}
                         <select
-                          value=-
+                          value=""
                           onChange={(e) => {
                             if (!e.target.value) return;
                             handleChannelToggle(e.target.value, channel.id, true);
                           }}
                           style={{ height: 40, width: '100%', borderRadius: 12, border: '1.5px solid rgba(13,175,206,0.18)', background: 'rgba(13,175,206,0.04)', padding: '0 12px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', outline: 'none' }}
                         >
-                          <option value=->+ Grant access to a user</option>
+                          <option value="">+ Grant access to a user</option>
                           {members
                             .filter((m) => m.role !== 'Admin')
                             .map((m) => (
@@ -1946,20 +1946,20 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: BROADCAST
-          ------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'broadcast' && (
-            <div className=-mx-auto max-w-2xl->
-              <div className=-card-premium- style={{ padding: 24 }}>
+            <div className="mx-auto max-w-2xl">
+              <div className="card-premium" style={{ padding: 24 }}>
                 {/* Top accent */}
                 <div style={{ height: 3, background: 'linear-gradient(90deg, #C026D3, #8B3FDB)', borderRadius: '8px 8px 0 0', marginBottom: 24, marginLeft: -24, marginRight: -24, marginTop: -24 }} />
-                <div className=-mb-6 flex items-start gap-4->
+                <div className="mb-6 flex items-start gap-4">
                   <div style={{ width: 48, height: 48, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(192,38,211,0.10)', border: '1.5px solid rgba(192,38,211,0.20)', flexShrink: 0 }}>
                     <Send size={20} style={{ color: '#C026D3' }} />
                   </div>
                   <div>
-                    <h2 style={{ fontFamily: -'Sora', 'Plus Jakarta Sans', sans-serif-, fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A' }}>
+                    <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A' }}>
                       Broadcast Email
                     </h2>
                     <p style={{ marginTop: 4, fontSize: 13, color: 'rgba(90,95,128,0.70)' }}>
@@ -1968,16 +1968,16 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div className=-space-y-4->
+                <div className="space-y-4">
                   <div>
-                    <label style={{ display: 'block', marginBottom: 6, fontFamily: -'JetBrains Mono', monospace-, fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.65)' }}>
+                    <label style={{ display: 'block', marginBottom: 6, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.65)' }}>
                       Subject
                     </label>
                     <input
-                      type=-text-
+                      type="text"
                       value={broadcastSubject}
                       onChange={(e) => setBroadcastSubject(e.target.value)}
-                      placeholder=-e.g. Team update -” June 2026-
+                      placeholder="e.g. Team update "” June 2026"
                       maxLength={150}
                       style={{ height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.18)', background: '#ECEAF8', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
                       onFocus={e => { e.target.style.borderColor = 'rgba(192,38,211,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(192,38,211,0.10)'; }}
@@ -1986,30 +1986,30 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: 6, fontFamily: -'JetBrains Mono', monospace-, fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.65)' }}>
+                    <label style={{ display: 'block', marginBottom: 6, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.65)' }}>
                       Message
                     </label>
                     <textarea
                       value={broadcastMessage}
                       onChange={(e) => setBroadcastMessage(e.target.value)}
-                      placeholder=-Write your message here. Plain text -” line breaks are preserved.-
+                      placeholder="Write your message here. Plain text "” line breaks are preserved."
                       rows={7}
                       maxLength={2000}
                       style={{ width: '100%', resize: 'none', borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.18)', background: '#ECEAF8', padding: '12px 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6, transition: 'border-color .2s, box-shadow .2s' }}
                       onFocus={e => { e.target.style.borderColor = 'rgba(192,38,211,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(192,38,211,0.10)'; }}
                       onBlur={e => { e.target.style.borderColor = 'rgba(192,38,211,0.18)'; e.target.style.boxShadow = 'none'; }}
                     />
-                    <p style={{ marginTop: 4, textAlign: 'right', fontSize: 9.5, color: 'rgba(90,95,128,0.50)', fontFamily: -'JetBrains Mono', monospace- }}>
+                    <p style={{ marginTop: 4, textAlign: 'right', fontSize: 9.5, color: 'rgba(90,95,128,0.50)', fontFamily: "'JetBrains Mono', monospace" }}>
                       {broadcastMessage.length}/2000
                     </p>
                   </div>
 
                   {/* Recipients preview */}
                   <div style={{ borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.12)', background: 'rgba(192,38,211,0.03)', padding: 16 }}>
-                    <p style={{ marginBottom: 10, fontFamily: -'JetBrains Mono', monospace-, fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)' }}>
+                    <p style={{ marginBottom: 10, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)' }}>
                       Will be sent to {members.length} members
                     </p>
-                    <div className=-flex flex-wrap gap-2->
+                    <div className="flex flex-wrap gap-2">
                       {members.slice(0, 10).map((m) => (
                         <span
                           key={m.id}
@@ -2031,13 +2031,13 @@ export default function AdminPage() {
 
                   {broadcastLastSent && (
                     <div style={{ borderRadius: 12, border: '1.5px solid rgba(16,201,138,0.20)', background: 'rgba(16,201,138,0.06)', padding: '12px 16px', fontSize: 12, fontWeight: 500, color: '#059669' }}>
-                      -œ“ Last sent at {broadcastLastSent.at} · &ldquo;{broadcastLastSent.subject}
-                      &rdquo; -†’ {broadcastLastSent.count} members
+                      âœ“ Last sent at {broadcastLastSent.at} · &ldquo;{broadcastLastSent.subject}
+                      &rdquo; â†’ {broadcastLastSent.count} members
                     </div>
                   )}
 
                   <button
-                    type=-button-
+                    type="button"
                     onClick={handleBroadcast}
                     disabled={broadcastSending || !broadcastSubject.trim() || !broadcastMessage.trim()}
                     style={{ display: 'flex', height: 44, width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 12, background: 'linear-gradient(135deg, #C026D3, #8B3FDB)', color: '#FFFFFF', fontSize: 13, fontWeight: 700, border: 'none', cursor: broadcastSending ? 'not-allowed' : 'pointer', opacity: broadcastSending || !broadcastSubject.trim() || !broadcastMessage.trim() ? 0.5 : 1, transition: 'all .2s', boxShadow: '0 4px 16px rgba(192,38,211,0.25)' }}
@@ -2046,7 +2046,7 @@ export default function AdminPage() {
                   >
                     {broadcastSending ? (
                       <>
-                        <RefreshCw size={15} className=-animate-spin- /> Sending...
+                        <RefreshCw size={15} className="animate-spin" /> Sending...
                       </>
                     ) : (
                       <>
@@ -2059,37 +2059,37 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: ACTIVITY
-          ------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'activity' && (
-            <div className=-card-premium space-y-8 p-6->
+            <div className="card-premium space-y-8 p-6">
               {/* Top accent */}
               <div style={{ height: 3, background: 'linear-gradient(90deg, #3B82F6, #0DAFCE)', borderRadius: 3 }} />
               {/* Activity monitoring */}
               <div>
-                <div className=-mb-6 flex items-center justify-between->
+                <div className="mb-6 flex items-center justify-between">
                   <div>
-                    <p style={{ marginBottom: 4, fontFamily: -'JetBrains Mono', monospace-, fontSize: 9.5, fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase', color: '#3B82F6' }}>
+                    <p style={{ marginBottom: 4, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase', color: '#3B82F6' }}>
                       Last 7 days · With user permission
                     </p>
-                    <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: -'Sora', 'Plus Jakarta Sans', sans-serif-, fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A' }}>
+                    <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A' }}>
                       <Eye size={20} style={{ color: '#3B82F6' }} />
                       Activity Monitoring
                     </h2>
                     <p style={{ marginTop: 4, fontSize: 13, color: 'rgba(90,95,128,0.70)', lineHeight: 1.6 }}>
                       In-app session time, messages sent, and engagement per team member. Users can
-                      see exactly what is tracked in Settings -†’ Privacy.
+                      see exactly what is tracked in Settings â†’ Privacy.
                     </p>
-                    <Link href=-/admin/activity- style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: '#3B82F6', textDecoration: 'none' }}
+                    <Link href="/admin/activity" style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: '#3B82F6', textDecoration: 'none' }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline'; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none'; }}
                     >
-                      View full activity report -†’
+                      View full activity report â†’
                     </Link>
                   </div>
                   <button
-                    type=-button-
+                    type="button"
                     onClick={() => {
                       const authData = localStorage.getItem('edutechex_token');
                       if (!authData) return;
@@ -2123,14 +2123,14 @@ export default function AdminPage() {
 
                 {activityLoading ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '64px 0', fontSize: 13, color: 'rgba(90,95,128,0.65)' }}>
-                    <RefreshCw size={16} style={{ marginRight: 8 }} className=-animate-spin- /> Loading activity data...
+                    <RefreshCw size={16} style={{ marginRight: 8 }} className="animate-spin" /> Loading activity data...
                   </div>
                 ) : activityStats.length === 0 ? (
                   <div style={{ borderRadius: 16, border: '1.5px dashed rgba(59,130,246,0.20)', background: 'rgba(59,130,246,0.03)', padding: '40px 32px', textAlign: 'center', fontSize: 13, color: 'rgba(90,95,128,0.65)' }}>
                     No activity data yet. Data appears once users open the dashboard.
                   </div>
                 ) : (
-                  <div className=-grid gap-4 sm:grid-cols-2 xl:grid-cols-3->
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {activityStats
                       .sort((a, b) => (b.totalMinutes ?? 0) - (a.totalMinutes ?? 0))
                       .map((stat) => {
@@ -2168,7 +2168,7 @@ export default function AdminPage() {
                             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(59,130,246,0.12)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.25)'; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(59,130,246,0.06)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.12)'; }}
                           >
-                            <div className=-flex items-center gap-3->
+                            <div className="flex items-center gap-3">
                               <div style={{ width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#FFFFFF', backgroundColor: color, flexShrink: 0 }}>
                                 {initials}
                               </div>
@@ -2220,19 +2220,19 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: ATTENDANCE COMMAND CENTER
-          ------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'attendance' && (
-            <div className=-card-premium p-6->
+            <div className="card-premium p-6">
               {/* Attendance hero banner */}
-              <div className=-mb-6 overflow-hidden rounded-2xl px-7 py-6- style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(239,71,111,0.06))', border: '1.5px solid rgba(245,158,11,0.18)', boxShadow: '0 4px 24px rgba(245,158,11,0.08)' }}>
-                <div className=-flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between->
+              <div className="mb-6 overflow-hidden rounded-2xl px-7 py-6" style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(239,71,111,0.06))', border: '1.5px solid rgba(245,158,11,0.18)', boxShadow: '0 4px 24px rgba(245,158,11,0.08)' }}>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p style={{ fontFamily: -'JetBrains Mono', monospace-, fontSize: 9.5, fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: '#D48C00', marginBottom: 6 }}>
+                    <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: '#D48C00', marginBottom: 6 }}>
                       Admin · Real-time tracking
                     </p>
-                    <h2 style={{ fontFamily: -'Sora', 'Plus Jakarta Sans', sans-serif-, fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: '#1A1B3A', marginBottom: 4 }}>
+                    <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: '#1A1B3A', marginBottom: 4 }}>
                       Attendance Command Center
                     </h2>
                     <p style={{ fontSize: 13, color: 'rgba(90,95,128,0.75)', lineHeight: 1.6 }}>
@@ -2241,16 +2241,16 @@ export default function AdminPage() {
                     </p>
                   </div>
                   {/* Today's quick presence dots */}
-                  <div className=-shrink-0 rounded-2xl px-5 py-4- style={{ border: '1.5px solid rgba(245,158,11,0.18)', background: 'rgba(255,255,255,0.70)', backdropFilter: 'blur(12px)' }}>
-                    <p style={{ fontFamily: -'JetBrains Mono', monospace-, fontSize: 9, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)', marginBottom: 10 }}>
+                  <div className="shrink-0 rounded-2xl px-5 py-4" style={{ border: '1.5px solid rgba(245,158,11,0.18)', background: 'rgba(255,255,255,0.70)', backdropFilter: 'blur(12px)' }}>
+                    <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)', marginBottom: 10 }}>
                       Present today
                     </p>
-                    <div className=-flex flex-wrap gap-2->
+                    <div className="flex flex-wrap gap-2">
                       {members.slice(0, 12).map((m) => (
                         <div
                           key={m.id}
                           title={m.name}
-                          className=-flex h-8 w-8 items-center justify-center rounded-lg text-[10px] font-black text-white transition-transform hover:scale-110-
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-[10px] font-black text-white transition-transform hover:scale-110"
                           style={{
                             backgroundColor:
                               m.status === 'online' ? m.color : `${m.color}55`,
@@ -2280,17 +2280,17 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: DESKTOP ACTIVITY
-          ------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'desktop' && (() => {
             const istOffset = 5.5 * 60 * 60 * 1000;
             const todayIST  = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
             const viewDate  = awDate; // single date for all data
 
             const panelIcon: Record<string, string> = {
-              messages: 'ðŸ’¬', wiki: 'ðŸ“–', kanban: '-œ…', calendar: 'ðŸ“…',
-              leave: 'ðŸŒ´', dashboard: 'ðŸ ', ai: '-œ¨',
+              messages: 'ðŸ’¬', wiki: 'ðŸ“–', kanban: 'âœ…', calendar: 'ðŸ“…',
+              leave: 'ðŸŒ´', dashboard: 'ðŸ ', ai: 'âœ¨',
             };
 
             const fmt = (m: number) => m <= 0 ? '0m' : m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`;
@@ -2354,7 +2354,7 @@ export default function AdminPage() {
               setExpandedDesktopEmail(prev => prev === email ? null : email);
 
             return (
-            <div className=-card-premium- style={{ padding: '24px 24px 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="card-premium" style={{ padding: '24px 24px 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
               <style>{`
                 @keyframes pdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(1.5)}}
                 .pdot{animation:pdot 1.8s ease-in-out infinite;}
@@ -2362,7 +2362,7 @@ export default function AdminPage() {
                 .drow:hover{background:rgba(99,102,241,0.04)!important;}
               `}</style>
 
-              {/* -”-”- Header -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”- */}
+              {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
                 <div>
                   <p style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: '#10B981', marginBottom: 6, fontFamily: 'monospace' }}>
@@ -2374,7 +2374,7 @@ export default function AdminPage() {
                   {/* Quick-stat chips */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(16,185,129,0.10)', borderRadius: 20, padding: '5px 12px' }}>
-                      <span className=-live-dot- style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: '#10B981' }} />
+                      <span className="live-dot" style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: '#10B981' }} />
                       <span style={{ fontSize: 12, fontWeight: 800, color: '#065F46' }}>{liveCount} online now</span>
                     </div>
                     <div style={{ background: 'rgba(99,102,241,0.09)', borderRadius: 20, padding: '5px 12px' }}>
@@ -2387,11 +2387,11 @@ export default function AdminPage() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input
-                    type=-date- value={viewDate} max={todayIST}
+                    type="date" value={viewDate} max={todayIST}
                     onChange={e => { const d = e.target.value; setAwDate(d); setHistoryDate(d); fetchHistory(d); fetchAwData(d); }}
                     style={{ borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', background: '#fff', padding: '8px 12px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', outline: 'none' }}
                   />
-                  <button type=-button- onClick={refreshAll}
+                  <button type="button" onClick={refreshAll}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', background: '#fff', padding: '8px 14px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', cursor: 'pointer' }}>
                     <RefreshCw size={13} className={(awLoading || historyLoading || liveLoading) ? 'animate-spin' : ''} />
                     Refresh
@@ -2427,7 +2427,7 @@ export default function AdminPage() {
                     <div key={person.email}>
                       {/* ── Collapsed row ── */}
                       <div
-                        className=-drow-
+                        className="drow"
                         onClick={() => toggleExpand(person.email)}
                         style={{
                           display: 'grid', gridTemplateColumns: '1fr 120px 60px 60px 60px 28px',
@@ -2553,26 +2553,26 @@ export default function AdminPage() {
           );
           })()}
 
-          {/* ------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: AVAILABILITY CALENDAR
-          ------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'availability' && (
-            <div className=-card-premium p-6->
+            <div className="card-premium p-6">
               <div style={{ height: 3, background: 'linear-gradient(90deg, #6366f1, #8B5CF6)', borderRadius: 3, marginBottom: 24 }} />
               <AdminAvailabilityCalendar />
             </div>
           )}
 
-          {/* ------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: LEAVES
-          ------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'leaves' && (
-            <div className=-card-premium space-y-6 p-6->
+            <div className="card-premium space-y-6 p-6">
               <div style={{ height: 3, background: 'linear-gradient(90deg, #F59E0B, #FBBF24)', borderRadius: 3, marginBottom: 8 }} />
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                  <h2 style={{ fontFamily: -'Sora', sans-serif-, fontSize: 18, fontWeight: 800, color: '#1A1B3A', margin: 0, letterSpacing: '-0.02em' }}>Leave Requests</h2>
+                  <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: 18, fontWeight: 800, color: '#1A1B3A', margin: 0, letterSpacing: '-0.02em' }}>Leave Requests</h2>
                   <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'rgba(90,95,128,0.60)' }}>Review and action leave applications from team members.</p>
                 </div>
                 <button onClick={fetchLeaves} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', background: '#FFFFFF', fontSize: 12, fontWeight: 600, color: 'rgba(90,95,128,0.70)', cursor: 'pointer' }}>
@@ -2611,7 +2611,7 @@ export default function AdminPage() {
                               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                   <div style={{ width: 40, height: 40, borderRadius: 12, background: `${catColor[leave.leaveCategory] ?? '#9BA6D3'}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16 }}>
-                                    {{ sick: 'ðŸ¤’', vacation: 'ðŸŒ´', personal: 'ðŸ‘¤', emergency: '-š¡', other: 'ðŸ“‹' }[leave.leaveCategory] ?? 'ðŸ“‹'}
+                                    {{ sick: 'ðŸ¤’', vacation: 'ðŸŒ´', personal: 'ðŸ‘¤', emergency: 'âš¡', other: 'ðŸ“‹' }[leave.leaveCategory] ?? 'ðŸ“‹'}
                                   </div>
                                   <div>
                                     <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#1A1B3A' }}>{leave.name}</p>
@@ -2622,9 +2622,9 @@ export default function AdminPage() {
                               </div>
 
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px', marginBottom: 12 }}>
-                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Type:</strong> {leave.type === 'instant' ? '-š¡ Emergency' : 'ðŸ“… Planned'}</span>
+                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Type:</strong> {leave.type === 'instant' ? 'âš¡ Emergency' : 'ðŸ“… Planned'}</span>
                                 <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Category:</strong> {catLabel[leave.leaveCategory] ?? leave.leaveCategory}</span>
-                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Date:</strong> {leave.type === 'instant' ? `${leave.startDate} · ${leave.duration === 'half' ? 'Half day' : 'Full day'}` : `${leave.startDate}${leave.endDate ? ` -†’ ${leave.endDate}` : ''}`}</span>
+                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Date:</strong> {leave.type === 'instant' ? `${leave.startDate} · ${leave.duration === 'half' ? 'Half day' : 'Full day'}` : `${leave.startDate}${leave.endDate ? ` â†’ ${leave.endDate}` : ''}`}</span>
                               </div>
 
                               <div style={{ background: 'rgba(26,27,58,0.03)', borderRadius: 10, padding: '10px 12px', marginBottom: 14, fontSize: 13, color: '#4A5578', lineHeight: 1.5 }}>
@@ -2633,8 +2633,8 @@ export default function AdminPage() {
 
                               {/* Admin note input */}
                               <input
-                                type=-text-
-                                placeholder=-Optional note to the member...-
+                                type="text"
+                                placeholder="Optional note to the member..."
                                 value={leaveNotes[leave.id] ?? ''}
                                 onChange={e => setLeaveNotes(prev => ({ ...prev, [leave.id]: e.target.value }))}
                                 style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid rgba(26,27,58,0.12)', fontSize: 12.5, color: '#1A1B3A', background: '#fff', outline: 'none', marginBottom: 12, boxSizing: 'border-box' }}
@@ -2642,7 +2642,7 @@ export default function AdminPage() {
 
                               <div style={{ display: 'flex', gap: 10 }}>
                                 <button
-                                  type=-button-
+                                  type="button"
                                   onClick={() => handleLeaveAction(leave.id, 'approved')}
                                   disabled={leaveActionLoading === leave.id}
                                   style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#10C98A,#059669)', color: '#fff', fontSize: 11.5, fontWeight: 700, border: 'none', cursor: 'pointer', letterSpacing: '.04em', opacity: leaveActionLoading === leave.id ? 0.6 : 1 }}
@@ -2650,7 +2650,7 @@ export default function AdminPage() {
                                   <CheckCircle2 size={14} /> Approve
                                 </button>
                                 <button
-                                  type=-button-
+                                  type="button"
                                   onClick={() => handleLeaveAction(leave.id, 'rejected')}
                                   disabled={leaveActionLoading === leave.id}
                                   style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 38, borderRadius: 10, background: '#fff', color: '#EF476F', fontSize: 11.5, fontWeight: 700, border: '1.5px solid rgba(239,71,111,0.25)', cursor: 'pointer', letterSpacing: '.04em', opacity: leaveActionLoading === leave.id ? 0.6 : 1 }}
@@ -2673,10 +2673,10 @@ export default function AdminPage() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {resolvedLeaves.map(leave => (
                             <div key={leave.id} style={{ borderRadius: 14, border: '1.5px solid rgba(26,27,58,0.08)', background: '#FAFAFA', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                              <div style={{ fontSize: 20 }}>{{ sick: 'ðŸ¤’', vacation: 'ðŸŒ´', personal: 'ðŸ‘¤', emergency: '-š¡', other: 'ðŸ“‹' }[leave.leaveCategory] ?? 'ðŸ“‹'}</div>
+                              <div style={{ fontSize: 20 }}>{{ sick: 'ðŸ¤’', vacation: 'ðŸŒ´', personal: 'ðŸ‘¤', emergency: 'âš¡', other: 'ðŸ“‹' }[leave.leaveCategory] ?? 'ðŸ“‹'}</div>
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1A1B3A' }}>{leave.name} <span style={{ fontWeight: 400, color: 'rgba(90,95,128,0.55)', fontSize: 11 }}>-” {leave.type === 'instant' ? 'Emergency' : 'Planned'} · {catLabel[leave.leaveCategory]}</span></p>
-                                <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'rgba(90,95,128,0.55)' }}>{leave.startDate}{leave.endDate ? ` -†’ ${leave.endDate}` : ''} · {leave.reason}</p>
+                                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1A1B3A' }}>{leave.name} <span style={{ fontWeight: 400, color: 'rgba(90,95,128,0.55)', fontSize: 11 }}>"” {leave.type === 'instant' ? 'Emergency' : 'Planned'} · {catLabel[leave.leaveCategory]}</span></p>
+                                <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'rgba(90,95,128,0.55)' }}>{leave.startDate}{leave.endDate ? ` â†’ ${leave.endDate}` : ''} · {leave.reason}</p>
                                 {leave.adminNote && <p style={{ margin: '3px 0 0', fontSize: 11, color: leave.status === 'approved' ? '#10C98A' : '#EF476F', fontStyle: 'italic' }}>Note: {leave.adminNote}</p>}
                               </div>
                               <LeaveStatusBadge status={leave.status} />
@@ -2691,11 +2691,11 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: LEAVE CALENDAR
-          ------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'leave-calendar' && (
-            <div className=-card-premium p-6->
+            <div className="card-premium p-6">
               <div style={{ height: 3, background: 'linear-gradient(90deg, #10C98A, #059669)', borderRadius: 3, marginBottom: 24 }} />
               <AdminLeaveCalendar />
             </div>
@@ -2705,13 +2705,13 @@ export default function AdminPage() {
               TAB: AUDIT LOG
           ══════════════════════════════════════════════════════════════ */}
           {activeTab === 'audit' && (
-            <div className=-card-premium- style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="card-premium" style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div style={{ height: 3, background: 'linear-gradient(90deg,#6366F1,#818CF8)', borderRadius: 3 }} />
 
               {/* Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                  <h2 style={{ fontFamily: -'Sora',sans-serif-, fontSize: 18, fontWeight: 800, color: '#1A1B3A', margin: 0, letterSpacing: '-0.02em' }}>
+                  <h2 style={{ fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 800, color: '#1A1B3A', margin: 0, letterSpacing: '-0.02em' }}>
                     Audit Log
                   </h2>
                   <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'rgba(90,95,128,0.60)' }}>
@@ -2830,19 +2830,19 @@ export default function AdminPage() {
           )}
         </main>
 
-        {/* -”-”- Add user modal -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”- */}
+        {/* â”€â”€ Add user modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {showAddModal && (
-          <div className=-fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in- style={{ background: 'rgba(26,27,58,0.28)' }}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" style={{ background: 'rgba(26,27,58,0.28)' }}>
             <form
               onSubmit={handleAddMember}
-              className=-w-full max-w-lg overflow-hidden-
+              className="w-full max-w-lg overflow-hidden"
               style={{ borderRadius: 20, background: '#FFFFFF', border: '1.5px solid rgba(26,27,58,0.22)', boxShadow: '0 24px 64px rgba(26,27,58,0.24)' }}
             >
               {/* Modal top accent */}
               <div style={{ height: 3, background: 'linear-gradient(90deg, #5B4FDB, #8B3FDB, #C026D3)', borderRadius: '8px 8px 0 0' }} />
-              <div className=-flex items-start justify-between gap-4 p-6- style={{ borderBottom: '1px solid rgba(26,27,58,0.14)' }}>
+              <div className="flex items-start justify-between gap-4 p-6" style={{ borderBottom: '1px solid rgba(26,27,58,0.14)' }}>
                 <div>
-                  <h2 style={{ fontFamily: -'Sora', 'Plus Jakarta Sans', sans-serif-, fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A' }}>
+                  <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A' }}>
                     Add application user
                   </h2>
                   <p style={{ marginTop: 4, fontSize: 13, color: 'rgba(90,95,128,0.70)' }}>
@@ -2850,7 +2850,7 @@ export default function AdminPage() {
                   </p>
                 </div>
                 <button
-                  type=-button-
+                  type="button"
                   onClick={() => setShowAddModal(false)}
                   style={{ width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(90,95,128,0.60)', border: '1.5px solid rgba(26,27,58,0.15)', background: 'transparent', cursor: 'pointer', transition: 'all .15s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.08)'; (e.currentTarget as HTMLElement).style.color = '#EF476F'; }}
@@ -2859,38 +2859,38 @@ export default function AdminPage() {
                   <X size={16} />
                 </button>
               </div>
-              <div className=-space-y-4 p-6->
-                <label className=-block->
-                  <span style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.65)', fontFamily: -'JetBrains Mono', monospace- }}>
+              <div className="space-y-4 p-6">
+                <label className="block">
+                  <span style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>
                     Full name
                   </span>
                   <input
                     required
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    placeholder=-Priya Nair-
+                    placeholder="Priya Nair"
                     style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: '#ECEAF8', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
                     onFocus={e => { e.target.style.borderColor = 'rgba(91,79,219,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(26,27,58,0.15)'; }}
                     onBlur={e => { e.target.style.borderColor = 'rgba(26,27,58,0.24)'; e.target.style.boxShadow = 'none'; }}
                   />
                 </label>
-                <label className=-block->
-                  <span style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.65)', fontFamily: -'JetBrains Mono', monospace- }}>
+                <label className="block">
+                  <span style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>
                     Work email
                   </span>
                   <input
                     required
-                    type=-email-
+                    type="email"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder=-priya@edutechex.in-
+                    placeholder="priya@edutechex.in"
                     style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: '#ECEAF8', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
                     onFocus={e => { e.target.style.borderColor = 'rgba(91,79,219,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(26,27,58,0.15)'; }}
                     onBlur={e => { e.target.style.borderColor = 'rgba(26,27,58,0.24)'; e.target.style.boxShadow = 'none'; }}
                   />
                 </label>
-                <label className=-block->
-                  <span style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.65)', fontFamily: -'JetBrains Mono', monospace- }}>
+                <label className="block">
+                  <span style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>
                     Role
                   </span>
                   <select
@@ -2898,15 +2898,15 @@ export default function AdminPage() {
                     onChange={(e) => setNewRole(e.target.value)}
                     style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: '#ECEAF8', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box' }}
                   >
-                    <option value=-Developer->Developer</option>
-                    <option value=-Designer->Designer</option>
-                    <option value=-Lead->Lead</option>
-                    <option value=-Manager->Manager</option>
-                    <option value=-Admin->Admin</option>
+                    <option value="Developer">Developer</option>
+                    <option value="Designer">Designer</option>
+                    <option value="Lead">Lead</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Admin">Admin</option>
                   </select>
                 </label>
                 <div>
-                  <span style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.65)', fontFamily: -'JetBrains Mono', monospace- }}>
+                  <span style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>
                     Channel access
                   </span>
                   {newRole === 'Admin' ? (
@@ -2915,11 +2915,11 @@ export default function AdminPage() {
                     </div>
                   ) : extraChannels.length === 0 ? (
                     <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.18)', background: '#ECEAF8', padding: '12px 14px', fontSize: 12, color: 'rgba(90,95,128,0.55)' }}>
-                      #general only -” no project channels created yet
+                      #general only "” no project channels created yet
                     </div>
                   ) : (
                     <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: '#ECEAF8', padding: '12px 14px' }}>
-                      <p style={{ fontFamily: -'JetBrains Mono', monospace-, fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.55)', marginBottom: 10 }}>
+                      <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.55)', marginBottom: 10 }}>
                         #general is always included · pick up to 3 more
                       </p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -2929,7 +2929,7 @@ export default function AdminPage() {
                           return (
                             <label key={`new-${c.id}`} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: (!checked && atLimit) ? 'not-allowed' : 'pointer', opacity: (!checked && atLimit) ? 0.45 : 1 }}>
                               <input
-                                type=-checkbox-
+                                type="checkbox"
                                 checked={checked}
                                 disabled={!checked && atLimit}
                                 onChange={(e) => {
@@ -2939,7 +2939,7 @@ export default function AdminPage() {
                                 style={{ width: 15, height: 15, accentColor: '#5B4FDB', cursor: 'inherit', flexShrink: 0 }}
                               />
                               <div>
-                                <span style={{ fontFamily: -'JetBrains Mono', monospace-, fontSize: 12, fontWeight: 700, color: checked ? '#5B4FDB' : '#1A1B3A' }}>
+                                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: checked ? '#5B4FDB' : '#1A1B3A' }}>
                                   #{c.name}
                                 </span>
                                 {c.description && (
@@ -2951,11 +2951,11 @@ export default function AdminPage() {
                         })}
                       </div>
                       <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 9.5, fontFamily: -'JetBrains Mono', monospace-, color: newExtraChannels.length >= 3 ? '#EF476F' : 'rgba(90,95,128,0.50)' }}>
+                        <span style={{ fontSize: 9.5, fontFamily: "'JetBrains Mono', monospace", color: newExtraChannels.length >= 3 ? '#EF476F' : 'rgba(90,95,128,0.50)' }}>
                           {newExtraChannels.length}/3 selected
                         </span>
                         {newExtraChannels.length > 0 && (
-                          <button type=-button- onClick={() => setNewExtraChannels([])} style={{ fontSize: 9.5, fontWeight: 600, color: 'rgba(90,95,128,0.55)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: -'JetBrains Mono', monospace- }}>
+                          <button type="button" onClick={() => setNewExtraChannels([])} style={{ fontSize: 9.5, fontWeight: 600, color: 'rgba(90,95,128,0.55)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}>
                             clear
                           </button>
                         )}
@@ -2964,9 +2964,9 @@ export default function AdminPage() {
                   )}
                 </div>
               </div>
-              <div className=-flex justify-end gap-3 p-5- style={{ borderTop: '1px solid rgba(26,27,58,0.14)', background: 'rgba(91,79,219,0.02)' }}>
+              <div className="flex justify-end gap-3 p-5" style={{ borderTop: '1px solid rgba(26,27,58,0.14)', background: 'rgba(91,79,219,0.02)' }}>
                 <button
-                  type=-button-
+                  type="button"
                   onClick={() => setShowAddModal(false)}
                   style={{ padding: '10px 20px', borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.22)', background: '#FFFFFF', fontSize: 13, fontWeight: 600, color: '#5A5F80', cursor: 'pointer', transition: 'all .15s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.30)'; (e.currentTarget as HTMLElement).style.color = '#EF476F'; }}
@@ -2974,7 +2974,7 @@ export default function AdminPage() {
                 >
                   Cancel
                 </button>
-                <button type=-submit-
+                <button type="submit"
                   style={{ padding: '10px 20px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all .2s', boxShadow: '0 4px 14px rgba(91,79,219,0.28)' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(91,79,219,0.35)'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(91,79,219,0.28)'; }}
