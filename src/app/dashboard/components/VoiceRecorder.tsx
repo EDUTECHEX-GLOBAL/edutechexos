@@ -9,7 +9,7 @@ interface VoiceRecorderProps {
 
 type Mode = 'idle' | 'recording' | 'preview' | 'ai-connecting' | 'ai-listening' | 'ai-speaking';
 
-// â”€â”€ Classic voice note recorder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -”-”- Classic voice note recorder -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-
 function useVoiceNote(onSend: (url: string) => void) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [duration, setDuration] = useState(0);
@@ -90,7 +90,7 @@ function useVoiceNote(onSend: (url: string) => void) {
   return { start, stop, send, discard, previewUrl, duration };
 }
 
-// â”€â”€ OpenAI Realtime API voice-to-voice AI tutor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -”-”- OpenAI Realtime API voice-to-voice AI tutor -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-
 function useAIVoice() {
   const [transcript, setTranscript] = useState('');
   const [aiResponse, setAiResponse] = useState('');
@@ -218,7 +218,7 @@ function useAIVoice() {
   return { connect, startListening, stopListening, disconnect, transcript, aiResponse };
 }
 
-// â”€â”€ Main VoiceRecorder component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -”-”- Main VoiceRecorder component -”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-”-
 export default function VoiceRecorder({ onSend }: VoiceRecorderProps) {
   const [mode, setMode] = useState<Mode>('idle');
   const voiceNote = useVoiceNote(onSend);
@@ -268,15 +268,15 @@ export default function VoiceRecorder({ onSend }: VoiceRecorderProps) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-[rgba(62,74,137,0.08)] bg-white p-4 shadow-sm w-full max-w-[320px]">
-      <p className="text-[10px] font-black uppercase tracking-widest text-[#7C859E]">Voice</p>
+    <div className=-flex flex-col items-center gap-3 rounded-2xl border border-[rgba(62,74,137,0.08)] bg-white p-4 shadow-sm w-full max-w-[320px]->
+      <p className=-text-[10px] font-black uppercase tracking-widest text-[#7C859E]->Voice</p>
 
       {/* Idle state */}
       {mode === 'idle' && (
-        <div className="flex gap-3">
+        <div className=-flex gap-3->
           <button
             onClick={handleStartRecording}
-            className="flex items-center gap-2 rounded-xl bg-[#3E4A89] px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-[rgba(62,74,137,0.12)] hover:bg-[rgba(62,74,137,0.08)]0 transition-all"
+            className=-flex items-center gap-2 rounded-xl bg-[#3E4A89] px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-[rgba(62,74,137,0.12)] hover:bg-[rgba(62,74,137,0.08)]0 transition-all-
           >
             <Mic size={14} strokeWidth={2.5} />
             Voice Note
@@ -284,7 +284,7 @@ export default function VoiceRecorder({ onSend }: VoiceRecorderProps) {
           {hasOpenAIKey && (
             <button
               onClick={handleStartAI}
-              className="flex items-center gap-2 rounded-xl border border-[rgba(62,74,137,0.15)] bg-[rgba(62,74,137,0.08)] px-4 py-2.5 text-xs font-bold text-[#3E4A89] hover:bg-indigo-100 transition-all"
+              className=-flex items-center gap-2 rounded-xl border border-[rgba(62,74,137,0.15)] bg-[rgba(62,74,137,0.08)] px-4 py-2.5 text-xs font-bold text-[#3E4A89] hover:bg-indigo-100 transition-all-
             >
               <Sparkles size={14} strokeWidth={2.5} />
               AI Tutor
@@ -295,17 +295,17 @@ export default function VoiceRecorder({ onSend }: VoiceRecorderProps) {
 
       {/* Recording */}
       {mode === 'recording' && (
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
-            <span className="font-mono text-sm font-bold text-[#4A5578]">
+        <div className=-flex flex-col items-center gap-3->
+          <div className=-flex items-center gap-2->
+            <div className=-h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse- />
+            <span className=-font-mono text-sm font-bold text-[#4A5578]->
               {fmt(voiceNote.duration)}
             </span>
           </div>
-          <div className="flex gap-2">
+          <div className=-flex gap-2->
             <button
               onClick={handleStopRecording}
-              className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-red-500 transition-all"
+              className=-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-red-500 transition-all-
             >
               <Square size={14} strokeWidth={2.5} />
               Stop
@@ -316,19 +316,19 @@ export default function VoiceRecorder({ onSend }: VoiceRecorderProps) {
 
       {/* Preview */}
       {mode === 'preview' && voiceNote.previewUrl && (
-        <div className="flex flex-col items-center gap-3 w-full">
-          <audio controls src={voiceNote.previewUrl} className="w-full h-8 rounded-lg" />
-          <div className="flex gap-2">
+        <div className=-flex flex-col items-center gap-3 w-full->
+          <audio controls src={voiceNote.previewUrl} className=-w-full h-8 rounded-lg- />
+          <div className=-flex gap-2->
             <button
               onClick={handleDiscard}
-              className="flex items-center gap-1.5 rounded-xl border border-[rgba(62,74,137,0.12)] px-3 py-2 text-xs font-bold text-[#7C859E] hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all"
+              className=-flex items-center gap-1.5 rounded-xl border border-[rgba(62,74,137,0.12)] px-3 py-2 text-xs font-bold text-[#7C859E] hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all-
             >
               <Trash2 size={13} strokeWidth={2.5} />
               Discard
             </button>
             <button
               onClick={handleSend}
-              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-all"
+              className=-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-all-
             >
               <Send size={13} strokeWidth={2.5} />
               Send
@@ -339,21 +339,21 @@ export default function VoiceRecorder({ onSend }: VoiceRecorderProps) {
 
       {/* AI connecting */}
       {mode === 'ai-connecting' && (
-        <div className="flex items-center gap-2 text-[#7C859E]">
-          <Loader2 size={16} className="animate-spin text-[#3E4A89]" />
-          <span className="text-xs font-medium">Connecting to AI Tutorâ€¦</span>
+        <div className=-flex items-center gap-2 text-[#7C859E]->
+          <Loader2 size={16} className=-animate-spin text-[#3E4A89]- />
+          <span className=-text-xs font-medium->Connecting to AI Tutor...</span>
         </div>
       )}
 
       {/* AI listening */}
       {mode === 'ai-listening' && (
-        <div className="flex flex-col items-center gap-3 w-full">
-          <div className="flex items-center gap-2">
-            <div className="flex gap-0.5">
+        <div className=-flex flex-col items-center gap-3 w-full->
+          <div className=-flex items-center gap-2->
+            <div className=-flex gap-0.5->
               {[0, 1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
-                  className="w-1 bg-[rgba(62,74,137,0.08)]0 rounded-full animate-pulse"
+                  className=-w-1 bg-[rgba(62,74,137,0.08)]0 rounded-full animate-pulse-
                   style={{
                     height: `${12 + Math.sin(i * 0.8) * 8}px`,
                     animationDelay: `${i * 100}ms`,
@@ -361,27 +361,27 @@ export default function VoiceRecorder({ onSend }: VoiceRecorderProps) {
                 />
               ))}
             </div>
-            <span className="text-xs font-medium text-[#4A5578]">AI Tutor is listeningâ€¦</span>
+            <span className=-text-xs font-medium text-[#4A5578]->AI Tutor is listening...</span>
           </div>
           {aiVoice.transcript && (
-            <p className="text-[11px] text-[#7C859E] italic max-w-[220px] text-center leading-relaxed">
+            <p className=-text-[11px] text-[#7C859E] italic max-w-[220px] text-center leading-relaxed->
               &quot;{aiVoice.transcript}&quot;
             </p>
           )}
           {aiVoice.aiResponse && (
-            <div className="rounded-xl bg-[rgba(62,74,137,0.08)] border border-[rgba(62,74,137,0.10)] p-3 max-w-[220px]">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <Volume2 size={11} className="text-indigo-500" />
-                <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500">
+            <div className=-rounded-xl bg-[rgba(62,74,137,0.08)] border border-[rgba(62,74,137,0.10)] p-3 max-w-[220px]->
+              <div className=-flex items-center gap-1.5 mb-1.5->
+                <Volume2 size={11} className=-text-indigo-500- />
+                <span className=-text-[9px] font-black uppercase tracking-widest text-indigo-500->
                   AI Response
                 </span>
               </div>
-              <p className="text-[11px] text-indigo-800 leading-relaxed">{aiVoice.aiResponse}</p>
+              <p className=-text-[11px] text-indigo-800 leading-relaxed->{aiVoice.aiResponse}</p>
             </div>
           )}
           <button
             onClick={handleStopAI}
-            className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-red-500 transition-all"
+            className=-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-red-500 transition-all-
           >
             <MicOff size={14} strokeWidth={2.5} />
             End Session
@@ -391,9 +391,9 @@ export default function VoiceRecorder({ onSend }: VoiceRecorderProps) {
 
       {/* No OpenAI key hint */}
       {mode === 'idle' && !hasOpenAIKey && (
-        <p className="text-[9px] text-[#7C859E] text-center leading-relaxed">
+        <p className=-text-[9px] text-[#7C859E] text-center leading-relaxed->
           Add{' '}
-          <code className="bg-[rgba(62,74,137,0.08)] px-1 rounded">NEXT_PUBLIC_OPENAI_API_KEY</code>{' '}
+          <code className=-bg-[rgba(62,74,137,0.08)] px-1 rounded->NEXT_PUBLIC_OPENAI_API_KEY</code>{' '}
           to unlock AI Tutor voice mode
         </p>
       )}

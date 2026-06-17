@@ -144,43 +144,43 @@ export default function IntegrationsPanel({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      className=-fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4-
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-[rgba(62,74,137,0.12)] flex flex-col max-h-[90vh]"
+        className=-w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-[rgba(62,74,137,0.12)] flex flex-col max-h-[90vh]-
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(62,74,137,0.08)]">
+        <div className=-flex items-center justify-between px-6 py-4 border-b border-[rgba(62,74,137,0.08)]->
           <div>
-            <h2 className="text-lg font-bold text-[#1E2636]">Integrations</h2>
-            <p className="text-xs text-[#7C859E] mt-0.5">
+            <h2 className=-text-lg font-bold text-[#1E2636]->Integrations</h2>
+            <p className=-text-xs text-[#7C859E] mt-0.5->
               Connect GitHub, Zapier, Make, and any webhook-compatible tool
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className=-flex items-center gap-2->
             <button
               onClick={fetchWebhooks}
-              className="p-2 rounded-lg hover:bg-[rgba(62,74,137,0.08)] text-[#7C859E] hover:text-[#4A5578] transition-colors"
+              className=-p-2 rounded-lg hover:bg-[rgba(62,74,137,0.08)] text-[#7C859E] hover:text-[#4A5578] transition-colors-
             >
               <RefreshCw size={15} />
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-[rgba(62,74,137,0.08)] text-[#7C859E] hover:text-[#4A5578] transition-colors"
+              className=-p-2 rounded-lg hover:bg-[rgba(62,74,137,0.08)] text-[#7C859E] hover:text-[#4A5578] transition-colors-
             >
               <X size={16} />
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+        <div className=-flex-1 overflow-y-auto px-6 py-5 space-y-6->
           {/* Add new button */}
           {!showForm && (
             <button
               onClick={() => setShowForm(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-[rgba(62,74,137,0.12)] text-[#7C859E] hover:border-[#2A3568] hover:text-[#C4CAE0] hover:bg-blue-50 transition-all text-sm font-medium"
+              className=-w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-[rgba(62,74,137,0.12)] text-[#7C859E] hover:border-[#2A3568] hover:text-[#C4CAE0] hover:bg-blue-50 transition-all text-sm font-medium-
             >
               <Plus size={16} /> New Integration
             </button>
@@ -190,26 +190,26 @@ export default function IntegrationsPanel({
           {showForm && (
             <form
               onSubmit={createWebhook}
-              className="bg-[#FAF8F5] rounded-xl border border-[rgba(62,74,137,0.12)] p-4 space-y-3"
+              className=-bg-[#FAF8F5] rounded-xl border border-[rgba(62,74,137,0.12)] p-4 space-y-3-
             >
-              <h3 className="text-sm font-bold text-[#4A5578]">New Integration</h3>
-              <div className="grid grid-cols-2 gap-3">
+              <h3 className=-text-sm font-bold text-[#4A5578]->New Integration</h3>
+              <div className=-grid grid-cols-2 gap-3->
                 <div>
-                  <label className="text-xs font-semibold text-[#7C859E] block mb-1">Name</label>
+                  <label className=-text-xs font-semibold text-[#7C859E] block mb-1->Name</label>
                   <input
                     value={form.name}
                     onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="e.g. GitHub â€” skillnaav"
-                    className="w-full text-sm border border-[rgba(62,74,137,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A3568]"
+                    placeholder=-e.g. GitHub -” skillnaav-
+                    className=-w-full text-sm border border-[rgba(62,74,137,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A3568]-
                     required
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-[#7C859E] block mb-1">Channel</label>
+                  <label className=-text-xs font-semibold text-[#7C859E] block mb-1->Channel</label>
                   <select
                     value={form.channelId}
                     onChange={(e) => setForm((p) => ({ ...p, channelId: e.target.value }))}
-                    className="w-full text-sm border border-[rgba(62,74,137,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A3568] bg-white"
+                    className=-w-full text-sm border border-[rgba(62,74,137,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A3568] bg-white-
                   >
                     {workspaceChannels.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -219,46 +219,46 @@ export default function IntegrationsPanel({
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className=-grid grid-cols-2 gap-3->
                 <div>
-                  <label className="text-xs font-semibold text-[#7C859E] block mb-1">Type</label>
+                  <label className=-text-xs font-semibold text-[#7C859E] block mb-1->Type</label>
                   <select
                     value={form.type}
                     onChange={(e) =>
                       setForm((p) => ({ ...p, type: e.target.value as 'github' | 'generic' }))
                     }
-                    className="w-full text-sm border border-[rgba(62,74,137,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A3568] bg-white"
+                    className=-w-full text-sm border border-[rgba(62,74,137,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A3568] bg-white-
                   >
-                    <option value="github">GitHub</option>
-                    <option value="generic">Generic (Zapier / Make / Any)</option>
+                    <option value=-github->GitHub</option>
+                    <option value=-generic->Generic (Zapier / Make / Any)</option>
                   </select>
                 </div>
                 {form.type === 'github' && (
                   <div>
-                    <label className="text-xs font-semibold text-[#7C859E] block mb-1">
-                      Webhook Secret <span className="text-[#7C859E] font-normal">(optional)</span>
+                    <label className=-text-xs font-semibold text-[#7C859E] block mb-1->
+                      Webhook Secret <span className=-text-[#7C859E] font-normal->(optional)</span>
                     </label>
                     <input
                       value={form.secret}
                       onChange={(e) => setForm((p) => ({ ...p, secret: e.target.value }))}
-                      placeholder="GitHub webhook secret"
-                      className="w-full text-sm border border-[rgba(62,74,137,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A3568]"
+                      placeholder=-GitHub webhook secret-
+                      className=-w-full text-sm border border-[rgba(62,74,137,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A3568]-
                     />
                   </div>
                 )}
               </div>
-              <div className="flex gap-2 pt-1">
+              <div className=-flex gap-2 pt-1->
                 <button
-                  type="submit"
+                  type=-submit-
                   disabled={creating}
-                  className="flex-1 py-2 rounded-lg bg-[#3E4A89] text-white text-sm font-semibold hover:bg-[#2A3568] transition-colors disabled:opacity-50"
+                  className=-flex-1 py-2 rounded-lg bg-[#3E4A89] text-white text-sm font-semibold hover:bg-[#2A3568] transition-colors disabled:opacity-50-
                 >
-                  {creating ? 'Creatingâ€¦' : 'Create Integration'}
+                  {creating ? 'Creating...' : 'Create Integration'}
                 </button>
                 <button
-                  type="button"
+                  type=-button-
                   onClick={() => setShowForm(false)}
-                  className="px-4 py-2 rounded-lg border border-[rgba(62,74,137,0.12)] text-sm text-[#4A5578] hover:bg-[rgba(62,74,137,0.08)] transition-colors"
+                  className=-px-4 py-2 rounded-lg border border-[rgba(62,74,137,0.12)] text-sm text-[#4A5578] hover:bg-[rgba(62,74,137,0.08)] transition-colors-
                 >
                   Cancel
                 </button>
@@ -267,30 +267,30 @@ export default function IntegrationsPanel({
           )}
 
           {loading && (
-            <div className="text-center py-8 text-[#7C859E] text-sm">Loading integrationsâ€¦</div>
+            <div className=-text-center py-8 text-[#7C859E] text-sm->Loading integrations...</div>
           )}
 
           {/* GitHub section */}
           {!loading && (
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <GitBranch size={16} className="text-[#4A5578]" />
-                <span className="text-sm font-bold text-[#4A5578]">GitHub</span>
-                <span className="text-xs bg-[rgba(62,74,137,0.08)] text-[#7C859E] px-2 py-0.5 rounded-full">
+              <div className=-flex items-center gap-2 mb-3->
+                <GitBranch size={16} className=-text-[#4A5578]- />
+                <span className=-text-sm font-bold text-[#4A5578]->GitHub</span>
+                <span className=-text-xs bg-[rgba(62,74,137,0.08)] text-[#7C859E] px-2 py-0.5 rounded-full->
                   {githubWebhooks.length}
                 </span>
               </div>
 
               {githubWebhooks.length === 0 && (
-                <div className="rounded-xl border border-dashed border-[rgba(62,74,137,0.12)] p-4 text-center">
-                  <p className="text-sm text-[#7C859E] mb-2">No GitHub integrations yet</p>
-                  <p className="text-xs text-[#7C859E]">
-                    Create one above, then add the URL to your GitHub repo â†’ Settings â†’ Webhooks
+                <div className=-rounded-xl border border-dashed border-[rgba(62,74,137,0.12)] p-4 text-center->
+                  <p className=-text-sm text-[#7C859E] mb-2->No GitHub integrations yet</p>
+                  <p className=-text-xs text-[#7C859E]->
+                    Create one above, then add the URL to your GitHub repo -†’ Settings -†’ Webhooks
                   </p>
                 </div>
               )}
 
-              <div className="space-y-2">
+              <div className=-space-y-2->
                 {githubWebhooks.map((wh) => (
                   <WebhookCard
                     key={wh.id}
@@ -305,13 +305,13 @@ export default function IntegrationsPanel({
               </div>
 
               {githubWebhooks.length > 0 && (
-                <div className="mt-3 bg-[#FAF8F5] rounded-lg p-3 border border-[rgba(62,74,137,0.08)]">
-                  <p className="text-xs font-semibold text-[#4A5578] mb-1">
+                <div className=-mt-3 bg-[#FAF8F5] rounded-lg p-3 border border-[rgba(62,74,137,0.08)]->
+                  <p className=-text-xs font-semibold text-[#4A5578] mb-1->
                     How to set up in GitHub:
                   </p>
-                  <ol className="text-xs text-[#7C859E] space-y-0.5 list-decimal list-inside">
+                  <ol className=-text-xs text-[#7C859E] space-y-0.5 list-decimal list-inside->
                     <li>
-                      Go to your repo â†’ <strong>Settings â†’ Webhooks â†’ Add webhook</strong>
+                      Go to your repo -†’ <strong>Settings -†’ Webhooks -†’ Add webhook</strong>
                     </li>
                     <li>
                       Paste the webhook URL above into <strong>Payload URL</strong>
@@ -323,7 +323,7 @@ export default function IntegrationsPanel({
                       Select events: <strong>Pushes, Pull requests, Issues, Releases</strong>
                     </li>
                     <li>
-                      Click <strong>Add webhook</strong> â€” done!
+                      Click <strong>Add webhook</strong> -” done!
                     </li>
                   </ol>
                 </div>
@@ -334,29 +334,29 @@ export default function IntegrationsPanel({
           {/* Generic / Zapier section */}
           {!loading && (
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Zap size={16} className="text-amber-500" />
-                <span className="text-sm font-bold text-[#4A5578]">Generic Webhooks</span>
-                <span className="text-xs bg-[rgba(62,74,137,0.08)] text-[#7C859E] px-2 py-0.5 rounded-full">
+              <div className=-flex items-center gap-2 mb-3->
+                <Zap size={16} className=-text-amber-500- />
+                <span className=-text-sm font-bold text-[#4A5578]->Generic Webhooks</span>
+                <span className=-text-xs bg-[rgba(62,74,137,0.08)] text-[#7C859E] px-2 py-0.5 rounded-full->
                   {genericWebhooks.length}
                 </span>
-                <span className="text-xs text-[#7C859E]">â€” Zapier, Make, IFTTT, any tool</span>
+                <span className=-text-xs text-[#7C859E]->-” Zapier, Make, IFTTT, any tool</span>
               </div>
 
               {genericWebhooks.length === 0 && (
-                <div className="rounded-xl border border-dashed border-[rgba(62,74,137,0.12)] p-4 text-center">
-                  <p className="text-sm text-[#7C859E] mb-1">No generic webhooks yet</p>
-                  <p className="text-xs text-[#7C859E]">
+                <div className=-rounded-xl border border-dashed border-[rgba(62,74,137,0.12)] p-4 text-center->
+                  <p className=-text-sm text-[#7C859E] mb-1->No generic webhooks yet</p>
+                  <p className=-text-xs text-[#7C859E]->
                     POST{' '}
-                    <code className="bg-[rgba(62,74,137,0.08)] px-1 rounded">
-                      {'{"text":"your message"}'}
+                    <code className=-bg-[rgba(62,74,137,0.08)] px-1 rounded->
+                      {'{-text-:-your message-}'}
                     </code>{' '}
                     to the webhook URL
                   </p>
                 </div>
               )}
 
-              <div className="space-y-2">
+              <div className=-space-y-2->
                 {genericWebhooks.map((wh) => (
                   <WebhookCard
                     key={wh.id}
@@ -371,15 +371,15 @@ export default function IntegrationsPanel({
               </div>
 
               {genericWebhooks.length > 0 && (
-                <div className="mt-3 bg-amber-50 rounded-lg p-3 border border-amber-100">
-                  <p className="text-xs font-semibold text-amber-700 mb-1">Payload format:</p>
-                  <pre className="text-xs text-amber-800 font-mono bg-amber-100 rounded p-2">{`POST <webhook-url>
+                <div className=-mt-3 bg-amber-50 rounded-lg p-3 border border-amber-100->
+                  <p className=-text-xs font-semibold text-amber-700 mb-1->Payload format:</p>
+                  <pre className=-text-xs text-amber-800 font-mono bg-amber-100 rounded p-2->{`POST <webhook-url>
 Content-Type: application/json
 
 {
-  "text": "Your message here",
-  "title": "Optional bold title",
-  "color": "#3E4A89"
+  -text-: -Your message here-,
+  -title-: -Optional bold title-,
+  -color-: -#3E4A89-
 }`}</pre>
                 </div>
               )}
@@ -413,62 +413,62 @@ function WebhookCard({
     <div
       className={`rounded-xl border p-3 transition-all ${wh.active ? 'border-[rgba(62,74,137,0.12)] bg-white' : 'border-[rgba(62,74,137,0.08)] bg-[#FAF8F5] opacity-60'}`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-semibold text-[#1E2636]">{wh.name}</span>
-            <span className="text-xs bg-[rgba(62,74,137,0.08)] text-[#C4CAE0] px-2 py-0.5 rounded-full font-medium">
+      <div className=-flex items-start justify-between gap-2->
+        <div className=-flex-1 min-w-0->
+          <div className=-flex items-center gap-2 mb-1->
+            <span className=-text-sm font-semibold text-[#1E2636]->{wh.name}</span>
+            <span className=-text-xs bg-[rgba(62,74,137,0.08)] text-[#C4CAE0] px-2 py-0.5 rounded-full font-medium->
               #{channel?.name ?? wh.channelId}
             </span>
             {!wh.active && (
-              <span className="text-xs bg-slate-200 text-[#7C859E] px-2 py-0.5 rounded-full">
+              <span className=-text-xs bg-slate-200 text-[#7C859E] px-2 py-0.5 rounded-full->
                 Paused
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5">
-            <code className="text-xs text-[#7C859E] bg-[#FAF8F5] border border-[rgba(62,74,137,0.08)] rounded px-2 py-1 flex-1 truncate font-mono">
+          <div className=-flex items-center gap-1.5->
+            <code className=-text-xs text-[#7C859E] bg-[#FAF8F5] border border-[rgba(62,74,137,0.08)] rounded px-2 py-1 flex-1 truncate font-mono->
               {url}
             </code>
             <button
               onClick={() => onCopy(wh)}
-              className="flex-shrink-0 p-1.5 rounded-lg hover:bg-[rgba(62,74,137,0.08)] text-[#7C859E] hover:text-[#C4CAE0] transition-colors"
+              className=-flex-shrink-0 p-1.5 rounded-lg hover:bg-[rgba(62,74,137,0.08)] text-[#7C859E] hover:text-[#C4CAE0] transition-colors-
             >
               {copied === wh.id ? (
-                <Check size={13} className="text-[#9BA6D3]" />
+                <Check size={13} className=-text-[#9BA6D3]- />
               ) : (
                 <Copy size={13} />
               )}
             </button>
             <a
               href={url}
-              target="_blank"
-              rel="noreferrer"
-              className="flex-shrink-0 p-1.5 rounded-lg hover:bg-[rgba(62,74,137,0.08)] text-[#7C859E] hover:text-[#4A5578] transition-colors"
+              target=-_blank-
+              rel=-noreferrer-
+              className=-flex-shrink-0 p-1.5 rounded-lg hover:bg-[rgba(62,74,137,0.08)] text-[#7C859E] hover:text-[#4A5578] transition-colors-
             >
               <ExternalLink size={13} />
             </a>
           </div>
           {wh.lastUsed && (
-            <p className="text-xs text-[#7C859E] mt-1">
+            <p className=-text-xs text-[#7C859E] mt-1->
               Last used: {new Date(wh.lastUsed).toLocaleString()}
             </p>
           )}
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className=-flex items-center gap-1 flex-shrink-0->
           <button
             onClick={() => onToggle(wh)}
-            className="p-1.5 rounded-lg hover:bg-[rgba(62,74,137,0.08)] transition-colors text-[#7C859E] hover:text-[#C4CAE0]"
+            className=-p-1.5 rounded-lg hover:bg-[rgba(62,74,137,0.08)] transition-colors text-[#7C859E] hover:text-[#C4CAE0]-
           >
             {wh.active ? (
-              <ToggleRight size={18} className="text-indigo-500" />
+              <ToggleRight size={18} className=-text-indigo-500- />
             ) : (
               <ToggleLeft size={18} />
             )}
           </button>
           <button
             onClick={() => onDelete(wh.id)}
-            className="p-1.5 rounded-lg hover:bg-red-50 text-[#7C859E] hover:text-red-500 transition-colors"
+            className=-p-1.5 rounded-lg hover:bg-red-50 text-[#7C859E] hover:text-red-500 transition-colors-
           >
             <Trash2 size={14} />
           </button>

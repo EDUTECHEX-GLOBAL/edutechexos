@@ -309,7 +309,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [message]);
 
-  // Typing indicator â€” updates local state AND broadcasts via socket
+  // Typing indicator -” updates local state AND broadcasts via socket
   const handleTyping = useCallback(() => {
     if (!currentUser?.name) return;
     setTyping(channelId, currentUser.name, true);
@@ -486,7 +486,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
             if (e) URL.revokeObjectURL(e.url);
             return { kind, blob, mimeType, url: URL.createObjectURL(blob) };
           });
-          toast.success(`Voice note ready â€” review before sending`);
+          toast.success(`Voice note ready -” review before sending`);
         }
       };
       mediaRecorderRef.current = recorder;
@@ -504,7 +504,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
         (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError');
       toast.error(
         isDenied
-          ? `Browser blocked ${kind} access â€” allow permissions.`
+          ? `Browser blocked ${kind} access -” allow permissions.`
           : `Could not start ${kind} recording.`
       );
     }
@@ -629,24 +629,24 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   return (
-    <div className="space-y-2 py-2">
+    <div className=-space-y-2 py-2->
       {/* Live camera preview */}
       {recordingType === 'video' && (
-        <div className="relative mx-1 overflow-hidden rounded-2xl border border-red-200 bg-black shadow-lg video-preview">
-          <video ref={liveVideoRef} className="h-32 w-full object-cover" muted playsInline />
-          <div className="absolute top-2 right-2">
+        <div className=-relative mx-1 overflow-hidden rounded-2xl border border-red-200 bg-black shadow-lg video-preview->
+          <video ref={liveVideoRef} className=-h-32 w-full object-cover- muted playsInline />
+          <div className=-absolute top-2 right-2->
             <button
               onClick={handleStopAndSend}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-700"
-              title="Stop & share to #general"
+              className=-flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-700-
+              title=-Stop & share to #general-
             >
               <X size={20} />
             </button>
           </div>
-          <div className="absolute bottom-2 left-3 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-black text-white backdrop-blur-sm">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+          <div className=-absolute bottom-2 left-3 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-black text-white backdrop-blur-sm->
+            <span className=-relative flex h-2 w-2->
+              <span className=-absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75- />
+              <span className=-relative inline-flex h-2 w-2 rounded-full bg-red-500- />
             </span>
             LIVE · {fmt(recordingDuration)}
           </div>
@@ -655,22 +655,22 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
 
       {/* @mention dropdown */}
       {showMentionDropdown && mentionSuggestions.length > 0 && (
-        <div className="mx-1 overflow-hidden rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-xl  dark:bg-slate-800">
+        <div className=-mx-1 overflow-hidden rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-xl  dark:bg-slate-800->
           {mentionSuggestions.map((m) => (
             <button
               key={m.id}
               onClick={() => insertMention(m.name)}
-              className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-indigo-900/20 transition-colors"
+              className=-flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-indigo-900/20 transition-colors-
             >
               <div
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-sm font-bold text-white"
+                className=-flex h-7 w-7 items-center justify-center rounded-lg text-sm font-bold text-white-
                 style={{ backgroundColor: m.color }}
               >
                 {m.initials}
               </div>
               <div>
-                <p className="text-sm font-bold text-[#1E2636]">{m.name}</p>
-                <p className="text-xs text-[#7C859E]">{m.role}</p>
+                <p className=-text-sm font-bold text-[#1E2636]->{m.name}</p>
+                <p className=-text-xs text-[#7C859E]->{m.role}</p>
               </div>
             </button>
           ))}
@@ -679,7 +679,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
 
       {/* AI suggestions */}
       {showAISuggestions && (
-        <div className="mx-1 flex gap-2 flex-wrap">
+        <div className=-mx-1 flex gap-2 flex-wrap->
           {AI_SUGGESTIONS.map((s) => (
             <button
               key={s}
@@ -688,7 +688,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
                 setShowAISuggestions(false);
                 textareaRef.current?.focus();
               }}
-              className="rounded-full border border-[rgba(62,74,137,0.15)] bg-[rgba(62,74,137,0.08)] px-3 py-1 text-sm font-semibold text-[#3E4A89] hover:bg-indigo-100 transition-colors"
+              className=-rounded-full border border-[rgba(62,74,137,0.15)] bg-[rgba(62,74,137,0.08)] px-3 py-1 text-sm font-semibold text-[#3E4A89] hover:bg-indigo-100 transition-colors-
             >
               {s}
             </button>
@@ -698,12 +698,12 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
 
       {/* Poll creator */}
       {pollOpen && (
-        <div className="mx-1 rounded-2xl border border-[rgba(62,74,137,0.12)]  bg-white dark:bg-slate-800 p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-black text-[#1E2636]">📊 Create Poll</p>
+        <div className=-mx-1 rounded-2xl border border-[rgba(62,74,137,0.12)]  bg-white dark:bg-slate-800 p-4 shadow-sm->
+          <div className=-mb-3 flex items-center justify-between->
+            <p className=-text-sm font-black text-[#1E2636]->📊 Create Poll</p>
             <button
               onClick={() => setPollOpen(false)}
-              className="rounded-lg p-1 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)]"
+              className=-rounded-lg p-1 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)]-
             >
               <X size={14} />
             </button>
@@ -711,11 +711,11 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
           <input
             value={pollQuestion}
             onChange={(e) => setPollQuestion(e.target.value)}
-            placeholder="Your questionâ€¦"
-            className="mb-2 w-full rounded-xl border border-[rgba(62,74,137,0.12)]  bg-[#FAF8F5] dark:bg-[#191E2F] px-3 py-2 text-sm focus:border-[#3E4A89] focus:outline-none"
+            placeholder=-Your question...-
+            className=-mb-2 w-full rounded-xl border border-[rgba(62,74,137,0.12)]  bg-[#FAF8F5] dark:bg-[#191E2F] px-3 py-2 text-sm focus:border-[#3E4A89] focus:outline-none-
           />
           {pollOptions.map((opt, i) => (
-            <div key={i} className="mb-1.5 flex gap-2">
+            <div key={i} className=-mb-1.5 flex gap-2->
               <input
                 value={opt}
                 onChange={(e) => {
@@ -724,12 +724,12 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
                   setPollOptions(next);
                 }}
                 placeholder={`Option ${i + 1}`}
-                className="flex-1 rounded-xl border border-[rgba(62,74,137,0.12)]  bg-[#FAF8F5] dark:bg-[#191E2F] px-3 py-1.5 text-sm focus:border-[#3E4A89] focus:outline-none"
+                className=-flex-1 rounded-xl border border-[rgba(62,74,137,0.12)]  bg-[#FAF8F5] dark:bg-[#191E2F] px-3 py-1.5 text-sm focus:border-[#3E4A89] focus:outline-none-
               />
               {pollOptions.length > 2 && (
                 <button
                   onClick={() => setPollOptions(pollOptions.filter((_, j) => j !== i))}
-                  className="rounded-lg p-1.5 text-[#7C859E] hover:text-red-500"
+                  className=-rounded-lg p-1.5 text-[#7C859E] hover:text-red-500-
                 >
                   <X size={14} />
                 </button>
@@ -739,14 +739,14 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
           {pollOptions.length < 4 && (
             <button
               onClick={() => setPollOptions([...pollOptions, ''])}
-              className="mt-1 text-sm font-bold text-[#3E4A89] hover:text-indigo-800"
+              className=-mt-1 text-sm font-bold text-[#3E4A89] hover:text-indigo-800-
             >
               + Add option
             </button>
           )}
           <button
             onClick={sendPoll}
-            className="mt-3 w-full rounded-xl bg-[#3E4A89] py-2 text-sm font-black text-white hover:bg-[#2A3568] transition-colors"
+            className=-mt-3 w-full rounded-xl bg-[#3E4A89] py-2 text-sm font-black text-white hover:bg-[#2A3568] transition-colors-
           >
             Create Poll
           </button>
@@ -754,23 +754,23 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
       )}
 
       {/* Status row */}
-      <div className="flex items-center justify-between px-1">
-        <div className="text-[11px] text-[#7C859E]">
+      <div className=-flex items-center justify-between px-1->
+        <div className=-text-[11px] text-[#7C859E]->
           {message.length > 0 && `${message.length} chars`}
         </div>
         {recordingType === 'audio' && (
-          <div className="voice-recording-overlay flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-sm font-black text-red-600">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+          <div className=-voice-recording-overlay flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-sm font-black text-red-600->
+            <span className=-relative flex h-2 w-2->
+              <span className=-absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75- />
+              <span className=-relative inline-flex h-2 w-2 rounded-full bg-red-500- />
             </span>
             {/* Waveform animation bars */}
-            <div className="flex space-x-0.5 ml-2 items-center">
-              <span className="wave-bar" style={{ animationDelay: '0s' }} />
-              <span className="wave-bar" style={{ animationDelay: '0.1s' }} />
-              <span className="wave-bar" style={{ animationDelay: '0.2s' }} />
-              <span className="wave-bar" style={{ animationDelay: '0.3s' }} />
-              <span className="wave-bar" style={{ animationDelay: '0.4s' }} />
+            <div className=-flex space-x-0.5 ml-2 items-center->
+              <span className=-wave-bar- style={{ animationDelay: '0s' }} />
+              <span className=-wave-bar- style={{ animationDelay: '0.1s' }} />
+              <span className=-wave-bar- style={{ animationDelay: '0.2s' }} />
+              <span className=-wave-bar- style={{ animationDelay: '0.3s' }} />
+              <span className=-wave-bar- style={{ animationDelay: '0.4s' }} />
             </div>
             REC · {fmt(recordingDuration)}
           </div>
@@ -778,12 +778,12 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-0.5">
+      <div className=-flex items-center gap-0.5->
         <button
           ref={emojiBtnRef}
           onClick={() => setEmojiOpen((v) => !v)}
           className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${emojiOpen ? 'bg-[rgba(62,74,137,0.08)] text-[#3E4A89]' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800'}`}
-          title="Emoji"
+          title=-Emoji-
         >
           <Smile size={16} />
         </button>
@@ -796,7 +796,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
         >
           {recordingType === 'audio' ? (
             <>
-              <span className="absolute inset-0 rounded-full border-2 border-red-600 animate-pulse opacity-30 pointer-events-none"></span>
+              <span className=-absolute inset-0 rounded-full border-2 border-red-600 animate-pulse opacity-30 pointer-events-none-></span>
               <Mic size={16} />
             </>
           ) : (
@@ -809,36 +809,36 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
           }
           disabled={recordingBusy || recordingType === 'audio'}
           className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${recordingType === 'video' ? 'animate-pulse bg-red-100 text-red-600' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800'}`}
-          title="Screen recording"
+          title=-Screen recording-
         >
           <Video size={16} />
         </button>
         <button
           onClick={() => setPollOpen((v) => !v)}
           className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${pollOpen ? 'bg-[rgba(62,74,137,0.08)] text-[#3E4A89]' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800'}`}
-          title="Create poll"
+          title=-Create poll-
         >
           <BarChart2 size={16} />
         </button>
         <button
           onClick={insertCodeBlock}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800 transition-colors"
-          title="Insert code block"
+          className=-flex h-8 w-8 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800 transition-colors-
+          title=-Insert code block-
         >
           <Code2 size={16} />
         </button>
         <button
           onClick={() => setShowAISuggestions((v) => !v)}
           className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${showAISuggestions ? 'bg-violet-50 text-violet-600' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800'}`}
-          title="AI suggestions"
+          title=-AI suggestions-
         >
           <Zap size={16} />
         </button>
-        <div className="flex-1" />
+        <div className=-flex-1- />
         {recordingType && (
           <button
             onClick={() => stopRecording(true)}
-            className="flex h-7 items-center gap-1 rounded-lg border border-[rgba(62,74,137,0.12)] bg-white px-2.5 text-[11px] font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)] transition-colors"
+            className=-flex h-7 items-center gap-1 rounded-lg border border-[rgba(62,74,137,0.12)] bg-white px-2.5 text-[11px] font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)] transition-colors-
           >
             <X size={12} /> Stop
           </button>
@@ -847,18 +847,18 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
 
       {/* Emoji picker */}
       {emojiOpen && (
-        <div ref={emojiPanelRef} className="relative z-50">
-          <div className="absolute bottom-0 left-0 w-72 rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-3 shadow-xl  dark:bg-slate-800">
-            <div className="mb-1 text-[11px] font-black uppercase tracking-wider text-[#7C859E]">
+        <div ref={emojiPanelRef} className=-relative z-50->
+          <div className=-absolute bottom-0 left-0 w-72 rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-3 shadow-xl  dark:bg-slate-800->
+            <div className=-mb-1 text-[11px] font-black uppercase tracking-wider text-[#7C859E]->
               Emoji
             </div>
-            <div className="grid max-h-48 grid-cols-8 gap-1 overflow-y-auto">
+            <div className=-grid max-h-48 grid-cols-8 gap-1 overflow-y-auto->
               {EMOJI_LIST.map((emoji, idx) => (
                 <button
                   key={idx}
-                  type="button"
+                  type=-button-
                   onClick={() => insertEmoji(emoji)}
-                  className="flex h-8 items-center justify-center rounded-lg text-lg transition-all hover:scale-110 hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-indigo-900/20"
+                  className=-flex h-8 items-center justify-center rounded-lg text-lg transition-all hover:scale-110 hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-indigo-900/20-
                 >
                   {emoji}
                 </button>
@@ -901,37 +901,37 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
 
       {/* Link preview card */}
       {(linkPreviewLoading || linkPreview) && (
-        <div className="mx-1 overflow-hidden rounded-xl border border-[rgba(62,74,137,0.12)] bg-white shadow-sm">
+        <div className=-mx-1 overflow-hidden rounded-xl border border-[rgba(62,74,137,0.12)] bg-white shadow-sm->
           {linkPreviewLoading ? (
-            <div className="flex items-center gap-2 px-3 py-2 text-xs text-[#7C859E]">
-              <Loader2 size={12} className="animate-spin" /> Fetching preview…
+            <div className=-flex items-center gap-2 px-3 py-2 text-xs text-[#7C859E]->
+              <Loader2 size={12} className=-animate-spin- /> Fetching preview…
             </div>
           ) : (
             linkPreview && (
-              <div className="flex gap-3 p-2.5">
+              <div className=-flex gap-3 p-2.5->
                 {linkPreview.image && (
                   <img
                     src={linkPreview.image}
-                    alt=""
-                    className="h-14 w-20 shrink-0 rounded-lg object-cover"
+                    alt=-
+                    className=-h-14 w-20 shrink-0 rounded-lg object-cover-
                   />
                 )}
-                <div className="min-w-0 flex-1">
+                <div className=-min-w-0 flex-1->
                   {linkPreview.siteName && (
-                    <p className="text-[10px] font-black uppercase tracking-wider text-[#7C859E]">
+                    <p className=-text-[10px] font-black uppercase tracking-wider text-[#7C859E]->
                       {linkPreview.siteName}
                     </p>
                   )}
                   {linkPreview.title && (
-                    <p className="truncate text-sm font-bold text-[#1E2636]">{linkPreview.title}</p>
+                    <p className=-truncate text-sm font-bold text-[#1E2636]->{linkPreview.title}</p>
                   )}
                   {linkPreview.description && (
-                    <p className="line-clamp-1 text-xs text-[#7C859E]">{linkPreview.description}</p>
+                    <p className=-line-clamp-1 text-xs text-[#7C859E]->{linkPreview.description}</p>
                   )}
                 </div>
                 <button
                   onClick={() => setLinkPreview(null)}
-                  className="shrink-0 self-start rounded p-1 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)]"
+                  className=-shrink-0 self-start rounded p-1 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)]-
                 >
                   <X size={12} />
                 </button>
@@ -942,23 +942,23 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
       )}
 
       {/* Input area */}
-      <div className="flex gap-2 items-end">
+      <div className=-flex gap-2 items-end->
         <input
           ref={fileInputRef}
-          type="file"
+          type=-file-
           multiple
-          className="hidden"
+          className=-hidden-
           onChange={handleFileAttach}
         />
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800 transition-colors"
-          title="Attach file"
+          className=-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800 transition-colors-
+          title=-Attach file-
         >
           <Paperclip size={18} />
         </button>
 
-        <div className="flex flex-1 flex-col gap-1">
+        <div className=-flex flex-1 flex-col gap-1->
           <textarea
             ref={textareaRef}
             value={message}
@@ -968,11 +968,11 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
             }}
             onKeyDown={handleKeyDown}
             placeholder={replyToId ? `Reply in thread…` : `Message #${channelName}…`}
-            className="w-full resize-none rounded-full border border-[rgba(62,74,137,0.12)]  bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-[#1E2636] placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+            className=-w-full resize-none rounded-full border border-[rgba(62,74,137,0.12)]  bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-[#1E2636] placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all-
             rows={1}
             style={{ maxHeight: '120px', overflowY: 'auto' }}
           />
-          <div className="text-[11px] text-[#7C859E] pl-2">
+          <div className=-text-[11px] text-[#7C859E] pl-2->
             Enter to send · Shift+Enter for new line
           </div>
         </div>
@@ -980,63 +980,63 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
         <button
           onClick={handleSend}
           disabled={!message.trim() || isLoading}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#3E4A89] text-white hover:bg-[#2A3568] disabled:cursor-not-allowed disabled:bg-slate-300 transition-all shadow-md hover:shadow-indigo-300/50 hover:scale-105 active:scale-95"
+          className=-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#3E4A89] text-white hover:bg-[#2A3568] disabled:cursor-not-allowed disabled:bg-slate-300 transition-all shadow-md hover:shadow-indigo-300/50 hover:scale-105 active:scale-95-
         >
-          {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+          {isLoading ? <Loader2 size={18} className=-animate-spin- /> : <Send size={18} />}
         </button>
       </div>
 
       {/* Recorded preview modal */}
       {recordedPreview && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl  dark:bg-[#191E2F]">
-            <div className="flex items-start justify-between gap-4 p-5 pb-4">
+        <div className=-fixed inset-0 z-[120] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm->
+          <div className=-w-full max-w-lg overflow-hidden rounded-3xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl  dark:bg-[#191E2F]->
+            <div className=-flex items-start justify-between gap-4 p-5 pb-4->
               <div>
-                <h2 className="text-lg font-black text-[#1E2636]">
+                <h2 className=-text-lg font-black text-[#1E2636]->
                   {recordedPreview.kind === 'video' ? '🎥 Screen recording' : '🎤 Voice note'}
                 </h2>
-                <p className="mt-0.5 text-sm font-semibold text-[#7C859E]">
+                <p className=-mt-0.5 text-sm font-semibold text-[#7C859E]->
                   Review before sending to{' '}
-                  <span className="font-black text-[#1E2636]">#{channelName}</span>
+                  <span className=-font-black text-[#1E2636]->#{channelName}</span>
                 </p>
               </div>
               <button
                 onClick={discardPreview}
-                className="rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 hover:text-[#4A5578]"
+                className=-rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 hover:text-[#4A5578]-
               >
                 <X size={18} />
               </button>
             </div>
-            <div className="px-5">
+            <div className=-px-5->
               {recordedPreview.kind === 'video' ? (
                 <video
                   src={recordedPreview.url}
-                  className="aspect-video w-full rounded-2xl bg-black object-contain"
+                  className=-aspect-video w-full rounded-2xl bg-black object-contain-
                   controls
                 />
               ) : (
-                <div className="rounded-2xl border border-[rgba(62,74,137,0.08)] bg-gradient-to-br from-slate-50 to-indigo-50 p-4">
-                  <audio src={recordedPreview.url} className="w-full" controls />
+                <div className=-rounded-2xl border border-[rgba(62,74,137,0.08)] bg-gradient-to-br from-slate-50 to-indigo-50 p-4->
+                  <audio src={recordedPreview.url} className=-w-full- controls />
                 </div>
               )}
             </div>
-            <div className="flex gap-3 p-5 pt-4">
+            <div className=-flex gap-3 p-5 pt-4->
               <button
                 onClick={discardPreview}
                 disabled={recordingSending}
-                className="h-11 flex-1 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white text-sm font-black text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)] disabled:opacity-60"
+                className=-h-11 flex-1 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white text-sm font-black text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)] disabled:opacity-60-
               >
                 Discard
               </button>
               <button
                 onClick={() => sendRecordedPreview()}
                 disabled={recordingSending}
-                className="h-11 flex-1 rounded-xl bg-[#3E4A89] text-sm font-black text-white hover:bg-[#2A3568] disabled:opacity-60"
+                className=-h-11 flex-1 rounded-xl bg-[#3E4A89] text-sm font-black text-white hover:bg-[#2A3568] disabled:opacity-60-
               >
                 {recordingSending ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 size={16} className="animate-spin" />
-                    Sendingâ€¦
+                  <span className=-flex items-center justify-center gap-2->
+                    <Loader2 size={16} className=-animate-spin- />
+                    Sending...
                   </span>
                 ) : (
                   'Send'

@@ -309,7 +309,7 @@ function renderWithMentions(
       memberNames.some((n) => part.slice(1).toLowerCase() === n.toLowerCase())
     ) {
       return (
-        <strong key={i} className="font-black" style={{ color: isOwn ? '#EAE8F4' : '#C4CAE0' }}>
+        <strong key={i} className=-font-black- style={{ color: isOwn ? '#EAE8F4' : '#C4CAE0' }}>
           {part}
         </strong>
       );
@@ -317,7 +317,7 @@ function renderWithMentions(
     // fallback: any @word token when no members list
     if (memberNames.length === 0 && /^@[A-Za-z]/.test(part)) {
       return (
-        <strong key={i} className="font-black" style={{ color: isOwn ? '#EAE8F4' : '#C4CAE0' }}>
+        <strong key={i} className=-font-black- style={{ color: isOwn ? '#EAE8F4' : '#C4CAE0' }}>
           {part}
         </strong>
       );
@@ -1631,7 +1631,7 @@ export default function EduTechExOSDashboard() {
       actorInitials: currentUser?.initials ?? 'OS',
       actorColor: currentUserColor,
       channel: channel.name,
-      message: `scheduled "${title}" for ${timeLabel}. Join: ${meetLink}`,
+      message: `scheduled -${title}- for ${timeLabel}. Join: ${meetLink}`,
       recipientEmails: inviteeEmails,
     });
 
@@ -1722,9 +1722,9 @@ export default function EduTechExOSDashboard() {
 
   if (!authChecked) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#FAF8F5] text-[#4A5578] dark:bg-[#191E2F] dark:text-[#7C859E]">
-        <div className="flex items-center gap-3 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] px-5 py-4 text-sm font-black shadow-sm  dark:bg-[#191E2F] dark:text-[#9BA6D3]">
-          <Loader2 size={18} className="animate-spin text-green-700" />
+      <div className=-flex min-h-screen items-center justify-center bg-[#FAF8F5] text-[#4A5578] dark:bg-[#191E2F] dark:text-[#7C859E]->
+        <div className=-flex items-center gap-3 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] px-5 py-4 text-sm font-black shadow-sm  dark:bg-[#191E2F] dark:text-[#9BA6D3]->
+          <Loader2 size={18} className=-animate-spin text-green-700- />
           Checking workspace access
         </div>
       </div>
@@ -1734,19 +1734,19 @@ export default function EduTechExOSDashboard() {
   // ── Pending-approval gate ────────────────────────────────────────────────────
   if (currentUser?.status === 'pending') {
     return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #F7F6FF 0%, #ECEAF8 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', fontFamily: "'Plus Jakarta Sans', Inter, sans-serif" }}>
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #F7F6FF 0%, #ECEAF8 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', fontFamily: -'Plus Jakarta Sans', Inter, sans-serif- }}>
         <div style={{ width: '100%', maxWidth: 480, background: '#FFFFFF', borderRadius: 20, border: '1.5px solid rgba(91,79,219,0.15)', boxShadow: '0 24px 72px rgba(91,79,219,0.12)', padding: 40, textAlign: 'center' }}>
           {/* Animated icon */}
           <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, rgba(91,79,219,0.12), rgba(139,63,219,0.12))', border: '2px solid rgba(91,79,219,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', position: 'relative' }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#5B4FDB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
+            <svg width=-32- height=-32- viewBox=-0 0 24 24- fill=-none- stroke=-#5B4FDB- strokeWidth=-1.8- strokeLinecap=-round- strokeLinejoin=-round->
+              <circle cx=-12- cy=-12- r=-10- />
+              <polyline points=-12 6 12 12 16 14- />
             </svg>
             <div style={{ position: 'absolute', inset: -4, borderRadius: '50%', border: '2px solid rgba(91,79,219,0.12)', animation: 'ping 2s cubic-bezier(0,0,0.2,1) infinite' }} />
           </div>
           <style>{`@keyframes ping { 75%,100% { transform: scale(1.4); opacity: 0; } }`}</style>
 
-          <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 22, fontWeight: 800, color: '#1A1B3A', letterSpacing: '-0.03em', margin: '0 0 10px' }}>
+          <h2 style={{ fontFamily: -'Sora', 'Plus Jakarta Sans', sans-serif-, fontSize: 22, fontWeight: 800, color: '#1A1B3A', letterSpacing: '-0.03em', margin: '0 0 10px' }}>
             Awaiting Approval
           </h2>
           <p style={{ fontSize: 14, color: 'rgba(90,95,128,0.70)', lineHeight: 1.7, margin: '0 0 24px' }}>
@@ -1784,14 +1784,14 @@ export default function EduTechExOSDashboard() {
   // ── Rejected gate ────────────────────────────────────────────────────────────
   if (currentUser?.status === 'rejected') {
     return (
-      <div style={{ minHeight: '100vh', background: '#FFF8F9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', fontFamily: "'Plus Jakarta Sans', Inter, sans-serif" }}>
+      <div style={{ minHeight: '100vh', background: '#FFF8F9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', fontFamily: -'Plus Jakarta Sans', Inter, sans-serif- }}>
         <div style={{ width: '100%', maxWidth: 440, background: '#FFFFFF', borderRadius: 20, border: '1.5px solid rgba(239,71,111,0.18)', boxShadow: '0 24px 72px rgba(239,71,111,0.10)', padding: 40, textAlign: 'center' }}>
           <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(239,71,111,0.10)', border: '2px solid rgba(239,71,111,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EF476F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+            <svg width=-28- height=-28- viewBox=-0 0 24 24- fill=-none- stroke=-#EF476F- strokeWidth=-2- strokeLinecap=-round- strokeLinejoin=-round->
+              <circle cx=-12- cy=-12- r=-10- /><line x1=-15- y1=-9- x2=-9- y2=-15- /><line x1=-9- y1=-9- x2=-15- y2=-15- />
             </svg>
           </div>
-          <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 20, fontWeight: 800, color: '#1A1B3A', margin: '0 0 10px' }}>Access Declined</h2>
+          <h2 style={{ fontFamily: -'Sora', 'Plus Jakarta Sans', sans-serif-, fontSize: 20, fontWeight: 800, color: '#1A1B3A', margin: '0 0 10px' }}>Access Declined</h2>
           <p style={{ fontSize: 13.5, color: 'rgba(90,95,128,0.70)', lineHeight: 1.7, margin: '0 0 24px' }}>
             Your access request was not approved. Please contact the workspace admin for further information.
           </p>
@@ -1810,41 +1810,41 @@ export default function EduTechExOSDashboard() {
   }
 
   return (
-    <div className="dashboard-root dashboard-workspace-no-panel text-[#1E2636]">
-      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• LEFT ICON RAIL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+    <div className=-dashboard-root dashboard-workspace-no-panel text-[#1E2636]->
+      {/* ------------------ LEFT ICON RAIL ------------------ */}
 
       {/* ══ MOBILE HEADER ══ */}
-      <div className="mobile-header">
+      <div className=-mobile-header->
         <button
-          className="mobile-header-btn"
+          className=-mobile-header-btn-
           onClick={() => setMobileSidebarOpen(true)}
-          aria-label="Open channels"
+          aria-label=-Open channels-
         >
           <Menu size={20} strokeWidth={2.5} />
         </button>
-        <div className="mobile-header-channel">
-          <span className="mobile-header-hash">#</span>
-          <span className="mobile-header-name">{channel?.name ?? 'general'}</span>
+        <div className=-mobile-header-channel->
+          <span className=-mobile-header-hash->#</span>
+          <span className=-mobile-header-name->{channel?.name ?? 'general'}</span>
         </div>
         <button
-          className="mobile-header-btn"
+          className=-mobile-header-btn-
           onClick={() => setGlobalSearchOpen(true)}
-          aria-label="Search"
+          aria-label=-Search-
         >
           <Search size={18} strokeWidth={2.5} />
         </button>
         <button
-          className="mobile-header-btn"
+          className=-mobile-header-btn-
           onClick={() => setSettingsOpen(true)}
-          aria-label="Settings"
+          aria-label=-Settings-
         >
           <Settings size={18} strokeWidth={2.5} />
         </button>
         <div
-          className="mobile-header-avatar"
+          className=-mobile-header-avatar-
           style={{ background: currentUserColor }}
           onClick={() => setSettingsOpen(true)}
-          role="button"
+          role=-button-
           tabIndex={0}
         >
           {currentUser?.name
@@ -1858,42 +1858,42 @@ export default function EduTechExOSDashboard() {
 
       {/* ══ MOBILE DRAWER BACKDROP ══ */}
       {mobileSidebarOpen && (
-        <div className="mobile-drawer-overlay" onClick={() => setMobileSidebarOpen(false)} />
+        <div className=-mobile-drawer-overlay- onClick={() => setMobileSidebarOpen(false)} />
       )}
 
       {/* ══ MOBILE CHANNEL DRAWER ══ */}
       <div className={`mobile-drawer${mobileSidebarOpen ? ' open' : ''}`}>
-        <div className="mobile-drawer-header">
-          <div className="flex items-center gap-2">
+        <div className=-mobile-drawer-header->
+          <div className=-flex items-center gap-2->
             <div
-              className="h-7 w-7 rounded-lg flex items-center justify-center"
+              className=-h-7 w-7 rounded-lg flex items-center justify-center-
               style={{ background: 'linear-gradient(135deg,#3E4A89,#4f52a0)' }}
             >
               <AppLogo size={14} />
             </div>
-            <span className="text-[14px] font-black text-white">EduTechExOS</span>
+            <span className=-text-[14px] font-black text-white->EduTechExOS</span>
           </div>
-          <button className="mobile-drawer-close" onClick={() => setMobileSidebarOpen(false)}>
+          <button className=-mobile-drawer-close- onClick={() => setMobileSidebarOpen(false)}>
             <X size={15} />
           </button>
         </div>
 
-        <div className="px-3 py-2.5 border-b border-[rgba(62,74,137,0.10)]">
+        <div className=-px-3 py-2.5 border-b border-[rgba(62,74,137,0.10)]->
           <button
             onClick={() => {
               setMobileSidebarOpen(false);
               setGlobalSearchOpen(true);
             }}
-            className="sidebar-search-input w-full"
+            className=-sidebar-search-input w-full-
           >
             <Search size={13} />
-            <span className="text-[12.5px]">Search workspace…</span>
+            <span className=-text-[12.5px]->Search workspace…</span>
           </button>
         </div>
 
-        <div className="sidebar-scroll flex-1">
-          <section className="mb-4">
-            <p className="sidebar-section-label mt-2">Channels</p>
+        <div className=-sidebar-scroll flex-1->
+          <section className=-mb-4->
+            <p className=-sidebar-section-label mt-2->Channels</p>
             {channels
               .filter((c: { id: string }) => !c.id.startsWith('member-'))
               .map((ch: { id: string; name: string }) => {
@@ -1909,13 +1909,13 @@ export default function EduTechExOSDashboard() {
                     }}
                   >
                     <Hash size={13} style={{ opacity: isActive ? 1 : 0.55, flexShrink: 0 }} />
-                    <span className="min-w-0 flex-1 truncate">{ch.name}</span>
+                    <span className=-min-w-0 flex-1 truncate->{ch.name}</span>
                   </button>
                 );
               })}
           </section>
           <section>
-            <p className="sidebar-section-label">Direct Messages</p>
+            <p className=-sidebar-section-label->Direct Messages</p>
             {channels
               .filter((c: { id: string }) => c.id.startsWith('member-'))
               .map((ch: { id: string; name: string }) => {
@@ -1940,7 +1940,7 @@ export default function EduTechExOSDashboard() {
                     }}
                   >
                     <span
-                      className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-black text-white"
+                      className=-relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-black text-white-
                       style={{ background: 'linear-gradient(135deg,#3E4A89,#2A3568)' }}
                     >
                       {initials}
@@ -1948,19 +1948,19 @@ export default function EduTechExOSDashboard() {
                         className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-[#191E2F] ${(member as { status?: string })?.status === 'online' ? 'bg-emerald-400' : 'bg-[#7C859E]'}`}
                       />
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-[13px]">{ch.name}</span>
+                    <span className=-min-w-0 flex-1 truncate text-[13px]->{ch.name}</span>
                   </button>
                 );
               })}
           </section>
         </div>
 
-        <div className="sidebar-footer">
+        <div className=-sidebar-footer->
           <UserAttendanceCalendar />
-          <div className="flex items-center gap-2">
-            <div className="relative">
+          <div className=-flex items-center gap-2->
+            <div className=-relative->
               <div
-                className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                className=-flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white-
                 style={{ background: currentUserColor }}
               >
                 {currentUser?.name
@@ -1975,9 +1975,9 @@ export default function EduTechExOSDashboard() {
                 style={{ borderColor: '#0E1120' }}
               />
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-semibold text-white">{currentUser?.name}</p>
-              <p className="truncate text-[10px]" style={{ color: 'rgba(124,133,158,0.75)' }}>
+            <div className=-min-w-0 flex-1->
+              <p className=-truncate text-[12px] font-semibold text-white->{currentUser?.name}</p>
+              <p className=-truncate text-[10px]- style={{ color: 'rgba(124,133,158,0.75)' }}>
                 {currentUser?.role}
               </p>
             </div>
@@ -1988,7 +1988,7 @@ export default function EduTechExOSDashboard() {
                 toast.success('Signed out');
                 router.push('/sign-up-login-screen');
               }}
-              className="flex h-7 w-7 items-center justify-center rounded"
+              className=-flex h-7 w-7 items-center justify-center rounded-
               style={{ color: 'rgba(255,255,255,0.42)' }}
             >
               <LogOut size={14} />
@@ -1999,14 +1999,14 @@ export default function EduTechExOSDashboard() {
 
       {/* ══ MOBILE TASKS PANEL (full-screen) ══ */}
       {mobileTab === 'tasks' && (
-        <div className="mobile-panel-overlay">
-          <div className="mobile-panel-header">
-            <button className="mobile-header-btn" onClick={() => setMobileTab('chat')}>
+        <div className=-mobile-panel-overlay->
+          <div className=-mobile-panel-header->
+            <button className=-mobile-header-btn- onClick={() => setMobileTab('chat')}>
               <ChevronLeft size={22} strokeWidth={2.5} />
             </button>
-            <span className="mobile-panel-title">Tasks</span>
+            <span className=-mobile-panel-title->Tasks</span>
           </div>
-          <div className="mobile-panel-body">
+          <div className=-mobile-panel-body->
             <KanbanBoard onClose={() => setMobileTab('chat')} />
           </div>
         </div>
@@ -2014,16 +2014,16 @@ export default function EduTechExOSDashboard() {
 
       {/* ══ MOBILE AI PANEL (full-screen) ══ */}
       {mobileTab === 'ai' && (
-        <div className="mobile-panel-overlay" style={{ background: '#FAFAF8' }}>
+        <div className=-mobile-panel-overlay- style={{ background: '#FAFAF8' }}>
           <AIPanel activeChannel={activeChannelId} onClose={() => setMobileTab('chat')} />
         </div>
       )}
 
       {/* ══ MOBILE BOTTOM NAV ══ */}
-      <nav className="mobile-nav">
-        <button className="mobile-nav-btn" onClick={() => setMobileSidebarOpen(true)}>
+      <nav className=-mobile-nav->
+        <button className=-mobile-nav-btn- onClick={() => setMobileSidebarOpen(true)}>
           {unreadNotifications > 0 && (
-            <span className="mobile-nav-badge">
+            <span className=-mobile-nav-badge->
               {unreadNotifications > 9 ? '9+' : unreadNotifications}
             </span>
           )}
@@ -2054,18 +2054,18 @@ export default function EduTechExOSDashboard() {
           <Bot size={20} strokeWidth={2} />
           Copilot
         </button>
-        <button className="mobile-nav-btn" onClick={() => setSettingsOpen(true)}>
+        <button className=-mobile-nav-btn- onClick={() => setSettingsOpen(true)}>
           <Settings size={20} strokeWidth={2} />
           More
         </button>
       </nav>
 
-      <nav className="workspace-rail">
-        <div className="rail-top">
+      <nav className=-workspace-rail->
+        <div className=-rail-top->
           <motion.div
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.94 }}
-            className="rail-logo-wrap"
+            className=-rail-logo-wrap-
             style={{
               background: 'linear-gradient(135deg,#5B6CF8 0%,#7B52E8 100%)',
               boxShadow: '0 4px 16px rgba(91,108,248,0.50)',
@@ -2074,11 +2074,11 @@ export default function EduTechExOSDashboard() {
             <AppLogo size={18} />
           </motion.div>
 
-          <div className="rail-divider" />
+          <div className=-rail-divider- />
 
-          <motion.button whileTap={{ scale: 0.9 }} className="rail-btn active">
+          <motion.button whileTap={{ scale: 0.9 }} className=-rail-btn active->
             <Hash size={19} strokeWidth={2.2} />
-            <span className="rail-label">Chat</span>
+            <span className=-rail-label->Chat</span>
           </motion.button>
 
           {[
@@ -2090,16 +2090,16 @@ export default function EduTechExOSDashboard() {
               key={label}
               whileTap={{ scale: 0.9 }}
               onClick={action}
-              className="rail-btn"
+              className=-rail-btn-
             >
               <Icon size={19} strokeWidth={1.8} />
-              <span className="rail-label">{label}</span>
+              <span className=-rail-label->{label}</span>
             </motion.button>
           ))}
         </div>
 
-        <div className="rail-bottom">
-          <div className="rail-divider" />
+        <div className=-rail-bottom->
+          <div className=-rail-divider- />
 
           {/* ActivityWatch status indicator */}
           <div
@@ -2108,9 +2108,9 @@ export default function EduTechExOSDashboard() {
               : awStatus === 'offline'  ? 'ActivityWatch not detected — install & open ActivityWatch on this machine'
               : 'Checking for ActivityWatch…'
             }
-            className="rail-btn cursor-default select-none"
+            className=-rail-btn cursor-default select-none-
           >
-            <div className="relative flex items-center justify-center">
+            <div className=-relative flex items-center justify-center->
               <Activity
                 size={19}
                 strokeWidth={1.8}
@@ -2121,7 +2121,7 @@ export default function EduTechExOSDashboard() {
                 }
               />
               {awStatus === 'connected' && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-white animate-pulse" />
+                <span className=-absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-white animate-pulse- />
               )}
             </div>
             <span
@@ -2141,10 +2141,10 @@ export default function EduTechExOSDashboard() {
               toggleTheme();
               storeDarkModeToggle();
             }}
-            className="rail-btn"
+            className=-rail-btn-
           >
             {darkMode ? <Sun size={18} strokeWidth={1.8} /> : <Moon size={18} strokeWidth={1.8} />}
-            <span className="rail-label">{darkMode ? 'Light mode' : 'Dark mode'}</span>
+            <span className=-rail-label->{darkMode ? 'Light mode' : 'Dark mode'}</span>
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.9 }}
@@ -2152,10 +2152,10 @@ export default function EduTechExOSDashboard() {
               setSettings((v) => ({ ...v, displayName: v.displayName || currentUser?.name || '' }));
               setSettingsOpen(true);
             }}
-            className="rail-btn"
+            className=-rail-btn-
           >
             <Settings size={18} strokeWidth={1.8} />
-            <span className="rail-label">Settings</span>
+            <span className=-rail-label->Settings</span>
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.92 }}
@@ -2163,7 +2163,7 @@ export default function EduTechExOSDashboard() {
               setSettings((v) => ({ ...v, displayName: v.displayName || currentUser?.name || '' }));
               setSettingsOpen(true);
             }}
-            className="rail-avatar"
+            className=-rail-avatar-
             style={
               settings.avatarEmoji
                 ? { background: 'transparent', fontSize: '1.35rem', lineHeight: 1 }
@@ -2177,14 +2177,14 @@ export default function EduTechExOSDashboard() {
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setNotificationsOpen(true)}
-            className="rail-btn relative"
+            className=-rail-btn relative-
             style={unreadNotifications > 0 ? { color: '#ef4444' } : {}}
           >
             <Bell size={18} strokeWidth={2} />
-            <span className="rail-label">Alerts</span>
+            <span className=-rail-label->Alerts</span>
             {unreadNotifications > 0 && (
               <span
-                className="badge-pulse absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[8px] font-black text-white"
+                className=-badge-pulse absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[8px] font-black text-white-
                 style={{ background: '#ef4444' }}
               >
                 {unreadNotifications > 9 ? '9+' : unreadNotifications}
@@ -2194,28 +2194,28 @@ export default function EduTechExOSDashboard() {
         </div>
       </nav>
 
-      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• SIDEBAR â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
-      <aside className="workspace-sidebar">
+      {/* ------------------ SIDEBAR ------------------ */}
+      <aside className=-workspace-sidebar->
         {/* ── Workspace header + search ─────────────────── */}
-        <div className="sidebar-search-bar">
-          <div className="mb-2.5 flex items-center justify-between px-1">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-[8px] flex-shrink-0" style={{ background: 'linear-gradient(135deg,#6C7BF5,#5055E8)', boxShadow: '0 2px 8px rgba(108,123,245,0.4)' }}>
-                <span className="text-[11px] font-black text-white">E</span>
+        <div className=-sidebar-search-bar->
+          <div className=-mb-2.5 flex items-center justify-between px-1->
+            <div className=-flex items-center gap-2->
+              <div className=-flex h-7 w-7 items-center justify-center rounded-[8px] flex-shrink-0- style={{ background: 'linear-gradient(135deg,#6C7BF5,#5055E8)', boxShadow: '0 2px 8px rgba(108,123,245,0.4)' }}>
+                <span className=-text-[11px] font-black text-white->E</span>
               </div>
-              <span className="text-[13px] font-bold text-white tracking-[-0.01em] truncate">EduTechExOS</span>
+              <span className=-text-[13px] font-bold text-white tracking-[-0.01em] truncate->EduTechExOS</span>
             </div>
             {unreadNotifications > 0 && (
               <motion.button
                 whileTap={{ scale: 0.88 }}
                 onClick={() => setNotificationsOpen(true)}
-                className="relative flex h-6 w-6 items-center justify-center rounded"
+                className=-relative flex h-6 w-6 items-center justify-center rounded-
                 style={{ color: 'rgba(255,255,255,0.55)' }}
-                title="Notifications"
+                title=-Notifications-
               >
                 <Bell size={14} />
                 <span
-                  className="badge-pulse absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[8px] font-black text-white"
+                  className=-badge-pulse absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[8px] font-black text-white-
                   style={{ background: '#ef4444' }}
                 >
                   {unreadNotifications > 9 ? '9+' : unreadNotifications}
@@ -2223,26 +2223,26 @@ export default function EduTechExOSDashboard() {
               </motion.button>
             )}
           </div>
-          <button onClick={() => setGlobalSearchOpen(true)} className="sidebar-search-input w-full">
+          <button onClick={() => setGlobalSearchOpen(true)} className=-sidebar-search-input w-full->
             <Search size={13} />
-            <span className="text-[12.5px]">Search</span>
+            <span className=-text-[12.5px]->Search</span>
           </button>
         </div>
 
         {/* ── Scrollable body ─────────────────────────────── */}
-        <div className="sidebar-scroll">
+        <div className=-sidebar-scroll->
           {/* Channels */}
-          <section className="mb-5">
+          <section className=-mb-5->
             <motion.button
               whileTap={{ scale: 0.97 }}
               onClick={() => setChannelsExpanded((v) => !v)}
-              className="flex w-full items-center justify-between px-1 py-1.5 text-left"
+              className=-flex w-full items-center justify-between px-1 py-1.5 text-left-
             >
-              <span className="sidebar-section-label flex items-center gap-1">
+              <span className=-sidebar-section-label flex items-center gap-1->
                 <motion.span
                   animate={{ rotate: channelsExpanded ? 0 : -90 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-                  className="flex"
+                  className=-flex-
                 >
                   <ChevronDown size={12} />
                 </motion.span>
@@ -2261,7 +2261,7 @@ export default function EduTechExOSDashboard() {
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 360, damping: 34, mass: 0.85 }}
                   style={{ overflow: 'hidden' }}
-                  className="mt-1.5 space-y-0.5"
+                  className=-mt-1.5 space-y-0.5-
                 >
                   {workspaceChannels.map((item, i) => {
                     const isActive = activeChannel === item.id;
@@ -2284,20 +2284,20 @@ export default function EduTechExOSDashboard() {
                         {/* Animated active-channel left bar — moves smoothly between channels */}
                         {isActive && (
                           <motion.span
-                            layoutId="active-channel-bar"
-                            className="absolute left-0 top-1.5 bottom-1.5 w-[2.5px] rounded-full"
+                            layoutId=-active-channel-bar-
+                            className=-absolute left-0 top-1.5 bottom-1.5 w-[2.5px] rounded-full-
                             style={{ background: 'linear-gradient(180deg,#818CF8,#6C7BF5)', boxShadow: '0 0 8px rgba(108,123,245,0.6)' }}
                             transition={{ type: 'spring', stiffness: 600, damping: 32 }}
                           />
                         )}
                         <Hash size={13} style={{ opacity: isActive ? 1 : 0.55, flexShrink: 0 }} />
-                        <span className="min-w-0 flex-1 truncate">{item.name}</span>
+                        <span className=-min-w-0 flex-1 truncate->{item.name}</span>
                         {item.unread > 0 && (
                           <motion.span
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             transition={{ type: 'spring', stiffness: 600, damping: 20 }}
-                            className="rounded-full px-1.5 py-0.5 text-[10px] font-black"
+                            className=-rounded-full px-1.5 py-0.5 text-[10px] font-black-
                             style={{ background: '#6C7BF5', color: '#ffffff' }}
                           >
                             {item.unread}
@@ -2313,8 +2313,8 @@ export default function EduTechExOSDashboard() {
 
           {/* People */}
           <section>
-            <p className="sidebar-section-label mt-3">People</p>
-            <div className="space-y-0.5">
+            <p className=-sidebar-section-label mt-3->People</p>
+            <div className=-space-y-0.5->
               {people.map((member, i) => {
                 const avatarColors = [
                   '#4338ca',
@@ -2338,16 +2338,16 @@ export default function EduTechExOSDashboard() {
                       delay: i * 0.045 + 0.12,
                     }}
                     whileHover={{ x: 4 }}
-                    className="group flex h-9 items-center gap-2 rounded px-1.5 transition-colors duration-100 hover:bg-white/[0.06] cursor-pointer"
+                    className=-group flex h-9 items-center gap-2 rounded px-1.5 transition-colors duration-100 hover:bg-white/[0.06] cursor-pointer-
                   >
                     <motion.button
                       onClick={() => setActiveChannel(member.id)}
                       whileTap={{ scale: 0.95 }}
                       title={`Chat with ${member.name}`}
-                      className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+                      className=-flex min-w-0 flex-1 items-center gap-2.5 text-left-
                     >
                       <div
-                        className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-black text-white"
+                        className=-relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-black text-white-
                         style={{ background: avatarBg }}
                       >
                         {member.initials}
@@ -2370,7 +2370,7 @@ export default function EduTechExOSDashboard() {
                         })()}
                       </div>
                       <span
-                        className="min-w-0 flex-1 truncate text-[13px]"
+                        className=-min-w-0 flex-1 truncate text-[13px]-
                         style={{ color: 'rgba(255,255,255,0.78)' }}
                       >
                         {member.name}
@@ -2381,7 +2381,7 @@ export default function EduTechExOSDashboard() {
                       onClick={() => setProfileMember(member)}
                       whileTap={{ scale: 0.88 }}
                       title={`View ${member.name}'s profile`}
-                      className="hidden h-6 w-6 shrink-0 items-center justify-center rounded-md group-hover:flex"
+                      className=-hidden h-6 w-6 shrink-0 items-center justify-center rounded-md group-hover:flex-
                       style={{
                         color: 'rgba(255,255,255,0.35)',
                         background: 'rgba(255,255,255,0.07)',
@@ -2397,10 +2397,10 @@ export default function EduTechExOSDashboard() {
 
           {/* Admin controls */}
           {isAdmin && (
-            <div className="mt-6 space-y-2">
+            <div className=-mt-6 space-y-2->
               <Link
-                href="/admin"
-                className="flex h-9 w-full items-center justify-center gap-2 rounded-lg text-[11px] font-bold uppercase tracking-[0.08em] transition-all duration-200"
+                href=-/admin-
+                className=-flex h-9 w-full items-center justify-center gap-2 rounded-lg text-[11px] font-bold uppercase tracking-[0.08em] transition-all duration-200-
                 style={{
                   background: 'rgba(108,123,245,0.12)',
                   color: '#818CF8',
@@ -2416,7 +2416,7 @@ export default function EduTechExOSDashboard() {
                 whileHover={{ borderColor: 'rgba(62,74,137,0.30)' }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setNewChannelOpen(true)}
-                className="flex h-10 w-full items-center gap-2.5 rounded-lg px-4 text-sm font-semibold transition-all duration-200"
+                className=-flex h-10 w-full items-center gap-2.5 rounded-lg px-4 text-sm font-semibold transition-all duration-200-
                 style={{
                   background: 'transparent',
                   color: 'rgba(255,255,255,0.38)',
@@ -2446,9 +2446,9 @@ export default function EduTechExOSDashboard() {
               {/* Step 1 */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <a
-                  href="https://activitywatch.net/downloads/"
-                  target="_blank"
-                  rel="noreferrer"
+                  href=-https://activitywatch.net/downloads/-
+                  target=-_blank-
+                  rel=-noreferrer-
                   style={{ display: 'flex', alignItems: 'center', gap: 7, borderRadius: 8, background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.28)', padding: '8px 10px', fontSize: 10.5, fontWeight: 600, color: '#A5B4FC', textDecoration: 'none' }}
                 >
                   <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(99,102,241,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#A5B4FC', flexShrink: 0 }}>1</span>
@@ -2457,8 +2457,8 @@ export default function EduTechExOSDashboard() {
 
                 {/* Step 2 */}
                 <a
-                  href="/aw-sync.js"
-                  download="aw-sync.js"
+                  href=-/aw-sync.js-
+                  download=-aw-sync.js-
                   style={{ display: 'flex', alignItems: 'center', gap: 7, borderRadius: 8, background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.28)', padding: '8px 10px', fontSize: 10.5, fontWeight: 600, color: '#A5B4FC', textDecoration: 'none' }}
                 >
                   <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(99,102,241,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#A5B4FC', flexShrink: 0 }}>2</span>
@@ -2482,7 +2482,7 @@ export default function EduTechExOSDashboard() {
                         if (el) { el.textContent = 'Copied!'; setTimeout(() => { if (el) el.textContent = 'Copy'; }, 2000); }
                       });
                     }}
-                    id="aw-copy-btn"
+                    id=-aw-copy-btn-
                     style={{ position: 'absolute', top: 6, right: 6, fontSize: 9, fontWeight: 700, color: '#A5B4FC', background: 'rgba(99,102,241,0.20)', border: '1px solid rgba(99,102,241,0.30)', borderRadius: 4, padding: '2px 7px', cursor: 'pointer' }}
                   >Copy</button>
                 </div>
@@ -2502,12 +2502,12 @@ export default function EduTechExOSDashboard() {
         </div>
 
         {/* ── Footer / User panel ─────────────────────────── */}
-        <div className="sidebar-footer">
+        <div className=-sidebar-footer->
           <UserAttendanceCalendar />
-          <div className="flex items-center gap-2">
-            <div className="relative shrink-0">
+          <div className=-flex items-center gap-2->
+            <div className=-relative shrink-0->
               <div
-                className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                className=-flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white-
                 style={{ background: currentUserColor }}
               >
                 {currentUser?.initials ?? 'G'}
@@ -2517,20 +2517,20 @@ export default function EduTechExOSDashboard() {
                 style={{ borderColor: '#0E1120' }}
               />
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12.5px] font-semibold leading-tight text-white">
+            <div className=-min-w-0 flex-1->
+              <p className=-truncate text-[12.5px] font-semibold leading-tight text-white->
                 {currentUser?.name ?? 'Guest'}
               </p>
-              <p className="text-[10.5px]" style={{ color: 'rgba(255,255,255,0.42)' }}>
+              <p className=-text-[10.5px]- style={{ color: 'rgba(255,255,255,0.42)' }}>
                 {currentUser?.role ?? 'Viewer'}
               </p>
             </div>
-            <div className="flex items-center gap-0.5 shrink-0">
+            <div className=-flex items-center gap-0.5 shrink-0->
               <motion.button
                 whileTap={{ scale: 0.88 }}
-                title="Activity"
+                title=-Activity-
                 onClick={() => setActivityCalendarOpen(true)}
-                className="flex h-7 w-7 items-center justify-center rounded"
+                className=-flex h-7 w-7 items-center justify-center rounded-
                 style={{ color: 'rgba(255,255,255,0.42)' }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
@@ -2539,14 +2539,14 @@ export default function EduTechExOSDashboard() {
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.88 }}
-                title="Sign out"
+                title=-Sign out-
                 onClick={() => {
                   localStorage.removeItem('edutechex_token');
                   document.cookie = 'auth_session=; path=/; max-age=0';
                   toast.success('Signed out');
                   router.push('/sign-up-login-screen');
                 }}
-                className="flex h-7 w-7 items-center justify-center rounded"
+                className=-flex h-7 w-7 items-center justify-center rounded-
                 style={{ color: 'rgba(255,255,255,0.42)' }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = 'rgba(239,68,68,0.14)';
@@ -2567,13 +2567,13 @@ export default function EduTechExOSDashboard() {
       <main
         className={`workspace-chat${(pinnedMessageIds[activeChannelId]?.length ?? 0) > 0 ? ' workspace-chat-has-pin' : ''}`}
       >
-        <header className="chat-header">
+        <header className=-chat-header->
           {/* Channel name box */}
-          <div className="min-w-0 relative">
-            <div className="inline-flex items-center gap-2.5">
+          <div className=-min-w-0 relative->
+            <div className=-inline-flex items-center gap-2.5->
               {/* Hash badge */}
               <span
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white text-[14px] font-black"
+                className=-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white text-[14px] font-black-
                 style={{
                   background: 'linear-gradient(135deg, #6C7BF5, #5055E8)',
                   boxShadow: '0 2px 12px rgba(108,123,245,0.40)',
@@ -2583,7 +2583,7 @@ export default function EduTechExOSDashboard() {
               </span>
               {/* Channel name */}
               <span
-                className="truncate text-[20px] font-black leading-tight max-w-[140px] sm:max-w-[260px]"
+                className=-truncate text-[20px] font-black leading-tight max-w-[140px] sm:max-w-[260px]-
                 style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
               >
                 {channel?.id.startsWith('member-') ? channel.name : channel?.name}
@@ -2592,7 +2592,7 @@ export default function EduTechExOSDashboard() {
 
             {channel?.description && (
               <p
-                className="mt-1 truncate text-[13px] font-medium pl-1"
+                className=-mt-1 truncate text-[13px] font-medium pl-1-
                 style={{ color: '#7C859E' }}
               >
                 {channel.description}
@@ -2600,11 +2600,11 @@ export default function EduTechExOSDashboard() {
             )}
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className=-flex shrink-0 items-center gap-2->
             <button
-              title="View channel members"
+              title=-View channel members-
               onClick={() => setMembersOpen(true)}
-              className="hidden h-8 items-center gap-1.5 rounded-lg px-3 text-[12px] font-semibold md:flex transition-all"
+              className=-hidden h-8 items-center gap-1.5 rounded-lg px-3 text-[12px] font-semibold md:flex transition-all-
               style={{
                 background: 'rgba(108,123,245,0.08)',
                 color: '#6C7BF5',
@@ -2617,9 +2617,9 @@ export default function EduTechExOSDashboard() {
               {channel?.id.startsWith('member-') ? 2 : activeChannelMembers.length}
             </button>
             <button
-              title="Search messages"
+              title=-Search messages-
               onClick={() => setGlobalSearchOpen(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg transition-all"
+              className=-flex h-8 w-8 items-center justify-center rounded-lg transition-all-
               style={{ color: '#9CA3AF', background: 'rgba(108,123,245,0.06)' }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(108,123,245,0.12)'; (e.currentTarget as HTMLButtonElement).style.color = '#6C7BF5'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(108,123,245,0.06)'; (e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF'; }}
@@ -2627,7 +2627,7 @@ export default function EduTechExOSDashboard() {
               <Search size={16} />
             </button>
 
-            <div className="relative">
+            <div className=-relative->
               <button
                 onClick={() => setMeetMenuOpen((value) => !value)}
                 className={`flex h-9 items-center gap-2 rounded-lg px-4 text-xs font-black uppercase text-white shadow-sm transition-all hover:scale-105 ${
@@ -2647,8 +2647,8 @@ export default function EduTechExOSDashboard() {
                 <ChevronDown size={14} />
               </button>
               {meetMenuOpen && (
-                <div className="absolute right-0 top-11 z-[300] w-56 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-2 shadow-xl">
-                  <p className="px-3 py-2 text-xs font-bold text-[#7C859E]">
+                <div className=-absolute right-0 top-11 z-[300] w-56 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-2 shadow-xl->
+                  <p className=-px-3 py-2 text-xs font-bold text-[#7C859E]->
                     {meetingButtonState.message}
                   </p>
                   <button
@@ -2661,31 +2661,31 @@ export default function EduTechExOSDashboard() {
                       }
                     }}
                     disabled={!meetingButtonState.link}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)] disabled:cursor-not-allowed disabled:opacity-50"
+                    className=-flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)] disabled:cursor-not-allowed disabled:opacity-50-
                   >
-                    <Video size={16} className="text-[#C4CAE0]" />
+                    <Video size={16} className=-text-[#C4CAE0]- />
                     Join meet
                   </button>
                 </div>
               )}
             </div>
 
-            <div className="relative">
+            <div className=-relative->
               <button
-                title="More channel actions"
+                title=-More channel actions-
                 onClick={() => setMoreOpen((value) => !value)}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)]"
+                className=-flex h-9 w-9 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)]-
               >
                 <MoreHorizontal size={20} />
               </button>
               {moreOpen && (
-                <div className="absolute right-0 top-11 z-[300] w-56 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-2 shadow-xl">
+                <div className=-absolute right-0 top-11 z-[300] w-56 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-2 shadow-xl->
                   <button
                     onClick={() => {
                       setMoreOpen(false);
                       setMembersOpen(true);
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
+                    className=-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]-
                   >
                     <Users size={15} /> View members
                   </button>
@@ -2694,7 +2694,7 @@ export default function EduTechExOSDashboard() {
                       setMoreOpen(false);
                       setGlobalSearchOpen(true);
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
+                    className=-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]-
                   >
                     <Search size={15} /> Search messages
                   </button>
@@ -2704,7 +2704,7 @@ export default function EduTechExOSDashboard() {
                       setMoreOpen(false);
                       setWikiOpen(true);
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
+                    className=-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]-
                   >
                     <BookOpen size={15} /> Knowledge base
                   </button>
@@ -2713,7 +2713,7 @@ export default function EduTechExOSDashboard() {
                       setMoreOpen(false);
                       setKanbanOpen(true);
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
+                    className=-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]-
                   >
                     <Layout size={15} /> Task board
                   </button>
@@ -2722,7 +2722,7 @@ export default function EduTechExOSDashboard() {
                       setMoreOpen(false);
                       setBookmarksPanelOpen(true);
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
+                    className=-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]-
                   >
                     <Bookmark size={15} /> Saved messages
                   </button>
@@ -2731,7 +2731,7 @@ export default function EduTechExOSDashboard() {
                       setMoreOpen(false);
                       setCalendarOpen(true);
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
+                    className=-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]-
                   >
                     <CalendarDays size={15} /> Team calendar
                   </button>
@@ -2741,7 +2741,7 @@ export default function EduTechExOSDashboard() {
                         setMoreOpen(false);
                         setAnalyticsOpen(true);
                       }}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
+                      className=-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]-
                     >
                       <BarChart2 size={15} /> Analytics
                     </button>
@@ -2752,7 +2752,7 @@ export default function EduTechExOSDashboard() {
                       setMoreOpen(false);
                       setIntegrationsOpen(true);
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
+                    className=-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]-
                   >
                     <Zap size={15} /> Integrations
                   </button>
@@ -2771,45 +2771,45 @@ export default function EduTechExOSDashboard() {
             const targetMsg = channelMessages.find((m) => m.id === targetId);
             return (
               <button
-                type="button"
+                type=-button-
                 onClick={() => {
                   document
                     .getElementById(`msg-${targetId}`)
                     ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   setPinScrollIdx((s) => s + 1);
                 }}
-                className="flex w-full items-center gap-3 border-y border-amber-200 bg-amber-50/80 px-5 py-3 text-left shadow-sm transition-colors hover:bg-amber-100/80"
+                className=-flex w-full items-center gap-3 border-y border-amber-200 bg-amber-50/80 px-5 py-3 text-left shadow-sm transition-colors hover:bg-amber-100/80-
               >
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-400 text-white shadow-sm">
+                <span className=-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-400 text-white shadow-sm->
                   <Pin size={13} strokeWidth={2.5} />
                 </span>
-                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">
+                <span className=-flex min-w-0 flex-1 flex-col gap-0.5->
+                  <span className=-text-[10px] font-black uppercase tracking-widest text-amber-600->
                     {pinIds.length > 1
                       ? `Pinned  ${idx + 1} of ${pinIds.length}`
                       : 'Pinned message'}
                   </span>
                   {targetMsg && (
-                    <span className="min-w-0 truncate text-xs font-semibold text-amber-900/75">
-                      <span className="text-amber-700 font-black">{targetMsg.sender}:&nbsp;</span>
+                    <span className=-min-w-0 truncate text-xs font-semibold text-amber-900/75->
+                      <span className=-text-amber-700 font-black->{targetMsg.sender}:&nbsp;</span>
                       {targetMsg.text.replace(/\n/g, ' ').slice(0, 80)}
                     </span>
                   )}
                 </span>
-                <ChevronDown size={14} className="shrink-0 text-amber-500 -rotate-90" />
+                <ChevronDown size={14} className=-shrink-0 text-amber-500 -rotate-90- />
               </button>
             );
           })()}
 
-        <section className="chat-scroll">
-          <div className="mt-auto w-full">
-            <div className="date-divider my-4 px-3">
+        <section className=-chat-scroll->
+          <div className=-mt-auto w-full->
+            <div className=-date-divider my-4 px-3->
               <span />
               <strong>{firstMessageDate}</strong>
               <span />
             </div>
 
-            <div className="pb-6 px-3">
+            <div className=-pb-6 px-3->
               {visibleMessages.map((message, index) => {
                 const prev = visibleMessages[index - 1];
                 const next = visibleMessages[index + 1];
@@ -2836,16 +2836,16 @@ export default function EduTechExOSDashboard() {
                   >
                     {/* Avatar — receiver only, first in group */}
                     {!isOwn && (
-                      <div className="shrink-0">
+                      <div className=-shrink-0->
                         {isFirst ? (
                           <div
-                            className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-sm"
+                            className=-flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-sm-
                             style={{ backgroundColor: message.color }}
                           >
                             {message.initials}
                           </div>
                         ) : (
-                          <div className="h-8 w-8" />
+                          <div className=-h-8 w-8- />
                         )}
                       </div>
                     )}
@@ -2857,7 +2857,7 @@ export default function EduTechExOSDashboard() {
                       {/* Sender name — receiver, first in group only */}
                       {isFirst && !isOwn && (
                         <span
-                          className="mb-0.5 ml-1 text-xs font-bold"
+                          className=-mb-0.5 ml-1 text-xs font-bold-
                           style={{ color: message.color }}
                         >
                           {message.sender}
@@ -2880,7 +2880,7 @@ export default function EduTechExOSDashboard() {
                           {scheduledMeet ? (
                             /* ── Meeting Scheduled Card ─────────────────── */
                             <div
-                              className="w-full max-w-[288px] overflow-hidden rounded-2xl"
+                              className=-w-full max-w-[288px] overflow-hidden rounded-2xl-
                               style={{
                                 boxShadow:
                                   '0 8px 32px rgba(25,30,47,0.18), 0 2px 8px rgba(25,30,47,0.10)',
@@ -2898,7 +2898,7 @@ export default function EduTechExOSDashboard() {
 
                               {/* ── Dark header ── */}
                               <div
-                                className="relative px-4 pt-4 pb-4 overflow-hidden"
+                                className=-relative px-4 pt-4 pb-4 overflow-hidden-
                                 style={{
                                   background:
                                     'linear-gradient(135deg, #191E2F 0%, #1E2538 60%, #252D4A 100%)',
@@ -2906,30 +2906,30 @@ export default function EduTechExOSDashboard() {
                               >
                                 {/* bg glow */}
                                 <div
-                                  className="absolute inset-0 pointer-events-none"
+                                  className=-absolute inset-0 pointer-events-none-
                                   style={{
                                     background:
                                       'radial-gradient(ellipse 70% 80% at 85% 30%, rgba(62,74,137,0.28), transparent 70%)',
                                   }}
                                 />
 
-                                <div className="relative flex items-start gap-3">
+                                <div className=-relative flex items-start gap-3->
                                   {/* Icon */}
                                   <div
-                                    className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0 mt-0.5"
+                                    className=-flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0 mt-0.5-
                                     style={{
                                       background: 'linear-gradient(135deg, #3E4A89, #2A3568)',
                                       boxShadow: '0 4px 14px rgba(62,74,137,0.50)',
                                     }}
                                   >
-                                    <Video size={17} className="text-white" />
+                                    <Video size={17} className=-text-white- />
                                   </div>
 
-                                  <div className="min-w-0 flex-1">
+                                  <div className=-min-w-0 flex-1->
                                     {/* Status pill */}
-                                    <div className="flex items-center gap-1.5 mb-1.5">
+                                    <div className=-flex items-center gap-1.5 mb-1.5->
                                       <span
-                                        className="inline-block w-1.5 h-1.5 rounded-full"
+                                        className=-inline-block w-1.5 h-1.5 rounded-full-
                                         style={{
                                           background: '#34D399',
                                           boxShadow: '0 0 6px rgba(52,211,153,0.70)',
@@ -2937,14 +2937,14 @@ export default function EduTechExOSDashboard() {
                                         }}
                                       />
                                       <span
-                                        className="text-[9px] font-black uppercase tracking-[0.22em]"
+                                        className=-text-[9px] font-black uppercase tracking-[0.22em]-
                                         style={{ color: 'rgba(155,166,211,0.80)' }}
                                       >
                                         Meeting Scheduled
                                       </span>
                                     </div>
                                     {/* Title */}
-                                    <h3 className="text-[15px] font-black text-white leading-snug truncate">
+                                    <h3 className=-text-[15px] font-black text-white leading-snug truncate->
                                       {scheduledMeet.title}
                                     </h3>
                                   </div>
@@ -2952,12 +2952,12 @@ export default function EduTechExOSDashboard() {
                               </div>
 
                               {/* ── Light body ── */}
-                              <div className="px-4 pt-3 pb-2" style={{ background: '#FAF8F5' }}>
-                                <div className="space-y-2">
+                              <div className=-px-4 pt-3 pb-2- style={{ background: '#FAF8F5' }}>
+                                <div className=-space-y-2->
                                   {scheduledMeet.time && (
-                                    <div className="flex items-center gap-2.5">
+                                    <div className=-flex items-center gap-2.5->
                                       <div
-                                        className="flex h-7 w-7 items-center justify-center rounded-lg flex-shrink-0"
+                                        className=-flex h-7 w-7 items-center justify-center rounded-lg flex-shrink-0-
                                         style={{
                                           background: 'rgba(62,74,137,0.08)',
                                           border: '1px solid rgba(62,74,137,0.14)',
@@ -2966,7 +2966,7 @@ export default function EduTechExOSDashboard() {
                                         <CalendarDays size={13} style={{ color: '#3E4A89' }} />
                                       </div>
                                       <span
-                                        className="text-[13px] font-bold"
+                                        className=-text-[13px] font-bold-
                                         style={{ color: '#1E2636' }}
                                       >
                                         {scheduledMeet.time}
@@ -2975,9 +2975,9 @@ export default function EduTechExOSDashboard() {
                                   )}
                                   {scheduledMeet.people &&
                                     scheduledMeet.people !== 'No mentions' && (
-                                      <div className="flex items-center gap-2.5">
+                                      <div className=-flex items-center gap-2.5->
                                         <div
-                                          className="flex h-7 w-7 items-center justify-center rounded-lg flex-shrink-0"
+                                          className=-flex h-7 w-7 items-center justify-center rounded-lg flex-shrink-0-
                                           style={{
                                             background: 'rgba(62,74,137,0.08)',
                                             border: '1px solid rgba(62,74,137,0.14)',
@@ -2986,7 +2986,7 @@ export default function EduTechExOSDashboard() {
                                           <Users size={13} style={{ color: '#3E4A89' }} />
                                         </div>
                                         <span
-                                          className="text-[13px] font-medium truncate"
+                                          className=-text-[13px] font-medium truncate-
                                           style={{ color: '#4A5578' }}
                                         >
                                           {scheduledMeet.people}
@@ -3007,12 +3007,12 @@ export default function EduTechExOSDashboard() {
                               />
 
                               {/* ── Join button ── */}
-                              <div className="px-4 pt-3 pb-4" style={{ background: '#FAF8F5' }}>
+                              <div className=-px-4 pt-3 pb-4- style={{ background: '#FAF8F5' }}>
                                 <a
                                   href={scheduledMeet.link}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="group flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-[13px] font-black text-white transition-all duration-200 hover:scale-[1.02] active:scale-95"
+                                  target=-_blank-
+                                  rel=-noreferrer-
+                                  className=-group flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-[13px] font-black text-white transition-all duration-200 hover:scale-[1.02] active:scale-95-
                                   style={{
                                     background: 'linear-gradient(135deg, #3E4A89 0%, #2A3568 100%)',
                                     boxShadow:
@@ -3040,7 +3040,7 @@ export default function EduTechExOSDashboard() {
                                 remarkPlugins={[remarkGfm]}
                                 components={{
                                   p: ({ children }) => (
-                                    <p className="mb-1 last:mb-0">
+                                    <p className=-mb-1 last:mb-0->
                                       {React.Children.map(children, (child) =>
                                         typeof child === 'string'
                                           ? renderWithMentions(
@@ -3053,13 +3053,13 @@ export default function EduTechExOSDashboard() {
                                     </p>
                                   ),
                                   strong: ({ children }) => (
-                                    <strong className="font-bold">{children}</strong>
+                                    <strong className=-font-bold->{children}</strong>
                                   ),
-                                  em: ({ children }) => <em className="italic">{children}</em>,
+                                  em: ({ children }) => <em className=-italic->{children}</em>,
                                   code: ({ children, className }) => {
                                     const isBlock = String(className ?? '').includes('language-');
                                     return isBlock ? (
-                                      <pre className="my-1 overflow-x-auto rounded-lg bg-black/20 p-2 text-xs text-green-300">
+                                      <pre className=-my-1 overflow-x-auto rounded-lg bg-black/20 p-2 text-xs text-green-300->
                                         <code>{children}</code>
                                       </pre>
                                     ) : (
@@ -3080,8 +3080,8 @@ export default function EduTechExOSDashboard() {
                                   a: ({ href, children }) => (
                                     <a
                                       href={href}
-                                      target="_blank"
-                                      rel="noreferrer"
+                                      target=-_blank-
+                                      rel=-noreferrer-
                                       className={`underline ${isOwn ? 'text-white/90' : 'text-green-700'}`}
                                     >
                                       {children}
@@ -3098,19 +3098,19 @@ export default function EduTechExOSDashboard() {
                           {message.linkPreview && !scheduledMeet && (
                             <a
                               href={message.linkPreview.url}
-                              target="_blank"
-                              rel="noreferrer"
+                              target=-_blank-
+                              rel=-noreferrer-
                               className={`mt-2 block overflow-hidden rounded-xl border transition-colors hover:opacity-90
                               ${isOwn ? 'border-white/20 bg-white/10' : 'border-[rgba(62,74,137,0.12)] bg-[#FAF8F5]'}`}
                             >
                               {message.linkPreview.image && (
                                 <img
                                   src={message.linkPreview.image}
-                                  alt=""
-                                  className="h-32 w-full object-cover"
+                                  alt=-
+                                  className=-h-32 w-full object-cover-
                                 />
                               )}
-                              <div className="px-3 py-2">
+                              <div className=-px-3 py-2->
                                 {message.linkPreview.siteName && (
                                   <p
                                     className={`text-[10px] font-black uppercase tracking-wider ${isOwn ? 'text-white/50' : 'text-[#7C859E]'}`}
@@ -3147,8 +3147,8 @@ export default function EduTechExOSDashboard() {
                             <div
                               className={`mt-2 rounded-xl p-2 ${isOwn ? 'bg-white/10' : 'bg-[#FAF8F5]'}`}
                             >
-                              <audio className="w-48 h-8" controls src={message.audioUrl}>
-                                <track kind="captions" />
+                              <audio className=-w-48 h-8- controls src={message.audioUrl}>
+                                <track kind=-captions- />
                               </audio>
                               <p
                                 className={`mt-0.5 text-[11px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}
@@ -3160,13 +3160,13 @@ export default function EduTechExOSDashboard() {
 
                           {/* Video */}
                           {message.videoUrl && (
-                            <div className="mt-2 w-56">
+                            <div className=-mt-2 w-56->
                               <video
-                                className="w-full rounded-xl bg-black"
+                                className=-w-full rounded-xl bg-black-
                                 controls
                                 src={message.videoUrl}
                               >
-                                <track kind="captions" />
+                                <track kind=-captions- />
                               </video>
                               <p
                                 className={`mt-0.5 text-[11px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}
@@ -3178,13 +3178,13 @@ export default function EduTechExOSDashboard() {
 
                           {/* Files */}
                           {message.files && message.files.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1.5">
+                            <div className=-mt-2 flex flex-wrap gap-1.5->
                               {message.files.map((file, fi) => (
                                 <a
                                   key={fi}
                                   href={file.url}
-                                  target="_blank"
-                                  rel="noreferrer"
+                                  target=-_blank-
+                                  rel=-noreferrer-
                                   className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-bold transition-colors
                                   ${isOwn ? 'border-white/30 bg-white/10 text-white hover:bg-white/20' : 'border-[rgba(62,74,137,0.12)] bg-white text-[#4A5578] hover:border-[rgba(62,74,137,0.15)]'}`}
                                 >
@@ -3201,16 +3201,16 @@ export default function EduTechExOSDashboard() {
                             <span>{formatTime(message.timestamp)}</span>
                             {isOwn && (
                               <svg
-                                width="16"
-                                height="11"
-                                viewBox="0 0 16 11"
-                                fill="currentColor"
-                                className="opacity-80"
+                                width=-16-
+                                height=-11-
+                                viewBox=-0 0 16 11-
+                                fill=-currentColor-
+                                className=-opacity-80-
                               >
-                                <path d="M11.071.653a.75.75 0 0 1 .001 1.06l-5.78 5.79a.75.75 0 0 1-1.063 0L1.928 5.2a.75.75 0 1 1 1.062-1.059l1.769 1.77L10.01.653a.75.75 0 0 1 1.061 0z" />
+                                <path d=-M11.071.653a.75.75 0 0 1 .001 1.06l-5.78 5.79a.75.75 0 0 1-1.063 0L1.928 5.2a.75.75 0 1 1 1.062-1.059l1.769 1.77L10.01.653a.75.75 0 0 1 1.061 0z- />
                                 <path
-                                  d="M15.071.653a.75.75 0 0 1 .001 1.06l-5.78 5.79a.75.75 0 0 1-.532.22.75.75 0 0 1-.532-1.28L13.01.653a.75.75 0 0 1 1.061 0z"
-                                  opacity="0.6"
+                                  d=-M15.071.653a.75.75 0 0 1 .001 1.06l-5.78 5.79a.75.75 0 0 1-.532.22.75.75 0 0 1-.532-1.28L13.01.653a.75.75 0 0 1 1.061 0z-
+                                  opacity=-0.6-
                                 />
                               </svg>
                             )}
@@ -3220,16 +3220,16 @@ export default function EduTechExOSDashboard() {
                           <div
                             className={`absolute ${isOwn ? 'left-0 -translate-x-full pr-2' : 'right-0 translate-x-full pl-2'} top-0 hidden group-hover/bubble:flex items-center`}
                           >
-                            <div className="flex items-center gap-0.5 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-1 shadow-lg">
-                              <div className="relative">
+                            <div className=-flex items-center gap-0.5 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-1 shadow-lg->
+                              <div className=-relative->
                                 <button
                                   onClick={() =>
                                     setHoverEmojiMsgId(
                                       hoverEmojiMsgId === message.id ? null : message.id
                                     )
                                   }
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-sm hover:bg-[rgba(62,74,137,0.08)]"
-                                  title="React"
+                                  className=-flex h-7 w-7 items-center justify-center rounded-lg text-sm hover:bg-[rgba(62,74,137,0.08)]-
+                                  title=-React-
                                 >
                                   😊
                                 </button>
@@ -3249,7 +3249,7 @@ export default function EduTechExOSDashboard() {
                                           );
                                           setHoverEmojiMsgId(null);
                                         }}
-                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-lg hover:scale-110 hover:bg-[rgba(62,74,137,0.08)] transition-all"
+                                        className=-flex h-7 w-7 items-center justify-center rounded-lg text-lg hover:scale-110 hover:bg-[rgba(62,74,137,0.08)] transition-all-
                                       >
                                         {em}
                                       </button>
@@ -3266,7 +3266,7 @@ export default function EduTechExOSDashboard() {
                                     setThreadReplyText('');
                                   }}
                                   className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[rgba(62,74,137,0.08)] ${activeThreadId === message.id ? 'text-[#3E4A89]' : 'text-[#7C859E] hover:text-[#3E4A89]'}`}
-                                  title="Reply in thread"
+                                  title=-Reply in thread-
                                 >
                                   <MessageSquare size={13} />
                                 </button>
@@ -3307,8 +3307,8 @@ export default function EduTechExOSDashboard() {
                                       sender: message.sender,
                                     })
                                   }
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#3E4A89]"
-                                  title="Forward message"
+                                  className=-flex h-7 w-7 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#3E4A89]-
+                                  title=-Forward message-
                                 >
                                   <Share2 size={13} />
                                 </button>
@@ -3316,8 +3316,8 @@ export default function EduTechExOSDashboard() {
                               {(isOwn || isAdmin) && (
                                 <button
                                   onClick={() => deleteMessage(activeChannelId, message.id)}
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-[#7C859E] hover:bg-red-50 hover:text-red-600"
-                                  title="Delete"
+                                  className=-flex h-7 w-7 items-center justify-center rounded-lg text-[#7C859E] hover:bg-red-50 hover:text-red-600-
+                                  title=-Delete-
                                 >
                                   <Trash2 size={13} />
                                 </button>
@@ -3329,11 +3329,11 @@ export default function EduTechExOSDashboard() {
 
                       {/* Poll */}
                       {message.poll && (
-                        <div className="mt-1 w-64 rounded-2xl border border-[rgba(62,74,137,0.10)] bg-white p-4 shadow-sm">
-                          <p className="mb-3 text-sm font-bold text-[#1E2636]">
+                        <div className=-mt-1 w-64 rounded-2xl border border-[rgba(62,74,137,0.10)] bg-white p-4 shadow-sm->
+                          <p className=-mb-3 text-sm font-bold text-[#1E2636]->
                             📊 {message.poll.question}
                           </p>
-                          <div className="space-y-2">
+                          <div className=-space-y-2->
                             {message.poll.options.map((opt, i) => {
                               const total = message.poll!.options.reduce(
                                 (s, o) => s + o.votes.length,
@@ -3343,23 +3343,23 @@ export default function EduTechExOSDashboard() {
                               return (
                                 <div
                                   key={i}
-                                  className="relative overflow-hidden rounded-xl border border-[rgba(62,74,137,0.15)] bg-white"
+                                  className=-relative overflow-hidden rounded-xl border border-[rgba(62,74,137,0.15)] bg-white-
                                 >
                                   <div
-                                    className="absolute inset-y-0 left-0 rounded-l-xl bg-indigo-100"
+                                    className=-absolute inset-y-0 left-0 rounded-l-xl bg-indigo-100-
                                     style={{ width: `${pct}%` }}
                                   />
-                                  <div className="relative flex items-center justify-between px-3 py-2">
-                                    <span className="text-sm font-semibold text-[#4A5578]">
+                                  <div className=-relative flex items-center justify-between px-3 py-2->
+                                    <span className=-text-sm font-semibold text-[#4A5578]->
                                       {opt.text}
                                     </span>
-                                    <span className="text-xs font-bold text-green-700">{pct}%</span>
+                                    <span className=-text-xs font-bold text-green-700->{pct}%</span>
                                   </div>
                                 </div>
                               );
                             })}
                           </div>
-                          <p className="mt-2 text-[11px] text-[#7C859E]">
+                          <p className=-mt-2 text-[11px] text-[#7C859E]->
                             {message.poll.options.reduce((s, o) => s + o.votes.length, 0)} votes
                           </p>
                         </div>
@@ -3420,7 +3420,7 @@ export default function EduTechExOSDashboard() {
                   </div>
                 );
               })}
-              <div ref={chatBottomRef} className="h-2" />
+              <div ref={chatBottomRef} className=-h-2- />
             </div>
           </div>
         </section>
@@ -3439,12 +3439,12 @@ export default function EduTechExOSDashboard() {
                   ? `${typers[0]} and ${typers[1]} are typing�¦`
                   : 'Several people are typing�¦';
             return (
-              <div className="flex items-center gap-2 px-5 py-1.5 text-[13px] text-[#616161]">
-                <span className="flex gap-[3px] items-center">
+              <div className=-flex items-center gap-2 px-5 py-1.5 text-[13px] text-[#616161]->
+                <span className=-flex gap-[3px] items-center->
                   {[0, 1, 2].map((i) => (
                     <span
                       key={i}
-                      className="typing-dot"
+                      className=-typing-dot-
                       style={{ animationDelay: `${i * 0.2}s` }}
                     />
                   ))}
@@ -3454,25 +3454,25 @@ export default function EduTechExOSDashboard() {
             );
           })()}
 
-        <footer className="shrink-0 border-t border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/95 backdrop-blur-md px-4 py-3">
+        <footer className=-shrink-0 border-t border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/95 backdrop-blur-md px-4 py-3->
           {/* Mention dropdown */}
           {mentionMenuOpen &&
             (broadcastSuggestions.length > 0 || mentionSuggestions.length > 0) && (
-              <div className="mb-2 overflow-hidden rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] dark:bg-[#191E2F] shadow-xl">
+              <div className=-mb-2 overflow-hidden rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] dark:bg-[#191E2F] shadow-xl->
                 {broadcastSuggestions.map((b) => (
                   <button
                     key={b.id}
                     onClick={() => insertMention(b.id.slice(1))}
-                    className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                    className=-flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors-
                   >
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/40 text-sm font-bold text-amber-700">
+                    <div className=-flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/40 text-sm font-bold text-amber-700->
                       @
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-amber-700 dark:text-amber-400">
+                      <p className=-text-sm font-bold text-amber-700 dark:text-amber-400->
                         {b.label}
                       </p>
-                      <p className="text-xs text-[#7C859E]">{b.desc}</p>
+                      <p className=-text-xs text-[#7C859E]->{b.desc}</p>
                     </div>
                   </button>
                 ))}
@@ -3480,19 +3480,19 @@ export default function EduTechExOSDashboard() {
                   <button
                     key={member.id}
                     onClick={() => insertMention(member.name)}
-                    className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-[rgba(62,74,137,0.08)] transition-colors"
+                    className=-flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-[rgba(62,74,137,0.08)] transition-colors-
                   >
                     <div
-                      className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold text-white"
+                      className=-flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold text-white-
                       style={{ backgroundColor: member.color }}
                     >
                       {member.initials}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-[#1E2636] dark:text-white">
+                      <p className=-text-sm font-bold text-[#1E2636] dark:text-white->
                         {member.name}
                       </p>
-                      <p className="text-xs text-[#7C859E]">{member.role}</p>
+                      <p className=-text-xs text-[#7C859E]->{member.role}</p>
                     </div>
                   </button>
                 ))}
@@ -3503,18 +3503,18 @@ export default function EduTechExOSDashboard() {
           {emojiMenuOpen && (
             <div
               ref={emojiPanelRef}
-              className="mb-2 rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-3 shadow-xl"
+              className=-mb-2 rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-3 shadow-xl-
             >
-              <div className="grid max-h-48 grid-cols-8 gap-1 overflow-y-auto">
+              <div className=-grid max-h-48 grid-cols-8 gap-1 overflow-y-auto->
                 {EMOJI_OPTIONS.map((emoji, idx) => (
                   <button
                     key={idx}
-                    type="button"
+                    type=-button-
                     onClick={() => {
                       insertComposerText(emoji);
                       setEmojiMenuOpen(false);
                     }}
-                    className="flex h-8 items-center justify-center rounded-lg text-lg hover:scale-110 hover:bg-[rgba(62,74,137,0.08)] transition-all"
+                    className=-flex h-8 items-center justify-center rounded-lg text-lg hover:scale-110 hover:bg-[rgba(62,74,137,0.08)] transition-all-
                   >
                     {emoji}
                   </button>
@@ -3523,11 +3523,11 @@ export default function EduTechExOSDashboard() {
             </div>
           )}
 
-          <input ref={fileInputRef} onChange={handleFileUpload} type="file" className="hidden" />
+          <input ref={fileInputRef} onChange={handleFileUpload} type=-file- className=-hidden- />
 
-          <div className="flex items-end gap-2">
+          <div className=-flex items-end gap-2->
             {/* Toolbar icons */}
-            <div className="flex items-center gap-0.5 shrink-0 mb-0.5">
+            <div className=-flex items-center gap-0.5 shrink-0 mb-0.5->
               <button
                 ref={emojiBtnRef}
                 onClick={() => {
@@ -3535,14 +3535,14 @@ export default function EduTechExOSDashboard() {
                   setMentionMenuOpen(false);
                 }}
                 className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${emojiMenuOpen ? 'bg-[rgba(62,74,137,0.08)] text-green-700' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]'}`}
-                title="Emoji"
+                title=-Emoji-
               >
                 <Smile size={18} />
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] transition-colors"
-                title="Attach file"
+                className=-flex h-9 w-9 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] transition-colors-
+                title=-Attach file-
               >
                 <Paperclip size={18} />
               </button>
@@ -3550,7 +3550,7 @@ export default function EduTechExOSDashboard() {
                 onClick={() => startRecording('audio')}
                 disabled={recordingBusy || !!recordingType}
                 className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${recordingType === 'audio' ? 'animate-pulse bg-red-100 text-red-600' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]'}`}
-                title="Voice note"
+                title=-Voice note-
               >
                 <Mic size={18} />
               </button>
@@ -3558,40 +3558,40 @@ export default function EduTechExOSDashboard() {
                 onClick={() => startRecording('video')}
                 disabled={recordingBusy || !!recordingType}
                 className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${recordingType === 'video' ? 'animate-pulse bg-red-100 text-red-600' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]'}`}
-                title="Screen record"
+                title=-Screen record-
               >
                 <Video size={18} />
               </button>
               {/* Meet dropdown */}
-              <div className="relative" ref={meetInputMenuRef}>
+              <div className=-relative- ref={meetInputMenuRef}>
                 <button
                   onClick={() => setMeetInputMenuOpen((v) => !v)}
                   className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${meetInputMenuOpen ? 'bg-[rgba(62,74,137,0.08)] text-green-700' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-green-700'}`}
-                  title="Meet options"
+                  title=-Meet options-
                 >
                   <PhoneCall size={17} />
                 </button>
                 {meetInputMenuOpen && (
-                  <div className="absolute bottom-full left-0 mb-2 z-50 w-52 overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl">
-                    <div className="px-3 py-2 bg-[#FAF8F5] border-b border-[rgba(62,74,137,0.08)]">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-[#7C859E]">
+                  <div className=-absolute bottom-full left-0 mb-2 z-50 w-52 overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl->
+                    <div className=-px-3 py-2 bg-[#FAF8F5] border-b border-[rgba(62,74,137,0.08)]->
+                      <p className=-text-[10px] font-black uppercase tracking-wider text-[#7C859E]->
                         Meeting
                       </p>
                     </div>
-                    <div className="p-1.5 space-y-0.5">
+                    <div className=-p-1.5 space-y-0.5->
                       <button
                         onClick={() => {
                           setMeetInputMenuOpen(false);
                           startNewMeeting();
                         }}
-                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-[rgba(62,74,137,0.08)] transition-colors group"
+                        className=-flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-[rgba(62,74,137,0.08)] transition-colors group-
                       >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-green-700 group-hover:bg-[rgba(62,74,137,0.12)] transition-colors">
+                        <span className=-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-green-700 group-hover:bg-[rgba(62,74,137,0.12)] transition-colors->
                           <Video size={15} />
                         </span>
                         <div>
-                          <p className="text-sm font-bold text-[#1E2636]">Start Meet</p>
-                          <p className="text-[11px] text-[#7C859E]">Instant Jitsi room</p>
+                          <p className=-text-sm font-bold text-[#1E2636]->Start Meet</p>
+                          <p className=-text-[11px] text-[#7C859E]->Instant Jitsi room</p>
                         </div>
                       </button>
                       <button
@@ -3599,14 +3599,14 @@ export default function EduTechExOSDashboard() {
                           setMeetInputMenuOpen(false);
                           openScheduleMeet();
                         }}
-                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-emerald-50 transition-colors group"
+                        className=-flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-emerald-50 transition-colors group-
                       >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200 transition-colors">
+                        <span className=-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200 transition-colors->
                           <CalendarPlus size={15} />
                         </span>
                         <div>
-                          <p className="text-sm font-bold text-[#1E2636]">Schedule Meet</p>
-                          <p className="text-[11px] text-[#7C859E]">
+                          <p className=-text-sm font-bold text-[#1E2636]->Schedule Meet</p>
+                          <p className=-text-[11px] text-[#7C859E]->
                             {composerMessage.includes('@')
                               ? 'Uses your @mentions'
                               : 'Pick who to invite'}
@@ -3622,7 +3622,7 @@ export default function EduTechExOSDashboard() {
             {/* Recording badge */}
             {recordingType && (
               <div
-                className="flex shrink-0 items-center gap-2 rounded-2xl px-3 py-2 mb-0.5"
+                className=-flex shrink-0 items-center gap-2 rounded-2xl px-3 py-2 mb-0.5-
                 style={{
                   background: 'rgba(139,92,246,0.10)',
                   border: '1px solid rgba(139,92,246,0.22)',
@@ -3630,7 +3630,7 @@ export default function EduTechExOSDashboard() {
               >
                 {recordingType === 'audio' ? (
                   /* Voice → animated waveform */
-                  <div className="flex items-center gap-[2.5px]" style={{ height: 28 }}>
+                  <div className=-flex items-center gap-[2.5px]- style={{ height: 28 }}>
                     {[
                       0.4, 0.7, 1, 0.6, 0.9, 0.5, 1, 0.75, 0.55, 0.85, 0.45, 0.95, 0.65, 0.8, 0.5,
                       0.7, 0.4, 0.9, 0.6, 1, 0.5, 0.75, 0.85, 0.45, 0.65,
@@ -3657,43 +3657,43 @@ export default function EduTechExOSDashboard() {
                   </div>
                 ) : (
                   /* Screen → pulsing REC dot + monitor icon + label */
-                  <div className="flex items-center gap-2" style={{ height: 28 }}>
-                    <span className="relative flex h-2.5 w-2.5">
+                  <div className=-flex items-center gap-2- style={{ height: 28 }}>
+                    <span className=-relative flex h-2.5 w-2.5->
                       <span
-                        className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                        className=-absolute inline-flex h-full w-full animate-ping rounded-full opacity-75-
                         style={{ background: '#ef4444' }}
                       />
                       <span
-                        className="relative inline-flex h-2.5 w-2.5 rounded-full"
+                        className=-relative inline-flex h-2.5 w-2.5 rounded-full-
                         style={{ background: '#ef4444' }}
                       />
                     </span>
                     <Monitor size={17} style={{ color: '#C4CAE0' }} strokeWidth={2.2} />
-                    <span className="text-xs font-bold" style={{ color: '#C4CAE0' }}>
+                    <span className=-text-xs font-bold- style={{ color: '#C4CAE0' }}>
                       Recording screen
                     </span>
                   </div>
                 )}
                 {/* Timer */}
-                <span className="text-xs font-bold tabular-nums mx-1" style={{ color: '#C4CAE0' }}>
+                <span className=-text-xs font-bold tabular-nums mx-1- style={{ color: '#C4CAE0' }}>
                   {String(Math.floor(recordingDuration / 60)).padStart(2, '0')}:
                   {String(recordingDuration % 60).padStart(2, '0')}
                 </span>
                 {/* Divider */}
-                <div className="w-px h-5 mx-0.5" style={{ background: 'rgba(139,92,246,0.25)' }} />
+                <div className=-w-px h-5 mx-0.5- style={{ background: 'rgba(139,92,246,0.25)' }} />
                 {/* Stop button */}
                 <button
                   onClick={() => stopRecording(false)}
-                  className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition-all hover:scale-105"
+                  className=-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition-all hover:scale-105-
                   style={{
                     background: 'rgba(239,68,68,0.12)',
                     color: '#ef4444',
                     border: '1px solid rgba(239,68,68,0.22)',
                   }}
-                  title="Stop recording"
+                  title=-Stop recording-
                 >
                   <span
-                    className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                    className=-w-2.5 h-2.5 rounded-sm flex-shrink-0-
                     style={{ background: '#ef4444' }}
                   />
                   Stop
@@ -3701,13 +3701,13 @@ export default function EduTechExOSDashboard() {
                 {/* Preview button */}
                 <button
                   onClick={() => stopRecording(true)}
-                  className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition-all hover:scale-105"
+                  className=-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition-all hover:scale-105-
                   style={{
                     background: 'rgba(139,92,246,0.14)',
                     color: '#C4CAE0',
                     border: '1px solid rgba(139,92,246,0.25)',
                   }}
-                  title="Stop and preview"
+                  title=-Stop and preview-
                 >
                   Preview
                 </button>
@@ -3717,13 +3717,13 @@ export default function EduTechExOSDashboard() {
                     discardRecordingRef.current = false;
                     stopRecording(true);
                   }}
-                  className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition-all hover:scale-105"
+                  className=-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition-all hover:scale-105-
                   style={{
                     background: 'linear-gradient(135deg,#7c3aed,#a78bfa)',
                     color: '#fff',
                     border: 'none',
                   }}
-                  title="Stop and send"
+                  title=-Stop and send-
                 >
                   Send
                 </button>
@@ -3750,7 +3750,7 @@ export default function EduTechExOSDashboard() {
                 }
               }}
               placeholder={`Message #${channel?.name ?? ''}�¦ (Enter to send · Shift+Enter for new line)`}
-              className="flex-1 resize-none border-0 bg-transparent px-3 py-2 text-[13.5px] text-[#1E2636] placeholder-[#8a8886] focus:outline-none"
+              className=-flex-1 resize-none border-0 bg-transparent px-3 py-2 text-[13.5px] text-[#1E2636] placeholder-[#8a8886] focus:outline-none-
               rows={1}
               style={{ maxHeight: '120px', overflowY: 'auto' }}
             />
@@ -3759,7 +3759,7 @@ export default function EduTechExOSDashboard() {
             <button
               onClick={sendMessage}
               disabled={!composerMessage.trim()}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 transition-all"
+              className=-flex h-8 w-8 shrink-0 items-center justify-center rounded text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 transition-all-
               style={{ background: 'linear-gradient(135deg, #C4CAE0, #7C859E)', color: '#191E2F' }}
             >
               <Send size={18} />
@@ -3768,72 +3768,72 @@ export default function EduTechExOSDashboard() {
         </footer>
       </main>
 
-      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• RIGHT ICON RAIL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
-      <nav className="workspace-right-rail">
+      {/* ------------------ RIGHT ICON RAIL ------------------ */}
+      <nav className=-workspace-right-rail->
         {/* Calendar / workspace tools — teal accent */}
-        <motion.button whileTap={{ scale: 0.88 }} onClick={() => setAvailabilityOpen(true)} className="rail-btn"
+        <motion.button whileTap={{ scale: 0.88 }} onClick={() => setAvailabilityOpen(true)} className=-rail-btn-
           style={{ color: 'rgba(34,211,238,0.60)' }}
           onMouseEnter={e => { e.currentTarget.style.color = '#67E8F9'; e.currentTarget.style.background = 'rgba(20,184,166,0.14)'; }}
           onMouseLeave={e => { e.currentTarget.style.color = 'rgba(34,211,238,0.60)'; e.currentTarget.style.background = 'transparent'; }}
         >
           <CalendarCheck size={18} strokeWidth={1.8} />
-          <span className="rail-label">Avail.</span>
+          <span className=-rail-label->Avail.</span>
         </motion.button>
 
-        <motion.button whileTap={{ scale: 0.88 }} onClick={() => setLeaveOpen(true)} className="rail-btn"
+        <motion.button whileTap={{ scale: 0.88 }} onClick={() => setLeaveOpen(true)} className=-rail-btn-
           style={{ color: 'rgba(251,191,36,0.55)' }}
           onMouseEnter={e => { e.currentTarget.style.color = '#FCD34D'; e.currentTarget.style.background = 'rgba(245,158,11,0.12)'; }}
           onMouseLeave={e => { e.currentTarget.style.color = 'rgba(251,191,36,0.55)'; e.currentTarget.style.background = 'transparent'; }}
         >
           <CalendarX size={18} strokeWidth={1.8} />
-          <span className="rail-label">Leave</span>
+          <span className=-rail-label->Leave</span>
         </motion.button>
 
-        <motion.button whileTap={{ scale: 0.88 }} onClick={() => setIntegrationsOpen(true)} className="rail-btn"
+        <motion.button whileTap={{ scale: 0.88 }} onClick={() => setIntegrationsOpen(true)} className=-rail-btn-
           style={{ color: 'rgba(167,139,250,0.55)' }}
           onMouseEnter={e => { e.currentTarget.style.color = '#C4B5FD'; e.currentTarget.style.background = 'rgba(139,92,246,0.14)'; }}
           onMouseLeave={e => { e.currentTarget.style.color = 'rgba(167,139,250,0.55)'; e.currentTarget.style.background = 'transparent'; }}
         >
           <Zap size={18} strokeWidth={1.8} />
-          <span className="rail-label">Integr.</span>
+          <span className=-rail-label->Integr.</span>
         </motion.button>
 
         {isAdmin && (
-          <motion.button whileTap={{ scale: 0.88 }} onClick={() => setAnalyticsOpen(true)} className="rail-btn"
+          <motion.button whileTap={{ scale: 0.88 }} onClick={() => setAnalyticsOpen(true)} className=-rail-btn-
             style={{ color: 'rgba(52,211,153,0.55)' }}
             onMouseEnter={e => { e.currentTarget.style.color = '#6EE7B7'; e.currentTarget.style.background = 'rgba(16,185,129,0.12)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(52,211,153,0.55)'; e.currentTarget.style.background = 'transparent'; }}
           >
             <BarChart2 size={18} strokeWidth={1.8} />
-            <span className="rail-label">Analytics</span>
+            <span className=-rail-label->Analytics</span>
           </motion.button>
         )}
 
-        <div className="rail-divider" />
+        <div className=-rail-divider- />
 
         {/* Channel tools — Pinned + Saved (amber when active) */}
         <motion.button
           whileTap={{ scale: 0.88 }}
           onClick={() => setRightSidePanel(rightSidePanel === 'pinned' ? null : 'pinned')}
-          className="rail-btn"
+          className=-rail-btn-
           style={rightSidePanel === 'pinned'
             ? { background: 'rgba(245,158,11,0.16)', color: '#FCD34D' }
             : { color: 'rgba(251,191,36,0.50)' }}
         >
           <Pin size={18} strokeWidth={2} />
-          <span className="rail-label">Pinned</span>
+          <span className=-rail-label->Pinned</span>
         </motion.button>
 
         <motion.button
           whileTap={{ scale: 0.88 }}
           onClick={() => setRightSidePanel(rightSidePanel === 'bookmarked' ? null : 'bookmarked')}
-          className="rail-btn"
+          className=-rail-btn-
           style={rightSidePanel === 'bookmarked'
             ? { background: 'rgba(245,158,11,0.16)', color: '#FCD34D' }
             : { color: 'rgba(251,191,36,0.45)' }}
         >
           <Bookmark size={18} strokeWidth={2} />
-          <span className="rail-label">Saved</span>
+          <span className=-rail-label->Saved</span>
         </motion.button>
 
         {/* Bottom: Copilot — purple accent, more prominent */}
@@ -3845,13 +3845,13 @@ export default function EduTechExOSDashboard() {
               if (next === 'ai') trackEvent('ai_copilot_opened', { channel: channel?.name });
               setRightPanel(next);
             }}
-            className="rail-btn"
+            className=-rail-btn-
             style={rightPanel === 'ai'
               ? { color: '#C4B5FD', background: 'rgba(139,92,246,0.22)', border: '1px solid rgba(139,92,246,0.30)' }
               : { color: 'rgba(167,139,250,0.70)', background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.18)' }}
           >
             <Bot size={18} strokeWidth={2} />
-            <span className="rail-label">Copilot</span>
+            <span className=-rail-label->Copilot</span>
           </motion.button>
         </div>
       </nav>
@@ -3860,21 +3860,21 @@ export default function EduTechExOSDashboard() {
       <AnimatePresence>
         {rightPanel === 'ai' && (
           <motion.div
-            key="ai-backdrop"
+            key=-ai-backdrop-
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="fixed inset-0 z-[199] flex items-center justify-center bg-[rgba(15,18,34,0.55)] backdrop-blur-sm p-4"
+            className=-fixed inset-0 z-[199] flex items-center justify-center bg-[rgba(15,18,34,0.55)] backdrop-blur-sm p-4-
             onClick={() => setRightPanel('closed')}
           >
             <motion.div
-              key="ai-popup"
+              key=-ai-popup-
               initial={{ opacity: 0, y: 24, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.97 }}
               transition={{ type: 'spring', damping: 28, stiffness: 380, mass: 0.7 }}
-              className="w-full max-w-[420px] overflow-hidden rounded-2xl shadow-2xl"
+              className=-w-full max-w-[420px] overflow-hidden rounded-2xl shadow-2xl-
               style={{ height: '82vh', display: 'flex', flexDirection: 'column' }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -3894,46 +3894,46 @@ export default function EduTechExOSDashboard() {
               .filter(Boolean);
             return (
               <motion.div
-                key="pinned-panel"
+                key=-pinned-panel-
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-                className="fixed top-0 right-14 z-[150] h-full w-80 border-l border-[rgba(62,74,137,0.08)] bg-white dark:bg-[#141928] shadow-2xl flex flex-col"
+                className=-fixed top-0 right-14 z-[150] h-full w-80 border-l border-[rgba(62,74,137,0.08)] bg-white dark:bg-[#141928] shadow-2xl flex flex-col-
               >
                 {/* Header */}
-                <div className="flex h-14 shrink-0 items-center justify-between border-b border-[rgba(62,74,137,0.08)] dark:border-slate-800 px-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#3E4A89]/10 dark:bg-[#3E4A89]/20">
-                      <Pin size={13} className="text-[#3E4A89] dark:text-[#9BA6D3]" strokeWidth={2.5} />
+                <div className=-flex h-14 shrink-0 items-center justify-between border-b border-[rgba(62,74,137,0.08)] dark:border-slate-800 px-4->
+                  <div className=-flex items-center gap-2.5->
+                    <div className=-flex h-7 w-7 items-center justify-center rounded-lg bg-[#3E4A89]/10 dark:bg-[#3E4A89]/20->
+                      <Pin size={13} className=-text-[#3E4A89] dark:text-[#9BA6D3]- strokeWidth={2.5} />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-[#1E2636] dark:text-white leading-none">Pinned</p>
-                      <p className="text-[10px] text-[#7C859E] dark:text-slate-500 mt-0.5">#{channel?.name ?? activeChannelId}</p>
+                      <p className=-text-sm font-bold text-[#1E2636] dark:text-white leading-none->Pinned</p>
+                      <p className=-text-[10px] text-[#7C859E] dark:text-slate-500 mt-0.5->#{channel?.name ?? activeChannelId}</p>
                     </div>
                     {pinIds.length > 0 && (
-                      <span className="ml-1 rounded-full bg-[#3E4A89] px-2 py-0.5 text-[10px] font-black text-white">
+                      <span className=-ml-1 rounded-full bg-[#3E4A89] px-2 py-0.5 text-[10px] font-black text-white->
                         {pinIds.length}
                       </span>
                     )}
                   </div>
                   <button
                     onClick={() => setRightSidePanel(null)}
-                    className="rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 hover:text-[#4A5578] transition-colors"
+                    className=-rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] dark:hover:bg-slate-800 hover:text-[#4A5578] transition-colors-
                   >
                     <X size={15} />
                   </button>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                <div className=-flex-1 overflow-y-auto p-3 space-y-2->
                   {pinnedMsgs.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center py-12 px-6">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800 mb-4">
-                        <Pin size={22} className="text-slate-300 dark:text-slate-600" />
+                    <div className=-flex flex-col items-center justify-center h-full text-center py-12 px-6->
+                      <div className=-flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800 mb-4->
+                        <Pin size={22} className=-text-slate-300 dark:text-slate-600- />
                       </div>
-                      <p className="text-sm font-bold text-[#4A5578] dark:text-slate-400">Nothing pinned yet</p>
-                      <p className="text-xs text-[#9BA6D3] dark:text-slate-600 mt-1 leading-relaxed">
+                      <p className=-text-sm font-bold text-[#4A5578] dark:text-slate-400->Nothing pinned yet</p>
+                      <p className=-text-xs text-[#9BA6D3] dark:text-slate-600 mt-1 leading-relaxed->
                         Right-click any message and choose <strong>Pin</strong> to keep it here.
                       </p>
                     </div>
@@ -3943,50 +3943,50 @@ export default function EduTechExOSDashboard() {
                         msg && (
                           <div
                             key={msg.id}
-                            className="group rounded-xl border border-[rgba(62,74,137,0.1)] dark:border-slate-700 bg-[#F8F9FC] dark:bg-[#1A2035] overflow-hidden"
+                            className=-group rounded-xl border border-[rgba(62,74,137,0.1)] dark:border-slate-700 bg-[#F8F9FC] dark:bg-[#1A2035] overflow-hidden-
                           >
                             {/* Pin label */}
-                            <div className="flex items-center gap-1.5 px-3 pt-2.5 pb-1">
-                              <Pin size={9} className="text-[#3E4A89]/50 dark:text-slate-500" strokeWidth={2.5} />
-                              <span className="text-[9px] font-black uppercase tracking-widest text-[#3E4A89]/50 dark:text-slate-500">
+                            <div className=-flex items-center gap-1.5 px-3 pt-2.5 pb-1->
+                              <Pin size={9} className=-text-[#3E4A89]/50 dark:text-slate-500- strokeWidth={2.5} />
+                              <span className=-text-[9px] font-black uppercase tracking-widest text-[#3E4A89]/50 dark:text-slate-500->
                                 Pinned message
                               </span>
                             </div>
 
                             {/* Message body */}
-                            <div className="px-3 pb-2">
-                              <div className="flex items-center gap-2 mb-1.5">
+                            <div className=-px-3 pb-2->
+                              <div className=-flex items-center gap-2 mb-1.5->
                                 <div
-                                  className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white shrink-0"
+                                  className=-flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white shrink-0-
                                   style={{ backgroundColor: msg.color }}
                                 >
                                   {msg.initials}
                                 </div>
-                                <span className="text-xs font-bold text-[#1E2636] dark:text-white">{msg.sender}</span>
-                                <span className="text-[10px] text-[#9BA6D3] dark:text-slate-500 ml-auto tabular-nums">
+                                <span className=-text-xs font-bold text-[#1E2636] dark:text-white->{msg.sender}</span>
+                                <span className=-text-[10px] text-[#9BA6D3] dark:text-slate-500 ml-auto tabular-nums->
                                   {formatTime(msg.timestamp)}
                                 </span>
                               </div>
 
                               {msg.text && (
-                                <p className="text-xs text-[#4A5578] dark:text-[#9BA6D3] leading-relaxed line-clamp-4 mb-1.5">
+                                <p className=-text-xs text-[#4A5578] dark:text-[#9BA6D3] leading-relaxed line-clamp-4 mb-1.5->
                                   {msg.text}
                                 </p>
                               )}
 
                               {/* File attachments */}
                               {msg.files && msg.files.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1 mb-1.5">
+                                <div className=-flex flex-wrap gap-1 mt-1 mb-1.5->
                                   {msg.files.map((f: {name: string; url: string; type: string}, fi: number) => (
                                     <a
                                       key={fi}
                                       href={f.url}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="inline-flex items-center gap-1 rounded-lg border border-[rgba(62,74,137,0.15)] dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1 text-[10px] font-semibold text-[#4A5578] dark:text-slate-300 hover:border-[#3E4A89]/30 transition-colors"
+                                      target=-_blank-
+                                      rel=-noreferrer-
+                                      className=-inline-flex items-center gap-1 rounded-lg border border-[rgba(62,74,137,0.15)] dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1 text-[10px] font-semibold text-[#4A5578] dark:text-slate-300 hover:border-[#3E4A89]/30 transition-colors-
                                     >
                                       <Paperclip size={9} />
-                                      <span className="max-w-[140px] truncate">{f.name}</span>
+                                      <span className=-max-w-[140px] truncate->{f.name}</span>
                                     </a>
                                   ))}
                                 </div>
@@ -3994,22 +3994,22 @@ export default function EduTechExOSDashboard() {
                             </div>
 
                             {/* Actions */}
-                            <div className="flex items-center gap-2 border-t border-[rgba(62,74,137,0.06)] dark:border-slate-700/50 px-3 py-2">
+                            <div className=-flex items-center gap-2 border-t border-[rgba(62,74,137,0.06)] dark:border-slate-700/50 px-3 py-2->
                               <button
                                 onClick={() => {
                                   document
                                     .getElementById(`msg-${msg.id}`)
                                     ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                 }}
-                                className="flex items-center gap-1 text-[10px] font-bold text-[#3E4A89] dark:text-[#9BA6D3] hover:text-[#2A3568] dark:hover:text-white transition-colors"
+                                className=-flex items-center gap-1 text-[10px] font-bold text-[#3E4A89] dark:text-[#9BA6D3] hover:text-[#2A3568] dark:hover:text-white transition-colors-
                               >
-                                <ChevronDown size={10} className="-rotate-90" />
+                                <ChevronDown size={10} className=--rotate-90- />
                                 Jump to
                               </button>
-                              <span className="text-[#E2E6F0] dark:text-slate-700">·</span>
+                              <span className=-text-[#E2E6F0] dark:text-slate-700->·</span>
                               <button
                                 onClick={() => unpinMessage(activeChannelId, msg.id)}
-                                className="text-[10px] font-bold text-[#7C859E] dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                                className=-text-[10px] font-bold text-[#7C859E] dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors-
                               >
                                 Unpin
                               </button>
@@ -4028,34 +4028,34 @@ export default function EduTechExOSDashboard() {
       <AnimatePresence>
         {rightSidePanel === 'bookmarked' && (
           <motion.div
-            key="bookmarked-panel"
+            key=-bookmarked-panel-
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
             transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-            className="fixed top-0 right-14 z-[150] h-full w-72 border-l border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/95 backdrop-blur-md shadow-2xl flex flex-col"
+            className=-fixed top-0 right-14 z-[150] h-full w-72 border-l border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/95 backdrop-blur-md shadow-2xl flex flex-col-
           >
-            <div className="flex h-14 shrink-0 items-center justify-between border-b border-[rgba(62,74,137,0.12)] px-4">
-              <div className="flex items-center gap-2">
-                <Bookmark size={15} className="text-amber-500" />
-                <span className="text-sm font-bold text-[#1E2636]">Saved Messages</span>
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-600">
+            <div className=-flex h-14 shrink-0 items-center justify-between border-b border-[rgba(62,74,137,0.12)] px-4->
+              <div className=-flex items-center gap-2->
+                <Bookmark size={15} className=-text-amber-500- />
+                <span className=-text-sm font-bold text-[#1E2636]->Saved Messages</span>
+                <span className=-rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-600->
                   {bookmarkedMessageIds.length}
                 </span>
               </div>
               <button
                 onClick={() => setRightSidePanel(null)}
-                className="rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]"
+                className=-rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]-
               >
                 <X size={16} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            <div className=-flex-1 overflow-y-auto p-3 space-y-2->
               {bookmarkedMessageIds.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                  <Bookmark size={32} className="mb-3 text-slate-200" />
-                  <p className="text-sm font-semibold text-[#7C859E]">No saved messages</p>
-                  <p className="text-xs text-[#9BA6D3] mt-1">Bookmark a message to see it here</p>
+                <div className=-flex flex-col items-center justify-center h-full text-center py-12->
+                  <Bookmark size={32} className=-mb-3 text-slate-200- />
+                  <p className=-text-sm font-semibold text-[#7C859E]->No saved messages</p>
+                  <p className=-text-xs text-[#9BA6D3] mt-1->Bookmark a message to see it here</p>
                 </div>
               ) : (
                 (() => {
@@ -4072,26 +4072,26 @@ export default function EduTechExOSDashboard() {
                       msg && (
                         <div
                           key={msg.id}
-                          className="rounded-xl border border-[rgba(62,74,137,0.08)] bg-[#FAF8F5] p-3"
+                          className=-rounded-xl border border-[rgba(62,74,137,0.08)] bg-[#FAF8F5] p-3-
                         >
-                          <div className="flex items-center gap-2 mb-1.5">
+                          <div className=-flex items-center gap-2 mb-1.5->
                             <div
-                              className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                              className=-flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white-
                               style={{ backgroundColor: msg.color }}
                             >
                               {msg.initials}
                             </div>
-                            <span className="text-xs font-bold text-[#4A5578]">{msg.sender}</span>
-                            <span className="text-[10px] text-[#7C859E] ml-auto">
+                            <span className=-text-xs font-bold text-[#4A5578]->{msg.sender}</span>
+                            <span className=-text-[10px] text-[#7C859E] ml-auto->
                               {formatTime(msg.timestamp)}
                             </span>
                           </div>
-                          <p className="text-xs text-[#4A5578] leading-relaxed line-clamp-3">
+                          <p className=-text-xs text-[#4A5578] leading-relaxed line-clamp-3->
                             {msg.text}
                           </p>
                           <button
                             onClick={() => toggleBookmark(msg.id)}
-                            className="mt-2 text-[10px] font-bold text-amber-600 hover:text-amber-700"
+                            className=-mt-2 text-[10px] font-bold text-amber-600 hover:text-amber-700-
                           >
                             Remove bookmark
                           </button>
@@ -4127,25 +4127,25 @@ export default function EduTechExOSDashboard() {
             };
             return (
               <motion.div
-                key="thread-panel"
+                key=-thread-panel-
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-                className="fixed top-0 right-0 md:right-14 z-[150] h-full w-full md:w-[380px] border-l border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/97 backdrop-blur-md shadow-2xl flex flex-col"
+                className=-fixed top-0 right-0 md:right-14 z-[150] h-full w-full md:w-[380px] border-l border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/97 backdrop-blur-md shadow-2xl flex flex-col-
               >
                 {/* Header */}
-                <div className="flex h-14 shrink-0 items-center justify-between border-b border-[rgba(62,74,137,0.12)] px-4">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare size={15} className="text-[#3E4A89]" />
-                    <span className="text-sm font-bold text-[#1E2636]">Thread</span>
-                    <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-black text-[#3E4A89]">
+                <div className=-flex h-14 shrink-0 items-center justify-between border-b border-[rgba(62,74,137,0.12)] px-4->
+                  <div className=-flex items-center gap-2->
+                    <MessageSquare size={15} className=-text-[#3E4A89]- />
+                    <span className=-text-sm font-bold text-[#1E2636]->Thread</span>
+                    <span className=-rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-black text-[#3E4A89]->
                       {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
                     </span>
                   </div>
                   <button
                     onClick={() => setActiveThread(null)}
-                    className="rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]"
+                    className=-rounded-lg p-1.5 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]-
                   >
                     <X size={16} />
                   </button>
@@ -4153,32 +4153,32 @@ export default function EduTechExOSDashboard() {
 
                 {/* Root message */}
                 {rootMsg && (
-                  <div className="shrink-0 border-b border-[rgba(62,74,137,0.08)] bg-white/60 px-4 py-3">
-                    <div className="flex items-center gap-2 mb-1.5">
+                  <div className=-shrink-0 border-b border-[rgba(62,74,137,0.08)] bg-white/60 px-4 py-3->
+                    <div className=-flex items-center gap-2 mb-1.5->
                       <div
-                        className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                        className=-flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white-
                         style={{ backgroundColor: rootMsg.color }}
                       >
                         {rootMsg.initials}
                       </div>
-                      <span className="text-xs font-bold text-[#4A5578]">{rootMsg.sender}</span>
-                      <span className="text-[10px] text-[#9BA6D3] ml-auto">
+                      <span className=-text-xs font-bold text-[#4A5578]->{rootMsg.sender}</span>
+                      <span className=-text-[10px] text-[#9BA6D3] ml-auto->
                         {formatTime(rootMsg.timestamp)}
                       </span>
                     </div>
-                    <p className="text-sm text-[#1E2636] leading-relaxed line-clamp-4">
+                    <p className=-text-sm text-[#1E2636] leading-relaxed line-clamp-4->
                       {rootMsg.text}
                     </p>
                   </div>
                 )}
 
                 {/* Replies list */}
-                <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                <div className=-flex-1 overflow-y-auto p-3 space-y-3->
                   {replies.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                      <MessageSquare size={32} className="mb-3 text-slate-200" />
-                      <p className="text-sm font-semibold text-[#7C859E]">No replies yet</p>
-                      <p className="text-xs text-[#9BA6D3] mt-1">Be the first to reply</p>
+                    <div className=-flex flex-col items-center justify-center h-full text-center py-12->
+                      <MessageSquare size={32} className=-mb-3 text-slate-200- />
+                      <p className=-text-sm font-semibold text-[#7C859E]->No replies yet</p>
+                      <p className=-text-xs text-[#9BA6D3] mt-1->Be the first to reply</p>
                     </div>
                   ) : (
                     replies.map((reply) => {
@@ -4189,7 +4189,7 @@ export default function EduTechExOSDashboard() {
                           className={`flex items-start gap-2.5 ${replyIsOwn ? 'flex-row-reverse' : ''}`}
                         >
                           <div
-                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                            className=-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white-
                             style={{ backgroundColor: reply.color }}
                           >
                             {reply.initials}
@@ -4197,7 +4197,7 @@ export default function EduTechExOSDashboard() {
                           <div
                             className={`max-w-[80%] ${replyIsOwn ? 'items-end' : 'items-start'} flex flex-col`}
                           >
-                            <span className="mb-0.5 text-[11px] font-bold text-[#7C859E]">
+                            <span className=-mb-0.5 text-[11px] font-bold text-[#7C859E]->
                               {reply.sender}
                             </span>
                             <div
@@ -4206,7 +4206,7 @@ export default function EduTechExOSDashboard() {
                             >
                               {reply.text}
                             </div>
-                            <span className="mt-0.5 text-[10px] text-[#9BA6D3]">
+                            <span className=-mt-0.5 text-[10px] text-[#9BA6D3]->
                               {formatTime(reply.timestamp)}
                             </span>
                           </div>
@@ -4217,8 +4217,8 @@ export default function EduTechExOSDashboard() {
                 </div>
 
                 {/* Reply input */}
-                <div className="shrink-0 border-t border-[rgba(62,74,137,0.08)] p-3">
-                  <div className="flex items-end gap-2">
+                <div className=-shrink-0 border-t border-[rgba(62,74,137,0.08)] p-3->
+                  <div className=-flex items-end gap-2->
                     <textarea
                       value={threadReplyText}
                       onChange={(e) => setThreadReplyText(e.target.value)}
@@ -4228,15 +4228,15 @@ export default function EduTechExOSDashboard() {
                           sendReply();
                         }
                       }}
-                      placeholder="Reply in thread…"
+                      placeholder=-Reply in thread…-
                       rows={1}
-                      className="flex-1 resize-none rounded-2xl border border-[rgba(62,74,137,0.12)] bg-white px-3 py-2.5 text-sm text-[#1E2636] placeholder-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/20"
+                      className=-flex-1 resize-none rounded-2xl border border-[rgba(62,74,137,0.12)] bg-white px-3 py-2.5 text-sm text-[#1E2636] placeholder-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/20-
                       style={{ maxHeight: '100px', overflowY: 'auto' }}
                     />
                     <button
                       onClick={sendReply}
                       disabled={!threadReplyText.trim()}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#3E4A89] text-white hover:bg-[#2A3568] disabled:bg-slate-200 disabled:cursor-not-allowed transition-all"
+                      className=-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#3E4A89] text-white hover:bg-[#2A3568] disabled:bg-slate-200 disabled:cursor-not-allowed transition-all-
                     >
                       <Send size={15} />
                     </button>
@@ -4255,13 +4255,13 @@ export default function EduTechExOSDashboard() {
 
       {/* ── Feature panels (AnimatePresence enables exit animations) ── */}
       <AnimatePresence>
-        {calendarOpen && <CalendarPanel key="calendar" onClose={() => setCalendarOpen(false)} />}
-        {availabilityOpen && <AdminAvailabilityView key="availability" onClose={() => setAvailabilityOpen(false)} />}
-        {leaveOpen && <LeavePanel key="leave" onClose={() => setLeaveOpen(false)} />}
+        {calendarOpen && <CalendarPanel key=-calendar- onClose={() => setCalendarOpen(false)} />}
+        {availabilityOpen && <AdminAvailabilityView key=-availability- onClose={() => setAvailabilityOpen(false)} />}
+        {leaveOpen && <LeavePanel key=-leave- onClose={() => setLeaveOpen(false)} />}
 
         {integrationsOpen && (
           <IntegrationsPanel
-            key="integrations"
+            key=-integrations-
             onClose={() => setIntegrationsOpen(false)}
             channels={channels}
           />
@@ -4271,37 +4271,37 @@ export default function EduTechExOSDashboard() {
       <AnimatePresence>
         {settingsOpen && (
           <motion.div
-            key="settings"
+            key=-settings-
             {...BACKDROP}
-            className="fixed inset-0 z-[115] flex items-center justify-center bg-[rgba(15,18,34,0.55)] p-4 backdrop-blur-sm"
+            className=-fixed inset-0 z-[115] flex items-center justify-center bg-[rgba(15,18,34,0.55)] p-4 backdrop-blur-sm-
             onClick={() => setSettingsOpen(false)}
           >
             <motion.div
               {...CARD}
-              className="flex w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+              className=-flex w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl-
               style={{ maxHeight: '88vh', border: '1px solid rgba(62,74,137,0.10)' }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* ── Left sidebar ── */}
               <div
-                className="flex w-48 shrink-0 flex-col"
+                className=-flex w-48 shrink-0 flex-col-
                 style={{ background: '#F7F6F2', borderRight: '1px solid rgba(62,74,137,0.08)' }}
               >
-                <div className="flex items-center gap-3 px-4 py-5 border-b border-[rgba(62,74,137,0.07)]">
+                <div className=-flex items-center gap-3 px-4 py-5 border-b border-[rgba(62,74,137,0.07)]->
                   <div
-                    className="h-9 w-9 shrink-0 rounded-xl flex items-center justify-center text-xs font-black text-white shadow-sm"
+                    className=-h-9 w-9 shrink-0 rounded-xl flex items-center justify-center text-xs font-black text-white shadow-sm-
                     style={{ background: '#3E4A89' }}
                   >
                     {settings.avatarEmoji || currentUser?.initials || 'G'}
                   </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-black text-[#1E2636]">
+                  <div className=-min-w-0->
+                    <p className=-truncate text-xs font-black text-[#1E2636]->
                       {settings.displayName || currentUser?.name}
                     </p>
-                    <p className="truncate text-[10px] text-[#9BA6D3]">{currentUser?.role}</p>
+                    <p className=-truncate text-[10px] text-[#9BA6D3]->{currentUser?.role}</p>
                   </div>
                 </div>
-                <nav className="flex-1 p-2 space-y-0.5">
+                <nav className=-flex-1 p-2 space-y-0.5->
                   {(
                     [
                       { id: 'profile', icon: UserCheck, label: 'Profile' },
@@ -4314,7 +4314,7 @@ export default function EduTechExOSDashboard() {
                   ).map(({ id, icon: Icon, label }) => (
                     <button
                       key={id}
-                      type="button"
+                      type=-button-
                       onClick={() => setSettingsTab(id)}
                       className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs font-bold transition-all ${
                         settingsTab === id
@@ -4327,16 +4327,16 @@ export default function EduTechExOSDashboard() {
                     </button>
                   ))}
                 </nav>
-                <div className="p-2 border-t border-[rgba(62,74,137,0.07)]">
+                <div className=-p-2 border-t border-[rgba(62,74,137,0.07)]->
                   <button
-                    type="button"
+                    type=-button-
                     onClick={() => {
                       localStorage.removeItem('edutechex_token');
                       document.cookie = 'auth_session=; path=/; max-age=0';
                       toast.success('Signed out');
                       router.push('/sign-up-login-screen');
                     }}
-                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs font-bold text-red-400 hover:bg-red-50 hover:text-red-600 transition-all"
+                    className=-flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs font-bold text-red-400 hover:bg-red-50 hover:text-red-600 transition-all-
                   >
                     <LogOut size={14} /> Sign out
                   </button>
@@ -4344,10 +4344,10 @@ export default function EduTechExOSDashboard() {
               </div>
 
               {/* ── Right content ── */}
-              <form onSubmit={saveSettings} className="flex min-h-0 flex-1 flex-col bg-white">
-                <div className="flex h-14 shrink-0 items-center justify-between px-6 border-b border-[rgba(62,74,137,0.08)]">
+              <form onSubmit={saveSettings} className=-flex min-h-0 flex-1 flex-col bg-white->
+                <div className=-flex h-14 shrink-0 items-center justify-between px-6 border-b border-[rgba(62,74,137,0.08)]->
                   <div>
-                    <h2 className="text-sm font-black text-[#1E2636]">
+                    <h2 className=-text-sm font-black text-[#1E2636]->
                       {settingsTab === 'profile' && 'Profile'}
                       {settingsTab === 'appearance' && 'Appearance'}
                       {settingsTab === 'notifications' && 'Notifications'}
@@ -4355,7 +4355,7 @@ export default function EduTechExOSDashboard() {
                       {settingsTab === 'security' && 'Security'}
                       {settingsTab === 'privacy' && 'Privacy & Monitoring'}
                     </h2>
-                    <p className="text-[10px] text-[#9BA6D3]">
+                    <p className=-text-[10px] text-[#9BA6D3]->
                       {settingsTab === 'profile' && 'Your identity in this workspace'}
                       {settingsTab === 'appearance' && 'Customize how the app looks and feels'}
                       {settingsTab === 'notifications' && 'Control how and when you get notified'}
@@ -4365,26 +4365,26 @@ export default function EduTechExOSDashboard() {
                     </p>
                   </div>
                   <button
-                    type="button"
+                    type=-button-
                     onClick={() => setSettingsOpen(false)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-[#9BA6D3] hover:bg-[rgba(62,74,137,0.06)] hover:text-[#4A5578] transition-all"
+                    className=-flex h-8 w-8 items-center justify-center rounded-lg text-[#9BA6D3] hover:bg-[rgba(62,74,137,0.06)] hover:text-[#4A5578] transition-all-
                   >
                     <X size={16} />
                   </button>
                 </div>
 
                 {/* Scrollable body */}
-                <div className="flex-1 space-y-3 overflow-y-auto p-5">
+                <div className=-flex-1 space-y-3 overflow-y-auto p-5->
                   {/* ── PROFILE ── */}
                   {settingsTab === 'profile' && (
                     <>
                       {/* User card */}
                       <div
-                        className="flex items-center gap-4 rounded-2xl p-4"
+                        className=-flex items-center gap-4 rounded-2xl p-4-
                         style={{ background: '#F7F6F2', border: '1px solid rgba(62,74,137,0.08)' }}
                       >
                         <div
-                          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-3xl"
+                          className=-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-3xl-
                           style={
                             settings.avatarEmoji
                               ? {
@@ -4397,17 +4397,17 @@ export default function EduTechExOSDashboard() {
                           {settings.avatarEmoji ? (
                             settings.avatarEmoji
                           ) : (
-                            <span className="text-base font-black text-white">
+                            <span className=-text-base font-black text-white->
                               {currentUser?.initials ?? 'G'}
                             </span>
                           )}
                         </div>
                         <div>
-                          <p className="font-black text-[#1E2636]">
+                          <p className=-font-black text-[#1E2636]->
                             {settings.displayName || currentUser?.name}
                           </p>
-                          <p className="text-xs text-[#7C859E] mt-0.5">{currentUser?.email}</p>
-                          <span className="mt-1.5 inline-flex rounded-lg bg-indigo-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#3E4A89]">
+                          <p className=-text-xs text-[#7C859E] mt-0.5->{currentUser?.email}</p>
+                          <span className=-mt-1.5 inline-flex rounded-lg bg-indigo-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#3E4A89]->
                             {currentUser?.role}
                           </span>
                         </div>
@@ -4415,10 +4415,10 @@ export default function EduTechExOSDashboard() {
 
                       {/* Display name */}
                       <div
-                        className="rounded-2xl p-4"
+                        className=-rounded-2xl p-4-
                         style={{ border: '1px solid rgba(62,74,137,0.08)' }}
                       >
-                        <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">
+                        <label className=-text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]->
                           Display name
                         </label>
                         <input
@@ -4427,22 +4427,22 @@ export default function EduTechExOSDashboard() {
                             setSettings((v) => ({ ...v, displayName: e.target.value }))
                           }
                           placeholder={currentUser?.name ?? 'Your name'}
-                          className="mt-2 h-10 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-semibold text-[#1E2636] outline-none focus:border-[#3E4A89] focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0]"
+                          className=-mt-2 h-10 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-semibold text-[#1E2636] outline-none focus:border-[#3E4A89] focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0]-
                         />
-                        <p className="mt-1.5 text-[11px] text-[#9BA6D3]">
+                        <p className=-mt-1.5 text-[11px] text-[#9BA6D3]->
                           Shown in chat messages and the people list.
                         </p>
                       </div>
 
                       {/* Status */}
                       <div
-                        className="rounded-2xl p-4"
+                        className=-rounded-2xl p-4-
                         style={{ border: '1px solid rgba(62,74,137,0.08)' }}
                       >
-                        <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">
+                        <label className=-text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]->
                           Status
                         </label>
-                        <div className="mt-2.5 grid grid-cols-4 gap-2">
+                        <div className=-mt-2.5 grid grid-cols-4 gap-2->
                           {(
                             [
                               { id: 'online', label: 'Online', dot: 'bg-emerald-500' },
@@ -4453,7 +4453,7 @@ export default function EduTechExOSDashboard() {
                           ).map(({ id, label, dot }) => (
                             <button
                               key={id}
-                              type="button"
+                              type=-button-
                               onClick={() => setSettings((v) => ({ ...v, status: id }))}
                               className={`flex flex-col items-center gap-2 rounded-xl border py-3 text-xs font-bold transition-all ${
                                 settings.status === id
@@ -4466,25 +4466,25 @@ export default function EduTechExOSDashboard() {
                             </button>
                           ))}
                         </div>
-                        <p className="mt-2 text-[11px] text-[#9BA6D3]">
+                        <p className=-mt-2 text-[11px] text-[#9BA6D3]->
                           Visible to everyone in the People list.
                         </p>
                       </div>
 
                       {/* Avatar picker */}
                       <div
-                        className="rounded-2xl p-4"
+                        className=-rounded-2xl p-4-
                         style={{ border: '1px solid rgba(62,74,137,0.08)' }}
                       >
-                        <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">
+                        <label className=-text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]->
                           Avatar emoji
                         </label>
-                        <p className="mt-0.5 text-[11px] text-[#9BA6D3] mb-2.5">
+                        <p className=-mt-0.5 text-[11px] text-[#9BA6D3] mb-2.5->
                           Appears next to your name. Leave blank to use initials.
                         </p>
-                        <div className="grid grid-cols-8 gap-1.5">
+                        <div className=-grid grid-cols-8 gap-1.5->
                           <button
-                            type="button"
+                            type=-button-
                             onClick={() => setSettings((v) => ({ ...v, avatarEmoji: '' }))}
                             className={`flex h-9 w-9 items-center justify-center rounded-xl border text-[10px] font-black transition-all ${
                               !settings.avatarEmoji
@@ -4497,7 +4497,7 @@ export default function EduTechExOSDashboard() {
                           {AVATAR_OPTIONS.map((emoji) => (
                             <button
                               key={emoji}
-                              type="button"
+                              type=-button-
                               onClick={() => setSettings((v) => ({ ...v, avatarEmoji: emoji }))}
                               className={`flex h-9 w-9 items-center justify-center rounded-xl border text-lg transition-all ${
                                 settings.avatarEmoji === emoji
@@ -4515,7 +4515,7 @@ export default function EduTechExOSDashboard() {
 
                   {/* ── APPEARANCE ── */}
                   {settingsTab === 'appearance' && (
-                    <div className="space-y-2">
+                    <div className=-space-y-2->
                       {[
                         {
                           icon: <Sun size={15} />,
@@ -4526,7 +4526,7 @@ export default function EduTechExOSDashboard() {
                             : 'Currently off — switch to dark',
                           control: (
                             <button
-                              type="button"
+                              type=-button-
                               onClick={() => {
                                 toggleTheme();
                                 storeDarkModeToggle();
@@ -4548,7 +4548,7 @@ export default function EduTechExOSDashboard() {
                             : 'Normal spacing between messages',
                           control: (
                             <button
-                              type="button"
+                              type=-button-
                               onClick={() =>
                                 setSettings((v) => ({ ...v, compactChat: !v.compactChat }))
                               }
@@ -4569,7 +4569,7 @@ export default function EduTechExOSDashboard() {
                             : 'Use the send button to post',
                           control: (
                             <button
-                              type="button"
+                              type=-button-
                               onClick={() =>
                                 setSettings((v) => ({ ...v, enterToSend: !v.enterToSend }))
                               }
@@ -4584,39 +4584,39 @@ export default function EduTechExOSDashboard() {
                       ].map((row) => (
                         <div
                           key={row.title}
-                          className="flex items-center justify-between rounded-xl px-4 py-3.5"
+                          className=-flex items-center justify-between rounded-xl px-4 py-3.5-
                           style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className=-flex items-center gap-3->
                             <span
                               className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${row.iconBg}`}
                             >
                               {row.icon}
                             </span>
                             <div>
-                              <p className="text-xs font-bold text-[#1E2636]">{row.title}</p>
-                              <p className="text-[11px] text-[#9BA6D3]">{row.sub}</p>
+                              <p className=-text-xs font-bold text-[#1E2636]->{row.title}</p>
+                              <p className=-text-[11px] text-[#9BA6D3]->{row.sub}</p>
                             </div>
                           </div>
                           {row.control}
                         </div>
                       ))}
                       <div
-                        className="rounded-xl px-4 py-3.5"
+                        className=-rounded-xl px-4 py-3.5-
                         style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}
                       >
-                        <div className="flex items-center gap-3 mb-3">
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-500">
+                        <div className=-flex items-center gap-3 mb-3->
+                          <span className=-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-500->
                             <Type size={15} />
                           </span>
                           <div>
-                            <p className="text-xs font-bold text-[#1E2636]">Message font size</p>
-                            <p className="text-[11px] text-[#9BA6D3]">
+                            <p className=-text-xs font-bold text-[#1E2636]->Message font size</p>
+                            <p className=-text-[11px] text-[#9BA6D3]->
                               Size of text in chat bubbles
                             </p>
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className=-flex gap-2->
                           {(
                             [
                               { id: 'normal', label: 'Normal', sub: '14px' },
@@ -4625,7 +4625,7 @@ export default function EduTechExOSDashboard() {
                           ).map(({ id, label, sub }) => (
                             <button
                               key={id}
-                              type="button"
+                              type=-button-
                               onClick={() => setSettings((v) => ({ ...v, fontSize: id }))}
                               className={`flex-1 rounded-xl border py-2.5 text-xs font-bold transition-all ${
                                 settings.fontSize === id
@@ -4633,7 +4633,7 @@ export default function EduTechExOSDashboard() {
                                   : 'border-[rgba(62,74,137,0.10)] bg-white text-[#7C859E] hover:border-[rgba(62,74,137,0.20)]'
                               }`}
                             >
-                              {label} <span className="opacity-60 font-medium">({sub})</span>
+                              {label} <span className=-opacity-60 font-medium->({sub})</span>
                             </button>
                           ))}
                         </div>
@@ -4643,24 +4643,24 @@ export default function EduTechExOSDashboard() {
 
                   {/* ── NOTIFICATIONS ── */}
                   {settingsTab === 'notifications' && (
-                    <div className="space-y-2">
+                    <div className=-space-y-2->
                       <div
-                        className="flex items-center justify-between rounded-xl px-4 py-3.5"
+                        className=-flex items-center justify-between rounded-xl px-4 py-3.5-
                         style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500">
+                        <div className=-flex items-center gap-3->
+                          <span className=-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500->
                             <Mail size={15} />
                           </span>
                           <div>
-                            <p className="text-xs font-bold text-[#1E2636]">Email on @mention</p>
-                            <p className="text-[11px] text-[#9BA6D3]">
+                            <p className=-text-xs font-bold text-[#1E2636]->Email on @mention</p>
+                            <p className=-text-[11px] text-[#9BA6D3]->
                               Receive an email when someone mentions you
                             </p>
                           </div>
                         </div>
                         <button
-                          type="button"
+                          type=-button-
                           onClick={() =>
                             setSettings((v) => ({
                               ...v,
@@ -4675,25 +4675,25 @@ export default function EduTechExOSDashboard() {
                         </button>
                       </div>
                       <div
-                        className="rounded-xl px-4 py-3.5"
+                        className=-rounded-xl px-4 py-3.5-
                         style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-500">
+                        <div className=-flex items-center justify-between->
+                          <div className=-flex items-center gap-3->
+                            <span className=-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-500->
                               <Monitor size={15} />
                             </span>
                             <div>
-                              <p className="text-xs font-bold text-[#1E2636]">
+                              <p className=-text-xs font-bold text-[#1E2636]->
                                 Desktop notifications
                               </p>
-                              <p className="text-[11px] text-[#9BA6D3]">
+                              <p className=-text-[11px] text-[#9BA6D3]->
                                 Browser pop-up when new messages arrive
                               </p>
                             </div>
                           </div>
                           <button
-                            type="button"
+                            type=-button-
                             onClick={() => {
                               const next = !settings.desktopNotifications;
                               setSettings((v) => ({ ...v, desktopNotifications: next }));
@@ -4714,37 +4714,37 @@ export default function EduTechExOSDashboard() {
                         {settings.desktopNotifications &&
                           typeof Notification !== 'undefined' &&
                           Notification.permission === 'denied' && (
-                            <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-500">
+                            <p className=-mt-3 rounded-lg bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-500->
                               Notifications blocked in your browser. Go to Site Settings to allow
                               them.
                             </p>
                           )}
                       </div>
                       <div
-                        className="flex items-center justify-between rounded-xl px-4 py-3.5"
+                        className=-flex items-center justify-between rounded-xl px-4 py-3.5-
                         style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-500">
+                        <div className=-flex items-center gap-3->
+                          <span className=-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-500->
                             <Volume2 size={15} />
                           </span>
                           <div>
-                            <p className="text-xs font-bold text-[#1E2636]">Sound alerts</p>
-                            <p className="text-[11px] text-[#9BA6D3]">
+                            <p className=-text-xs font-bold text-[#1E2636]->Sound alerts</p>
+                            <p className=-text-[11px] text-[#9BA6D3]->
                               Play a chime when new messages arrive
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className=-flex items-center gap-2->
                           <button
-                            type="button"
+                            type=-button-
                             onClick={playNotificationSound}
-                            className="rounded-lg border border-[rgba(62,74,137,0.10)] bg-white px-2.5 py-1 text-[10px] font-bold text-[#7C859E] hover:border-[rgba(62,74,137,0.25)] hover:text-[#3E4A89] transition-all"
+                            className=-rounded-lg border border-[rgba(62,74,137,0.10)] bg-white px-2.5 py-1 text-[10px] font-bold text-[#7C859E] hover:border-[rgba(62,74,137,0.25)] hover:text-[#3E4A89] transition-all-
                           >
                             Preview
                           </button>
                           <button
-                            type="button"
+                            type=-button-
                             onClick={() =>
                               setSettings((v) => ({
                                 ...v,
@@ -4766,10 +4766,10 @@ export default function EduTechExOSDashboard() {
                   {settingsTab === 'meeting' && (
                     <>
                       <div
-                        className="rounded-2xl p-4 space-y-2"
+                        className=-rounded-2xl p-4 space-y-2-
                         style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}
                       >
-                        <p className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3] mb-3">
+                        <p className=-text-[9px] font-black uppercase tracking-widest text-[#9BA6D3] mb-3->
                           Recurring meet schedule
                         </p>
                         {[
@@ -4800,30 +4800,30 @@ export default function EduTechExOSDashboard() {
                         ].map(({ days, label, link, dot }) => (
                           <div
                             key={label}
-                            className="flex items-center justify-between rounded-xl px-3 py-2.5"
+                            className=-flex items-center justify-between rounded-xl px-3 py-2.5-
                             style={{
                               border: '1px solid rgba(62,74,137,0.07)',
                               background: '#F7F6F2',
                             }}
                           >
-                            <div className="flex items-center gap-2.5">
+                            <div className=-flex items-center gap-2.5->
                               <span className={`h-2 w-2 rounded-full shrink-0 ${dot}`} />
                               <div>
-                                <p className="text-xs font-bold text-[#1E2636]">{label}</p>
-                                <p className="text-[10px] text-[#9BA6D3]">{days}</p>
+                                <p className=-text-xs font-bold text-[#1E2636]->{label}</p>
+                                <p className=-text-[10px] text-[#9BA6D3]->{days}</p>
                               </div>
                             </div>
                             {link ? (
                               <a
                                 href={link}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="rounded-lg bg-indigo-50 px-2.5 py-1 text-[10px] font-bold text-[#3E4A89] hover:bg-indigo-100 transition-colors"
+                                target=-_blank-
+                                rel=-noreferrer-
+                                className=-rounded-lg bg-indigo-50 px-2.5 py-1 text-[10px] font-bold text-[#3E4A89] hover:bg-indigo-100 transition-colors-
                               >
                                 Join
                               </a>
                             ) : (
-                              <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-[#9BA6D3]">
+                              <span className=-rounded-lg bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-[#9BA6D3]->
                                 Off
                               </span>
                             )}
@@ -4831,19 +4831,19 @@ export default function EduTechExOSDashboard() {
                         ))}
                       </div>
                       <div
-                        className="rounded-2xl p-4"
+                        className=-rounded-2xl p-4-
                         style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}
                       >
-                        <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">
+                        <label className=-text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]->
                           Override main meet link
                         </label>
                         <input
                           value={settings.meetLink}
                           onChange={(e) => setSettings((v) => ({ ...v, meetLink: e.target.value }))}
                           placeholder={DEFAULT_COMPANY_MEET_LINK}
-                          className="mt-2 h-10 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-semibold text-[#1E2636] outline-none focus:border-[#3E4A89] focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0]"
+                          className=-mt-2 h-10 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-semibold text-[#1E2636] outline-none focus:border-[#3E4A89] focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0]-
                         />
-                        <p className="mt-1.5 text-[11px] text-[#9BA6D3]">
+                        <p className=-mt-1.5 text-[11px] text-[#9BA6D3]->
                           Leave blank to use the built-in link.
                         </p>
                       </div>
@@ -4854,49 +4854,49 @@ export default function EduTechExOSDashboard() {
                   {settingsTab === 'security' && (
                     <>
                       <div
-                        className="flex items-start gap-3 rounded-2xl p-4"
+                        className=-flex items-start gap-3 rounded-2xl p-4-
                         style={{ background: '#F0F4FF', border: '1px solid rgba(62,74,137,0.12)' }}
                       >
-                        <ShieldCheck size={16} className="mt-0.5 shrink-0 text-[#3E4A89]" />
+                        <ShieldCheck size={16} className=-mt-0.5 shrink-0 text-[#3E4A89]- />
                         <div>
-                          <p className="text-xs font-black text-[#3E4A89]">Change your password</p>
-                          <p className="mt-0.5 text-[11px] text-[#7C859E] leading-relaxed">
+                          <p className=-text-xs font-black text-[#3E4A89]->Change your password</p>
+                          <p className=-mt-0.5 text-[11px] text-[#7C859E] leading-relaxed->
                             Enter your current password to set a new one. Minimum 8 characters.
                           </p>
                         </div>
                       </div>
                       <div
-                        className="rounded-2xl p-4 space-y-4"
+                        className=-rounded-2xl p-4 space-y-4-
                         style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}
                       >
                         <div>
-                          <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">
+                          <label className=-text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]->
                             Current password
                           </label>
                           <input
-                            type="password"
+                            type=-password-
                             value={pwCurrent}
                             onChange={(e) => setPwCurrent(e.target.value)}
-                            placeholder="Enter your current password"
-                            autoComplete="current-password"
-                            className="mt-2 h-10 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-semibold outline-none focus:border-[#3E4A89] focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0]"
+                            placeholder=-Enter your current password-
+                            autoComplete=-current-password-
+                            className=-mt-2 h-10 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-semibold outline-none focus:border-[#3E4A89] focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0]-
                           />
                         </div>
                         <div>
-                          <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">
+                          <label className=-text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]->
                             New password
                           </label>
                           <input
-                            type="password"
+                            type=-password-
                             value={pwNew}
                             onChange={(e) => setPwNew(e.target.value)}
-                            placeholder="Minimum 8 characters"
-                            autoComplete="new-password"
-                            className="mt-2 h-10 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-semibold outline-none focus:border-[#3E4A89] focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0]"
+                            placeholder=-Minimum 8 characters-
+                            autoComplete=-new-password-
+                            className=-mt-2 h-10 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-semibold outline-none focus:border-[#3E4A89] focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0]-
                           />
                           {pwNew.length > 0 && (
-                            <div className="mt-2">
-                              <div className="flex gap-1 mb-1">
+                            <div className=-mt-2->
+                              <div className=-flex gap-1 mb-1->
                                 {[8, 10, 12].map((t, i) => (
                                   <div
                                     key={i}
@@ -4912,7 +4912,7 @@ export default function EduTechExOSDashboard() {
                                   />
                                 ))}
                               </div>
-                              <p className="text-[10px] text-[#9BA6D3]">
+                              <p className=-text-[10px] text-[#9BA6D3]->
                                 {pwNew.length < 8
                                   ? 'Too short'
                                   : pwNew.length < 10
@@ -4925,15 +4925,15 @@ export default function EduTechExOSDashboard() {
                           )}
                         </div>
                         <div>
-                          <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">
+                          <label className=-text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]->
                             Confirm new password
                           </label>
                           <input
-                            type="password"
+                            type=-password-
                             value={pwConfirm}
                             onChange={(e) => setPwConfirm(e.target.value)}
-                            placeholder="Repeat new password"
-                            autoComplete="new-password"
+                            placeholder=-Repeat new password-
+                            autoComplete=-new-password-
                             className={`mt-2 h-10 w-full rounded-xl border px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0] ${
                               pwConfirm && pwNew !== pwConfirm
                                 ? 'border-red-300 focus:border-red-400'
@@ -4941,19 +4941,19 @@ export default function EduTechExOSDashboard() {
                             }`}
                           />
                           {pwConfirm && pwNew !== pwConfirm && (
-                            <p className="mt-1.5 text-[11px] font-semibold text-red-500">
+                            <p className=-mt-1.5 text-[11px] font-semibold text-red-500->
                               Passwords do not match.
                             </p>
                           )}
                         </div>
                         <button
-                          type="button"
+                          type=-button-
                           onClick={handleChangePassword}
                           disabled={pwLoading || !pwCurrent || !pwNew || pwNew !== pwConfirm}
-                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#3E4A89] py-2.5 text-sm font-black text-white hover:bg-[#2A3568] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className=-flex w-full items-center justify-center gap-2 rounded-xl bg-[#3E4A89] py-2.5 text-sm font-black text-white hover:bg-[#2A3568] disabled:opacity-50 disabled:cursor-not-allowed transition-colors-
                         >
                           {pwLoading ? (
-                            <Loader2 size={15} className="animate-spin" />
+                            <Loader2 size={15} className=-animate-spin- />
                           ) : (
                             <ShieldCheck size={15} />
                           )}
@@ -4967,15 +4967,15 @@ export default function EduTechExOSDashboard() {
                   {settingsTab === 'privacy' && (
                     <>
                       <div
-                        className="flex items-start gap-3 rounded-2xl p-4"
+                        className=-flex items-start gap-3 rounded-2xl p-4-
                         style={{ background: '#F0F4FF', border: '1px solid rgba(62,74,137,0.12)' }}
                       >
-                        <Eye size={16} className="mt-0.5 shrink-0 text-[#3E4A89]" />
+                        <Eye size={16} className=-mt-0.5 shrink-0 text-[#3E4A89]- />
                         <div>
-                          <p className="text-xs font-black text-[#3E4A89]">
+                          <p className=-text-xs font-black text-[#3E4A89]->
                             Activity monitoring is active
                           </p>
-                          <p className="mt-0.5 text-[11px] text-[#7C859E] leading-relaxed">
+                          <p className=-mt-0.5 text-[11px] text-[#7C859E] leading-relaxed->
                             As a business platform, EduTechExOS tracks your in-app activity so
                             admins can manage workload and team engagement. Only activity{' '}
                             <strong>inside this app</strong> is tracked — nothing on your device,
@@ -4985,10 +4985,10 @@ export default function EduTechExOSDashboard() {
                       </div>
 
                       <div
-                        className="rounded-2xl p-4 space-y-3"
+                        className=-rounded-2xl p-4 space-y-3-
                         style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}
                       >
-                        <p className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">
+                        <p className=-text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]->
                           What is collected
                         </p>
                         {[
@@ -5015,33 +5015,33 @@ export default function EduTechExOSDashboard() {
                         ].map(({ icon: Icon, label, desc }) => (
                           <div
                             key={label}
-                            className="flex items-start gap-3 py-2 border-b border-[rgba(62,74,137,0.06)] last:border-0"
+                            className=-flex items-start gap-3 py-2 border-b border-[rgba(62,74,137,0.06)] last:border-0-
                           >
                             <div
-                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                              className=-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg-
                               style={{ background: 'rgba(62,74,137,0.08)' }}
                             >
-                              <Icon size={13} className="text-[#3E4A89]" />
+                              <Icon size={13} className=-text-[#3E4A89]- />
                             </div>
                             <div>
-                              <p className="text-xs font-black text-[#1E2636]">{label}</p>
-                              <p className="text-[11px] text-[#7C859E]">{desc}</p>
+                              <p className=-text-xs font-black text-[#1E2636]->{label}</p>
+                              <p className=-text-[11px] text-[#7C859E]->{desc}</p>
                             </div>
                           </div>
                         ))}
                       </div>
 
                       <div
-                        className="rounded-2xl p-4"
+                        className=-rounded-2xl p-4-
                         style={{
                           border: '1px solid rgba(16,185,129,0.18)',
                           background: 'rgba(16,185,129,0.04)',
                         }}
                       >
-                        <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600 mb-2">
+                        <p className=-text-[9px] font-black uppercase tracking-widest text-emerald-600 mb-2->
                           What is NOT collected
                         </p>
-                        <ul className="space-y-1.5">
+                        <ul className=-space-y-1.5->
                           {[
                             'Message content or file contents',
                             'Screen recordings or screenshots',
@@ -5051,9 +5051,9 @@ export default function EduTechExOSDashboard() {
                           ].map((item) => (
                             <li
                               key={item}
-                              className="flex items-center gap-2 text-[11px] text-[#4A7C6F]"
+                              className=-flex items-center gap-2 text-[11px] text-[#4A7C6F]-
                             >
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />
+                              <span className=-h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0- />
                               {item}
                             </li>
                           ))}
@@ -5061,14 +5061,14 @@ export default function EduTechExOSDashboard() {
                       </div>
 
                       <div
-                        className="flex items-start gap-3 rounded-2xl p-4"
+                        className=-flex items-start gap-3 rounded-2xl p-4-
                         style={{
                           background: 'rgba(241,245,249,0.7)',
                           border: '1px solid rgba(62,74,137,0.07)',
                         }}
                       >
-                        <ShieldCheck size={14} className="mt-0.5 shrink-0 text-[#9BA6D3]" />
-                        <p className="text-[11px] text-[#7C859E] leading-relaxed">
+                        <ShieldCheck size={14} className=-mt-0.5 shrink-0 text-[#9BA6D3]- />
+                        <p className=-text-[11px] text-[#7C859E] leading-relaxed->
                           Data is stored securely in the company database and visible only to
                           admins. It is used solely for team management — not shared with third
                           parties.
@@ -5080,25 +5080,25 @@ export default function EduTechExOSDashboard() {
 
                 {/* Footer */}
                 <div
-                  className="flex items-center justify-between px-5 py-3.5 border-t border-[rgba(62,74,137,0.08)]"
+                  className=-flex items-center justify-between px-5 py-3.5 border-t border-[rgba(62,74,137,0.08)]-
                   style={{ background: '#F7F6F2' }}
                 >
-                  <p className="text-[11px] text-[#9BA6D3]">
+                  <p className=-text-[11px] text-[#9BA6D3]->
                     {settingsTab === 'security'
                       ? 'Use the button above to update password.'
                       : 'Changes save automatically.'}
                   </p>
-                  <div className="flex gap-2">
+                  <div className=-flex gap-2->
                     <button
-                      type="button"
+                      type=-button-
                       onClick={() => setSettingsOpen(false)}
-                      className="h-8 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white px-4 text-xs font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.05)] transition-all"
+                      className=-h-8 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white px-4 text-xs font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.05)] transition-all-
                     >
                       Cancel
                     </button>
                     <button
-                      type="submit"
-                      className="h-8 rounded-xl bg-[#3E4A89] px-5 text-xs font-bold text-white hover:bg-[#2A3568] transition-all"
+                      type=-submit-
+                      className=-h-8 rounded-xl bg-[#3E4A89] px-5 text-xs font-bold text-white hover:bg-[#2A3568] transition-all-
                     >
                       Save
                     </button>
@@ -5113,56 +5113,56 @@ export default function EduTechExOSDashboard() {
       <AnimatePresence>
         {scheduleMeetOpen && (
           <motion.div
-            key="schedule-meet"
+            key=-schedule-meet-
             {...BACKDROP}
-            className="fixed inset-0 z-[115] flex items-center justify-center bg-[rgba(15,18,32,0.60)] p-4 backdrop-blur-md"
+            className=-fixed inset-0 z-[115] flex items-center justify-center bg-[rgba(15,18,32,0.60)] p-4 backdrop-blur-md-
             onClick={() => setScheduleMeetOpen(false)}
           >
             <motion.form
               {...CARD}
               onSubmit={scheduleMeet}
-              className="w-full max-w-2xl flex flex-col overflow-hidden rounded-3xl shadow-[0_32px_80px_rgba(25,30,47,0.45)]"
+              className=-w-full max-w-2xl flex flex-col overflow-hidden rounded-3xl shadow-[0_32px_80px_rgba(25,30,47,0.45)]-
               style={{ maxHeight: '92vh', border: '1px solid rgba(155,166,211,0.18)' }}
               onClick={(event) => event.stopPropagation()}
             >
               {/* ── Header ─────────────────────────────────────────────── */}
               <div
-                className="relative flex items-center justify-between gap-4 px-6 py-5 overflow-hidden flex-shrink-0"
+                className=-relative flex items-center justify-between gap-4 px-6 py-5 overflow-hidden flex-shrink-0-
                 style={{
                   background: 'linear-gradient(135deg, #191E2F 0%, #1E2538 60%, #252D4A 100%)',
                 }}
               >
                 <div
-                  className="absolute inset-0 pointer-events-none"
+                  className=-absolute inset-0 pointer-events-none-
                   style={{
                     background:
                       'radial-gradient(ellipse 60% 80% at 10% 50%, rgba(62,74,137,0.22) 0%, transparent 70%)',
                   }}
                 />
                 <div
-                  className="absolute top-0 left-0 right-0 h-[2px]"
+                  className=-absolute top-0 left-0 right-0 h-[2px]-
                   style={{
                     background:
                       'linear-gradient(90deg, transparent, #3E4A89, #9BA6D3, #3E4A89, transparent)',
                   }}
                 />
 
-                <div className="flex items-center gap-4 relative z-10">
+                <div className=-flex items-center gap-4 relative z-10->
                   <div
-                    className="flex h-11 w-11 items-center justify-center rounded-2xl flex-shrink-0"
+                    className=-flex h-11 w-11 items-center justify-center rounded-2xl flex-shrink-0-
                     style={{
                       background: 'linear-gradient(135deg, #3E4A89, #2A3568)',
                       boxShadow: '0 4px 16px rgba(62,74,137,0.40)',
                     }}
                   >
-                    <Video size={20} className="text-white" />
+                    <Video size={20} className=-text-white- />
                   </div>
                   <div>
-                    <h2 className="text-[18px] font-black tracking-tight text-white leading-tight">
+                    <h2 className=-text-[18px] font-black tracking-tight text-white leading-tight->
                       Schedule Meeting
                     </h2>
                     <p
-                      className="text-[13px] font-medium mt-0.5"
+                      className=-text-[13px] font-medium mt-0.5-
                       style={{ color: 'rgba(155,166,211,0.75)' }}
                     >
                       #{channel?.name} &middot; Invitees get email + in-app alerts
@@ -5171,9 +5171,9 @@ export default function EduTechExOSDashboard() {
                 </div>
 
                 <button
-                  type="button"
+                  type=-button-
                   onClick={() => setScheduleMeetOpen(false)}
-                  className="relative z-10 flex h-9 w-9 items-center justify-center rounded-xl transition-all hover:scale-110"
+                  className=-relative z-10 flex h-9 w-9 items-center justify-center rounded-xl transition-all hover:scale-110-
                   style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(196,202,224,0.80)' }}
                   onMouseEnter={(e) => {
                     (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.15)';
@@ -5183,7 +5183,7 @@ export default function EduTechExOSDashboard() {
                     (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)';
                     (e.currentTarget as HTMLElement).style.color = 'rgba(196,202,224,0.80)';
                   }}
-                  title="Close"
+                  title=-Close-
                 >
                   <X size={17} />
                 </button>
@@ -5191,30 +5191,30 @@ export default function EduTechExOSDashboard() {
 
               {/* ── Body (two-column) ───────────────────────────────────── */}
               <div
-                className="flex flex-col sm:flex-row overflow-hidden flex-1 min-h-0"
+                className=-flex flex-col sm:flex-row overflow-hidden flex-1 min-h-0-
                 style={{ background: '#FAF8F5' }}
               >
                 {/* Left � Details */}
                 <div
-                  className="flex flex-col gap-5 p-6 sm:w-[52%] sm:border-r overflow-y-auto"
+                  className=-flex flex-col gap-5 p-6 sm:w-[52%] sm:border-r overflow-y-auto-
                   style={{ borderColor: 'rgba(62,74,137,0.10)' }}
                 >
                   {/* Title */}
                   <div>
                     <p
-                      className="text-[10px] font-black uppercase tracking-[0.14em] mb-2"
+                      className=-text-[10px] font-black uppercase tracking-[0.14em] mb-2-
                       style={{ color: '#7C859E' }}
                     >
                       Meeting Title
                     </p>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <div className=-relative->
+                      <span className=-absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none->
                         <FileText size={15} style={{ color: '#9BA6D3' }} />
                       </span>
                       <input
                         value={meetTitle}
                         onChange={(e) => setMeetTitle(e.target.value)}
-                        className="w-full h-11 rounded-xl pl-9 pr-3 text-sm font-bold outline-none transition-all"
+                        className=-w-full h-11 rounded-xl pl-9 pr-3 text-sm font-bold outline-none transition-all-
                         style={{
                           background: '#FFFFFF',
                           border: '1.5px solid rgba(62,74,137,0.14)',
@@ -5228,30 +5228,30 @@ export default function EduTechExOSDashboard() {
                           e.currentTarget.style.borderColor = 'rgba(62,74,137,0.14)';
                           e.currentTarget.style.boxShadow = 'none';
                         }}
-                        placeholder="e.g. Product Review Sync"
+                        placeholder=-e.g. Product Review Sync-
                         autoFocus
                       />
                     </div>
                   </div>
 
                   {/* Date + Time */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className=-grid grid-cols-2 gap-3->
                     <div>
                       <p
-                        className="text-[10px] font-black uppercase tracking-[0.14em] mb-2"
+                        className=-text-[10px] font-black uppercase tracking-[0.14em] mb-2-
                         style={{ color: '#7C859E' }}
                       >
                         Date
                       </p>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <div className=-relative->
+                        <span className=-absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none->
                           <CalendarDays size={14} style={{ color: '#9BA6D3' }} />
                         </span>
                         <input
-                          type="date"
+                          type=-date-
                           value={meetDate}
                           onChange={(e) => setMeetDate(e.target.value)}
-                          className="w-full h-11 rounded-xl pl-9 pr-3 text-sm font-bold outline-none transition-all"
+                          className=-w-full h-11 rounded-xl pl-9 pr-3 text-sm font-bold outline-none transition-all-
                           style={{
                             background: '#FFFFFF',
                             border: '1.5px solid rgba(62,74,137,0.14)',
@@ -5270,35 +5270,35 @@ export default function EduTechExOSDashboard() {
                     </div>
                     <div>
                       <p
-                        className="text-[10px] font-black uppercase tracking-[0.14em] mb-2"
+                        className=-text-[10px] font-black uppercase tracking-[0.14em] mb-2-
                         style={{ color: '#7C859E' }}
                       >
                         Time
                       </p>
-                      <div className="relative">
+                      <div className=-relative->
                         <span
-                          className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                          className=-absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none-
                           style={{ color: '#9BA6D3' }}
                         >
                           <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                            width=-14-
+                            height=-14-
+                            viewBox=-0 0 24 24-
+                            fill=-none-
+                            stroke=-currentColor-
+                            strokeWidth=-2.2-
+                            strokeLinecap=-round-
+                            strokeLinejoin=-round-
                           >
-                            <circle cx="12" cy="12" r="10" />
-                            <polyline points="12 6 12 12 16 14" />
+                            <circle cx=-12- cy=-12- r=-10- />
+                            <polyline points=-12 6 12 12 16 14- />
                           </svg>
                         </span>
                         <input
-                          type="time"
+                          type=-time-
                           value={meetTime}
                           onChange={(e) => setMeetTime(e.target.value)}
-                          className="w-full h-11 rounded-xl pl-9 pr-3 text-sm font-bold outline-none transition-all"
+                          className=-w-full h-11 rounded-xl pl-9 pr-3 text-sm font-bold outline-none transition-all-
                           style={{
                             background: '#FFFFFF',
                             border: '1.5px solid rgba(62,74,137,0.14)',
@@ -5320,7 +5320,7 @@ export default function EduTechExOSDashboard() {
                   {/* Live date preview */}
                   {meetDate && (
                     <div
-                      className="rounded-2xl p-4 flex items-center gap-4"
+                      className=-rounded-2xl p-4 flex items-center gap-4-
                       style={{
                         background:
                           'linear-gradient(135deg, rgba(62,74,137,0.07), rgba(62,74,137,0.03))',
@@ -5328,24 +5328,24 @@ export default function EduTechExOSDashboard() {
                       }}
                     >
                       <div
-                        className="flex flex-col items-center justify-center w-14 h-14 rounded-xl flex-shrink-0"
+                        className=-flex flex-col items-center justify-center w-14 h-14 rounded-xl flex-shrink-0-
                         style={{
                           background: 'linear-gradient(135deg, #3E4A89, #2A3568)',
                           boxShadow: '0 4px 12px rgba(62,74,137,0.30)',
                         }}
                       >
                         <span
-                          className="text-[9px] font-black uppercase tracking-widest leading-none"
+                          className=-text-[9px] font-black uppercase tracking-widest leading-none-
                           style={{ color: '#9BA6D3' }}
                         >
                           {new Date(meetDate).toLocaleDateString('en', { month: 'short' })}
                         </span>
-                        <span className="text-[22px] font-black text-white leading-none mt-0.5">
+                        <span className=-text-[22px] font-black text-white leading-none mt-0.5->
                           {new Date(meetDate).getDate()}
                         </span>
                       </div>
                       <div>
-                        <p className="text-[13px] font-black" style={{ color: '#1E2636' }}>
+                        <p className=-text-[13px] font-black- style={{ color: '#1E2636' }}>
                           {new Date(meetDate).toLocaleDateString('en', {
                             weekday: 'long',
                             month: 'long',
@@ -5354,7 +5354,7 @@ export default function EduTechExOSDashboard() {
                         </p>
                         {meetTime && (
                           <p
-                            className="text-[13px] font-semibold mt-0.5"
+                            className=-text-[13px] font-semibold mt-0.5-
                             style={{ color: '#4A5578' }}
                           >
                             {meetTime} &middot; {meetTitle || 'Untitled meeting'}
@@ -5366,7 +5366,7 @@ export default function EduTechExOSDashboard() {
 
                   {/* Email toggle */}
                   <div
-                    className="flex items-start gap-3 rounded-2xl p-4 cursor-pointer select-none transition-all"
+                    className=-flex items-start gap-3 rounded-2xl p-4 cursor-pointer select-none transition-all-
                     style={{
                       background: sendEmailInvite ? 'rgba(62,74,137,0.08)' : '#FFFFFF',
                       border: sendEmailInvite
@@ -5375,33 +5375,33 @@ export default function EduTechExOSDashboard() {
                     }}
                     onClick={() => setSendEmailInvite(!sendEmailInvite)}
                   >
-                    <div className="flex-shrink-0 mt-0.5">
+                    <div className=-flex-shrink-0 mt-0.5->
                       <div
-                        className="w-9 h-5 rounded-full flex items-center px-0.5 transition-all duration-200"
+                        className=-w-9 h-5 rounded-full flex items-center px-0.5 transition-all duration-200-
                         style={{ background: sendEmailInvite ? '#3E4A89' : 'rgba(62,74,137,0.15)' }}
                       >
                         <div
-                          className="w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200"
+                          className=-w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200-
                           style={{
                             transform: sendEmailInvite ? 'translateX(16px)' : 'translateX(0)',
                           }}
                         />
                       </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                    <div className=-min-w-0 flex-1->
+                      <div className=-flex items-center gap-2->
                         <Mail
                           size={13}
                           style={{ color: sendEmailInvite ? '#3E4A89' : '#9BA6D3' }}
                         />
                         <span
-                          className="text-sm font-black"
+                          className=-text-sm font-black-
                           style={{ color: sendEmailInvite ? '#3E4A89' : '#7C859E' }}
                         >
                           Send email invites
                         </span>
                       </div>
-                      <p className="text-[11px] mt-1" style={{ color: '#7C859E' }}>
+                      <p className=-text-[11px] mt-1- style={{ color: '#7C859E' }}>
                         {sendEmailInvite
                           ? `Will email all ${members.filter((m) => m.email && m.email.toLowerCase() !== currentUserEmail).length} team members`
                           : 'In-app notification only'}
@@ -5412,19 +5412,19 @@ export default function EduTechExOSDashboard() {
 
                 {/* Right � People selector */}
                 <div
-                  className="flex flex-col sm:w-[48%] overflow-hidden"
+                  className=-flex flex-col sm:w-[48%] overflow-hidden-
                   style={{ background: '#F2F0EC' }}
                 >
-                  <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
+                  <div className=-flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0->
                     <span
-                      className="text-[10px] font-black uppercase tracking-[0.14em]"
+                      className=-text-[10px] font-black uppercase tracking-[0.14em]-
                       style={{ color: '#7C859E' }}
                     >
                       @Mention in Chat &middot; {meetInviteeIds.length} selected
                     </span>
                     {availableInvitees.length > 0 && (
                       <button
-                        type="button"
+                        type=-button-
                         onClick={() =>
                           setMeetInviteeIds(
                             meetInviteeIds.length === availableInvitees.length
@@ -5432,7 +5432,7 @@ export default function EduTechExOSDashboard() {
                               : availableInvitees.map((m) => m.id)
                           )
                         }
-                        className="text-[10px] font-black uppercase tracking-[0.10em] transition-colors hover:underline"
+                        className=-text-[10px] font-black uppercase tracking-[0.10em] transition-colors hover:underline-
                         style={{ color: '#3E4A89' }}
                       >
                         {meetInviteeIds.length === availableInvitees.length
@@ -5443,7 +5443,7 @@ export default function EduTechExOSDashboard() {
                   </div>
 
                   <div
-                    className="flex-1 overflow-y-auto px-4 pb-4 space-y-2"
+                    className=-flex-1 overflow-y-auto px-4 pb-4 space-y-2-
                     style={{
                       scrollbarWidth: 'thin',
                       scrollbarColor: 'rgba(62,74,137,0.18) transparent',
@@ -5455,9 +5455,9 @@ export default function EduTechExOSDashboard() {
                         return (
                           <button
                             key={`invite-${member.id}`}
-                            type="button"
+                            type=-button-
                             onClick={() => toggleInvitee(member.id)}
-                            className="flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-all duration-150"
+                            className=-flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-all duration-150-
                             style={{
                               background: checked ? '#FFFFFF' : 'rgba(255,255,255,0.55)',
                               border: checked
@@ -5477,25 +5477,25 @@ export default function EduTechExOSDashboard() {
                             }}
                           >
                             {/* Avatar with checkmark badge */}
-                            <div className="relative flex-shrink-0">
+                            <div className=-relative flex-shrink-0->
                               <span
-                                className="flex h-10 w-10 items-center justify-center rounded-xl text-xs font-black text-white shadow-sm"
+                                className=-flex h-10 w-10 items-center justify-center rounded-xl text-xs font-black text-white shadow-sm-
                                 style={{ backgroundColor: member.color }}
                               >
                                 {member.initials}
                               </span>
                               {checked && (
                                 <span
-                                  className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full"
+                                  className=-absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full-
                                   style={{ background: '#3E4A89', border: '2px solid #F2F0EC' }}
                                 >
-                                  <svg width="9" height="7" viewBox="0 0 12 10" fill="none">
+                                  <svg width=-9- height=-7- viewBox=-0 0 12 10- fill=-none->
                                     <path
-                                      d="M1 5l3.5 3.5L11 1"
-                                      stroke="white"
-                                      strokeWidth="2.2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
+                                      d=-M1 5l3.5 3.5L11 1-
+                                      stroke=-white-
+                                      strokeWidth=-2.2-
+                                      strokeLinecap=-round-
+                                      strokeLinejoin=-round-
                                     />
                                   </svg>
                                 </span>
@@ -5503,15 +5503,15 @@ export default function EduTechExOSDashboard() {
                             </div>
 
                             {/* Name + email */}
-                            <div className="min-w-0 flex-1">
+                            <div className=-min-w-0 flex-1->
                               <p
-                                className="truncate text-[14px] font-black leading-tight"
+                                className=-truncate text-[14px] font-black leading-tight-
                                 style={{ color: checked ? '#1E2636' : '#4A5578' }}
                               >
                                 {member.name}
                               </p>
                               <p
-                                className="truncate text-[12px] mt-0.5"
+                                className=-truncate text-[12px] mt-0.5-
                                 style={{ color: '#7C859E' }}
                               >
                                 {member.role}
@@ -5520,7 +5520,7 @@ export default function EduTechExOSDashboard() {
 
                             {/* Checkbox */}
                             <div
-                              className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-md transition-all"
+                              className=-flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-md transition-all-
                               style={{
                                 background: checked ? '#3E4A89' : 'transparent',
                                 border: checked
@@ -5529,13 +5529,13 @@ export default function EduTechExOSDashboard() {
                               }}
                             >
                               {checked && (
-                                <svg width="10" height="8" viewBox="0 0 12 10" fill="none">
+                                <svg width=-10- height=-8- viewBox=-0 0 12 10- fill=-none->
                                   <path
-                                    d="M1 5l3.5 3.5L11 1"
-                                    stroke="white"
-                                    strokeWidth="2.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
+                                    d=-M1 5l3.5 3.5L11 1-
+                                    stroke=-white-
+                                    strokeWidth=-2.5-
+                                    strokeLinecap=-round-
+                                    strokeLinejoin=-round-
                                   />
                                 </svg>
                               )}
@@ -5544,9 +5544,9 @@ export default function EduTechExOSDashboard() {
                         );
                       })
                     ) : (
-                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className=-flex flex-col items-center justify-center py-12 text-center->
                         <div
-                          className="flex h-14 w-14 items-center justify-center rounded-2xl mb-4"
+                          className=-flex h-14 w-14 items-center justify-center rounded-2xl mb-4-
                           style={{
                             background: 'rgba(62,74,137,0.08)',
                             border: '1px dashed rgba(62,74,137,0.20)',
@@ -5554,10 +5554,10 @@ export default function EduTechExOSDashboard() {
                         >
                           <Users size={22} style={{ color: '#9BA6D3' }} />
                         </div>
-                        <p className="text-sm font-bold" style={{ color: '#4A5578' }}>
+                        <p className=-text-sm font-bold- style={{ color: '#4A5578' }}>
                           No teammates yet
                         </p>
-                        <p className="text-xs mt-1" style={{ color: '#7C859E' }}>
+                        <p className=-text-xs mt-1- style={{ color: '#7C859E' }}>
                           Add members to this channel first.
                         </p>
                       </div>
@@ -5568,20 +5568,20 @@ export default function EduTechExOSDashboard() {
 
               {/* ── Footer ─────────────────────────────────────────────── */}
               <div
-                className="flex items-center justify-between gap-4 px-6 py-4 flex-shrink-0"
+                className=-flex items-center justify-between gap-4 px-6 py-4 flex-shrink-0-
                 style={{ background: '#FAF8F5', borderTop: '1px solid rgba(62,74,137,0.10)' }}
               >
                 {/* Invited avatars */}
-                <div className="flex items-center gap-2.5">
+                <div className=-flex items-center gap-2.5->
                   {meetInviteeIds.length > 0 && (
-                    <div className="flex -space-x-2">
+                    <div className=-flex -space-x-2->
                       {availableInvitees
                         .filter((m) => meetInviteeIds.includes(m.id))
                         .slice(0, 4)
                         .map((m) => (
                           <span
                             key={m.id}
-                            className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black text-white"
+                            className=-flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black text-white-
                             style={{ backgroundColor: m.color, border: '2px solid #FAF8F5' }}
                           >
                             {m.initials}
@@ -5589,7 +5589,7 @@ export default function EduTechExOSDashboard() {
                         ))}
                       {meetInviteeIds.length > 4 && (
                         <span
-                          className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black"
+                          className=-flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-black-
                           style={{
                             background: 'rgba(62,74,137,0.15)',
                             color: '#3E4A89',
@@ -5601,18 +5601,18 @@ export default function EduTechExOSDashboard() {
                       )}
                     </div>
                   )}
-                  <span className="text-[13px] font-semibold" style={{ color: '#7C859E' }}>
+                  <span className=-text-[13px] font-semibold- style={{ color: '#7C859E' }}>
                     {meetInviteeIds.length > 0
                       ? `${meetInviteeIds.length} @mentioned in chat`
                       : 'No one @mentioned'}
                   </span>
                 </div>
 
-                <div className="flex gap-3">
+                <div className=-flex gap-3->
                   <button
-                    type="button"
+                    type=-button-
                     onClick={() => setScheduleMeetOpen(false)}
-                    className="h-10 rounded-xl px-5 text-xs font-black uppercase tracking-[0.10em] transition-all hover:scale-[1.02]"
+                    className=-h-10 rounded-xl px-5 text-xs font-black uppercase tracking-[0.10em] transition-all hover:scale-[1.02]-
                     style={{
                       border: '1.5px solid rgba(62,74,137,0.15)',
                       background: 'transparent',
@@ -5628,8 +5628,8 @@ export default function EduTechExOSDashboard() {
                     Cancel
                   </button>
                   <button
-                    type="submit"
-                    className="h-10 rounded-xl px-6 text-xs font-black uppercase tracking-[0.10em] text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    type=-submit-
+                    className=-h-10 rounded-xl px-6 text-xs font-black uppercase tracking-[0.10em] text-white transition-all hover:scale-[1.02] active:scale-[0.98]-
                     style={{
                       background: 'linear-gradient(135deg, #3E4A89, #2A3568)',
                       boxShadow: '0 4px 16px rgba(62,74,137,0.35)',
@@ -5657,28 +5657,28 @@ export default function EduTechExOSDashboard() {
       <AnimatePresence>
         {recordedPreview && (
           <motion.div
-            key="preview"
+            key=-preview-
             {...BACKDROP}
-            className="fixed inset-0 z-[120] flex items-center justify-center bg-[rgba(25,30,47,0.45)] p-4 backdrop-blur-sm dark:bg-black/70"
+            className=-fixed inset-0 z-[120] flex items-center justify-center bg-[rgba(25,30,47,0.45)] p-4 backdrop-blur-sm dark:bg-black/70-
           >
             <motion.div
               {...CARD}
-              className="w-full max-w-lg rounded-3xl border border-[rgba(62,74,137,0.12)] bg-white p-5 shadow-2xl  dark:bg-[#191E2F]"
+              className=-w-full max-w-lg rounded-3xl border border-[rgba(62,74,137,0.12)] bg-white p-5 shadow-2xl  dark:bg-[#191E2F]-
             >
-              <div className="flex items-start justify-between gap-4">
+              <div className=-flex items-start justify-between gap-4->
                 <div>
-                  <h2 className="text-lg font-black text-[#1E2636]">
+                  <h2 className=-text-lg font-black text-[#1E2636]->
                     Preview {recordedPreview.kind === 'video' ? 'screen recording' : 'voice note'}
                   </h2>
-                  <p className="mt-1 text-sm font-semibold text-[#7C859E] dark:text-[#7C859E]">
+                  <p className=-mt-1 text-sm font-semibold text-[#7C859E] dark:text-[#7C859E]->
                     Review it before sending to #{channel?.name}.
                   </p>
                 </div>
                 <button
-                  type="button"
+                  type=-button-
                   onClick={discardRecordedPreview}
-                  className="rounded-lg p-2 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                  title="Discard recording"
+                  className=-rounded-lg p-2 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] dark:hover:bg-slate-800 dark:hover:text-slate-200-
+                  title=-Discard recording-
                 >
                   <X size={18} />
                 </button>
@@ -5687,29 +5687,29 @@ export default function EduTechExOSDashboard() {
               {recordedPreview.kind === 'video' ? (
                 <video
                   src={recordedPreview.url}
-                  className="mt-5 aspect-video w-full rounded-2xl bg-black object-contain"
+                  className=-mt-5 aspect-video w-full rounded-2xl bg-black object-contain-
                   controls
                 />
               ) : (
-                <div className="mt-5 rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ">
-                  <audio src={recordedPreview.url} className="w-full" controls />
+                <div className=-mt-5 rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-4 ->
+                  <audio src={recordedPreview.url} className=-w-full- controls />
                 </div>
               )}
 
-              <div className="mt-6 flex gap-3">
+              <div className=-mt-6 flex gap-3->
                 <button
-                  type="button"
+                  type=-button-
                   onClick={discardRecordedPreview}
                   disabled={recordingSending}
-                  className="h-11 flex-1 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white text-sm font-black text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)] disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-slate-800 dark:text-[#9BA6D3]"
+                  className=-h-11 flex-1 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white text-sm font-black text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)] disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-slate-800 dark:text-[#9BA6D3]-
                 >
                   Discard
                 </button>
                 <button
-                  type="button"
+                  type=-button-
                   onClick={sendRecordedPreview}
                   disabled={recordingSending}
-                  className="h-11 flex-1 rounded-xl bg-[#3E4A89] text-sm font-black text-white hover:bg-[#2A3568] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[rgba(62,74,137,0.08)]0 dark:hover:bg-[#3E4A89]"
+                  className=-h-11 flex-1 rounded-xl bg-[#3E4A89] text-sm font-black text-white hover:bg-[#2A3568] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[rgba(62,74,137,0.08)]0 dark:hover:bg-[#3E4A89]-
                 >
                   {recordingSending ? 'Sending...' : 'Send'}
                 </button>
@@ -5722,30 +5722,30 @@ export default function EduTechExOSDashboard() {
       <AnimatePresence>
         {membersOpen && (
           <motion.div
-            key="members"
+            key=-members-
             {...BACKDROP}
-            className="fixed inset-0 z-[110] flex items-center justify-center bg-[rgba(25,30,47,0.35)] p-4 backdrop-blur-sm"
+            className=-fixed inset-0 z-[110] flex items-center justify-center bg-[rgba(25,30,47,0.35)] p-4 backdrop-blur-sm-
             onClick={() => setMembersOpen(false)}
           >
             <motion.div
               {...CARD}
-              className="max-h-[80vh] w-full max-w-lg overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl"
+              className=-max-h-[80vh] w-full max-w-lg overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl-
               onClick={(event) => event.stopPropagation()}
             >
-              <div className="flex items-center justify-between border-b border-[rgba(62,74,137,0.12)] px-5 py-4">
+              <div className=-flex items-center justify-between border-b border-[rgba(62,74,137,0.12)] px-5 py-4->
                 <div>
-                  <h2 className="text-lg font-black text-[#1E2636]">Channel members</h2>
-                  <p className="text-sm font-semibold text-[#7C859E]">#{channel?.name}</p>
+                  <h2 className=-text-lg font-black text-[#1E2636]->Channel members</h2>
+                  <p className=-text-sm font-semibold text-[#7C859E]->#{channel?.name}</p>
                 </div>
                 <button
-                  title="Close members"
+                  title=-Close members-
                   onClick={() => setMembersOpen(false)}
-                  className="rounded-lg p-2 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]"
+                  className=-rounded-lg p-2 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]-
                 >
                   <X size={18} />
                 </button>
               </div>
-              <div className="max-h-[60vh] overflow-y-auto p-3">
+              <div className=-max-h-[60vh] overflow-y-auto p-3->
                 {activeChannelMembers.length ? (
                   activeChannelMembers.map((member) => (
                     <button
@@ -5754,29 +5754,29 @@ export default function EduTechExOSDashboard() {
                         setActiveChannel(member.id);
                         setMembersOpen(false);
                       }}
-                      className="flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-[rgba(62,74,137,0.06)]"
+                      className=-flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-[rgba(62,74,137,0.06)]-
                     >
                       <span
-                        className="flex h-10 w-10 items-center justify-center rounded-full text-xs font-black text-white"
+                        className=-flex h-10 w-10 items-center justify-center rounded-full text-xs font-black text-white-
                         style={{ backgroundColor: member.color }}
                       >
                         {member.initials}
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-black text-[#1E2636]">
+                      <span className=-min-w-0 flex-1->
+                        <span className=-block truncate text-sm font-black text-[#1E2636]->
                           {member.name}
                         </span>
-                        <span className="block truncate text-xs font-semibold text-[#7C859E]">
+                        <span className=-block truncate text-xs font-semibold text-[#7C859E]->
                           {member.email}
                         </span>
                       </span>
-                      <span className="rounded-full bg-[rgba(62,74,137,0.08)] px-2 py-1 text-[10px] font-black uppercase text-[#7C859E]">
+                      <span className=-rounded-full bg-[rgba(62,74,137,0.08)] px-2 py-1 text-[10px] font-black uppercase text-[#7C859E]->
                         {member.status}
                       </span>
                     </button>
                   ))
                 ) : (
-                  <div className="rounded-xl border border-dashed border-[rgba(62,74,137,0.12)] p-6 text-center text-sm font-semibold text-[#7C859E]">
+                  <div className=-rounded-xl border border-dashed border-[rgba(62,74,137,0.12)] p-6 text-center text-sm font-semibold text-[#7C859E]->
                     No users have been granted this channel yet.
                   </div>
                 )}
@@ -5792,9 +5792,9 @@ export default function EduTechExOSDashboard() {
       <AnimatePresence>
         {globalSearchOpen && (
           <motion.div
-            key="search"
+            key=-search-
             {...BACKDROP}
-            className="fixed inset-0 z-[200] flex items-start justify-center bg-[rgba(25,30,47,0.50)] pt-20 backdrop-blur-sm"
+            className=-fixed inset-0 z-[200] flex items-start justify-center bg-[rgba(25,30,47,0.50)] pt-20 backdrop-blur-sm-
             onClick={() => setGlobalSearchOpen(false)}
           >
             <motion.div
@@ -5803,7 +5803,7 @@ export default function EduTechExOSDashboard() {
               exit={{ opacity: 0, y: -12, scale: 0.97 }}
               transition={SPRING}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-2xl"
+              className=-w-full max-w-2xl-
             >
               <SearchPanel onClose={() => setGlobalSearchOpen(false)} />
             </motion.div>
@@ -5818,14 +5818,14 @@ export default function EduTechExOSDashboard() {
       <AnimatePresence>
         {wikiOpen && (
           <motion.div
-            key="wiki"
+            key=-wiki-
             {...BACKDROP}
-            className="fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm"
+            className=-fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm-
             onClick={() => setWikiOpen(false)}
           >
             <motion.div
               {...CARD}
-              className="h-full w-full max-w-4xl"
+              className=-h-full w-full max-w-4xl-
               onClick={(e) => e.stopPropagation()}
             >
               <WikiPanel
@@ -5844,14 +5844,14 @@ export default function EduTechExOSDashboard() {
       <AnimatePresence>
         {kanbanOpen && (
           <motion.div
-            key="kanban"
+            key=-kanban-
             {...BACKDROP}
-            className="fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm"
+            className=-fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm-
             onClick={() => setKanbanOpen(false)}
           >
             <motion.div
               {...CARD}
-              className="h-full w-full max-w-5xl"
+              className=-h-full w-full max-w-5xl-
               onClick={(e) => e.stopPropagation()}
             >
               <KanbanBoard
@@ -5869,14 +5869,14 @@ export default function EduTechExOSDashboard() {
       <AnimatePresence>
         {analyticsOpen && isAdmin && (
           <motion.div
-            key="analytics"
+            key=-analytics-
             {...BACKDROP}
-            className="fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm"
+            className=-fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm-
             onClick={() => setAnalyticsOpen(false)}
           >
             <motion.div
               {...CARD}
-              className="w-full max-w-4xl max-h-[90vh] overflow-auto"
+              className=-w-full max-w-4xl max-h-[90vh] overflow-auto-
               onClick={(e) => e.stopPropagation()}
             >
               <AnalyticsPanel
@@ -5894,14 +5894,14 @@ export default function EduTechExOSDashboard() {
       <AnimatePresence>
         {bookmarksPanelOpen && (
           <motion.div
-            key="bookmarks"
+            key=-bookmarks-
             {...BACKDROP}
-            className="fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm"
+            className=-fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm-
             onClick={() => setBookmarksPanelOpen(false)}
           >
             <motion.div
               {...CARD}
-              className="w-full max-w-xl max-h-[85vh] overflow-auto"
+              className=-w-full max-w-xl max-h-[85vh] overflow-auto-
               onClick={(e) => e.stopPropagation()}
             >
               <BookmarksPanel
@@ -5918,55 +5918,55 @@ export default function EduTechExOSDashboard() {
       <AnimatePresence>
         {newChannelOpen && isAdmin && (
           <motion.div
-            key="new-channel"
+            key=-new-channel-
             {...BACKDROP}
-            className="fixed inset-0 z-[110] flex items-center justify-center bg-[rgba(25,30,47,0.35)] p-4 backdrop-blur-sm"
+            className=-fixed inset-0 z-[110] flex items-center justify-center bg-[rgba(25,30,47,0.35)] p-4 backdrop-blur-sm-
             onClick={() => setNewChannelOpen(false)}
           >
             <motion.form
               {...CARD}
               onSubmit={createChannel}
-              className="w-full max-w-md rounded-2xl border border-[rgba(62,74,137,0.12)] bg-white p-5 shadow-2xl"
+              className=-w-full max-w-md rounded-2xl border border-[rgba(62,74,137,0.12)] bg-white p-5 shadow-2xl-
               onClick={(event) => event.stopPropagation()}
             >
-              <div className="mb-5 flex items-center justify-between">
+              <div className=-mb-5 flex items-center justify-between->
                 <div>
-                  <h2 className="text-lg font-black text-[#1E2636]">New channel</h2>
-                  <p className="text-sm font-semibold text-[#7C859E]">
+                  <h2 className=-text-lg font-black text-[#1E2636]->New channel</h2>
+                  <p className=-text-sm font-semibold text-[#7C859E]->
                     Create a workspace discussion lane.
                   </p>
                 </div>
                 <button
-                  title="Close new channel"
-                  type="button"
+                  title=-Close new channel-
+                  type=-button-
                   onClick={() => setNewChannelOpen(false)}
-                  className="rounded-lg p-2 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]"
+                  className=-rounded-lg p-2 text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578]-
                 >
                   <X size={18} />
                 </button>
               </div>
-              <label className="block text-xs font-black uppercase tracking-[0.12em] text-[#7C859E]">
+              <label className=-block text-xs font-black uppercase tracking-[0.12em] text-[#7C859E]->
                 Name
               </label>
               <input
                 value={newChannelName}
                 onChange={(event) => setNewChannelName(event.target.value)}
-                className="mt-2 h-11 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-bold outline-none focus:border-[#3E4A89] focus:ring-4 focus:ring-indigo-100"
-                placeholder="for example, school-pilots"
+                className=-mt-2 h-11 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-bold outline-none focus:border-[#3E4A89] focus:ring-4 focus:ring-indigo-100-
+                placeholder=-for example, school-pilots-
                 autoFocus
               />
-              <label className="mt-4 block text-xs font-black uppercase tracking-[0.12em] text-[#7C859E]">
+              <label className=-mt-4 block text-xs font-black uppercase tracking-[0.12em] text-[#7C859E]->
                 Description
               </label>
               <input
                 value={newChannelDescription}
                 onChange={(event) => setNewChannelDescription(event.target.value)}
-                className="mt-2 h-11 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-bold outline-none focus:border-[#3E4A89] focus:ring-4 focus:ring-indigo-100"
-                placeholder="What this channel is for"
+                className=-mt-2 h-11 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-bold outline-none focus:border-[#3E4A89] focus:ring-4 focus:ring-indigo-100-
+                placeholder=-What this channel is for-
               />
               <button
-                type="submit"
-                className="mt-5 h-11 w-full rounded-xl bg-[#3E4A89] text-sm font-black text-white hover:bg-[#2A3568]"
+                type=-submit-
+                className=-mt-5 h-11 w-full rounded-xl bg-[#3E4A89] text-sm font-black text-white hover:bg-[#2A3568]-
               >
                 Create channel
               </button>
@@ -6012,77 +6012,77 @@ export default function EduTechExOSDashboard() {
 
           return (
             <div
-              className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+              className=-fixed inset-0 z-[300] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm-
               onClick={() => {
                 setForwardingMsg(null);
                 setForwardQuery('');
               }}
             >
               <div
-                className="w-full max-w-sm overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl"
+                className=-w-full max-w-sm overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl-
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-[rgba(62,74,137,0.08)] px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Share2 size={15} className="text-[#3E4A89]" />
-                    <h3 className="font-bold text-[#1E2636]">Forward message</h3>
+                <div className=-flex items-center justify-between border-b border-[rgba(62,74,137,0.08)] px-4 py-3->
+                  <div className=-flex items-center gap-2->
+                    <Share2 size={15} className=-text-[#3E4A89]- />
+                    <h3 className=-font-bold text-[#1E2636]->Forward message</h3>
                   </div>
                   <button
                     onClick={() => {
                       setForwardingMsg(null);
                       setForwardQuery('');
                     }}
-                    className="text-[#7C859E] hover:text-[#4A5578]"
+                    className=-text-[#7C859E] hover:text-[#4A5578]-
                   >
                     <X size={16} />
                   </button>
                 </div>
                 {/* Message preview */}
-                <div className="border-b border-[rgba(62,74,137,0.08)] bg-[rgba(62,74,137,0.04)] px-4 py-3">
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#7C859E]">
+                <div className=-border-b border-[rgba(62,74,137,0.08)] bg-[rgba(62,74,137,0.04)] px-4 py-3->
+                  <p className=-mb-1 text-[10px] font-bold uppercase tracking-widest text-[#7C859E]->
                     From {sourceName}
                   </p>
-                  <p className="line-clamp-2 text-sm italic text-[#4A5578]">
+                  <p className=-line-clamp-2 text-sm italic text-[#4A5578]->
                     &quot;{forwardingMsg.text.slice(0, 120)}
                     {forwardingMsg.text.length > 120 ? '…' : ''}&quot;
                   </p>
                 </div>
                 {/* Search */}
-                <div className="border-b border-[rgba(62,74,137,0.08)] px-4 py-2">
+                <div className=-border-b border-[rgba(62,74,137,0.08)] px-4 py-2->
                   <input
                     autoFocus
-                    type="text"
+                    type=-text-
                     value={forwardQuery}
                     onChange={(e) => setForwardQuery(e.target.value)}
-                    placeholder="Search channels or people…"
-                    className="w-full rounded-xl border border-[rgba(62,74,137,0.12)] bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                    placeholder=-Search channels or people…-
+                    className=-w-full rounded-xl border border-[rgba(62,74,137,0.12)] bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400-
                   />
                 </div>
                 {/* List */}
-                <div className="max-h-64 overflow-y-auto">
+                <div className=-max-h-64 overflow-y-auto->
                   {filteredWS.length > 0 && (
                     <>
-                      <p className="px-4 pb-1 pt-2 text-[10px] font-bold uppercase tracking-widest text-[#7C859E]">
+                      <p className=-px-4 pb-1 pt-2 text-[10px] font-bold uppercase tracking-widest text-[#7C859E]->
                         Channels
                       </p>
                       {filteredWS.map((ch) => (
                         <button
                           key={ch.id}
                           onClick={() => doForward(ch.id, `#${ch.name}`)}
-                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[rgba(62,74,137,0.06)]"
+                          className=-flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[rgba(62,74,137,0.06)]-
                         >
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
-                            <Hash size={14} className="text-[#3E4A89]" />
+                          <div className=-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50->
+                            <Hash size={14} className=-text-[#3E4A89]- />
                           </div>
-                          <span className="text-sm font-semibold text-[#1E2636]">{ch.name}</span>
+                          <span className=-text-sm font-semibold text-[#1E2636]->{ch.name}</span>
                         </button>
                       ))}
                     </>
                   )}
                   {filteredDMs.length > 0 && (
                     <>
-                      <p className="px-4 pb-1 pt-2 text-[10px] font-bold uppercase tracking-widest text-[#7C859E]">
+                      <p className=-px-4 pb-1 pt-2 text-[10px] font-bold uppercase tracking-widest text-[#7C859E]->
                         Direct Messages
                       </p>
                       {filteredDMs.map((m) => {
@@ -6092,17 +6092,17 @@ export default function EduTechExOSDashboard() {
                           <button
                             key={m.id}
                             onClick={() => doForward(dmId, m.name)}
-                            className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[rgba(62,74,137,0.06)]"
+                            className=-flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[rgba(62,74,137,0.06)]-
                           >
                             <div
-                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                              className=-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white-
                               style={{ backgroundColor: m.color }}
                             >
                               {m.initials}
                             </div>
                             <div>
-                              <p className="text-sm font-semibold text-[#1E2636]">{m.name}</p>
-                              <p className="text-xs text-[#7C859E]">{m.role}</p>
+                              <p className=-text-sm font-semibold text-[#1E2636]->{m.name}</p>
+                              <p className=-text-xs text-[#7C859E]->{m.role}</p>
                             </div>
                           </button>
                         );
@@ -6110,9 +6110,9 @@ export default function EduTechExOSDashboard() {
                     </>
                   )}
                   {filteredWS.length === 0 && filteredDMs.length === 0 && (
-                    <p className="py-8 text-center text-sm text-[#7C859E]">
+                    <p className=-py-8 text-center text-sm text-[#7C859E]->
                       {forwardQuery
-                        ? `No results for "${forwardQuery}"`
+                        ? `No results for -${forwardQuery}-`
                         : 'No destinations available'}
                     </p>
                   )}
