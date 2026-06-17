@@ -3578,6 +3578,84 @@ app.delete('/api/channels/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// ── Password generation for internal (@edutechex.in) users ──────────────────
+// POST /api/admin/generate-password
+// Admin generates a random password for a pending access request, approves the
+// account, and emails the credentials to the user.
+app.post('/api/admin/generate-password', requireAdmin, async (req, res) => {
+  try {
+    const { requestId } = req.body;
+    if (!requestId) return res.status(400).json({ success: false, error: 'requestId is required.' });
+
+    const request = await AccessRequest.findById(requestId).lean();
+    if (!request) return res.status(404).json({ success: false, error: 'Access request not found.' });
+    if (request.status === 'rejected') return res.status(409).json({ success: false, error: 'This request has been rejected.' });
+
+    // Generate a secure password
+    const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
+    let plainPassword = 'Edx@';
+    for (let i = 0; i < 10; i++) plainPassword += charset[Math.floor(Math.random() * charset.length)];
+
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
+    // Approve the request and set the generated password
+    await AccessRequest.findByIdAndUpdate(requestId, {
+      $set: { status: 'approved', password: hashedPassword },
+    });
+
+    const appUrl = process.env.APP_URL || 'https://edutechexos.vercel.app';
+
+    // Email credentials to the user
+    const emailResult = await sendBrevoEmail({
+      to: [{ email: request.email, name: request.name }],
+      subject: 'EduTechExOS — Your account is ready',
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#FAF8F5;border-radius:12px;">
+          <div style="background:linear-gradient(135deg,#191E2F,#252D45);border-radius:10px;padding:24px;text-align:center;margin-bottom:24px;">
+            <h1 style="color:#fff;margin:0;font-size:22px;letter-spacing:-0.5px;">EduTechExOS</h1>
+            <p style="color:rgba(255,255,255,0.6);margin:6px 0 0;font-size:13px;">Team Operating System</p>
+          </div>
+          <h2 style="color:#1E2636;font-size:20px;margin:0 0 12px;">Welcome, ${request.name}!</h2>
+          <p style="color:#4A5578;font-size:14px;line-height:1.6;margin:0 0 20px;">
+            Your workspace account has been created by the admin. Use the credentials below to sign in.
+          </p>
+          <div style="background:#fff;border:1px solid rgba(62,74,137,0.15);border-radius:10px;padding:18px 20px;margin-bottom:20px;">
+            <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#9BA6D3;text-transform:uppercase;letter-spacing:1px;">Your login credentials</p>
+            <p style="margin:8px 0;font-size:13px;color:#4A5578;"><strong>Email:</strong> ${request.email}</p>
+            <p style="margin:8px 0;font-size:13px;color:#4A5578;"><strong>Password:</strong>
+              <span style="font-family:monospace;font-size:15px;font-weight:700;color:#1E2636;background:#EEF0FB;padding:3px 10px;border-radius:6px;letter-spacing:1px;">${plainPassword}</span>
+            </p>
+            <p style="margin:8px 0;font-size:13px;color:#4A5578;"><strong>Role:</strong> ${request.role}</p>
+          </div>
+          <div style="text-align:center;margin:24px 0;">
+            <a href="${appUrl}/sign-up-login-screen" style="display:inline-block;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:0.3px;box-shadow:0 4px 15px rgba(99,102,241,0.30);">Sign In to EduTechExOS &#x2192;</a>
+          </div>
+          <p style="color:#9BA6D3;font-size:12px;text-align:center;line-height:1.6;">We recommend changing your password after first login.<br/>If you didn't expect this email, contact your workspace admin.</p>
+          <hr style="border:none;border-top:1px solid rgba(62,74,137,0.10);margin:24px 0;" />
+          <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS - Powered by EduTechEx</p>
+        </div>`,
+    });
+
+    const emailSent = emailResult && emailResult.ok === true;
+    if (!emailSent) console.error('[email] generate-password credentials email failed:', emailResult?.brevoError);
+
+    // Notify browser instantly
+    io.emit('access_approved', { email: request.email });
+
+    await logAudit(req, 'member.password_generated', request.email, request.name, { role: request.role, emailSent });
+
+    res.json({
+      success: true,
+      emailSent,
+      generatedPassword: plainPassword,
+      message: emailSent ? `Password generated and emailed to ${request.email}` : `Password generated — email failed. Share manually.`,
+    });
+  } catch (err) {
+    console.error('[/api/admin/generate-password]', err);
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
+
 // ── Invite Token routes ───────────────────────────────────────────────────────
 
 // POST /api/admin/invite — admin sends a one-time invite link to a user

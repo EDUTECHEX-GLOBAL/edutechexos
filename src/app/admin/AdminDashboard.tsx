@@ -6,6 +6,7 @@ import {
   Activity,
   AlertTriangle,
   Bell,
+  KeyRound,
   CalendarDays,
   CalendarX,
   CheckCircle2,
@@ -179,6 +180,8 @@ export default function AdminPage() {
   const [csvText, setCsvText]           = useState('');
   const [csvParsed, setCsvParsed]       = useState<CsvRow[]>([]);
   const [csvSending, setCsvSending]     = useState(false);
+  const [generatingFor, setGeneratingFor] = useState<string | null>(null);
+  const [shownPasswords, setShownPasswords] = useState<Record<string, string>>({});
 
   const fetchAuditLog = useCallback(async () => {
     const raw = localStorage.getItem('edutechex_token');
@@ -763,6 +766,38 @@ export default function AdminPage() {
       }
     } catch {
       toast.error('Could not reach server. Try again.');
+    }
+  }
+
+  async function generatePasswordForRequest(request: AccessRequest) {
+    const token = getAdminToken();
+    setGeneratingFor(request.id);
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/generate-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ requestId: request.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? 'Failed to generate password.'); return; }
+
+      const updated = accessRequests.map((r) => r.id === request.id ? { ...r, status: 'approved' as const } : r);
+      setAccessRequests(updated);
+      localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify(updated));
+
+      if (data.generatedPassword) {
+        setShownPasswords((prev) => ({ ...prev, [request.id]: data.generatedPassword }));
+      }
+
+      if (data.emailSent === false) {
+        toast.warning(`Password generated — email failed. Copy it below and share with ${request.email}.`);
+      } else {
+        toast.success(`Password generated and emailed to ${request.email}. They can sign in now.`);
+      }
+    } catch {
+      toast.error('Could not reach server. Try again.');
+    } finally {
+      setGeneratingFor(null);
     }
   }
 
@@ -1512,27 +1547,60 @@ export default function AdminPage() {
                           </p>
                         </div>
                       )}
+                      {/* Generated password display (shown after generation if email failed) */}
+                      {shownPasswords[request.id] && (
+                        <div style={{ marginBottom: 10, padding: '8px 12px', background: 'rgba(16,201,138,0.06)', border: '1px solid rgba(16,201,138,0.22)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: '#065F46', flexShrink: 0 }}>Password:</span>
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: '#065F46', flex: 1, wordBreak: 'break-all' }}>{shownPasswords[request.id]}</span>
+                          <button
+                            type="button"
+                            onClick={() => { navigator.clipboard.writeText(shownPasswords[request.id]); toast.success('Password copied!'); }}
+                            style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5, background: '#10C98A', color: '#fff', border: 'none', cursor: 'pointer' }}
+                          >Copy</button>
+                        </div>
+                      )}
                       <div className="flex gap-2">
-                        {/* Primary action: Send Invite (replaced old Approve) */}
-                        <button
-                          type="button"
-                          onClick={() => sendInvite(request)}
-                          disabled={request.status === 'invited'}
-                          style={{ display: 'flex', height: 36, flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, background: request.status === 'invited' ? 'rgba(129,140,248,0.12)' : 'linear-gradient(135deg, #6366f1, #4f46e5)', color: request.status === 'invited' ? '#818CF8' : '#FFFFFF', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', border: request.status === 'invited' ? '1.5px solid rgba(129,140,248,0.35)' : 'none', cursor: request.status === 'invited' ? 'default' : 'pointer', transition: 'all .2s', boxShadow: request.status === 'invited' ? 'none' : '0 3px 12px rgba(99,102,241,0.28)' }}
-                          onMouseEnter={e => { if (request.status !== 'invited') { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(99,102,241,0.38)'; } }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = request.status === 'invited' ? 'none' : '0 3px 12px rgba(99,102,241,0.28)'; }}
-                        >
-                          {request.status === 'invited' ? (
-                            <><CheckCircle2 size={13} /> Invite Sent</>
-                          ) : (
-                            <><Mail size={13} /> Send Invite</>
-                          )}
-                        </button>
+                        {request.email.toLowerCase().endsWith('@edutechex.in') ? (
+                          /* Internal user — generate password directly */
+                          <button
+                            type="button"
+                            onClick={() => generatePasswordForRequest(request)}
+                            disabled={request.status === 'approved' || generatingFor === request.id}
+                            style={{ display: 'flex', height: 36, flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, background: request.status === 'approved' ? 'rgba(16,201,138,0.12)' : 'linear-gradient(135deg,#10C98A,#059669)', color: request.status === 'approved' ? '#059669' : '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', border: request.status === 'approved' ? '1.5px solid rgba(16,201,138,0.30)' : 'none', cursor: request.status === 'approved' ? 'default' : 'pointer', transition: 'all .2s', boxShadow: request.status === 'approved' ? 'none' : '0 3px 12px rgba(16,201,138,0.28)' }}
+                            onMouseEnter={e => { if (request.status !== 'approved') { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(16,201,138,0.38)'; } }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = request.status === 'approved' ? 'none' : '0 3px 12px rgba(16,201,138,0.28)'; }}
+                          >
+                            {request.status === 'approved' ? (
+                              <><CheckCircle2 size={13} /> Access Granted</>
+                            ) : generatingFor === request.id ? (
+                              <><RefreshCw size={13} className="animate-spin" /> Generating...</>
+                            ) : (
+                              <><KeyRound size={13} /> Generate Password</>
+                            )}
+                          </button>
+                        ) : (
+                          /* External user — send invite link */
+                          <button
+                            type="button"
+                            onClick={() => sendInvite(request)}
+                            disabled={request.status === 'invited'}
+                            style={{ display: 'flex', height: 36, flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, background: request.status === 'invited' ? 'rgba(129,140,248,0.12)' : 'linear-gradient(135deg,#6366f1,#4f46e5)', color: request.status === 'invited' ? '#818CF8' : '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', border: request.status === 'invited' ? '1.5px solid rgba(129,140,248,0.35)' : 'none', cursor: request.status === 'invited' ? 'default' : 'pointer', transition: 'all .2s', boxShadow: request.status === 'invited' ? 'none' : '0 3px 12px rgba(99,102,241,0.28)' }}
+                            onMouseEnter={e => { if (request.status !== 'invited') { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(99,102,241,0.38)'; } }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = request.status === 'invited' ? 'none' : '0 3px 12px rgba(99,102,241,0.28)'; }}
+                          >
+                            {request.status === 'invited' ? (
+                              <><CheckCircle2 size={13} /> Invite Sent</>
+                            ) : (
+                              <><Mail size={13} /> Send Invite</>
+                            )}
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => rejectRequest(request.id)}
-                          style={{ height: 36, borderRadius: 12, border: '1.5px solid rgba(239,71,111,0.18)', background: '#FFFFFF', padding: '0 14px', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: '#EF476F', cursor: 'pointer', transition: 'all .2s' }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.06)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.35)'; }}
+                          disabled={request.status === 'approved'}
+                          style={{ height: 36, borderRadius: 12, border: '1.5px solid rgba(239,71,111,0.18)', background: '#FFFFFF', padding: '0 14px', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: request.status === 'approved' ? 'rgba(239,71,111,0.35)' : '#EF476F', cursor: request.status === 'approved' ? 'default' : 'pointer', transition: 'all .2s', opacity: request.status === 'approved' ? 0.5 : 1 }}
+                          onMouseEnter={e => { if (request.status !== 'approved') { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.06)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.35)'; } }}
                           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#FFFFFF'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.18)'; }}
                         >
                           Reject
