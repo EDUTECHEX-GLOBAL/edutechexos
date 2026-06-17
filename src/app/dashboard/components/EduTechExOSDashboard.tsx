@@ -11,6 +11,7 @@ import { sendMentionEmailNotification, changePassword } from '@/app/actions/dbAc
 import { smartUpload } from '@/lib/uploadToFirebase';
 import NotificationPanel from './NotificationPanel';
 import AIPanel from './AIPanel';
+import { ToastContainer, type ToastData } from './ToastNotification';
 import { getSocket } from '@/lib/socket';
 import {
   getOrCreateKeyPair,
@@ -377,6 +378,7 @@ export default function EduTechExOSDashboard() {
     activeThreadId,
     setActiveThread,
   } = useDashboardStore();
+  const [dmToasts, setDmToasts] = useState<ToastData[]>([]);
   const [rightPanel, setRightPanel] = useState<'ai' | 'closed'>('closed');
   const [rightSidePanel, setRightSidePanel] = useState<'pinned' | 'bookmarked' | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -767,12 +769,35 @@ export default function EduTechExOSDashboard() {
       // Only notify for messages sent by someone else
       if (message.sender !== currentUserRef.current?.name) {
         if (settingsRef.current.soundNotifications) playNotificationSound();
+        const isDMChannel = channelId.startsWith('member-');
         if (settingsRef.current.desktopNotifications) {
-          const isDMChannel = channelId.startsWith('member-');
           const notifTitle = isDMChannel
             ? `DM from ${message.sender}`
             : `${message.sender} · #${channelId}`;
           showDesktopNotification(notifTitle, displayMessage.text);
+        }
+        // Show in-app popup toast for DMs
+        if (isDMChannel) {
+          const toastId = `dm-${Date.now()}-${Math.random()}`;
+          const initials = message.sender
+            .split(' ')
+            .map((p: string) => p[0])
+            .join('')
+            .slice(0, 2)
+            .toUpperCase();
+          setDmToasts((prev) => [
+            ...prev,
+            {
+              id: toastId,
+              type: 'dm',
+              actor: message.sender,
+              actorInitials: initials,
+              actorColor: message.color ?? '#6366f1',
+              message: displayMessage.text,
+              channel: 'dm',
+              onClickAction: () => setActiveChannel(channelId),
+            },
+          ]);
         }
       }
     };
@@ -6100,6 +6125,12 @@ export default function EduTechExOSDashboard() {
             </div>
           );
         })()}
+
+      {/* DM popup notifications */}
+      <ToastContainer
+        toasts={dmToasts}
+        onDismiss={(id) => setDmToasts((prev) => prev.filter((t) => t.id !== id))}
+      />
     </div>
   );
 }
