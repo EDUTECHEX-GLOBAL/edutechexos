@@ -108,6 +108,7 @@ import {
   ChevronLeft,
   CalendarX,
   Activity,
+  Lock,
 } from 'lucide-react';
 
 type CurrentUser = {
@@ -381,6 +382,7 @@ export default function EduTechExOSDashboard() {
   const [dmToasts, setDmToasts] = useState<ToastData[]>([]);
   const [rightPanel, setRightPanel] = useState<'ai' | 'closed'>('closed');
   const [rightSidePanel, setRightSidePanel] = useState<'pinned' | 'bookmarked' | null>(null);
+  const [meetJoinState, setMeetJoinState] = useState<Record<string, 'checking' | 'denied'>>({});
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'chat' | 'tasks' | 'ai'>('chat');
   const [composerMessage, setComposerMessage] = useState('');
@@ -1603,6 +1605,34 @@ export default function EduTechExOSDashboard() {
     setMeetMenuOpen(false);
     setMeetInputMenuOpen(false);
     setScheduleMeetOpen(true);
+  }
+
+  async function handleJoinMeeting(messageId: string, link: string) {
+    const token = localStorage.getItem('token');
+    setMeetJoinState((prev) => ({ ...prev, [messageId]: 'checking' }));
+    try {
+      const res = await fetch(`${BACKEND}/api/meeting-access/check/${messageId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = await res.json().catch(() => ({}));
+      // If no access record exists at all, allow join (open meeting, no restriction set)
+      if (!data.exists) {
+        setMeetJoinState((prev) => { const s = { ...prev }; delete s[messageId]; return s; });
+        window.open(link, '_blank', 'noreferrer');
+        return;
+      }
+      if (data.canJoin) {
+        setMeetJoinState((prev) => { const s = { ...prev }; delete s[messageId]; return s; });
+        window.open(link, '_blank', 'noreferrer');
+      } else {
+        setMeetJoinState((prev) => ({ ...prev, [messageId]: 'denied' }));
+        setTimeout(() => setMeetJoinState((prev) => { const s = { ...prev }; delete s[messageId]; return s; }), 4000);
+      }
+    } catch {
+      // On network error, fall through and allow join
+      setMeetJoinState((prev) => { const s = { ...prev }; delete s[messageId]; return s; });
+      window.open(link, '_blank', 'noreferrer');
+    }
   }
 
   async function scheduleMeet(event: React.FormEvent) {
@@ -3057,28 +3087,34 @@ export default function EduTechExOSDashboard() {
 
                               {/* ── Join button ── */}
                               <div className="px-4 pt-3 pb-4" style={{ background: '#FAF8F5' }}>
-                                <a
-                                  href={scheduledMeet.link}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="group flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-[13px] font-black text-white transition-all duration-200 hover:scale-[1.02] active:scale-95"
-                                  style={{
-                                    background: 'linear-gradient(135deg, #3E4A89 0%, #2A3568 100%)',
-                                    boxShadow:
-                                      '0 4px 14px rgba(62,74,137,0.38), inset 0 1px 0 rgba(255,255,255,0.12)',
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    (e.currentTarget as HTMLAnchorElement).style.boxShadow =
-                                      '0 6px 20px rgba(62,74,137,0.55), inset 0 1px 0 rgba(255,255,255,0.15)';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    (e.currentTarget as HTMLAnchorElement).style.boxShadow =
-                                      '0 4px 14px rgba(62,74,137,0.38), inset 0 1px 0 rgba(255,255,255,0.12)';
-                                  }}
-                                >
-                                  <Video size={14} />
-                                  Join Meeting
-                                </a>
+                                {meetJoinState[message.id] === 'denied' ? (
+                                  <div className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-[13px] font-black" style={{ background: '#FEF2F2', color: '#DC2626' }}>
+                                    <Lock size={13} />
+                                    You are not invited
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => handleJoinMeeting(message.id, scheduledMeet.link)}
+                                    disabled={meetJoinState[message.id] === 'checking'}
+                                    className="group flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-[13px] font-black text-white transition-all duration-200 hover:scale-[1.02] active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
+                                    style={{
+                                      background: 'linear-gradient(135deg, #3E4A89 0%, #2A3568 100%)',
+                                      boxShadow: '0 4px 14px rgba(62,74,137,0.38), inset 0 1px 0 rgba(255,255,255,0.12)',
+                                    }}
+                                  >
+                                    {meetJoinState[message.id] === 'checking' ? (
+                                      <>
+                                        <div className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                                        Checking access...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Video size={14} />
+                                        Join Meeting
+                                      </>
+                                    )}
+                                  </button>
+                                )}
                               </div>
                             </div>
                           ) : (
