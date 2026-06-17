@@ -288,7 +288,7 @@ export default function AdminPage() {
 
     fetch(`${API_BASE}/api/access-requests`, {
       signal: controller.signal,
-      headers: { Authorization: `Bearer ${token}` }, // â† was missing (caused 403)
+      headers: { Authorization: `Bearer ${token}` }, //  was missing (caused 403)
     })
       .then((r) => r.json())
       .then((data: { success: boolean; requests?: AccessRequest[] }) => {
@@ -348,7 +348,7 @@ export default function AdminPage() {
     fetch(`${API_BASE}/api/activity/stats`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => (r.ok ? r.json() : null)) // 404 before backend deploys â†’ null
+      .then((r) => (r.ok ? r.json() : null)) // 404 before backend deploys ’ null
       .then((data: { success: boolean; stats?: ActivityStat[] } | null) => {
         if (data?.success && Array.isArray(data.stats)) setActivityStats(data.stats);
       })
@@ -384,7 +384,7 @@ export default function AdminPage() {
     return () => { socket.off('aw_sync', handler); };
   }, [fetchAwData]);
 
-  // â”€â”€ Live in-app activity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // €€ Live in-app activity €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€
   const fetchLiveUsers = useCallback(() => {
     const token = getAdminToken();
     if (!token) return;
@@ -419,7 +419,7 @@ export default function AdminPage() {
     return () => { socket.off('user_activity_update', handler); };
   }, []);
 
-  // â”€â”€ In-app activity history (all sessions for a given date) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // €€ In-app activity history (all sessions for a given date) €€€€€€€€€€€€€€€€€€
   const fetchHistory = useCallback((date?: string) => {
     const token = getAdminToken();
     if (!token) return;
@@ -574,7 +574,7 @@ export default function AdminPage() {
     const colors = ['#3E4A89', '#9BA6D3', '#7c3aed', '#a78bfa', '#2A3568', '#c4b5fd'];
     const color = colors[Math.floor(Math.random() * colors.length)];
 
-    // â”€â”€ Persist to backend first so the member survives page refresh â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // €€ Persist to backend first so the member survives page refresh €€€€€€€€€€
     try {
       const token = getAdminToken();
       const res = await fetch(`${API_BASE}/api/members`, {
@@ -701,7 +701,7 @@ export default function AdminPage() {
           MEMBER_COLORS.length
       ];
 
-    // â”€â”€ Persist approval to backend (cross-device) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // €€ Persist approval to backend (cross-device) €€€€€€€€€€€€€€€€€€€€€€€€€€
     try {
       const authData = localStorage.getItem('edutechex_token');
       const token = authData ? JSON.parse(authData).token : null;
@@ -737,7 +737,7 @@ export default function AdminPage() {
       if (selectedChannels.length > 0) setMemberWorkspaceChannels(fallbackId, selectedChannels);
     }
 
-    // â”€â”€ Update local UI state + localStorage fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // €€ Update local UI state + localStorage fallback €€€€€€€€€€€€€€€€€€€€€€€
     const nextRequests = accessRequests.map((item) =>
       item.id === request.id ? { ...item, status: 'approved' as const } : item
     );
@@ -1009,10 +1009,10 @@ export default function AdminPage() {
     <AdminGuard>
       <div className="admin-control-root min-h-screen" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
 
-        {/* â”€â”€ Spectrum bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* €€ Spectrum bar €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ */}
         <div className="spectrum-bar fixed top-0 left-0 right-0 z-50 pointer-events-none" />
 
-        {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* €€ Header €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ */}
         <header className="sticky top-[3px] z-40" style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(26,27,58,0.14)', boxShadow: '0 2px 16px rgba(91,79,219,0.06)' }}>
           <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-6 lg:px-8">
             <div className="flex items-center gap-4">
@@ -1062,7 +1062,7 @@ export default function AdminPage() {
         </header>
 
         <main className="mx-auto max-w-[1500px] px-6 py-10 lg:px-8">
-          {/* â”€â”€ Page hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/* €€ Page hero €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ */}
           <section className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: '#7C3AED', marginBottom: 8 }}>
@@ -1085,7 +1085,7 @@ export default function AdminPage() {
             </button>
           </section>
 
-          {/* â”€â”€ Stat cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/* €€ Stat cards €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ */}
           <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {statCards.map(({ label, value, icon: Icon, accent, accentBg, gradient }) => (
               <div
@@ -1115,7 +1115,7 @@ export default function AdminPage() {
             ))}
           </section>
 
-          {/* â”€â”€ Tab navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/* €€ Tab navigation €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ */}
           <div className="mb-6 flex gap-2 overflow-x-auto rounded-2xl p-1.5" style={{ background: '#FFFFFF', border: '1.5px solid rgba(26,27,58,0.14)', boxShadow: '0 2px 8px rgba(91,79,219,0.04)' }}>
             {TABS.map((tab) => {
               const isActive = activeTab === tab.id;
@@ -2031,8 +2031,8 @@ export default function AdminPage() {
 
                   {broadcastLastSent && (
                     <div style={{ borderRadius: 12, border: '1.5px solid rgba(16,201,138,0.20)', background: 'rgba(16,201,138,0.06)', padding: '12px 16px', fontSize: 12, fontWeight: 500, color: '#059669' }}>
-                      âœ“ Last sent at {broadcastLastSent.at} · &ldquo;{broadcastLastSent.subject}
-                      &rdquo; â†’ {broadcastLastSent.count} members
+                      “ Last sent at {broadcastLastSent.at} · &ldquo;{broadcastLastSent.subject}
+                      &rdquo; ’ {broadcastLastSent.count} members
                     </div>
                   )}
 
@@ -2079,13 +2079,13 @@ export default function AdminPage() {
                     </h2>
                     <p style={{ marginTop: 4, fontSize: 13, color: 'rgba(90,95,128,0.70)', lineHeight: 1.6 }}>
                       In-app session time, messages sent, and engagement per team member. Users can
-                      see exactly what is tracked in Settings â†’ Privacy.
+                      see exactly what is tracked in Settings ’ Privacy.
                     </p>
                     <Link href="/admin/activity" style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: '#3B82F6', textDecoration: 'none' }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline'; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none'; }}
                     >
-                      View full activity report â†’
+                      View full activity report ’
                     </Link>
                   </div>
                   <button
@@ -2289,8 +2289,8 @@ export default function AdminPage() {
             const viewDate  = awDate; // single date for all data
 
             const panelIcon: Record<string, string> = {
-              messages: 'ðŸ’¬', wiki: 'ðŸ“–', kanban: 'âœ…', calendar: 'ðŸ“…',
-              leave: 'ðŸŒ´', dashboard: 'ðŸ ', ai: 'âœ¨',
+              messages: 'ðŸ’¬', wiki: 'ðŸ“–', kanban: '…', calendar: 'ðŸ“…',
+              leave: 'ðŸŒ´', dashboard: 'ðŸ ', ai: '¨',
             };
 
             const fmt = (m: number) => m <= 0 ? '0m' : m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`;
@@ -2362,7 +2362,7 @@ export default function AdminPage() {
                 .drow:hover{background:rgba(99,102,241,0.04)!important;}
               `}</style>
 
-              {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              {/* €€ Header €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
                 <div>
                   <p style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: '#10B981', marginBottom: 6, fontFamily: 'monospace' }}>
@@ -2611,7 +2611,7 @@ export default function AdminPage() {
                               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                   <div style={{ width: 40, height: 40, borderRadius: 12, background: `${catColor[leave.leaveCategory] ?? '#9BA6D3'}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16 }}>
-                                    {{ sick: 'ðŸ¤’', vacation: 'ðŸŒ´', personal: 'ðŸ‘¤', emergency: 'âš¡', other: 'ðŸ“‹' }[leave.leaveCategory] ?? 'ðŸ“‹'}
+                                    {{ sick: 'ðŸ¤’', vacation: 'ðŸŒ´', personal: 'ðŸ‘¤', emergency: '¡', other: 'ðŸ“‹' }[leave.leaveCategory] ?? 'ðŸ“‹'}
                                   </div>
                                   <div>
                                     <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#1A1B3A' }}>{leave.name}</p>
@@ -2622,9 +2622,9 @@ export default function AdminPage() {
                               </div>
 
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px', marginBottom: 12 }}>
-                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Type:</strong> {leave.type === 'instant' ? 'âš¡ Emergency' : 'ðŸ“… Planned'}</span>
+                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Type:</strong> {leave.type === 'instant' ? '¡ Emergency' : 'ðŸ“… Planned'}</span>
                                 <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Category:</strong> {catLabel[leave.leaveCategory] ?? leave.leaveCategory}</span>
-                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Date:</strong> {leave.type === 'instant' ? `${leave.startDate} · ${leave.duration === 'half' ? 'Half day' : 'Full day'}` : `${leave.startDate}${leave.endDate ? ` â†’ ${leave.endDate}` : ''}`}</span>
+                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Date:</strong> {leave.type === 'instant' ? `${leave.startDate} · ${leave.duration === 'half' ? 'Half day' : 'Full day'}` : `${leave.startDate}${leave.endDate ? ` ’ ${leave.endDate}` : ''}`}</span>
                               </div>
 
                               <div style={{ background: 'rgba(26,27,58,0.03)', borderRadius: 10, padding: '10px 12px', marginBottom: 14, fontSize: 13, color: '#4A5578', lineHeight: 1.5 }}>
@@ -2673,10 +2673,10 @@ export default function AdminPage() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {resolvedLeaves.map(leave => (
                             <div key={leave.id} style={{ borderRadius: 14, border: '1.5px solid rgba(26,27,58,0.08)', background: '#FAFAFA', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                              <div style={{ fontSize: 20 }}>{{ sick: 'ðŸ¤’', vacation: 'ðŸŒ´', personal: 'ðŸ‘¤', emergency: 'âš¡', other: 'ðŸ“‹' }[leave.leaveCategory] ?? 'ðŸ“‹'}</div>
+                              <div style={{ fontSize: 20 }}>{{ sick: 'ðŸ¤’', vacation: 'ðŸŒ´', personal: 'ðŸ‘¤', emergency: '¡', other: 'ðŸ“‹' }[leave.leaveCategory] ?? 'ðŸ“‹'}</div>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1A1B3A' }}>{leave.name} <span style={{ fontWeight: 400, color: 'rgba(90,95,128,0.55)', fontSize: 11 }}>"” {leave.type === 'instant' ? 'Emergency' : 'Planned'} · {catLabel[leave.leaveCategory]}</span></p>
-                                <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'rgba(90,95,128,0.55)' }}>{leave.startDate}{leave.endDate ? ` â†’ ${leave.endDate}` : ''} · {leave.reason}</p>
+                                <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'rgba(90,95,128,0.55)' }}>{leave.startDate}{leave.endDate ? ` ’ ${leave.endDate}` : ''} · {leave.reason}</p>
                                 {leave.adminNote && <p style={{ margin: '3px 0 0', fontSize: 11, color: leave.status === 'approved' ? '#10C98A' : '#EF476F', fontStyle: 'italic' }}>Note: {leave.adminNote}</p>}
                               </div>
                               <LeaveStatusBadge status={leave.status} />
@@ -2830,7 +2830,7 @@ export default function AdminPage() {
           )}
         </main>
 
-        {/* â”€â”€ Add user modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* €€ Add user modal €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ */}
         {showAddModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" style={{ background: 'rgba(26,27,58,0.28)' }}>
             <form
