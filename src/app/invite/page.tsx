@@ -1,4 +1,5 @@
 'use client';
+export const dynamic = 'force-dynamic';
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -45,6 +46,19 @@ function PasswordRule({ ok, label }: { ok: boolean; label: string }) {
 }
 
 export default function InvitePage() {
+  return (
+    <React.Suspense fallback={
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 36, height: 36, border: '3px solid rgba(129,140,248,0.2)', borderTop: '3px solid #818cf8', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    }>
+      <InviteContent />
+    </React.Suspense>
+  );
+}
+
+function InviteContent() {
   const params    = useSearchParams();
   const router    = useRouter();
   const token     = params.get('token') ?? '';

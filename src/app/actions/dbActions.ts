@@ -7,7 +7,7 @@ import Message from '@/models/Message';
 import Note from '@/models/Note';
 
 // ── Email helper — routes through Render backend so only Render's IP hits Brevo ──
-async function sendBrevoEmail(opts: {
+export async function sendBrevoEmail(opts: {
   to: { email: string; name?: string }[];
   subject: string;
   htmlContent: string;

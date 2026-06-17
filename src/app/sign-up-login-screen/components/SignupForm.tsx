@@ -9,6 +9,7 @@ type SignupFormData = { name: string; email: string; role: string };
 const roles = ['Developer', 'Designer', 'Manager', 'Other'];
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+const ALLOWED_DOMAIN = 'edutechex.in';
 
 type AccessRequest = SignupFormData & {
   id: string;
@@ -114,7 +115,7 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: 'rgba(91,79,219,0.06)', border: '1px solid rgba(91,79,219,0.14)', borderRadius: 8, padding: '10px 14px', marginBottom: 20 }}>
         <KeyRound size={14} style={{ color: '#5B4FDB', flexShrink: 0, marginTop: 1 }} />
         <p style={{ margin: 0, fontSize: 11.5, color: 'rgba(26,27,58,0.65)', lineHeight: 1.5 }}>
-          A temporary password will be <strong>sent to your email</strong>. You can sign in immediately — full access is granted after admin approval.
+          This workspace is <strong>invite-only</strong>. Only <strong>@{ALLOWED_DOMAIN}</strong> addresses may request access. If you do not have one, ask your admin for an invite link.
         </p>
       </div>
 
@@ -164,9 +165,13 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
               }}
               {...register('email', {
                 required: 'Email is required',
-                pattern: {
-                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                  message: 'Enter a valid email address',
+                validate: (v) => {
+                  const clean = v.trim().toLowerCase();
+                  if (!clean.endsWith('@' + ALLOWED_DOMAIN))
+                    return 'Only @' + ALLOWED_DOMAIN + ' addresses are allowed. Contact your admin for an invite.';
+                  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean))
+                    return 'Enter a valid email address';
+                  return true;
                 },
               })}
             />

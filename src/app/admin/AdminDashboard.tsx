@@ -940,6 +940,7 @@ export default function AdminPage() {
   const TABS = [
     { id: 'people' as const,     Icon: Users,        label: 'People',     badge: 0,                      accent: '#5B4FDB', accentBg: 'rgba(26,27,58,0.15)',   accentBorder: 'rgba(91,79,219,0.22)',   animClass: 'click-slide-deck' },
     { id: 'requests' as const,   Icon: UserPlus,     label: 'Requests',   badge: pendingRequests.length,  accent: '#EF476F', accentBg: 'rgba(239,71,111,0.10)',  accentBorder: 'rgba(239,71,111,0.22)',  animClass: 'click-bubble-pop' },
+    { id: 'invites' as const,    Icon: Sparkles,     label: 'Invite',     badge: 0,                       accent: '#10C98A', accentBg: 'rgba(16,201,138,0.10)',  accentBorder: 'rgba(16,201,138,0.22)',  animClass: 'click-bubble-pop' },
     { id: 'channels' as const,   Icon: Hash,         label: 'Channels',   badge: 0,                      accent: '#0DAFCE', accentBg: 'rgba(13,175,206,0.10)',  accentBorder: 'rgba(13,175,206,0.22)',  animClass: 'click-bubble-pop' },
     { id: 'broadcast' as const,  Icon: Send,         label: 'Broadcast',  badge: 0,                      accent: '#C026D3', accentBg: 'rgba(192,38,211,0.10)',  accentBorder: 'rgba(192,38,211,0.22)',  animClass: 'click-send-whoosh' },
     { id: 'activity' as const,   Icon: Activity,     label: 'Activity',   badge: 0,                      accent: '#3B82F6', accentBg: 'rgba(59,130,246,0.10)',  accentBorder: 'rgba(59,130,246,0.22)',  animClass: 'click-bar-rise' },
@@ -1610,6 +1611,101 @@ export default function AdminPage() {
           {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               TAB: CHANNELS
           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+          {/* TAB: INVITE GENERATOR */}
+          {activeTab === 'invites' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 18px', borderRadius: 14, background: 'rgba(16,201,138,0.06)', border: '1.5px solid rgba(16,201,138,0.20)' }}>
+                <ShieldCheck size={16} style={{ color: '#10C98A', flexShrink: 0, marginTop: 1 }} />
+                <p style={{ margin: 0, fontSize: 12.5, color: 'rgba(26,27,58,0.70)', lineHeight: 1.6 }}>
+                  Invites are the <strong>only</strong> way into the workspace. Each link expires in <strong>4.5 hours</strong> and is single-use. Users who sign up with non-company emails are blocked.
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div className="card-premium" style={{ padding: '24px 28px' }}>
+                  <div style={{ height: 3, background: 'linear-gradient(90deg,#10C98A,#059669)', borderRadius: 3, marginBottom: 20 }} />
+                  <h3 style={{ fontFamily: "'Sora',sans-serif", fontSize: 16, fontWeight: 800, color: '#1A1B3A', margin: '0 0 4px', letterSpacing: '-0.02em' }}>Send a single invite</h3>
+                  <p style={{ margin: '0 0 20px', fontSize: 12, color: 'rgba(90,95,128,0.60)' }}>Fill in the details and we will email a secure activation link.</p>
+                  <form onSubmit={sendDirectInvite} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {[
+                      { label: 'Full name', value: inviteName, setter: setInviteName, placeholder: 'Riya Sharma', type: 'text' },
+                      { label: 'Email', value: inviteEmail, setter: setInviteEmail, placeholder: 'riya@edutechex.in', type: 'email' },
+                    ].map(({ label, value, setter, placeholder, type }) => (
+                      <label key={label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>{label}</span>
+                        <input type={type} required value={value} onChange={(e) => setter(e.target.value)} placeholder={placeholder} style={{ height: 40, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.14)', background: '#ECEAF8', padding: '0 12px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none' }} />
+                      </label>
+                    ))}
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>Role</span>
+                      <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} style={{ height: 40, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.14)', background: '#ECEAF8', padding: '0 12px', fontSize: 13, fontWeight: 600, color: '#1A1B3A', outline: 'none' }}>
+                        {['Developer', 'Designer', 'Lead', 'Manager', 'Admin'].map((r) => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </label>
+                    <button type="submit" disabled={inviteSubmitting} style={{ height: 42, borderRadius: 12, background: inviteSubmitting ? 'rgba(16,201,138,0.35)' : 'linear-gradient(135deg,#10C98A,#059669)', color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: inviteSubmitting ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 14px rgba(16,201,138,0.28)', transition: 'all .2s', marginTop: 4 }}>
+                      <Mail size={14} /> {inviteSubmitting ? 'Sending...' : 'Send Invite Link'}
+                    </button>
+                  </form>
+                </div>
+
+                <div className="card-premium" style={{ padding: '24px 28px' }}>
+                  <div style={{ height: 3, background: 'linear-gradient(90deg,#6366f1,#8B3FDB)', borderRadius: 3, marginBottom: 20 }} />
+                  <h3 style={{ fontFamily: "'Sora',sans-serif", fontSize: 16, fontWeight: 800, color: '#1A1B3A', margin: '0 0 4px', letterSpacing: '-0.02em' }}>Bulk invite via CSV</h3>
+                  <p style={{ margin: '0 0 16px', fontSize: 12, color: 'rgba(90,95,128,0.60)' }}>
+                    One row per person: <code style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, background: 'rgba(91,79,219,0.08)', padding: '1px 5px', borderRadius: 4 }}>Name, email@edutechex.in, Role</code>
+                  </p>
+                  <textarea value={csvText} onChange={(e) => { setCsvText(e.target.value); parseCSV(e.target.value); }} placeholder="Priya Nair, priya@edutechex.in, Designer" rows={6} style={{ width: '100%', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.14)', background: '#ECEAF8', padding: '10px 12px', fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: '#1A1B3A', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+                  {csvParsed.length > 0 && (
+                    <div style={{ marginTop: 14, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.10)', overflow: 'hidden' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 90px', padding: '7px 12px', background: 'rgba(26,27,58,0.04)', borderBottom: '1px solid rgba(26,27,58,0.08)' }}>
+                        {['Name', 'Email', 'Role'].map((h) => <span key={h} style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.50)' }}>{h}</span>)}
+                      </div>
+                      {csvParsed.map((row, i) => (
+                        <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 90px', padding: '8px 12px', borderBottom: i < csvParsed.length - 1 ? '1px solid rgba(26,27,58,0.06)' : 'none', background: i % 2 === 0 ? '#fff' : 'rgba(26,27,58,0.015)' }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#1A1B3A' }}>{row.name}</span>
+                          <span style={{ fontSize: 11, color: 'rgba(90,95,128,0.70)', fontFamily: "'JetBrains Mono', monospace" }}>{row.email}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#5B4FDB' }}>{row.role}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button type="button" disabled={csvParsed.length === 0 || csvSending} onClick={sendBulkInvites} style={{ marginTop: 14, width: '100%', height: 42, borderRadius: 12, background: (csvParsed.length === 0 || csvSending) ? 'rgba(99,102,241,0.25)' : 'linear-gradient(135deg,#6366f1,#4f46e5)', color: (csvParsed.length === 0 || csvSending) ? 'rgba(255,255,255,0.60)' : '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: (csvParsed.length === 0 || csvSending) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all .2s' }}>
+                    <Send size={14} /> {csvSending ? 'Sending...' : 'Send ' + String(csvParsed.length > 0 ? csvParsed.length + ' ' : '') + 'Invite' + String(csvParsed.length !== 1 ? 's' : '')}
+                  </button>
+                </div>
+              </div>
+
+              {inviteLog.length > 0 && (
+                <div className="card-premium" style={{ padding: '24px 28px' }}>
+                  <div style={{ height: 3, background: 'linear-gradient(90deg,#F59E0B,#D97706)', borderRadius: 3, marginBottom: 20 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <h3 style={{ fontFamily: "'Sora',sans-serif", fontSize: 16, fontWeight: 800, color: '#1A1B3A', margin: 0 }}>
+                      Invite log <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(90,95,128,0.50)', marginLeft: 6 }}>this session</span>
+                    </h3>
+                    <button type="button" onClick={() => setInviteLog([])} style={{ fontSize: 11, fontWeight: 600, color: 'rgba(90,95,128,0.55)', background: 'none', border: '1.5px solid rgba(26,27,58,0.12)', borderRadius: 8, padding: '4px 12px', cursor: 'pointer' }}>Clear</button>
+                  </div>
+                  <div style={{ borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.08)', overflow: 'hidden' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 90px 1fr 120px', padding: '8px 16px', background: 'rgba(26,27,58,0.03)', borderBottom: '1px solid rgba(26,27,58,0.07)' }}>
+                      {['Name', 'Email', 'Role', 'Status', 'Sent at'].map((h) => <span key={h} style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.45)' }}>{h}</span>)}
+                    </div>
+                    {inviteLog.map((entry, i) => (
+                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 90px 1fr 120px', padding: '10px 16px', borderBottom: i < inviteLog.length - 1 ? '1px solid rgba(26,27,58,0.06)' : 'none', background: i % 2 === 0 ? '#fff' : 'rgba(26,27,58,0.015)', alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#1A1B3A' }}>{entry.name}</span>
+                        <span style={{ fontSize: 11, color: 'rgba(90,95,128,0.70)', fontFamily: "'JetBrains Mono', monospace" }}>{entry.email}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#5B4FDB' }}>{entry.role}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 700, color: entry.status === 'sent' ? '#10C98A' : '#EF476F' }}>
+                          {entry.status === 'sent' ? <CheckCircle2 size={12} /> : <X size={12} />}
+                          {entry.status === 'sent' ? 'Sent' : entry.message}
+                        </span>
+                        <span style={{ fontSize: 10.5, color: 'rgba(90,95,128,0.45)', fontFamily: "'JetBrains Mono', monospace" }}>{new Date(entry.at).toLocaleTimeString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'channels' && (
             <div className="card-premium space-y-4 p-6">
               {/* Top accent */}
