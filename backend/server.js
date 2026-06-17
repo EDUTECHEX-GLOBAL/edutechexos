@@ -105,77 +105,52 @@ if (!JWT_SECRET) {
 }
 const JWT_EXPIRY = '7d';
 
-// ── Brevo HTTP API helper ─────────────────────────────────────────────────
-// Requires BREVO_API_KEY env var. To send from any IP, go to:
-// Brevo Dashboard → Account → API Keys → edit your key → disable IP restriction.
+// ── SMTP email helper (nodemailer) ────────────────────────────────────────
+// Uses SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM env vars.
+// For Gmail: SMTP_HOST=smtp.gmail.com  SMTP_PORT=587  SMTP_USER=you@gmail.com
+//            SMTP_PASS=<16-char App Password>  SMTP_FROM=EduTechExOS <you@gmail.com>
+const nodemailer = require('nodemailer');
+
+let _transporter = null;
+function getTransporter() {
+  if (_transporter) return _transporter;
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const port = parseInt(process.env.SMTP_PORT || '587', 10);
+  const secure = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true';
+  const user = process.env.SMTP_USER || '';
+  const pass = process.env.SMTP_PASS || '';
+  _transporter = nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
+  return _transporter;
+}
+
 async function sendBrevoEmail({ to, bcc, subject, html }) {
   const toList = Array.isArray(to) ? to : [{ email: String(to) }];
   const totalRecipients = toList.length + (Array.isArray(bcc) ? bcc.length : 0);
   console.log(`[Mail] Sending "${subject}" → ${totalRecipients} recipient(s)`);
 
-  if (!process.env.BREVO_API_KEY) {
-    console.error('[Mail] BREVO_API_KEY not set');
-    return { ok: false, brevoError: 'NOT_CONFIGURED' };
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  if (!smtpUser || !smtpPass) {
+    console.error('[Mail] SMTP_USER / SMTP_PASS not configured');
+    return { ok: false, brevoError: 'SMTP_NOT_CONFIGURED' };
+  }
+
+  const fromAddr = process.env.SMTP_FROM || `EduTechExOS <${smtpUser}>`;
+
+  const toAddresses = toList.map(r => r.name ? `${r.name} <${r.email}>` : r.email).join(', ');
+  const mailOpts = { from: fromAddr, to: toAddresses, subject, html };
+
+  if (Array.isArray(bcc) && bcc.length > 0) {
+    mailOpts.bcc = bcc.map(r => (typeof r === 'string' ? r : r.email)).join(', ');
   }
 
   try {
-    const fromConfig = process.env.SMTP_FROM || 'EduTechExOS <edutechexos121@gmail.com>';
-    let senderEmail = 'edutechexos121@gmail.com';
-    let senderName = 'EduTechExOS';
-    const match = fromConfig.match(/(.*)<(.*)>/);
-    if (match) {
-      senderName = match[1].trim();
-      senderEmail = match[2].trim();
-    } else if (fromConfig.includes('@')) {
-      senderEmail = fromConfig.trim();
-    }
-
-    const payload = {
-      sender: { name: senderName, email: senderEmail },
-      to: toList.map(r => ({ email: r.email, name: r.name || '' })),
-      subject: subject,
-      htmlContent: html
-    };
-
-    if (Array.isArray(bcc) && bcc.length > 0) {
-      payload.bcc = bcc.map(r => ({ email: typeof r === 'string' ? r : r.email }));
-    }
-
-    const postData = JSON.stringify(payload);
-    const https = require('https');
-    
-    const apiResult = await new Promise((resolve, reject) => {
-      const req = https.request('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          'api-key': process.env.BREVO_API_KEY,
-          'content-type': 'application/json',
-          'content-length': Buffer.byteLength(postData)
-        }
-      }, (res) => {
-        let data = '';
-        res.on('data', chunk => { data += chunk; });
-        res.on('end', () => {
-          resolve({ statusCode: res.statusCode, body: data });
-        });
-      });
-
-      req.on('error', err => reject(err));
-      req.write(postData);
-      req.end();
-    });
-
-    if (apiResult.statusCode >= 200 && apiResult.statusCode < 300) {
-      console.log(`[Mail] OK — delivered to ${totalRecipients} recipient(s)`);
-      return { ok: true };
-    }
-
-    const errMsg = `${apiResult.statusCode}: ${apiResult.body}`;
-    console.error(`[Mail] HTTP API returned ${errMsg}`);
-    return { ok: false, brevoError: errMsg };
+    await getTransporter().sendMail(mailOpts);
+    console.log(`[Mail] OK — queued for ${totalRecipients} recipient(s)`);
+    return { ok: true };
   } catch (err) {
-    console.error('[Mail] HTTP API call failed:', err.message);
+    console.error('[Mail] SMTP send failed:', err.message);
+    _transporter = null; // reset so next call retries with a fresh connection
     return { ok: false, brevoError: err.message };
   }
 }
@@ -1838,26 +1813,13 @@ app.post('/api/admin/broadcast-email', authMiddleware, async (req, res) => {
     });
 
     if (!r.ok) {
-      if (r.brevoError === 'NOT_CONFIGURED') {
+      if (r.brevoError === 'SMTP_NOT_CONFIGURED') {
         return res.status(503).json({
           success: false,
-          error: 'Email service not configured. Please set the BREVO_API_KEY environment variable in your Render backend settings, then redeploy.',
+          error: 'Email service not configured. Set SMTP_USER and SMTP_PASS in Render environment variables, then redeploy.',
         });
       }
-      const brevoStatus = parseInt((r.brevoError || '').split(':')[0], 10);
-      if (brevoStatus === 401) {
-        return res.status(503).json({
-          success: false,
-          error: 'Invalid Brevo API key (401). Double-check BREVO_API_KEY in Render environment variables.',
-        });
-      }
-      if (brevoStatus === 403) {
-        return res.status(503).json({
-          success: false,
-          error: 'Brevo rejected the request (403): IP not authorised. Go to Brevo Dashboard → Account → API Keys → edit your key → disable "Restrict to IPs".',
-        });
-      }
-      return res.status(502).json({ success: false, error: `Email provider error (${brevoStatus || 'unknown'}): ${r.brevoError}` });
+      return res.status(502).json({ success: false, error: `Email send failed: ${r.brevoError}` });
     }
 
     console.log(`[broadcast] Admin ${req.user.email} sent "${subject.trim()}" to ${allEmails.length} users.`);
@@ -3272,8 +3234,8 @@ app.post('/api/email', requireAuth, async (req, res) => {
     const recipients = Array.isArray(to) ? to : [{ email: String(to) }];
     const result = await sendBrevoEmail({ to: recipients, subject, html: htmlContent });
     if (!result.ok) {
-      console.error('[/api/email] Brevo rejected the request:', result.brevoError);
-      return res.status(502).json({ success: false, error: result.brevoError ?? 'Brevo send failed' });
+      console.error('[/api/email] Email send failed:', result.brevoError);
+      return res.status(502).json({ success: false, error: result.brevoError ?? 'Email send failed' });
     }
     res.json({ success: true });
   } catch (err) {
