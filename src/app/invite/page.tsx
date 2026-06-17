@@ -58,6 +58,25 @@ export default function InvitePage() {
   );
 }
 
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+      <div style={{ width: '100%', maxWidth: 420 }}>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12, padding: '10px 18px', marginBottom: 12 }}>
+            <ShieldCheck size={18} color="#818cf8" />
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.3px' }}>EduTechExOS</span>
+          </div>
+          <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>Secure Workspace Invitation</p>
+        </div>
+        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '28px 24px', backdropFilter: 'blur(12px)' }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function InviteContent() {
   const params    = useSearchParams();
   const router    = useRouter();
@@ -119,24 +138,6 @@ function InviteContent() {
       setErrMsg('Could not reach server. Try again.'); setSub(false);
     }
   }
-
-  // ── Shared shell ──────────────────────────────────────────────────────────────
-  const Shell = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
-      <div style={{ width: '100%', maxWidth: 420 }}>
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12, padding: '10px 18px', marginBottom: 12 }}>
-            <ShieldCheck size={18} color="#818cf8" />
-            <span style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.3px' }}>EduTechExOS</span>
-          </div>
-          <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>Secure Workspace Invitation</p>
-        </div>
-        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '28px 24px', backdropFilter: 'blur(12px)' }}>
-          {children}
-        </div>
-      </div>
-    </div>
-  );
 
   // ── Loading ───────────────────────────────────────────────────────────────────
   if (phase === 'loading') return (
