@@ -1195,20 +1195,105 @@ export default function AdminPage() {
                 </label>
               </div>
 
+              {/* Channel access modal */}
+              {channelPopoverId && (() => {
+                const modalMember = filteredMembers.find(m => m.id === channelPopoverId);
+                if (!modalMember) return null;
+                const modalExtraChannels = getExtraChannels(modalMember.id);
+                return (
+                  <div
+                    style={{ position: 'fixed', inset: 0, zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,12,40,0.45)', backdropFilter: 'blur(4px)' }}
+                    onClick={() => setChannelPopoverId(null)}
+                  >
+                    <div
+                      style={{ background: '#fff', borderRadius: 20, width: 380, maxWidth: '92vw', boxShadow: '0 24px 60px rgba(91,79,219,0.22), 0 4px 16px rgba(0,0,0,0.12)', overflow: 'hidden' }}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      {/* Header */}
+                      <div style={{ background: 'linear-gradient(135deg, #5B4FDB, #7B6FEB)', padding: '20px 24px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: 12, background: modalMember.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.20)' }}>
+                              {modalMember.initials}
+                            </div>
+                            <div>
+                              <p style={{ fontSize: 15, fontWeight: 700, color: '#fff', margin: 0 }}>{modalMember.name}</p>
+                              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', margin: '2px 0 0' }}>Channel Access</p>
+                            </div>
+                          </div>
+                          <button type="button" onClick={() => setChannelPopoverId(null)} style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                      {/* Channel list */}
+                      <div style={{ padding: '16px 24px 20px', maxHeight: 360, overflowY: 'auto' }}>
+                        <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.50)', marginBottom: 12 }}>
+                          Select channels to grant access
+                        </p>
+                        {/* #general — always on */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: 'rgba(13,175,206,0.06)', border: '1px solid rgba(13,175,206,0.15)', marginBottom: 8, opacity: 0.7 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(13,175,206,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Hash size={14} style={{ color: '#0DAFCE' }} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: '#0DAFCE', margin: 0 }}>general</p>
+                            <p style={{ fontSize: 10, color: 'rgba(90,95,128,0.55)', margin: '1px 0 0' }}>Always granted to everyone</p>
+                          </div>
+                          <span style={{ fontSize: 9, fontWeight: 800, color: '#0DAFCE', background: 'rgba(13,175,206,0.12)', padding: '3px 8px', borderRadius: 6, letterSpacing: '.06em' }}>DEFAULT</span>
+                        </div>
+                        {extraChannels.length === 0 ? (
+                          <p style={{ fontSize: 13, color: 'rgba(90,95,128,0.55)', textAlign: 'center', padding: '24px 0' }}>No additional channels in workspace.</p>
+                        ) : extraChannels.map((c) => {
+                          const checked = modalExtraChannels.some((ec) => ec.id === c.id);
+                          return (
+                            <label
+                              key={c.id}
+                              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, cursor: 'pointer', marginBottom: 6, background: checked ? 'rgba(91,79,219,0.06)' : 'rgba(90,95,128,0.03)', border: `1.5px solid ${checked ? 'rgba(91,79,219,0.22)' : 'rgba(90,95,128,0.10)'}`, transition: 'all .15s' }}
+                            >
+                              <div style={{ width: 32, height: 32, borderRadius: 8, background: checked ? 'rgba(91,79,219,0.12)' : 'rgba(90,95,128,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <Hash size={14} style={{ color: checked ? '#5B4FDB' : '#9BA6D3' }} />
+                              </div>
+                              <span style={{ flex: 1, fontSize: 13, fontWeight: checked ? 700 : 500, color: checked ? '#1A1B3A' : '#5A5F80' }}>{c.name}</span>
+                              {/* Toggle switch */}
+                              <div style={{ position: 'relative', width: 40, height: 22, flexShrink: 0 }}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => handleChannelToggle(modalMember.id, c.id, e.target.checked)}
+                                  style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', margin: 0, cursor: 'pointer', zIndex: 1 }}
+                                />
+                                <div style={{ width: 40, height: 22, borderRadius: 11, background: checked ? '#5B4FDB' : 'rgba(90,95,128,0.20)', transition: 'background .2s', position: 'relative' }}>
+                                  <div style={{ position: 'absolute', top: 3, left: checked ? 21 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.20)', transition: 'left .2s' }} />
+                                </div>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      {/* Footer */}
+                      <div style={{ padding: '12px 24px 20px', borderTop: '1px solid rgba(91,79,219,0.08)', display: 'flex', gap: 8 }}>
+                        <button type="button" onClick={() => setChannelPopoverId(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, background: 'rgba(90,95,128,0.08)', color: '#5A5F80', fontSize: 13, fontWeight: 700, border: '1px solid rgba(90,95,128,0.14)', cursor: 'pointer' }}>
+                          Cancel
+                        </button>
+                        <button type="button" onClick={() => setChannelPopoverId(null)} style={{ flex: 2, padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg, #5B4FDB, #7B6FEB)', color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(91,79,219,0.30)' }}>
+                          Save Access
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="overflow-x-auto scrollbar-thin">
-                <table className="w-full min-w-[820px] text-left">
+                <table className="w-full min-w-[700px] text-left">
                   <thead>
-                    <tr style={{ borderBottom: '1px solid rgba(26,27,58,0.14)', background: 'rgba(91,79,219,0.02)' }}>
-                      {['User', 'Role', 'Status', 'Current access', 'Channel access', ''].map(
-                        (h) => (
-                          <th
-                            key={h}
-                            style={{ padding: '12px 20px', fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)' }}
-                          >
-                            {h}
-                          </th>
-                        )
-                      )}
+                    <tr style={{ borderBottom: '1px solid rgba(26,27,58,0.10)', background: 'rgba(91,79,219,0.02)' }}>
+                      {['Member', 'Role', 'Status', 'Channels', ''].map((h) => (
+                        <th key={h} style={{ padding: '11px 20px', fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.55)' }}>
+                          {h}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -1216,30 +1301,32 @@ export default function AdminPage() {
                       const memberExtraChannels = getExtraChannels(member.id);
                       const isPrivileged = member.role === 'Admin' || member.role === 'Manager';
                       const isAdminMember = member.role === 'Admin';
+                      const roleColors: Record<string, { bg: string; color: string; border: string }> = {
+                        Admin:     { bg: 'rgba(91,79,219,0.12)',  color: '#5B4FDB', border: 'rgba(91,79,219,0.25)' },
+                        Manager:   { bg: 'rgba(16,201,138,0.10)', color: '#0BA868', border: 'rgba(16,201,138,0.25)' },
+                        Lead:      { bg: 'rgba(245,158,11,0.10)', color: '#D48C00', border: 'rgba(245,158,11,0.25)' },
+                        Developer: { bg: 'rgba(13,175,206,0.10)', color: '#0A90AA', border: 'rgba(13,175,206,0.22)' },
+                        Designer:  { bg: 'rgba(239,71,111,0.10)', color: '#C73060', border: 'rgba(239,71,111,0.22)' },
+                      };
+                      const rc = roleColors[member.role] ?? roleColors.Developer;
                       return (
-                        <tr key={member.id} style={{ borderBottom: '1px solid rgba(91,79,219,0.05)', transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(91,79,219,0.03)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                          <td className="px-5 py-4">
+                        <tr key={member.id} style={{ borderBottom: '1px solid rgba(91,79,219,0.05)', transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(91,79,219,0.025)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                          {/* Member */}
+                          <td className="px-5 py-3.5">
                             <div className="flex items-center gap-3">
-                              <div
-                                className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold text-white"
-                                style={{
-                                  background: `linear-gradient(135deg, ${member.color}, ${member.color}cc)`,
-                                  boxShadow: `0 3px 10px ${member.color}30`,
-                                }}
-                              >
+                              <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(135deg, ${member.color}, ${member.color}bb)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0, boxShadow: `0 2px 8px ${member.color}30` }}>
                                 {member.initials}
                               </div>
                               <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold" style={{ color: '#1A1B3A' }}>
-                                  {member.name}
-                                </p>
-                                <p className="truncate text-xs text-ink-light">{member.email}</p>
+                                <p className="truncate text-sm font-semibold" style={{ color: '#1A1B3A' }}>{member.name}</p>
+                                <p className="truncate text-xs" style={{ color: 'rgba(90,95,128,0.60)' }}>{member.email}</p>
                               </div>
                             </div>
                           </td>
-                          <td className="px-5 py-4">
+                          {/* Role */}
+                          <td className="px-5 py-3.5">
                             {systemEmails.includes(member.email.toLowerCase()) ? (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', background: isAdminMember ? 'rgba(26,27,58,0.15)' : 'rgba(90,95,128,0.08)', color: isAdminMember ? '#5B4FDB' : '#5A5F80', border: `1px solid ${isAdminMember ? 'rgba(91,79,219,0.20)' : 'rgba(90,95,128,0.12)'}` }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, background: rc.bg, color: rc.color, border: `1px solid ${rc.border}` }}>
                                 {member.role}
                               </span>
                             ) : (
@@ -1247,7 +1334,7 @@ export default function AdminPage() {
                                 <select
                                   value={member.role}
                                   onChange={(e) => handleRoleChange(member.id, member.name, e.target.value)}
-                                  style={{ height: 36, borderRadius: 10, border: '1.5px solid rgba(91,79,219,0.14)', background: '#ECEAF8', padding: '0 8px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', outline: 'none' }}
+                                  style={{ height: 32, borderRadius: 8, border: `1.5px solid ${rc.border}`, background: rc.bg, padding: '0 8px', fontSize: 12, fontWeight: 600, color: rc.color, outline: 'none', cursor: 'pointer' }}
                                 >
                                   <option value="Developer">Developer</option>
                                   <option value="Designer">Designer</option>
@@ -1256,119 +1343,50 @@ export default function AdminPage() {
                                   <option value="Admin">Admin</option>
                                 </select>
                                 {!isAdminMember && canAddMoreAdmins && (
-                                  <button
-                                    type="button"
-                                    onClick={() => promoteToAdmin(member)}
-                                    disabled={promoteLoadingId === member.id}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 8, background: 'rgba(26,27,58,0.14)', color: '#5B4FDB', fontSize: 10, fontWeight: 700, border: '1px solid rgba(26,27,58,0.22)', cursor: 'pointer', opacity: promoteLoadingId === member.id ? 0.5 : 1 }}
-                                    title={`Make Admin (${adminCount}/${MAX_ADMINS} slots used)`}
-                                  >
+                                  <button type="button" onClick={() => promoteToAdmin(member)} disabled={promoteLoadingId === member.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, background: 'transparent', color: '#5B4FDB', fontSize: 10, fontWeight: 700, border: '1px solid rgba(91,79,219,0.22)', cursor: 'pointer', opacity: promoteLoadingId === member.id ? 0.5 : 1, width: 'fit-content' }}>
                                     <ShieldCheck size={10} />
-                                    {promoteLoadingId === member.id ? 'Promoting...' : 'Make Admin'}
+                                    {promoteLoadingId === member.id ? 'Promoting…' : 'Make Admin'}
                                   </button>
                                 )}
                               </div>
                             )}
                           </td>
-                          <td className="px-5 py-4">
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#5A5F80' }}>
-                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: member.status === 'online' ? '#10C98A' : member.status === 'away' ? '#F59E0B' : '#D4D0CC', boxShadow: member.status === 'online' ? '0 0 6px rgba(16,201,138,0.60)' : 'none' }} />
-                              {member.status}
+                          {/* Status */}
+                          <td className="px-5 py-3.5">
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: member.status === 'online' ? '#0BA868' : '#5A5F80' }}>
+                              <span style={{ width: 7, height: 7, borderRadius: '50%', background: member.status === 'online' ? '#10C98A' : member.status === 'away' ? '#F59E0B' : '#D4D0CC', boxShadow: member.status === 'online' ? '0 0 6px rgba(16,201,138,0.60)' : 'none', flexShrink: 0 }} />
+                              {member.status ?? 'offline'}
                             </span>
                           </td>
-                          {/* Current access */}
-                          <td className="px-5 py-4">
-                            <div className="flex flex-wrap gap-1.5">
-                              {isPrivileged ? (
-                                <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, letterSpacing: '.06em', background: 'rgba(26,27,58,0.14)', color: '#5B4FDB', border: '1px solid rgba(26,27,58,0.22)' }}>All channels</span>
-                              ) : (
-                                <>
-                                  <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'rgba(13,175,206,0.08)', color: '#0DAFCE', border: '1px solid rgba(13,175,206,0.18)' }}>#general</span>
-                                  {memberExtraChannels.length > 0 ? (
-                                    memberExtraChannels.map((ec) => (
-                                      <span key={ec.id} style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'rgba(91,79,219,0.10)', color: '#5B4FDB', border: '1px solid rgba(91,79,219,0.18)' }}>#{ec.name}</span>
-                                    ))
-                                  ) : (
-                                    <span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'rgba(245,158,11,0.08)', color: '#D48C00', border: '1px solid rgba(245,158,11,0.18)' }}>No extra channels</span>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </td>
-                          {/* Channel access — popover */}
-                          <td className="px-5 py-4">
+                          {/* Channels */}
+                          <td className="px-5 py-3.5">
                             {isPrivileged ? (
-                              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(90,95,128,0.50)', fontStyle: 'italic' }}>Full access</span>
-                            ) : systemEmails.includes(member.email.toLowerCase()) ? (
-                              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(90,95,128,0.50)', fontStyle: 'italic' }}>System member</span>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, background: 'rgba(91,79,219,0.08)', color: '#5B4FDB', border: '1px solid rgba(91,79,219,0.18)' }}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                All channels
+                              </span>
                             ) : (
-                              <div style={{ position: 'relative' }}>
-                                <button
-                                  type="button"
-                                  onClick={() => setChannelPopoverId(channelPopoverId === member.id ? null : member.id)}
-                                  style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                                    padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                                    background: channelPopoverId === member.id ? 'rgba(91,79,219,0.14)' : 'rgba(91,79,219,0.07)',
-                                    color: '#5B4FDB', border: '1.5px solid rgba(91,79,219,0.22)',
-                                    cursor: 'pointer', transition: 'all .15s',
-                                  }}
-                                >
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                                  {memberExtraChannels.length > 0 ? `${memberExtraChannels.length} channel${memberExtraChannels.length > 1 ? 's' : ''}` : 'Assign channels'}
-                                </button>
-                                {channelPopoverId === member.id && (
-                                  <div
-                                    style={{
-                                      position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
-                                      background: '#fff', borderRadius: 12,
-                                      border: '1.5px solid rgba(91,79,219,0.18)',
-                                      boxShadow: '0 12px 40px rgba(91,79,219,0.16), 0 2px 8px rgba(0,0,0,0.08)',
-                                      padding: '14px 16px', minWidth: 220,
-                                    }}
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: 'rgba(13,175,206,0.08)', color: '#0DAFCE', border: '1px solid rgba(13,175,206,0.18)' }}>
+                                  <Hash size={8} />{`general`}
+                                </span>
+                                {memberExtraChannels.slice(0, 2).map((ec) => (
+                                  <span key={ec.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: 'rgba(91,79,219,0.08)', color: '#5B4FDB', border: '1px solid rgba(91,79,219,0.18)' }}>
+                                    <Hash size={8} />{ec.name}
+                                  </span>
+                                ))}
+                                {memberExtraChannels.length > 2 && (
+                                  <span style={{ fontSize: 10, fontWeight: 700, color: '#5A5F80' }}>+{memberExtraChannels.length - 2} more</span>
+                                )}
+                                {!systemEmails.includes(member.email.toLowerCase()) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setChannelPopoverId(member.id)}
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: 'rgba(91,79,219,0.07)', color: '#5B4FDB', border: '1.5px dashed rgba(91,79,219,0.30)', cursor: 'pointer', transition: 'all .15s' }}
                                   >
-                                    <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.10em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.55)', marginBottom: 10 }}>
-                                      Channel access for {member.name.split(' ')[0]}
-                                    </p>
-                                    {/* #general is always on */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', opacity: 0.5 }}>
-                                      <span style={{ width: 16, height: 16, borderRadius: 4, background: '#0DAFCE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
-                                      </span>
-                                      <span style={{ fontSize: 12, fontWeight: 600, color: '#1A1B3A' }}>#general <span style={{ fontSize: 10, color: 'rgba(90,95,128,0.50)' }}>(always on)</span></span>
-                                    </div>
-                                    {extraChannels.length === 0 ? (
-                                      <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.60)', marginTop: 6 }}>No extra channels in workspace.</p>
-                                    ) : extraChannels.map((c) => {
-                                      const checked = memberExtraChannels.some((ec) => ec.id === c.id);
-                                      return (
-                                        <label
-                                          key={c.id}
-                                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', cursor: 'pointer', borderTop: '1px solid rgba(91,79,219,0.06)' }}
-                                        >
-                                          <input
-                                            type="checkbox"
-                                            checked={checked}
-                                            onChange={(e) => handleChannelToggle(member.id, c.id, e.target.checked)}
-                                            style={{ width: 15, height: 15, accentColor: '#5B4FDB', cursor: 'pointer' }}
-                                          />
-                                          <span style={{ fontSize: 13, fontWeight: checked ? 700 : 500, color: checked ? '#5B4FDB' : '#4A5578' }}>
-                                            #{c.name}
-                                          </span>
-                                          {checked && (
-                                            <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 700, color: '#5B4FDB', background: 'rgba(91,79,219,0.10)', padding: '2px 6px', borderRadius: 4 }}>ON</span>
-                                          )}
-                                        </label>
-                                      );
-                                    })}
-                                    <button
-                                      type="button"
-                                      onClick={() => setChannelPopoverId(null)}
-                                      style={{ marginTop: 10, width: '100%', padding: '7px', borderRadius: 8, background: 'rgba(91,79,219,0.10)', color: '#5B4FDB', fontSize: 11, fontWeight: 700, border: '1px solid rgba(91,79,219,0.18)', cursor: 'pointer' }}
-                                    >
-                                      Done
-                                    </button>
-                                  </div>
+                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                                    Manage
+                                  </button>
                                 )}
                               </div>
                             )}
