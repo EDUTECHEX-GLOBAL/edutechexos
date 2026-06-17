@@ -29,7 +29,7 @@ const nextConfig = {
   // calls, so Render sleeping / missing headers stops being a browser error.
   async rewrites() {
     const backendUrl =
-      process.env.BACKEND_URL || 'https://edutechexos-backend.onrender.com';
+      process.env.BACKEND_URL || 'https://edutechexos-ueoq.onrender.com';
     return [
       {
         source: '/api/:path*',

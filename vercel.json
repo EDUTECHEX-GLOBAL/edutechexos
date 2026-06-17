@@ -3,11 +3,11 @@
   "regions": ["bom1"],
   "build": {
     "env": {
-      "NEXT_PUBLIC_API_URL": "https://edutechexos-backend.onrender.com"
+      "NEXT_PUBLIC_API_URL": "https://edutechexos-ueoq.onrender.com"
     }
   },
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://edutechexos-backend.onrender.com"
+    "NEXT_PUBLIC_API_URL": "https://edutechexos-ueoq.onrender.com"
   },
   "headers": [
     {

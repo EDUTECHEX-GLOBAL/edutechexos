@@ -192,7 +192,7 @@ export default function AdminPage() {
     setAuditLoading(true);
     try {
       const { token } = JSON.parse(raw);
-      const r = await fetch('https://edutechexos-backend.onrender.com/api/audit-log?limit=200', {
+      const r = await fetch(`${API_BASE}/api/audit-log?limit=200`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await r.json();
