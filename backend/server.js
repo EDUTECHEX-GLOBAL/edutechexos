@@ -2548,7 +2548,7 @@ app.get('/api/keys/:email', authMiddleware, async (req, res) => {
   try {
     const email = req.params.email?.toLowerCase();
     const record = await UserKey.findOne({ email }).lean();
-    if (!record) return res.status(404).json({ success: false, error: 'No key found.' });
+    if (!record) return res.status(200).json({ success: false, error: 'No key found.' });
     res.json({ success: true, publicKey: record.publicKey });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
