@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
@@ -143,7 +143,7 @@ export default function AdminPage() {
     return new Date(Date.now() + istOffset).toISOString().slice(0, 10);
   });
 
-  // Live in-app activity "” users active in last 3 minutes
+  // Live in-app activity "" users active in last 3 minutes
   type LiveUser = {
     email: string; name: string;
     currentActivity: string; currentPanel: string;
@@ -265,7 +265,7 @@ export default function AdminPage() {
     };
   }, [loadLocalMembers]);
 
-  // Helper "” read the stored JWT token once
+  // Helper "" read the stored JWT token once
   function getAdminToken(): string | null {
     try {
       return JSON.parse(localStorage.getItem('edutechex_token') ?? '').token ?? null;
@@ -280,7 +280,7 @@ export default function AdminPage() {
     loadWorkspaceChannels?.();
 
     const token = getAdminToken();
-    if (!token) return; // not logged in "” nothing to load
+    if (!token) return; // not logged in "" nothing to load
 
     // Load access requests with a 20-second timeout so Render cold-starts don't block the UI
     const controller = new AbortController();
@@ -288,7 +288,7 @@ export default function AdminPage() {
 
     fetch(`${API_BASE}/api/access-requests`, {
       signal: controller.signal,
-      headers: { Authorization: `Bearer ${token}` }, //  was missing (caused 403)
+      headers: { Authorization: `Bearer ${token}` }, //  was missing (caused 403)
     })
       .then((r) => r.json())
       .then((data: { success: boolean; requests?: AccessRequest[] }) => {
@@ -324,7 +324,7 @@ export default function AdminPage() {
               }
             })
             .catch(() => {
-              /* silent "” already showing cached */
+              /* silent "" already showing cached */
             });
         }, 15_000);
       });
@@ -348,12 +348,12 @@ export default function AdminPage() {
     fetch(`${API_BASE}/api/activity/stats`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => (r.ok ? r.json() : null)) // 404 before backend deploys ’ null
+      .then((r) => (r.ok ? r.json() : null)) // 404 before backend deploys ' null
       .then((data: { success: boolean; stats?: ActivityStat[] } | null) => {
         if (data?.success && Array.isArray(data.stats)) setActivityStats(data.stats);
       })
       .catch(() => {
-        /* non-critical "” section shows empty state */
+        /* non-critical "" section shows empty state */
       })
       .finally(() => setActivityLoading(false));
   }, []);
@@ -384,7 +384,7 @@ export default function AdminPage() {
     return () => { socket.off('aw_sync', handler); };
   }, [fetchAwData]);
 
-  // €€ Live in-app activity €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€
+  //  Live in-app activity 
   const fetchLiveUsers = useCallback(() => {
     const token = getAdminToken();
     if (!token) return;
@@ -419,7 +419,7 @@ export default function AdminPage() {
     return () => { socket.off('user_activity_update', handler); };
   }, []);
 
-  // €€ In-app activity history (all sessions for a given date) €€€€€€€€€€€€€€€€€€
+  //  In-app activity history (all sessions for a given date) 
   const fetchHistory = useCallback((date?: string) => {
     const token = getAdminToken();
     if (!token) return;
@@ -524,7 +524,7 @@ export default function AdminPage() {
           body: JSON.stringify({ role: newRoleVal }),
         });
       } catch {
-        /* non-critical "” local update already applied */
+        /* non-critical "" local update already applied */
       }
     }
     toast.success(`Role updated to ${newRoleVal} for ${memberName}`);
@@ -574,7 +574,7 @@ export default function AdminPage() {
     const colors = ['#3E4A89', '#9BA6D3', '#7c3aed', '#a78bfa', '#2A3568', '#c4b5fd'];
     const color = colors[Math.floor(Math.random() * colors.length)];
 
-    // €€ Persist to backend first so the member survives page refresh €€€€€€€€€€
+    //  Persist to backend first so the member survives page refresh 
     try {
       const token = getAdminToken();
       const res = await fetch(`${API_BASE}/api/members`, {
@@ -597,7 +597,7 @@ export default function AdminPage() {
         if (newRole !== 'Admin' && newExtraChannels.length > 0)
           setMemberWorkspaceChannels(data.member.id, newExtraChannels);
         const pwd = data.generatedPassword ?? '';
-        toast.success(`${cleanName} added! Password: ${pwd} "” sent to their email.`, { duration: 8000 });
+        toast.success(`${cleanName} added! Password: ${pwd} "" sent to their email.`, { duration: 8000 });
         // Send welcome email with credentials
         if (pwd) {
           fetch(`${API_BASE}/api/email`, {
@@ -615,7 +615,7 @@ export default function AdminPage() {
         return;
       }
     } catch {
-      // Backend unreachable "” add locally only (temporary, won't persist)
+      // Backend unreachable "" add locally only (temporary, won't persist)
       const tempId = `member-${cleanName
         .toLowerCase()
         .replace(/[^a-z]/g, '')
@@ -631,7 +631,7 @@ export default function AdminPage() {
       });
       if (newRole !== 'Admin' && newExtraChannels.length > 0)
         setMemberWorkspaceChannels(tempId, newExtraChannels);
-      toast.warning(`${cleanName} added locally "” backend unreachable, won't persist.`);
+      toast.warning(`${cleanName} added locally "" backend unreachable, won't persist.`);
     }
 
     setNewName('');
@@ -672,7 +672,7 @@ export default function AdminPage() {
       const data = await res.json();
       if (!res.ok || !data.success) { toast.error(data.error ?? 'Failed to update leave.'); return; }
       setLeaves(prev => prev.map(l => l.id === leaveId ? { ...l, status, adminNote: leaveNotes[leaveId] ?? '' } : l));
-      toast.success(`Leave ${status === 'approved' ? 'approved' : 'rejected'} "” user has been notified.`);
+      toast.success(`Leave ${status === 'approved' ? 'approved' : 'rejected'} "" user has been notified.`);
     } catch { toast.error('Network error.'); }
     finally { setLeaveActionLoading(null); }
   }
@@ -685,7 +685,7 @@ export default function AdminPage() {
 
     const selectedChannels = requestChannelsByReq[request.id] ?? [];
 
-    // Build member object up-front "” used in both online and offline paths
+    // Build member object up-front "" used in both online and offline paths
     const MEMBER_COLORS = ['#3E4A89', '#9BA6D3', '#7c3aed', '#a78bfa', '#2A3568', '#c4b5fd'];
     const initials = request.name
       .split(' ')
@@ -701,7 +701,7 @@ export default function AdminPage() {
           MEMBER_COLORS.length
       ];
 
-    // €€ Persist approval to backend (cross-device) €€€€€€€€€€€€€€€€€€€€€€€€€€
+    //  Persist approval to backend (cross-device) 
     try {
       const authData = localStorage.getItem('edutechex_token');
       const token = authData ? JSON.parse(authData).token : null;
@@ -720,10 +720,10 @@ export default function AdminPage() {
         return;
       }
 
-      // Sync from backend "” gets the newly approved member with correct channelIds
+      // Sync from backend "" gets the newly approved member with correct channelIds
       loadLocalMembers?.();
     } catch {
-      // Backend unreachable "” still approve locally so the list updates
+      // Backend unreachable "" still approve locally so the list updates
       const fallbackId = makeMemberId(request.name);
       addMember({
         id: fallbackId,
@@ -737,7 +737,7 @@ export default function AdminPage() {
       if (selectedChannels.length > 0) setMemberWorkspaceChannels(fallbackId, selectedChannels);
     }
 
-    // €€ Update local UI state + localStorage fallback €€€€€€€€€€€€€€€€€€€€€€€
+    //  Update local UI state + localStorage fallback 
     const nextRequests = accessRequests.map((item) =>
       item.id === request.id ? { ...item, status: 'approved' as const } : item
     );
@@ -763,9 +763,9 @@ export default function AdminPage() {
       localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify(updated));
       if (data.emailSent === false && data.inviteUrl) {
         toast.warning(`Email delivery failed. Copy the invite link and share it manually with ${request.email}.`);
-        setInviteLog((prev) => [{ name: request.name, email: request.email, role: request.role, status: 'warn' as const, message: 'Email failed — share link manually', inviteUrl: data.inviteUrl, at: new Date().toISOString() }, ...prev]);
+        setInviteLog((prev) => [{ name: request.name, email: request.email, role: request.role, status: 'warn' as const, message: 'Email failed  share link manually', inviteUrl: data.inviteUrl, at: new Date().toISOString() }, ...prev]);
       } else {
-        toast.success(`Invite sent to ${request.email} — link expires in 4.5 hours.`);
+        toast.success(`Invite sent to ${request.email}  link expires in 4.5 hours.`);
       }
     } catch {
       toast.error('Could not reach server. Try again.');
@@ -793,7 +793,7 @@ export default function AdminPage() {
       }
 
       if (data.emailSent === false) {
-        toast.warning(`Password generated — email failed. Copy it below and share with ${request.email}.`);
+        toast.warning(`Password generated  email failed. Copy it below and share with ${request.email}.`);
       } else {
         toast.success(`Password generated and emailed to ${request.email}. They can sign in now.`);
       }
@@ -820,8 +820,8 @@ export default function AdminPage() {
         setInviteLog((prev) => [{ ...entry, status: 'error' as const, message: data.error ?? 'Failed', at: new Date().toISOString() }, ...prev]);
         toast.error(data.error ?? 'Failed to send invite.');
       } else if (data.emailSent === false && data.inviteUrl) {
-        setInviteLog((prev) => [{ ...entry, status: 'warn' as const, message: 'Email failed — share link manually', inviteUrl: data.inviteUrl, at: new Date().toISOString() }, ...prev]);
-        toast.warning(`Email delivery failed. The invite link is shown below — copy and send it to ${entry.email}.`);
+        setInviteLog((prev) => [{ ...entry, status: 'warn' as const, message: 'Email failed  share link manually', inviteUrl: data.inviteUrl, at: new Date().toISOString() }, ...prev]);
+        toast.warning(`Email delivery failed. The invite link is shown below  copy and send it to ${entry.email}.`);
         setInviteName(''); setInviteEmail(''); setInviteRole('Developer');
       } else {
         setInviteLog((prev) => [{ ...entry, status: 'sent' as const, message: 'Invite sent (expires in 4.5h)', at: new Date().toISOString() }, ...prev]);
@@ -862,7 +862,7 @@ export default function AdminPage() {
           });
           const data = await res.json();
           if (!res.ok) return { ...row, status: 'error' as const, message: data.error ?? 'Failed', at: new Date().toISOString() };
-          if (data.emailSent === false && data.inviteUrl) return { ...row, status: 'warn' as const, message: 'Email failed — share link manually', inviteUrl: data.inviteUrl, at: new Date().toISOString() };
+          if (data.emailSent === false && data.inviteUrl) return { ...row, status: 'warn' as const, message: 'Email failed  share link manually', inviteUrl: data.inviteUrl, at: new Date().toISOString() };
           return { ...row, status: 'sent' as const, message: 'Invite sent (expires in 4.5h)', at: new Date().toISOString() };
         } catch {
           return { ...row, status: 'error' as const, message: 'Network error', at: new Date().toISOString() };
@@ -893,7 +893,7 @@ export default function AdminPage() {
         return;
       }
     } catch {
-      // Backend unreachable "” still update locally
+      // Backend unreachable "" still update locally
     }
 
     const nextRequests = accessRequests.map((r) =>
@@ -1009,10 +1009,10 @@ export default function AdminPage() {
     <AdminGuard>
       <div className="admin-control-root min-h-screen" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
 
-        {/* €€ Spectrum bar €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ */}
+        {/*  Spectrum bar  */}
         <div className="spectrum-bar fixed top-0 left-0 right-0 z-50 pointer-events-none" />
 
-        {/* €€ Header €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ */}
+        {/*  Header  */}
         <header className="sticky top-[3px] z-40" style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(26,27,58,0.14)', boxShadow: '0 2px 16px rgba(91,79,219,0.06)' }}>
           <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-6 lg:px-8">
             <div className="flex items-center gap-4">
@@ -1062,7 +1062,7 @@ export default function AdminPage() {
         </header>
 
         <main className="mx-auto max-w-[1500px] px-6 py-10 lg:px-8">
-          {/* €€ Page hero €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ */}
+          {/*  Page hero  */}
           <section className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: '#7C3AED', marginBottom: 8 }}>
@@ -1072,7 +1072,7 @@ export default function AdminPage() {
                 Workspace Control Center
               </h1>
               <p style={{ fontSize: 14, color: 'rgba(90,95,128,0.75)', lineHeight: 1.65, maxWidth: 560 }}>
-                Manage people, channel access, broadcast emails, and monitor team activity "” all in one place.
+                Manage people, channel access, broadcast emails, and monitor team activity "" all in one place.
               </p>
             </div>
             <button
@@ -1085,7 +1085,7 @@ export default function AdminPage() {
             </button>
           </section>
 
-          {/* €€ Stat cards €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ */}
+          {/*  Stat cards  */}
           <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {statCards.map(({ label, value, icon: Icon, accent, accentBg, gradient }) => (
               <div
@@ -1115,7 +1115,7 @@ export default function AdminPage() {
             ))}
           </section>
 
-          {/* €€ Tab navigation €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ */}
+          {/*  Tab navigation  */}
           <div className="mb-6 flex gap-2 overflow-x-auto rounded-2xl p-1.5" style={{ background: '#FFFFFF', border: '1.5px solid rgba(26,27,58,0.14)', boxShadow: '0 2px 8px rgba(91,79,219,0.04)' }}>
             {TABS.map((tab) => {
               const isActive = activeTab === tab.id;
@@ -1167,9 +1167,9 @@ export default function AdminPage() {
             })}
           </div>
 
-          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: PEOPLE
-          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'people' && (
             <div className="card-premium overflow-hidden" style={{ animation: 'slide-deck 0.4s cubic-bezier(0.22,1,0.36,1)' }}>
               {/* People tab top accent */}
@@ -1231,7 +1231,7 @@ export default function AdminPage() {
                         <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.50)', marginBottom: 12 }}>
                           Select channels to grant access
                         </p>
-                        {/* #general — always on */}
+                        {/* #general  always on */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: 'rgba(13,175,206,0.06)', border: '1px solid rgba(13,175,206,0.15)', marginBottom: 8, opacity: 0.7 }}>
                           <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(13,175,206,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <Hash size={14} style={{ color: '#0DAFCE' }} />
@@ -1345,7 +1345,7 @@ export default function AdminPage() {
                                 {!isAdminMember && canAddMoreAdmins && (
                                   <button type="button" onClick={() => promoteToAdmin(member)} disabled={promoteLoadingId === member.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, background: 'transparent', color: '#5B4FDB', fontSize: 10, fontWeight: 700, border: '1px solid rgba(91,79,219,0.22)', cursor: 'pointer', opacity: promoteLoadingId === member.id ? 0.5 : 1, width: 'fit-content' }}>
                                     <ShieldCheck size={10} />
-                                    {promoteLoadingId === member.id ? 'Promoting…' : 'Make Admin'}
+                                    {promoteLoadingId === member.id ? 'Promoting' : 'Make Admin'}
                                   </button>
                                 )}
                               </div>
@@ -1431,7 +1431,7 @@ export default function AdminPage() {
                                     toast.success(`${member.name} was removed from the workspace.`);
                                     loadLocalMembers?.();
                                   } else if (r.status === 404) {
-                                    // Both endpoints missing (very old deploy) "” remove locally
+                                    // Both endpoints missing (very old deploy) "" remove locally
                                     removeMember(member.id);
                                     toast.success(`${member.name} was removed from the workspace.`);
                                     loadLocalMembers?.();
@@ -1452,7 +1452,7 @@ export default function AdminPage() {
                                       toast.success(`${member.name} was removed from the workspace.`);
                                       loadLocalMembers?.();
                                     } else if (res.status === 404) {
-                                      // DB record already gone "” try system endpoint (covers
+                                      // DB record already gone "" try system endpoint (covers
                                       // hardcoded members that were also registered via sign-up)
                                       // or just remove from local state if truly gone.
                                       await doSystemRemove().catch(async () => {
@@ -1485,9 +1485,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: REQUESTS
-          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'requests' && (() => {
             const statusCfg: Record<string, { label: string; color: string; bg: string; border: string }> = {
               pending:  { label: 'Pending',  color: '#F59E0B', bg: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.25)' },
@@ -1724,9 +1724,9 @@ export default function AdminPage() {
             );
           })()}
 
-          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: CHANNELS
-          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {/* TAB: INVITE GENERATOR */}
           {activeTab === 'invites' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -1849,7 +1849,7 @@ export default function AdminPage() {
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', fontFamily: "'JetBrains Mono', monospace" }}>#general</p>
                       <p style={{ fontSize: 11, color: 'rgba(90,95,128,0.65)', marginTop: 2 }}>
-                        Default channel "” every user is automatically added.
+                        Default channel "" every user is automatically added.
                       </p>
                     </div>
                   </div>
@@ -1946,9 +1946,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: BROADCAST
-          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'broadcast' && (
             <div className="mx-auto max-w-2xl">
               <div className="card-premium" style={{ padding: 24 }}>
@@ -1977,7 +1977,7 @@ export default function AdminPage() {
                       type="text"
                       value={broadcastSubject}
                       onChange={(e) => setBroadcastSubject(e.target.value)}
-                      placeholder="e.g. Team update "” June 2026"
+                      placeholder="e.g. Team update - June 2026"
                       maxLength={150}
                       style={{ height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.18)', background: '#ECEAF8', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
                       onFocus={e => { e.target.style.borderColor = 'rgba(192,38,211,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(192,38,211,0.10)'; }}
@@ -1992,7 +1992,7 @@ export default function AdminPage() {
                     <textarea
                       value={broadcastMessage}
                       onChange={(e) => setBroadcastMessage(e.target.value)}
-                      placeholder="Write your message here. Plain text "” line breaks are preserved."
+                      placeholder="Write your message here. Plain text - line breaks are preserved."
                       rows={7}
                       maxLength={2000}
                       style={{ width: '100%', resize: 'none', borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.18)', background: '#ECEAF8', padding: '12px 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6, transition: 'border-color .2s, box-shadow .2s' }}
@@ -2031,8 +2031,8 @@ export default function AdminPage() {
 
                   {broadcastLastSent && (
                     <div style={{ borderRadius: 12, border: '1.5px solid rgba(16,201,138,0.20)', background: 'rgba(16,201,138,0.06)', padding: '12px 16px', fontSize: 12, fontWeight: 500, color: '#059669' }}>
-                      “ Last sent at {broadcastLastSent.at} · &ldquo;{broadcastLastSent.subject}
-                      &rdquo; ’ {broadcastLastSent.count} members
+                      " Last sent at {broadcastLastSent.at}  &ldquo;{broadcastLastSent.subject}
+                      &rdquo; ' {broadcastLastSent.count} members
                     </div>
                   )}
 
@@ -2059,9 +2059,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: ACTIVITY
-          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'activity' && (
             <div className="card-premium space-y-8 p-6">
               {/* Top accent */}
@@ -2071,7 +2071,7 @@ export default function AdminPage() {
                 <div className="mb-6 flex items-center justify-between">
                   <div>
                     <p style={{ marginBottom: 4, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase', color: '#3B82F6' }}>
-                      Last 7 days · With user permission
+                      Last 7 days  With user permission
                     </p>
                     <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: '#1A1B3A' }}>
                       <Eye size={20} style={{ color: '#3B82F6' }} />
@@ -2079,13 +2079,13 @@ export default function AdminPage() {
                     </h2>
                     <p style={{ marginTop: 4, fontSize: 13, color: 'rgba(90,95,128,0.70)', lineHeight: 1.6 }}>
                       In-app session time, messages sent, and engagement per team member. Users can
-                      see exactly what is tracked in Settings ’ Privacy.
+                      see exactly what is tracked in Settings ' Privacy.
                     </p>
                     <Link href="/admin/activity" style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: '#3B82F6', textDecoration: 'none' }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline'; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none'; }}
                     >
-                      View full activity report ’
+                      View full activity report '
                     </Link>
                   </div>
                   <button
@@ -2220,9 +2220,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: ATTENDANCE COMMAND CENTER
-          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'attendance' && (
             <div className="card-premium p-6">
               {/* Attendance hero banner */}
@@ -2230,7 +2230,7 @@ export default function AdminPage() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: '#D48C00', marginBottom: 6 }}>
-                      Admin · Real-time tracking
+                      Admin  Real-time tracking
                     </p>
                     <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: '#1A1B3A', marginBottom: 4 }}>
                       Attendance Command Center
@@ -2280,17 +2280,17 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: DESKTOP ACTIVITY
-          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'desktop' && (() => {
             const istOffset = 5.5 * 60 * 60 * 1000;
             const todayIST  = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
             const viewDate  = awDate; // single date for all data
 
             const panelIcon: Record<string, string> = {
-              messages: 'ðŸ’¬', wiki: 'ðŸ“–', kanban: '…', calendar: 'ðŸ“…',
-              leave: 'ðŸŒ´', dashboard: 'ðŸ ', ai: '¨',
+              messages: 'chat', wiki: 'docs', kanban: 'board', calendar: 'cal',
+              leave: 'leave', dashboard: 'home', ai: 'ai',
             };
 
             const fmt = (m: number) => m <= 0 ? '0m' : m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`;
@@ -2362,11 +2362,11 @@ export default function AdminPage() {
                 .drow:hover{background:rgba(99,102,241,0.04)!important;}
               `}</style>
 
-              {/* €€ Header €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ */}
+              {/*  Header  */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
                 <div>
                   <p style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: '#10B981', marginBottom: 6, fontFamily: 'monospace' }}>
-                    {viewDate === todayIST ? 'Live · Today' : viewDate} · Team Overview
+                    {viewDate === todayIST ? 'Live  Today' : viewDate}  Team Overview
                   </p>
                   <h2 style={{ fontSize: 26, fontWeight: 900, color: '#1A1B3A', margin: '0 0 14px', letterSpacing: '-0.025em' }}>
                     Team Activity
@@ -2399,7 +2399,7 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* ── Member list (accordion) ──────────────────────────────────── */}
+              {/*  Member list (accordion)  */}
               <div style={{ borderRadius: 18, border: '1.5px solid rgba(26,27,58,0.09)', background: '#fff', overflow: 'hidden', boxShadow: '0 2px 12px rgba(26,27,58,0.04)' }}>
 
                 {/* Column headers */}
@@ -2418,14 +2418,14 @@ export default function AdminPage() {
                   const topApps    = person.appBreakdown.slice(0, 8);
                   const maxMins    = topApps[0]?.minutes || 1;
                   const inAppPct   = Math.min(100, Math.round((person.todayMinutes / 480) * 100));
-                  const icon       = panelIcon[person.currentPanel] || '🖥️';
+                  const icon       = panelIcon[person.currentPanel] || '';
                   const dotColor   = isLive ? '#10B981' : isAway ? '#F59E0B' : '#CBD5E1';
                   const statusText = isLive ? 'Online' : isAway ? ago(person.lastSeen) : 'Offline';
                   const statusFg   = isLive ? '#059669' : isAway ? '#B45309' : '#94A3B8';
 
                   return (
                     <div key={person.email}>
-                      {/* ── Collapsed row ── */}
+                      {/*  Collapsed row  */}
                       <div
                         className="drow"
                         onClick={() => toggleExpand(person.email)}
@@ -2463,10 +2463,10 @@ export default function AdminPage() {
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B' }}>{person.taskCount}</span>
 
                         {/* Chevron */}
-                        <span style={{ fontSize: 14, color: 'rgba(90,95,128,0.35)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>▾</span>
+                        <span style={{ fontSize: 14, color: 'rgba(90,95,128,0.35)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}></span>
                       </div>
 
-                      {/* ── Expanded detail panel ── */}
+                      {/*  Expanded detail panel  */}
                       {isExpanded && (
                         <div style={{ borderTop: '1px solid rgba(99,102,241,0.10)', borderBottom: idx < merged.length - 1 ? '1px solid rgba(26,27,58,0.06)' : 'none', background: 'rgba(99,102,241,0.02)', padding: '20px 22px 22px' }}>
 
@@ -2515,7 +2515,7 @@ export default function AdminPage() {
                                 <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.45)' }}>Desktop Apps</span>
                                 <span style={{ fontSize: 10.5, fontWeight: 700, color: '#6366F1' }}>
                                   {fmt(person.totalActiveMinutes)} tracked
-                                  {person.isAfk && <span style={{ marginLeft: 8, color: '#D97706' }}> · AFK now</span>}
+                                  {person.isAfk && <span style={{ marginLeft: 8, color: '#D97706' }}>  AFK now</span>}
                                 </span>
                               </div>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -2525,7 +2525,7 @@ export default function AdminPage() {
                                   return (
                                     <div key={app} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                       <span style={{ width: 140, fontSize: 12, fontWeight: isDist ? 700 : 500, color: isDist ? '#EF476F' : '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                        {isDist ? '⚠ ' : ''}{app}
+                                        {isDist ? ' ' : ''}{app}
                                       </span>
                                       <div style={{ flex: 1, height: 8, borderRadius: 4, background: isDist ? 'rgba(239,71,111,0.10)' : 'rgba(99,102,241,0.10)' }}>
                                         <div style={{ height: '100%', borderRadius: 4, width: `${pct}%`, background: isDist ? 'linear-gradient(90deg,#EF476F,#F59E0B)' : 'linear-gradient(90deg,#6366F1,#818CF8)', transition: 'width .5s' }} />
@@ -2539,7 +2539,7 @@ export default function AdminPage() {
                           ) : (
                             <div style={{ borderRadius: 10, border: '1.5px dashed rgba(99,102,241,0.20)', padding: '14px 16px', background: 'rgba(99,102,241,0.03)' }}>
                               <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.55)', margin: 0 }}>
-                                💻 Desktop app tracking not set up — ask this member to follow the setup banner in their sidebar.
+                                 Desktop app tracking not set up  ask this member to follow the setup banner in their sidebar.
                               </p>
                             </div>
                           )}
@@ -2553,9 +2553,9 @@ export default function AdminPage() {
           );
           })()}
 
-          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: AVAILABILITY CALENDAR
-          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'availability' && (
             <div className="card-premium p-6">
               <div style={{ height: 3, background: 'linear-gradient(90deg, #6366f1, #8B5CF6)', borderRadius: 3, marginBottom: 24 }} />
@@ -2563,9 +2563,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: LEAVES
-          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'leaves' && (
             <div className="card-premium space-y-6 p-6">
               <div style={{ height: 3, background: 'linear-gradient(90deg, #F59E0B, #FBBF24)', borderRadius: 3, marginBottom: 8 }} />
@@ -2603,7 +2603,7 @@ export default function AdminPage() {
                     {pendingLeaves.length > 0 && (
                       <div>
                         <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(90,95,128,0.45)', letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 12 }}>
-                          Awaiting action · {pendingLeaves.length}
+                          Awaiting action  {pendingLeaves.length}
                         </p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                           {pendingLeaves.map(leave => (
@@ -2611,7 +2611,7 @@ export default function AdminPage() {
                               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                   <div style={{ width: 40, height: 40, borderRadius: 12, background: `${catColor[leave.leaveCategory] ?? '#9BA6D3'}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16 }}>
-                                    {{ sick: 'ðŸ¤’', vacation: 'ðŸŒ´', personal: 'ðŸ‘¤', emergency: '¡', other: 'ðŸ“‹' }[leave.leaveCategory] ?? 'ðŸ“‹'}
+                                    {{ sick: '🤒', vacation: '🌴', personal: '🙂', emergency: '🚨', other: '📋' }[leave.leaveCategory] ?? '📋'}
                                   </div>
                                   <div>
                                     <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#1A1B3A' }}>{leave.name}</p>
@@ -2622,9 +2622,9 @@ export default function AdminPage() {
                               </div>
 
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px', marginBottom: 12 }}>
-                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Type:</strong> {leave.type === 'instant' ? '¡ Emergency' : 'ðŸ“… Planned'}</span>
+                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Type:</strong> {leave.type === 'instant' ? ' Emergency' : '" Planned'}</span>
                                 <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Category:</strong> {catLabel[leave.leaveCategory] ?? leave.leaveCategory}</span>
-                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Date:</strong> {leave.type === 'instant' ? `${leave.startDate} · ${leave.duration === 'half' ? 'Half day' : 'Full day'}` : `${leave.startDate}${leave.endDate ? ` ’ ${leave.endDate}` : ''}`}</span>
+                                <span style={{ fontSize: 12.5, color: '#4A5578' }}><strong>Date:</strong> {leave.type === 'instant' ? `${leave.startDate}  ${leave.duration === 'half' ? 'Half day' : 'Full day'}` : `${leave.startDate}${leave.endDate ? ` ' ${leave.endDate}` : ''}`}</span>
                               </div>
 
                               <div style={{ background: 'rgba(26,27,58,0.03)', borderRadius: 10, padding: '10px 12px', marginBottom: 14, fontSize: 13, color: '#4A5578', lineHeight: 1.5 }}>
@@ -2668,15 +2668,15 @@ export default function AdminPage() {
                     {resolvedLeaves.length > 0 && (
                       <div>
                         <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(90,95,128,0.45)', letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 12 }}>
-                          Resolved · {resolvedLeaves.length}
+                          Resolved  {resolvedLeaves.length}
                         </p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {resolvedLeaves.map(leave => (
                             <div key={leave.id} style={{ borderRadius: 14, border: '1.5px solid rgba(26,27,58,0.08)', background: '#FAFAFA', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                              <div style={{ fontSize: 20 }}>{{ sick: 'ðŸ¤’', vacation: 'ðŸŒ´', personal: 'ðŸ‘¤', emergency: '¡', other: 'ðŸ“‹' }[leave.leaveCategory] ?? 'ðŸ“‹'}</div>
+                              <div style={{ fontSize: 20 }}>{{ sick: '🤒', vacation: '🌴', personal: '🙂', emergency: '🚨', other: '📋' }[leave.leaveCategory] ?? '📋'}</div>
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1A1B3A' }}>{leave.name} <span style={{ fontWeight: 400, color: 'rgba(90,95,128,0.55)', fontSize: 11 }}>"” {leave.type === 'instant' ? 'Emergency' : 'Planned'} · {catLabel[leave.leaveCategory]}</span></p>
-                                <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'rgba(90,95,128,0.55)' }}>{leave.startDate}{leave.endDate ? ` ’ ${leave.endDate}` : ''} · {leave.reason}</p>
+                                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1A1B3A' }}>{leave.name} <span style={{ fontWeight: 400, color: 'rgba(90,95,128,0.55)', fontSize: 11 }}>- {leave.type === 'instant' ? 'Emergency' : 'Planned'}  {catLabel[leave.leaveCategory]}</span></p>
+                                <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'rgba(90,95,128,0.55)' }}>{leave.startDate}{leave.endDate ? ` ' ${leave.endDate}` : ''}  {leave.reason}</p>
                                 {leave.adminNote && <p style={{ margin: '3px 0 0', fontSize: 11, color: leave.status === 'approved' ? '#10C98A' : '#EF476F', fontStyle: 'italic' }}>Note: {leave.adminNote}</p>}
                               </div>
                               <LeaveStatusBadge status={leave.status} />
@@ -2691,9 +2691,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+          {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: LEAVE CALENDAR
-          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
+          ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ */}
           {activeTab === 'leave-calendar' && (
             <div className="card-premium p-6">
               <div style={{ height: 3, background: 'linear-gradient(90deg, #10C98A, #059669)', borderRadius: 3, marginBottom: 24 }} />
@@ -2701,9 +2701,9 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════════════════
+          {/* 
               TAB: AUDIT LOG
-          ══════════════════════════════════════════════════════════════ */}
+           */}
           {activeTab === 'audit' && (
             <div className="card-premium" style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div style={{ height: 3, background: 'linear-gradient(90deg,#6366F1,#818CF8)', borderRadius: 3 }} />
@@ -2743,7 +2743,7 @@ export default function AdminPage() {
               {/* Log entries */}
               {auditLoading ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'rgba(90,95,128,0.55)', fontSize: 13, padding: '48px 0', justifyContent: 'center' }}>
-                  <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Loading audit log…
+                  <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Loading audit log
                 </div>
               ) : auditLogs.length === 0 ? (
                 <div style={{ borderRadius: 16, border: '1.5px dashed rgba(99,102,241,0.20)', background: 'rgba(99,102,241,0.02)', padding: '52px 32px', textAlign: 'center' }}>
@@ -2799,7 +2799,7 @@ export default function AdminPage() {
                           <span style={{ fontSize: 12.5, fontWeight: 700, color: accent }}>{actionLabel}</span>
                           {log.details && Object.keys(log.details).length > 0 && (
                             <span style={{ fontSize: 10.5, color: 'rgba(90,95,128,0.45)', marginLeft: 4 }}>
-                              {Object.entries(log.details).filter(([k]) => !['leaveId'].includes(k)).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                              {Object.entries(log.details).filter(([k]) => !['leaveId'].includes(k)).map(([k, v]) => `${k}: ${v}`).join('  ')}
                             </span>
                           )}
                         </div>
@@ -2818,7 +2818,7 @@ export default function AdminPage() {
                               <p style={{ margin: 0, fontSize: 10.5, color: 'rgba(90,95,128,0.45)' }}>{log.target}</p>
                             </>
                           ) : (
-                            <span style={{ fontSize: 11, color: 'rgba(90,95,128,0.30)' }}>—</span>
+                            <span style={{ fontSize: 11, color: 'rgba(90,95,128,0.30)' }}></span>
                           )}
                         </div>
                       </div>
@@ -2830,7 +2830,7 @@ export default function AdminPage() {
           )}
         </main>
 
-        {/* €€ Add user modal €€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€ */}
+        {/*  Add user modal  */}
         {showAddModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" style={{ background: 'rgba(26,27,58,0.28)' }}>
             <form
@@ -2915,12 +2915,12 @@ export default function AdminPage() {
                     </div>
                   ) : extraChannels.length === 0 ? (
                     <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.18)', background: '#ECEAF8', padding: '12px 14px', fontSize: 12, color: 'rgba(90,95,128,0.55)' }}>
-                      #general only "” no project channels created yet
+                      #general only "" no project channels created yet
                     </div>
                   ) : (
                     <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: '#ECEAF8', padding: '12px 14px' }}>
                       <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.55)', marginBottom: 10 }}>
-                        #general is always included · pick up to 3 more
+                        #general is always included  pick up to 3 more
                       </p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {extraChannels.map((c) => {
