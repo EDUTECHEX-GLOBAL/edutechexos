@@ -1,3 +1,5 @@
+IPs previously authorised for Brevo HTTP API (no longer needed if IP restriction is disabled):
+
 43.205.238.201
 13.232.23.217
 49.205.97.159
