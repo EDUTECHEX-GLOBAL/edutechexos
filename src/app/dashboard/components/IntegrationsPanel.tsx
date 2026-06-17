@@ -199,7 +199,7 @@ export default function IntegrationsPanel({
                   <input
                     value={form.name}
                     onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="e.g. GitHub "" skillnaav"
+                    placeholder="e.g. GitHub / skillnaav"
                     className="w-full text-sm border border-[rgba(62,74,137,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A3568]"
                     required
                   />
@@ -285,7 +285,7 @@ export default function IntegrationsPanel({
                 <div className="rounded-xl border border-dashed border-[rgba(62,74,137,0.12)] p-4 text-center">
                   <p className="text-sm text-[#7C859E] mb-2">No GitHub integrations yet</p>
                   <p className="text-xs text-[#7C859E]">
-                    Create one above, then add the URL to your GitHub repo -> Settings -> Webhooks
+                    Create one above, then add the URL to your GitHub repo &gt; Settings &gt; Webhooks
                   </p>
                 </div>
               )}
@@ -311,7 +311,7 @@ export default function IntegrationsPanel({
                   </p>
                   <ol className="text-xs text-[#7C859E] space-y-0.5 list-decimal list-inside">
                     <li>
-                      Go to your repo -> <strong>Settings -> Webhooks -> Add webhook</strong>
+                      Go to your repo &gt; <strong>Settings &gt; Webhooks &gt; Add webhook</strong>
                     </li>
                     <li>
                       Paste the webhook URL above into <strong>Payload URL</strong>
