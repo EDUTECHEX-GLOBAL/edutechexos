@@ -1208,7 +1208,22 @@ export default function EduTechExOSDashboard() {
           sourceChannel: `#${channel.name}`,
           status: 'todo',
         });
-        toast.success(`📋 Task added to Kanban board for @${firstMentioned.name}`);
+        // Post a task card message to the chat so everyone sees the assignment
+        addMessage(activeChannelId, {
+          id: `task-card-${Date.now()}`,
+          sender: currentUser?.name ?? 'EduTechExOS',
+          initials: currentUser?.initials ?? 'ET',
+          color: currentUser?.color ?? '#5B4FDB',
+          timestamp: new Date().toISOString(),
+          text: text.slice(0, 200),
+          taskCard: {
+            assignee: firstMentioned.name,
+            assigneeInitials: firstMentioned.initials,
+            assigneeColor: firstMentioned.color ?? '#3E4A89',
+            taskText: text.slice(0, 200),
+            status: 'todo',
+          },
+        });
         trackEvent('task_created', {
           source: 'mention',
           channel: channel?.name,
@@ -2827,6 +2842,7 @@ export default function EduTechExOSDashboard() {
                 const scheduledMeet = parseScheduledMeet(message.text);
                 const isPinned = (pinnedMessageIds[activeChannelId] ?? []).includes(message.id);
                 const isBookmarked = bookmarkedMessageIds.includes(message.id);
+                const taskCard = message.taskCard;
 
                 return (
                   <div
@@ -2877,7 +2893,43 @@ export default function EduTechExOSDashboard() {
                       `}
                         >
                           {/* Content */}
-                          {scheduledMeet ? (
+                          {taskCard ? (
+                            /* -- Task Card --------------------------------- */
+                            <div style={{ width: 272, borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 20px rgba(91,79,219,0.18)', border: '1px solid rgba(91,79,219,0.20)' }}>
+                              {/* top accent */}
+                              <div style={{ height: 3, background: 'linear-gradient(90deg, #5B4FDB, #7B6FEB, #10C98A)' }} />
+                              {/* header */}
+                              <div style={{ background: 'linear-gradient(135deg, #1A1B3A, #252D4A)', padding: '14px 16px 12px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                                  <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(91,79,219,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7B6FEB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M7 6H5a2 2 0 00-2 2v12a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-2"/><path d="M9 12l2 2 4-4"/></svg>
+                                  </div>
+                                  <div>
+                                    <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(155,166,211,0.65)', margin: 0 }}>Task Assigned</p>
+                                    <p style={{ fontSize: 11, fontWeight: 700, color: '#fff', margin: '1px 0 0' }}>#{channel?.name}</p>
+                                  </div>
+                                  <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 800, color: '#10C98A', background: 'rgba(16,201,138,0.15)', padding: '3px 8px', borderRadius: 6, letterSpacing: '.06em', textTransform: 'uppercase' }}>TODO</span>
+                                </div>
+                                <p style={{ fontSize: 13, fontWeight: 500, color: 'rgba(212,216,235,0.90)', margin: 0, lineHeight: 1.5 }}>
+                                  {taskCard.taskText.replace(/@[\w. ]+/g, (m) => m).slice(0, 120)}
+                                </p>
+                              </div>
+                              {/* assignee footer */}
+                              <div style={{ background: '#fff', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{ width: 30, height: 30, borderRadius: 8, background: taskCard.assigneeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+                                  {taskCard.assigneeInitials}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <p style={{ fontSize: 10, color: 'rgba(90,95,128,0.55)', margin: 0, fontWeight: 600 }}>Assigned to</p>
+                                  <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', margin: '1px 0 0' }}>@{taskCard.assignee}</p>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#5B4FDB' }}>
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                                  Kanban
+                                </div>
+                              </div>
+                            </div>
+                          ) : scheduledMeet ? (
                             /* ── Meeting Scheduled Card ─────────────────── */
                             <div
                               className=-w-full max-w-[288px] overflow-hidden rounded-2xl-

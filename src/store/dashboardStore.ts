@@ -96,6 +96,13 @@ export type Message = {
   linkPreview?: LinkPreview;
   // soft-delete — set by server when "Delete for everyone" is triggered
   isDeleted?: boolean;
+  taskCard?: {
+    assignee: string;
+    assigneeInitials: string;
+    assigneeColor: string;
+    taskText: string;
+    status: 'todo' | 'inprogress' | 'done';
+  };
 };
 
 export type WikiPage = {
