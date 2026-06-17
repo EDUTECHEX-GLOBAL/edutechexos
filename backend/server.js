@@ -1847,6 +1847,7 @@ app.post('/api/meeting-access', requireAuth, async (req, res) => {
 app.get('/api/meeting-access/:messageId', authMiddleware, async (req, res) => {
   try {
     const doc = await MeetingAccess.findOne({ messageId: req.params.messageId }).lean();
+    // No record = legacy meeting posted before access control existed; allow everyone
     if (!doc) return res.json({ success: true, canJoin: true, exists: false });
 
     const userEmail = req.user?.email?.toLowerCase() || '';

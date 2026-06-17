@@ -198,7 +198,8 @@ function parseScheduledMeet(text: string) {
   return {
     title: text.match(/Meeting Scheduled:\s*(.+)/)?.[1]?.trim() ?? 'Team meeting',
     timeStr: text.match(/Time:\s*(.+)/)?.[1]?.trim() ?? '',
-    people: text.match(/Mentioned people:\s*(.+)/)?.[1]?.trim() ?? '',
+    // Support both "Mentioned:" and legacy "Mentioned people:"
+    people: (text.match(/Mentioned(?:\s+people)?:\s*(.+)/)?.[1]?.trim() ?? ''),
     link: text.match(/Join Link:\s*(https?:\/\/\S+)/)?.[1]?.trim() ?? '',
   };
 }
@@ -294,13 +295,16 @@ function canJoin(
   u: { name: string; email: string; role: string } | null
 ) {
   if (!u) return false;
-  if (u.role === 'Admin' || u.role === 'Manager') return true;
+  // Host can always join their own meeting
   if (m.sender.toLowerCase() === u.name.toLowerCase()) return true;
-  if (!m.people) return false;
+  // No people listed → open to all (legacy messages without explicit invite list)
+  if (!m.people) return u.role === 'Admin';
+  // Otherwise only explicitly mentioned people can join
   const list = m.people.split(/[,;]/).map((p) => p.trim().toLowerCase());
-  const h = u.email.split('@')[0].toLowerCase();
+  const nameLower = u.name.toLowerCase();
+  const emailPrefix = u.email.split('@')[0].toLowerCase();
   return list.some(
-    (p) => u.name.toLowerCase().includes(p) || p.includes(u.name.toLowerCase()) || p.includes(h)
+    (p) => nameLower.includes(p) || p.includes(nameLower) || p.includes(emailPrefix)
   );
 }
 function chips(people: string) {

@@ -1615,8 +1615,9 @@ export default function EduTechExOSDashboard() {
     ];
     const text = textLines.join('\n');
 
+    const msgId = `meeting-${Date.now()}`;
     addMessage(activeChannelId, {
-      id: `meeting-${Date.now()}`,
+      id: msgId,
       sender: currentUser?.name ?? 'You',
       initials: currentUser?.initials ?? 'Y',
       color: currentUserColor,
@@ -1634,7 +1635,7 @@ export default function EduTechExOSDashboard() {
       recipientEmails: inviteeEmails,
     });
 
-    // Always close the modal and return to chat first, then send email in background
+    // Close the modal immediately — background work continues after
     setScheduleMeetOpen(false);
     setMeetTitle('');
     setMeetDate('');
@@ -1642,48 +1643,43 @@ export default function EduTechExOSDashboard() {
     setMeetInviteeIds([]);
     setComposerMessage('');
 
-    // Scroll chat to the new meeting message and refocus input
     setTimeout(() => {
       chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
       composerRef.current?.focus();
     }, 200);
 
-    // Send email invite in the background — does not block returning to chat
-    if (sendEmailInvite) {
+    // Run email + access-record creation concurrently in the background
+    const authData = localStorage.getItem('edutechex_token');
+    const token = authData ? JSON.parse(authData).token : null;
+    const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+    const authHeaders = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+
+    // 1. Create meeting access record so backend enforces invite-only join
+    if (inviteeEmails.length > 0) {
+      fetch(`${BACKEND}/api/meeting-access`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ messageId: msgId, channelId: activeChannelId, allowedEmails: inviteeEmails }),
+      }).catch((err) => console.error('[meeting-access] record creation failed:', err));
+    }
+
+    // 2. Always send email to every mentioned person (not gated by settings toggle)
+    if (inviteeEmails.length > 0) {
       try {
-        const authData = localStorage.getItem('edutechex_token');
-        const token = authData ? JSON.parse(authData).token : null;
-        const BACKEND =
-          process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
         const emailRes = await fetch(`${BACKEND}/api/meetings/invite`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            title,
-            time: timeLabel,
-            joinLink: meetLink,
-            channelId: activeChannelId,
-            inviteeEmails,
-          }),
+          headers: authHeaders,
+          body: JSON.stringify({ title, time: timeLabel, joinLink: meetLink, channelId: activeChannelId, inviteeEmails }),
         });
         const emailResult = await emailRes.json().catch(() => ({}));
         if (emailResult.success) {
-          toast.success(
-            `Meeting scheduled. Invite sent to ${emailResult.sent} member${emailResult.sent === 1 ? '' : 's'}.`
-          );
-          trackEvent('meeting_scheduled', {
-            emailInviteSent: true,
-            inviteeCount: emailResult.sent,
-          });
+          toast.success(`Meeting scheduled. Invite emailed to ${emailResult.sent} member${emailResult.sent === 1 ? '' : 's'}.`);
+          trackEvent('meeting_scheduled', { emailInviteSent: true, inviteeCount: emailResult.sent });
         } else {
-          const reason = emailResult.error ? ` (${emailResult.error})` : '';
-          toast.warning(`Meeting scheduled, but email delivery failed${reason}.`);
+          toast.warning(`Meeting scheduled — email delivery failed. Share the link manually.`);
         }
-      } catch (err) {
-        toast.warning(`Meeting scheduled, but email could not be sent. (${String(err)})`);
+      } catch {
+        toast.warning('Meeting scheduled — could not send email invites. Share the link manually.');
       }
     } else {
       toast.success('Meeting scheduled successfully.');
