@@ -836,88 +836,71 @@ app.post('/api/access-requests', authLimiter, async (req, res) => {
       });
     }
 
-    // Generate a strong random password and email it to the user immediately
-    const plainPassword = generatePassword();
-    const request = new AccessRequest({ name, email: emailClean, password: await bcrypt.hash(plainPassword, 10), role });
+    // Invite-only system: store the request as pending, no temp password
+    const request = new AccessRequest({ name, email: emailClean, password: '', role, status: 'pending' });
     const saved = await request.save();
     const { _id, __v, ...rest } = saved.toObject();
 
     const appUrl = process.env.APP_URL || 'https://edutechexos.vercel.app';
 
-    // ── Email 1: credentials to the new user ──────────────────────────────
+    // ── Email 1: confirmation to the user (no credentials — invite-only) ──
     sendBrevoEmail({
       to: [{ email: emailClean, name }],
-      subject: 'Welcome to EduTechExOS — Your Login Credentials',
+      subject: 'EduTechExOS — Access Request Received',
       html: `
-        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#ffffff;">
-          <div style="text-align:center;margin-bottom:28px;">
-            <h1 style="color:#0A1128;margin:0 0 4px;font-size:26px;font-weight:900;letter-spacing:-0.5px;">EduTechExOS</h1>
-            <p style="color:#888;margin:0;font-size:13px;">Your Gateway to Excellence</p>
+        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#FAF8F5;border-radius:12px;">
+          <div style="background:linear-gradient(135deg,#191E2F,#252D45);border-radius:10px;padding:24px;text-align:center;margin-bottom:24px;">
+            <h1 style="color:#fff;margin:0;font-size:22px;letter-spacing:-0.5px;">EduTechExOS</h1>
+            <p style="color:rgba(255,255,255,0.6);margin:6px 0 0;font-size:13px;">Team Operating System</p>
           </div>
-
-          <p style="font-size:15px;color:#1E2636;margin:0 0 16px;">Hello ${name},</p>
-
-          <p style="font-size:14px;color:#4A5578;line-height:1.7;margin:0 0 20px;">
-            Welcome to <strong>EduTechExOS</strong>! Here are your login credentials:
+          <h2 style="color:#1E2636;font-size:18px;margin:0 0 12px;">Hi ${name}, your request is received!</h2>
+          <p style="color:#4A5578;font-size:14px;line-height:1.6;margin:0 0 16px;">
+            Thank you for requesting access to <strong>EduTechExOS</strong>. Your request has been sent to the workspace admin for review.
           </p>
-
-          <div style="background:#F7F8FC;border:1px solid #E2E6F0;border-radius:8px;padding:20px;margin-bottom:20px;">
-            <p style="margin:0 0 10px;font-size:13px;color:#4A5578;"><strong>Email:</strong> ${emailClean}</p>
-            <p style="margin:0 0 10px;font-size:13px;color:#4A5578;"><strong>Password:</strong> <span style="font-family:monospace;font-size:15px;color:#0A1128;font-weight:700;background:#EEF0FB;padding:3px 8px;border-radius:4px;">${plainPassword}</span></p>
-            <p style="margin:0;font-size:13px;color:#4A5578;"><strong>Role:</strong> ${role}</p>
+          <div style="background:#fff;border:1px solid rgba(62,74,137,0.12);border-radius:10px;padding:16px;margin-bottom:20px;">
+            <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#9BA6D3;text-transform:uppercase;letter-spacing:1px;">Request details</p>
+            <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Name:</strong> ${name}</p>
+            <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Email:</strong> ${emailClean}</p>
+            <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Role:</strong> ${role}</p>
           </div>
-
-          <p style="font-size:14px;color:#4A5578;margin:0 0 8px;">
-            You can log in at <a href="${appUrl}/sign-up-login-screen" style="color:#5B4FDB;">${appUrl}/sign-up-login-screen</a>
+          <p style="color:#4A5578;font-size:13px;line-height:1.6;margin:0 0 8px;">
+            Once approved, you will receive a <strong>personal invite link</strong> by email. The link will let you set your password and activate your account.
           </p>
-          <p style="font-size:13px;color:#888;margin:0 0 20px;">We recommend changing your password after the first login.</p>
-
-          <p style="font-size:13px;color:#4A5578;margin:0 0 6px;">For more information, visit <a href="${appUrl}" style="color:#5B4FDB;">EduTechExOS</a>.</p>
-          <p style="font-size:13px;color:#4A5578;margin:0 0 20px;">If you have any questions, contact <a href="mailto:edutechexos121@gmail.com" style="color:#5B4FDB;">edutechexos121@gmail.com</a>.</p>
-
-          <p style="font-size:14px;color:#1E2636;margin:0 0 6px;">Thank you for being a part of EduTechExOS.</p>
-          <p style="font-size:14px;color:#1E2636;margin:0 0 28px;"><strong>Best Regards,<br/>The EduTechExOS Team</strong></p>
-
-          <hr style="border:none;border-top:1px solid #E8EAF0;margin:0 0 16px;" />
-          <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS · Powered by EduTechEx</p>
+          <p style="color:#9BA6D3;font-size:12px;">If you don't hear back within 24 hours, contact your workspace admin directly.</p>
+          <hr style="border:none;border-top:1px solid rgba(62,74,137,0.10);margin:24px 0;" />
+          <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS - Powered by EduTechEx</p>
         </div>`,
-    }).catch(() => {});
+    }).catch((err) => console.error('[email] access-request confirmation failed:', err));
 
-    // ── Email 2: alert to the admin ────────────────────────────────────────
+    // ── Email 2: alert to the admin with a direct "Send Invite" prompt ────
     const adminEmail = process.env.ADMIN_NOTIFY_EMAIL || (VALID_ACCOUNTS.find(a => a.role === 'Admin') || {}).email;
     if (adminEmail) {
       sendBrevoEmail({
         to: [{ email: adminEmail }],
-        subject: `EduTechExOS — New user joined: ${name}`,
+        subject: `EduTechExOS — New access request from ${name}`,
         html: `
-          <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#ffffff;">
-            <div style="text-align:center;margin-bottom:28px;">
-              <h1 style="color:#0A1128;margin:0 0 4px;font-size:26px;font-weight:900;letter-spacing:-0.5px;">EduTechExOS</h1>
-              <p style="color:#888;margin:0;font-size:13px;">Your Gateway to Excellence</p>
+          <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#FAF8F5;border-radius:12px;">
+            <div style="background:linear-gradient(135deg,#191E2F,#252D45);border-radius:10px;padding:24px;text-align:center;margin-bottom:24px;">
+              <h1 style="color:#fff;margin:0;font-size:22px;letter-spacing:-0.5px;">EduTechExOS</h1>
+              <p style="color:rgba(255,255,255,0.6);margin:6px 0 0;font-size:13px;">Admin Notification</p>
             </div>
-
-            <p style="font-size:15px;color:#1E2636;margin:0 0 16px;">Hello Admin,</p>
-
-            <p style="font-size:14px;color:#4A5578;line-height:1.7;margin:0 0 20px;">
-              A new user has joined <strong>EduTechExOS</strong> and has been sent a temporary password. Their account is pending your approval.
+            <h2 style="color:#1E2636;font-size:17px;margin:0 0 12px;">New Access Request</h2>
+            <p style="color:#4A5578;font-size:14px;line-height:1.6;margin:0 0 16px;">
+              A new user has requested access to the <strong>EduTechExOS</strong> workspace. Review and send them an invite link from the admin panel.
             </p>
-
-            <div style="background:#F7F8FC;border:1px solid #E2E6F0;border-radius:8px;padding:20px;margin-bottom:20px;">
-              <p style="margin:0 0 8px;font-size:13px;color:#4A5578;"><strong>Name:</strong> ${name}</p>
-              <p style="margin:0 0 8px;font-size:13px;color:#4A5578;"><strong>Email:</strong> ${emailClean}</p>
-              <p style="margin:0;font-size:13px;color:#4A5578;"><strong>Role:</strong> ${role}</p>
+            <div style="background:#fff;border:1px solid rgba(62,74,137,0.12);border-radius:10px;padding:16px;margin-bottom:20px;">
+              <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#9BA6D3;text-transform:uppercase;letter-spacing:1px;">Request details</p>
+              <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Name:</strong> ${name}</p>
+              <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Email:</strong> ${emailClean}</p>
+              <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Role:</strong> ${role}</p>
             </div>
-
-            <p style="font-size:14px;color:#4A5578;margin:0 0 20px;">
-              Log in to the <a href="${appUrl}/sign-up-login-screen" style="color:#5B4FDB;">admin panel</a> to approve or reject this request.
-            </p>
-
-            <p style="font-size:14px;color:#1E2636;margin:0 0 6px;"><strong>Best Regards,<br/>The EduTechExOS System</strong></p>
-
-            <hr style="border:none;border-top:1px solid #E8EAF0;margin:24px 0 16px;" />
-            <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS · Powered by EduTechEx</p>
+            <div style="text-align:center;margin:20px 0;">
+              <a href="${appUrl}/admin" style="display:inline-block;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;text-decoration:none;padding:13px 28px;border-radius:10px;font-size:13px;font-weight:700;">Review in Admin Panel &#x2192;</a>
+            </div>
+            <hr style="border:none;border-top:1px solid rgba(62,74,137,0.10);margin:24px 0;" />
+            <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS - Powered by EduTechEx</p>
           </div>`,
-      }).catch(() => {});
+      }).catch((err) => console.error('[email] admin new-request alert failed:', err));
     }
 
     res.json({
@@ -999,31 +982,28 @@ app.patch('/api/access-requests/:id', authMiddleware, async (req, res) => {
     if (status === 'approved') {
       sendBrevoEmail({
         to: [{ email: rest.email, name: rest.name }],
-        subject: '🎉 EduTechExOS — Your access has been approved!',
+        subject: 'EduTechExOS — Your access request has been approved',
         html: `
           <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#FAF8F5;border-radius:12px;">
             <div style="background:linear-gradient(135deg,#191E2F,#252D45);border-radius:10px;padding:24px;text-align:center;margin-bottom:24px;">
               <h1 style="color:#fff;margin:0;font-size:22px;letter-spacing:-0.5px;">EduTechExOS</h1>
               <p style="color:rgba(255,255,255,0.6);margin:6px 0 0;font-size:13px;">Team Operating System</p>
             </div>
-            <h2 style="color:#1E2636;font-size:20px;margin:0 0 12px;">Welcome aboard, ${rest.name}! 🚀</h2>
-            <p style="color:#4A5578;font-size:14px;line-height:1.6;margin:0 0 20px;">
-              Your access to <strong>EduTechExOS</strong> has been approved by the admin. You can now sign in and start collaborating with the team.
+            <h2 style="color:#1E2636;font-size:20px;margin:0 0 12px;">Welcome aboard, ${rest.name}!</h2>
+            <p style="color:#4A5578;font-size:14px;line-height:1.6;margin:0 0 16px;">
+              Your access request to <strong>EduTechExOS</strong> has been approved. Check your inbox for a separate invite email with your personal activation link.
             </p>
-            <div style="background:#fff;border:1px solid rgba(62,74,137,0.12);border-radius:10px;padding:16px;margin-bottom:20px;">
-              <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#9BA6D3;text-transform:uppercase;letter-spacing:1px;">Your login credentials</p>
-              <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Email:</strong> ${rest.email}</p>
-              <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Password:</strong> The one you set when you signed up</p>
-              <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Role:</strong> ${rest.role}</p>
-            </div>
+            <p style="color:#4A5578;font-size:13px;line-height:1.6;margin:0 0 20px;">
+              The invite link lets you set your own password and activate your account. It expires in 4.5 hours.
+            </p>
             <div style="text-align:center;margin:24px 0;">
-              <a href="${appUrl}/sign-up-login-screen" style="display:inline-block;background:#3E4A89;color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:0.3px;">Sign In to EduTechExOS →</a>
+              <a href="${appUrl}/sign-up-login-screen" style="display:inline-block;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:0.3px;">Sign In to EduTechExOS &#x2192;</a>
             </div>
             <p style="color:#9BA6D3;font-size:12px;text-align:center;">If you have any questions, reach out to your workspace admin.</p>
             <hr style="border:none;border-top:1px solid rgba(62,74,137,0.10);margin:24px 0;" />
-            <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS · Powered by EduTechEx</p>
+            <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS - Powered by EduTechEx</p>
           </div>`,
-      }).catch(() => {});
+      }).catch((err) => console.error('[email] access-approved notification failed:', err));
     } else if (status === 'rejected') {
       sendBrevoEmail({
         to: [{ email: rest.email, name: rest.name }],
@@ -1041,9 +1021,9 @@ app.patch('/api/access-requests/:id', authMiddleware, async (req, res) => {
               If you believe this was a mistake or would like to discuss further, please contact your workspace admin directly.
             </p>
             <hr style="border:none;border-top:1px solid rgba(62,74,137,0.10);margin:24px 0;" />
-            <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS · Powered by EduTechEx</p>
+            <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS - Powered by EduTechEx</p>
           </div>`,
-      }).catch(() => {});
+      }).catch((err) => console.error('[email] access-rejected notification failed:', err));
     }
 
     res.json({
@@ -1194,10 +1174,10 @@ app.post('/api/leaves', authMiddleware, async (req, res) => {
               <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Reason:</strong> ${reason}</p>
             </div>
             <div style="text-align:center;">
-              <a href="${appUrl}/admin" style="display:inline-block;background:#3E4A89;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;">Review in Admin Panel →</a>
+              <a href="${appUrl}/admin" style="display:inline-block;background:#3E4A89;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;">Review in Admin Panel &#x2192;</a>
             </div>
           </div>`,
-      }).catch(() => {});
+      }).catch((err) => console.error('[email] leave-request admin alert failed:', err));
     }
 
     // Real-time socket notification to admin
@@ -1272,10 +1252,10 @@ app.patch('/api/leaves/:id', authMiddleware, async (req, res) => {
             ${rest.adminNote ? `<p style="margin:8px 0 4px;font-size:13px;color:#4A5578;"><strong>Admin note:</strong> ${rest.adminNote}</p>` : ''}
           </div>
           <div style="text-align:center;">
-            <a href="${appUrl}/dashboard" style="display:inline-block;background:#3E4A89;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;">Go to Dashboard →</a>
+            <a href="${appUrl}/dashboard" style="display:inline-block;background:#3E4A89;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;">Go to Dashboard &#x2192;</a>
           </div>
         </div>`,
-    }).catch(() => {});
+    }).catch((err) => console.error('[email] leave-decision notification failed:', err));
 
     res.json({ success: true, leave: { ...rest, id: _id.toString() } });
   } catch (err) {
@@ -1399,7 +1379,7 @@ app.post('/api/members', async (req, res) => {
     const { _id, __v, ...rest } = saved.toObject();
 
     // Email the generated password to the new user
-    sendBrevoEmail({
+    const credEmail = await sendBrevoEmail({
       to: [{ email: emailClean, name }],
       subject: 'Your EduTechExOS account has been created',
       html: `
@@ -1412,11 +1392,14 @@ app.post('/api/members', async (req, res) => {
           </div>
           <p style="color:#9BA6D3;font-size:13px;">Please change your password after your first login. If you did not expect this email, contact your workspace admin.</p>
         </div>`,
-    }).catch(() => {});
+    });
+    const emailOk = credEmail && credEmail.ok === true;
+    if (!emailOk) console.error('[email] admin-create-member credentials email failed:', credEmail?.brevoError);
 
     res.json({
       success: true,
-      generatedPassword, // returned so admin can see it once in the UI
+      emailSent: emailOk,
+      generatedPassword, // always returned so admin can share manually if email fails
       member: {
         id: `member-${_id.toString()}`,
         name: rest.name,
@@ -2641,9 +2624,18 @@ app.post('/api/meeting-requests', authMiddleware, async (req, res) => {
     // Notify admin via email
     sendBrevoEmail({
       to: [{ email: adminEmail || 'admin@edutechex.in' }],
-      subject: `Meeting request from ${req.user.name} on ${date} at ${time}`,
-      html: `<p><strong>${req.user.name}</strong> (${req.user.email}) has requested a meeting on <strong>${date}</strong> at <strong>${time}</strong>.</p><p>Purpose: ${purpose || 'Not specified'}</p>`,
-    }).catch(() => {});
+      subject: `EduTechExOS — Meeting request from ${req.user.name} on ${date} at ${time}`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:520px;padding:24px;background:#FAF8F5;border-radius:10px;">
+          <h2 style="color:#1E2636;margin:0 0 12px;font-size:17px;">New Meeting Request</h2>
+          <div style="background:#fff;border:1px solid rgba(62,74,137,0.12);border-radius:8px;padding:14px;margin-bottom:16px;">
+            <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>From:</strong> ${req.user.name} (${req.user.email})</p>
+            <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Date:</strong> ${date} at ${time}</p>
+            <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Purpose:</strong> ${purpose || 'Not specified'}</p>
+          </div>
+          <a href="${process.env.APP_URL || 'https://edutechexos.vercel.app'}/admin" style="display:inline-block;background:#3E4A89;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:700;">Review in Admin Panel &#x2192;</a>
+        </div>`,
+    }).catch((err) => console.error('[email] meeting-request admin alert failed:', err));
     res.json({ success: true, request: saved });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
@@ -2664,9 +2656,15 @@ app.patch('/api/meeting-requests/:id', authMiddleware, async (req, res) => {
     // Notify user
     sendBrevoEmail({
       to: [{ email: updated.userEmail }],
-      subject: `Your meeting request on ${updated.date} at ${updated.time} has been ${status}`,
-      html: `<p>Hi <strong>${updated.userName}</strong>,</p><p>Your meeting request for <strong>${updated.date}</strong> at <strong>${updated.time}</strong> has been <strong>${status}</strong> by the admin.</p>`,
-    }).catch(() => {});
+      subject: `EduTechExOS — Your meeting request has been ${status}`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:520px;padding:24px;background:#FAF8F5;border-radius:10px;">
+          <h2 style="color:#1E2636;margin:0 0 12px;font-size:17px;">Meeting Request ${status === 'confirmed' ? 'Confirmed' : 'Declined'}</h2>
+          <p style="color:#4A5578;font-size:14px;margin:0 0 12px;">Hi <strong>${updated.userName}</strong>,</p>
+          <p style="color:#4A5578;font-size:14px;margin:0 0 16px;">Your meeting request for <strong>${updated.date}</strong> at <strong>${updated.time}</strong> has been <strong>${status}</strong> by the admin.</p>
+          <a href="${process.env.APP_URL || 'https://edutechexos.vercel.app'}/dashboard" style="display:inline-block;background:#3E4A89;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:700;">Go to Dashboard &#x2192;</a>
+        </div>`,
+    }).catch((err) => console.error('[email] meeting-decision notification failed:', err));
     res.json({ success: true, request: updated });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
@@ -3708,14 +3706,14 @@ app.post('/api/invite/accept', async (req, res) => {
     if (adminEmail) {
       sendBrevoEmail({
         to: [{ email: adminEmail }],
-        subject: `✅ ${invite.name} accepted their invite`,
+        subject: `EduTechExOS — ${invite.name} accepted their invite`,
         html: `<div style="font-family:Arial,sans-serif;max-width:480px;padding:24px;background:#F8FAFC;border-radius:10px;">
-          <h2 style="color:#1E2636;margin:0 0 12px;">New team member joined 🎉</h2>
-          <p style="color:#4A5578;font-size:14px;"><strong>${invite.name}</strong> (${invite.email}) accepted their invite and set their password.</p>
-          <p style="color:#4A5578;font-size:14px;">Role: <strong>${invite.role}</strong></p>
-          <a href="${appUrl}/admin" style="display:inline-block;margin-top:16px;background:#3E4A89;color:#fff;text-decoration:none;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;">View in Admin Panel →</a>
+          <h2 style="color:#1E2636;margin:0 0 12px;font-size:17px;">New team member joined</h2>
+          <p style="color:#4A5578;font-size:14px;margin:0 0 8px;"><strong>${invite.name}</strong> (${invite.email}) accepted their invite and activated their account.</p>
+          <p style="color:#4A5578;font-size:14px;margin:0 0 16px;">Role: <strong>${invite.role}</strong></p>
+          <a href="${appUrl}/admin" style="display:inline-block;background:#3E4A89;color:#fff;text-decoration:none;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;">View in Admin Panel &#x2192;</a>
         </div>`,
-      }).catch(() => {});
+      }).catch((err) => console.error('[email] invite-accepted admin notification failed:', err));
     }
 
     res.json({ success: true, message: 'Account activated! You can now sign in.' });

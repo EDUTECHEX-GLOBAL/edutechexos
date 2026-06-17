@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
@@ -67,6 +67,11 @@ export default function DashboardSidebar({
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberRole, setNewMemberRole] = useState('Developer');
   const [selectedChannels, setSelectedChannels] = useState<string[]>(['general']);
+
+  // New state for editing member channel assignments
+  const [showEditMemberModal, setShowEditMemberModal] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [editSelectedChannels, setEditSelectedChannels] = useState<string[]>(['general']);
 
   const handleCreateChannel = (e: React.FormEvent) => {
     e.preventDefault();
@@ -460,6 +465,23 @@ export default function DashboardSidebar({
                       </span>
                       <span className="min-w-0 flex-1 truncate">{member.name}</span>
                     </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingMemberId(member.id);
+                        // Compute channels the member currently belongs to
+                        const memberChannels = channels
+                          .filter((ch) => !ch.id.startsWith('member-') && ch.memberIds?.includes(member.id))
+                          .map((ch) => ch.id);
+                        setEditSelectedChannels(memberChannels.length ? memberChannels : ['general']);
+                        setShowEditMemberModal(true);
+                      }}
+                      className="absolute right-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-200 rounded transition-all text-[#7C859E]"
+                      title="Assign Channels"
+                    >
+                      ⚙️
+                    </button>
                     {currentUser.role === 'Admin' && (
                       <button
                         type="button"
@@ -644,114 +666,60 @@ export default function DashboardSidebar({
         </div>
       )}
 
-      {showNewMemberModal && (
+      {showEditMemberModal && editingMemberId && (
         <div className="fixed inset-0 bg-[rgba(25,30,47,0.60)] backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white border border-[rgba(62,74,137,0.08)] shadow-2xl rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-5 text-white relative">
-              <h3 className="text-base font-black uppercase tracking-widest flex items-center gap-2">
-                <span>📧</span> Add Team Member
-              </h3>
-              <p className="text-[10px] text-emerald-100 font-bold uppercase tracking-wider mt-1">
-                Onboard a new collaborator to the OS workspace
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowNewMemberModal(false)}
-                className="absolute top-4 right-4 text-white/80 hover:text-white text-lg font-black"
-              >
-                ✕
-              </button>
+              <h3 className="text-base font-black uppercase tracking-widest flex items-center gap-2">⚙️ Assign Channels</h3>
+              <p className="text-[10px] text-emerald-100 font-bold uppercase tracking-wider mt-1">Select channels this member should have access to</p>
+              <button type="button" onClick={() => setShowEditMemberModal(false)} className="absolute top-4 right-4 text-white/80 hover:text-white text-lg font-black">✕</button>
             </div>
-
-            <form onSubmit={handleCreateMember} className="p-6 space-y-4">
-              <div>
-                <label className="block text-[11px] font-black text-[#7C859E] uppercase tracking-widest mb-1.5">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Priya Nair"
-                  value={newMemberName}
-                  onChange={(e) => setNewMemberName(e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-xl border border-[rgba(26,27,58,0.18)] bg-[rgba(242,240,236,0.50)] text-sm font-bold text-[#1E2636] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                />
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                // Determine added and removed channels
+                const member = members.find((m) => m.id === editingMemberId);
+                if (!member) return;
+                const current = new Set(member.channelIds || []);
+                const selected = new Set(editSelectedChannels);
+                const toAdd = [...selected].filter((c) => !current.has(c));
+                const toRemove = [...current].filter((c) => !selected.has(c));
+                // Apply updates via store actions
+                toAdd.forEach((chanId) => addMemberToChannel(chanId, editingMemberId));
+                toRemove.forEach((chanId) => removeMemberFromChannel(chanId, editingMemberId));
+                toast.success(`Channel access updated for ${member.name}`);
+                setShowEditMemberModal(false);
+                setEditingMemberId(null);
+              }}
+              className="p-6 space-y-4"
+            >
+              <div className="space-y-2 max-h-36 overflow-y-auto border border-[rgba(26,27,58,0.18)] rounded-xl p-3 bg-[rgba(242,240,236,0.50)]">
+                {channels
+                  .filter((ch) => !ch.id.startsWith('member-'))
+                  .map((ch) => (
+                    <label key={ch.id} className="flex items-center gap-2.5 text-sm font-bold text-[#4A5578] cursor-pointer hover:text-emerald-600 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={editSelectedChannels.includes(ch.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setEditSelectedChannels([...editSelectedChannels, ch.id]);
+                          } else {
+                            setEditSelectedChannels(editSelectedChannels.filter((id) => id !== ch.id));
+                          }
+                        }}
+                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                      />
+                      <span>#{ch.name}</span>
+                    </label>
+                  ))}
               </div>
-
-              <div>
-                <label className="block text-[11px] font-black text-[#7C859E] uppercase tracking-widest mb-1.5">
-                  Work Email Address
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="e.g. priya@edutechex.in"
-                  value={newMemberEmail}
-                  onChange={(e) => setNewMemberEmail(e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-xl border border-[rgba(26,27,58,0.18)] bg-[rgba(242,240,236,0.50)] text-sm font-bold text-[#1E2636] placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-black text-[#7C859E] uppercase tracking-widest mb-1.5">
-                  Access Assignment Role
-                </label>
-                <select
-                  value={newMemberRole}
-                  onChange={(e) => setNewMemberRole(e.target.value)}
-                  className="w-full h-10 px-3.5 rounded-xl border border-[rgba(26,27,58,0.18)] bg-[rgba(242,240,236,0.50)] text-sm font-bold text-[#1E2636] focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none cursor-pointer"
-                >
-                  <option value="Developer">Developer</option>
-                  <option value="Designer">Designer</option>
-                  <option value="Lead">Lead</option>
-                  <option value="Manager">Manager</option>
-                  <option value="Admin">Admin</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-black text-[#7C859E] uppercase tracking-widest mb-1.5">
-                  Channel Access Permissions
-                </label>
-                <div className="space-y-2 max-h-36 overflow-y-auto border border-[rgba(26,27,58,0.18)] rounded-xl p-3 bg-[rgba(242,240,236,0.50)]">
-                  {channels
-                    .filter((ch) => !ch.id.startsWith('member-'))
-                    .map((ch) => (
-                      <label
-                        key={ch.id}
-                        className="flex items-center gap-2.5 text-sm font-bold text-[#4A5578] cursor-pointer hover:text-emerald-600 transition-colors"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedChannels.includes(ch.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedChannels([...selectedChannels, ch.id]);
-                            } else {
-                              setSelectedChannels(selectedChannels.filter((id) => id !== ch.id));
-                            }
-                          }}
-                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
-                        />
-                        <span>#{ch.name}</span>
-                      </label>
-                    ))}
-                </div>
-              </div>
-
               <div className="pt-4 flex items-center justify-end gap-3 border-t border-[rgba(62,74,137,0.08)]">
-                <button
-                  type="button"
-                  onClick={() => setShowNewMemberModal(false)}
-                  className="h-9 px-4 rounded-xl text-sm font-black text-[#7C859E] hover:bg-[rgba(62,74,137,0.06)] transition-colors uppercase tracking-wider"
-                >
+                <button type="button" onClick={() => setShowEditMemberModal(false)} className="h-9 px-4 rounded-xl text-sm font-black text-[#7C859E] hover:bg-[rgba(62,74,137,0.06)] transition-colors uppercase tracking-wider">
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="h-9 px-5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-black text-sm transition-all hover:scale-[1.02] shadow-md shadow-emerald-600/10 uppercase tracking-wider cursor-pointer"
-                >
-                  Add Member 🚀
+                <button type="submit" className="h-9 px-5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-black text-sm transition-all hover:scale-[1.02] shadow-md shadow-emerald-600/10 uppercase tracking-wider cursor-pointer">
+                  Save
                 </button>
               </div>
             </form>
