@@ -345,6 +345,7 @@ cron.schedule('30 2 * * *', async () => {
     }).join('');
 
     const dateLabel = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const appUrl = process.env.APP_URL || 'https://edutechexos.vercel.app';
     const html = `
       <div style="font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:24px 16px;">
         <div style="background:linear-gradient(135deg,#1E2538,#3E4A89);padding:22px 26px;border-radius:14px 14px 0 0;">
@@ -355,7 +356,7 @@ cron.schedule('30 2 * * *', async () => {
           <p style="color:#4A5578;font-size:14px;margin:0 0 20px;">Here's what happened in your workspace in the last 24 hours:</p>
           ${channelHtml || '<p style="color:#9BA6D3;font-size:13px;">No channel messages today.</p>'}
           <div style="margin-top:24px;padding-top:16px;border-top:1px solid rgba(62,74,137,.08);">
-            <a href="https://edutechexos.vercel.app" style="display:inline-block;background:#3E4A89;color:#fff;padding:11px 22px;border-radius:9px;font-weight:700;font-size:13px;text-decoration:none;">Open EduTechExOS →</a>
+            <a href="${appUrl}" style="display:inline-block;background:#3E4A89;color:#fff;padding:11px 22px;border-radius:9px;font-weight:700;font-size:13px;text-decoration:none;">Open EduTechExOS &#x2192;</a>
           </div>
           <p style="margin:16px 0 0;font-size:11px;color:#9BA6D3;">You receive this because you are a member of EduTechExOS. To unsubscribe, ask your admin.</p>
         </div>
