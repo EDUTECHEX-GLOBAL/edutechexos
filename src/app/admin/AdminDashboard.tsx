@@ -33,6 +33,7 @@ import AdminAvailabilityCalendar from './components/AdminAvailabilityCalendar';
 import AdminLeaveCalendar from './components/AdminLeaveCalendar';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { getSocket } from '@/lib/socket';
+import './admin.css';
 
 type AdminUser = { name: string; email: string; role: string };
 type ActivityStat = {
@@ -52,6 +53,15 @@ type AccessRequest = {
   status: 'pending' | 'invited' | 'approved' | 'rejected';
   requestedAt: string;
 };
+type InviteLogEntry = {
+  name: string;
+  email: string;
+  role: string;
+  status: 'sent' | 'error';
+  message: string;
+  at: string;
+};
+type CsvRow = { name: string; email: string; role: string };
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
 function LeaveStatusBadge({ status }: { status: string }) {
@@ -116,7 +126,7 @@ export default function AdminPage() {
     at: string;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<
-    'people' | 'requests' | 'channels' | 'broadcast' | 'activity' | 'attendance' | 'desktop' | 'availability' | 'leaves' | 'leave-calendar' | 'audit'
+    'people' | 'requests' | 'invites' | 'channels' | 'broadcast' | 'activity' | 'attendance' | 'desktop' | 'availability' | 'leaves' | 'leave-calendar' | 'audit'
   >('people');
   type AWRecord = {
     email: string; name: string; currentApp: string; currentTitle: string;
@@ -159,6 +169,14 @@ export default function AdminPage() {
   };
   const [auditLogs, setAuditLogs]       = useState<AuditEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
+  const [inviteName, setInviteName]     = useState('');
+  const [inviteEmail, setInviteEmail]   = useState('');
+  const [inviteRole, setInviteRole]     = useState('Developer');
+  const [inviteSubmitting, setInviteSubmitting] = useState(false);
+  const [inviteLog, setInviteLog]       = useState<InviteLogEntry[]>([]);
+  const [csvText, setCsvText]           = useState('');
+  const [csvParsed, setCsvParsed]       = useState<CsvRow[]>([]);
+  const [csvSending, setCsvSending]     = useState(false);
 
   const fetchAuditLog = useCallback(async () => {
     const raw = localStorage.getItem('edutechex_token');
@@ -741,6 +759,72 @@ export default function AdminPage() {
     }
   }
 
+  async function sendDirectInvite(e: React.FormEvent) {
+    e.preventDefault();
+    const token = getAdminToken();
+    setInviteSubmitting(true);
+    const entry: CsvRow = { name: inviteName.trim(), email: inviteEmail.trim().toLowerCase(), role: inviteRole };
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(entry),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setInviteLog((prev) => [{ ...entry, status: 'error' as const, message: data.error ?? 'Failed', at: new Date().toISOString() }, ...prev]);
+        toast.error(data.error ?? 'Failed to send invite.');
+      } else {
+        setInviteLog((prev) => [{ ...entry, status: 'sent' as const, message: 'Invite sent (expires in 4.5h)', at: new Date().toISOString() }, ...prev]);
+        toast.success(`Invite sent to ${entry.email}`);
+        setInviteName(''); setInviteEmail(''); setInviteRole('Developer');
+      }
+    } catch {
+      setInviteLog((prev) => [{ ...entry, status: 'error' as const, message: 'Network error', at: new Date().toISOString() }, ...prev]);
+      toast.error('Could not reach server.');
+    } finally {
+      setInviteSubmitting(false);
+    }
+  }
+
+  function parseCSV(raw: string) {
+    const rows = raw.trim().split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const parts = line.split(',').map((c) => c.trim());
+        return { name: parts[0] ?? '', email: (parts[1] ?? '').toLowerCase(), role: parts[2] ?? 'Developer' } as CsvRow;
+      })
+      .filter((r) => r.name && r.email);
+    setCsvParsed(rows);
+  }
+
+  async function sendBulkInvites() {
+    if (csvParsed.length === 0) return;
+    const token = getAdminToken();
+    setCsvSending(true);
+    const results: InviteLogEntry[] = await Promise.all(
+      csvParsed.map(async (row) => {
+        try {
+          const res = await fetch(`${API_BASE}/api/admin/invite`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            body: JSON.stringify(row),
+          });
+          const data = await res.json();
+          return { ...row, status: res.ok ? ('sent' as const) : ('error' as const), message: res.ok ? 'Invite sent (expires in 4.5h)' : (data.error ?? 'Failed'), at: new Date().toISOString() };
+        } catch {
+          return { ...row, status: 'error' as const, message: 'Network error', at: new Date().toISOString() };
+        }
+      })
+    );
+    setInviteLog((prev) => [...results, ...prev]);
+    setCsvParsed([]); setCsvText('');
+    const sent = results.filter((r) => r.status === 'sent').length;
+    toast.success(`${sent}/${results.length} invites sent successfully.`);
+    setCsvSending(false);
+  }
+
   async function rejectRequest(requestId: string) {
     try {
       const token = getAdminToken();
@@ -871,7 +955,7 @@ export default function AdminPage() {
 
   return (
     <AdminGuard>
-      <div className="min-h-screen" style={{ background: '#ECEAF8', fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
+      <div className="admin-control-root min-h-screen" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
 
         {/* â”€â”€ Spectrum bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="spectrum-bar fixed top-0 left-0 right-0 z-50 pointer-events-none" />
@@ -929,8 +1013,8 @@ export default function AdminPage() {
           {/* â”€â”€ Page hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <section className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: '#EF476F', marginBottom: 8 }}>
-                Admin-only dashboard
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: '#7C3AED', marginBottom: 8 }}>
+                Admin control
               </p>
               <h1 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.8rem)', fontWeight: 800, letterSpacing: '-0.03em', color: '#1A1B3A', marginBottom: 8 }}>
                 Workspace Control Center
@@ -1035,7 +1119,7 @@ export default function AdminPage() {
               TAB: PEOPLE
           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'people' && (
-            <div className="overflow-hidden rounded-2xl" style={{ background: '#FFFFFF', border: '1.5px solid rgba(26,27,58,0.15)', boxShadow: '0 4px 16px rgba(91,79,219,0.06)', animation: 'slide-deck 0.4s cubic-bezier(0.22,1,0.36,1)' }}>
+            <div className="card-premium overflow-hidden" style={{ animation: 'slide-deck 0.4s cubic-bezier(0.22,1,0.36,1)' }}>
               {/* People tab top accent */}
               <div style={{ height: 3, background: 'linear-gradient(90deg, #5B4FDB, #7B6FEB, #8B3FDB)', borderRadius: '8px 8px 0 0' }} />
               <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between" style={{ borderBottom: '1px solid rgba(26,27,58,0.14)' }}>
@@ -1335,7 +1419,7 @@ export default function AdminPage() {
               TAB: REQUESTS
           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'requests' && (
-            <div className="space-y-6">
+            <div className="card-premium space-y-6 p-6">
               {/* Tab top accent */}
               <div style={{ height: 3, background: 'linear-gradient(90deg, #EF476F, #F57A98)', borderRadius: 3, marginBottom: 8 }} />
               {/* Pending requests grid */}
@@ -1527,7 +1611,7 @@ export default function AdminPage() {
               TAB: CHANNELS
           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'channels' && (
-            <div className="space-y-4">
+            <div className="card-premium space-y-4 p-6">
               {/* Top accent */}
               <div style={{ height: 3, background: 'linear-gradient(90deg, #0DAFCE, #3B82F6)', borderRadius: 3 }} />
               {/* General channel */}
@@ -1642,7 +1726,7 @@ export default function AdminPage() {
           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'broadcast' && (
             <div className="mx-auto max-w-2xl">
-              <div style={{ borderRadius: 20, border: '1.5px solid rgba(192,38,211,0.14)', background: '#FFFFFF', padding: 24, boxShadow: '0 4px 24px rgba(192,38,211,0.08)' }}>
+              <div className="card-premium" style={{ padding: 24 }}>
                 {/* Top accent */}
                 <div style={{ height: 3, background: 'linear-gradient(90deg, #C026D3, #8B3FDB)', borderRadius: '8px 8px 0 0', marginBottom: 24, marginLeft: -24, marginRight: -24, marginTop: -24 }} />
                 <div className="mb-6 flex items-start gap-4">
@@ -1754,7 +1838,7 @@ export default function AdminPage() {
               TAB: ACTIVITY
           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'activity' && (
-            <div className="space-y-8">
+            <div className="card-premium space-y-8 p-6">
               {/* Top accent */}
               <div style={{ height: 3, background: 'linear-gradient(90deg, #3B82F6, #0DAFCE)', borderRadius: 3 }} />
               {/* Activity monitoring */}
@@ -1915,7 +1999,7 @@ export default function AdminPage() {
               TAB: ATTENDANCE COMMAND CENTER
           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'attendance' && (
-            <div>
+            <div className="card-premium p-6">
               {/* Attendance hero banner */}
               <div className="mb-6 overflow-hidden rounded-2xl px-7 py-6" style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(239,71,111,0.06))', border: '1.5px solid rgba(245,158,11,0.18)', boxShadow: '0 4px 24px rgba(245,158,11,0.08)' }}>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -2045,7 +2129,7 @@ export default function AdminPage() {
               setExpandedDesktopEmail(prev => prev === email ? null : email);
 
             return (
-            <div style={{ padding: '24px 24px 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="card-premium" style={{ padding: '24px 24px 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
               <style>{`
                 @keyframes pdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(1.5)}}
                 .pdot{animation:pdot 1.8s ease-in-out infinite;}
@@ -2248,7 +2332,7 @@ export default function AdminPage() {
               TAB: AVAILABILITY CALENDAR
           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'availability' && (
-            <div className="p-6">
+            <div className="card-premium p-6">
               <div style={{ height: 3, background: 'linear-gradient(90deg, #6366f1, #8B5CF6)', borderRadius: 3, marginBottom: 24 }} />
               <AdminAvailabilityCalendar />
             </div>
@@ -2258,7 +2342,7 @@ export default function AdminPage() {
               TAB: LEAVES
           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'leaves' && (
-            <div className="space-y-6 p-6">
+            <div className="card-premium space-y-6 p-6">
               <div style={{ height: 3, background: 'linear-gradient(90deg, #F59E0B, #FBBF24)', borderRadius: 3, marginBottom: 8 }} />
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
@@ -2386,7 +2470,7 @@ export default function AdminPage() {
               TAB: LEAVE CALENDAR
           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
           {activeTab === 'leave-calendar' && (
-            <div className="p-6">
+            <div className="card-premium p-6">
               <div style={{ height: 3, background: 'linear-gradient(90deg, #10C98A, #059669)', borderRadius: 3, marginBottom: 24 }} />
               <AdminLeaveCalendar />
             </div>
@@ -2396,7 +2480,7 @@ export default function AdminPage() {
               TAB: AUDIT LOG
           ══════════════════════════════════════════════════════════════ */}
           {activeTab === 'audit' && (
-            <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="card-premium" style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div style={{ height: 3, background: 'linear-gradient(90deg,#6366F1,#818CF8)', borderRadius: 3 }} />
 
               {/* Header */}
