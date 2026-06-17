@@ -182,6 +182,9 @@ export default function AdminPage() {
   const [csvSending, setCsvSending]     = useState(false);
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
   const [shownPasswords, setShownPasswords] = useState<Record<string, string>>({});
+  const [requestFilter, setRequestFilter] = useState<'all' | 'pending' | 'approved' | 'invited' | 'rejected'>('all');
+  const [requestSearch, setRequestSearch] = useState('');
+  const [viewingRequest, setViewingRequest] = useState<AccessRequest | null>(null);
 
   const fetchAuditLog = useCallback(async () => {
     const raw = localStorage.getItem('edutechex_token');
@@ -1467,227 +1470,241 @@ export default function AdminPage() {
           {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               TAB: REQUESTS
           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
-          {activeTab === 'requests' && (
-            <div className="card-premium space-y-6 p-6">
-              {/* Tab top accent */}
-              <div style={{ height: 3, background: 'linear-gradient(90deg, #EF476F, #F57A98)', borderRadius: 3, marginBottom: 8 }} />
-              {/* Pending requests grid */}
-              {pendingRequests.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {pendingRequests.map((request) => (
-                    <div
-                      key={request.id}
-                      className="rounded-2xl p-5 transition-all duration-300"
-                      style={{ background: '#FFFFFF', border: '1.5px solid rgba(239,71,111,0.14)', boxShadow: '0 2px 12px rgba(239,71,111,0.06)' }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 28px rgba(239,71,111,0.12)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.28)'; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(239,71,111,0.06)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.14)'; }}
+          {activeTab === 'requests' && (() => {
+            const statusCfg: Record<string, { label: string; color: string; bg: string; border: string }> = {
+              pending:  { label: 'Pending',  color: '#F59E0B', bg: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.25)' },
+              invited:  { label: 'Invited',  color: '#6366F1', bg: 'rgba(99,102,241,0.10)',  border: 'rgba(99,102,241,0.25)' },
+              approved: { label: 'Approved', color: '#10C98A', bg: 'rgba(16,201,138,0.10)',  border: 'rgba(16,201,138,0.25)' },
+              rejected: { label: 'Revoked',  color: '#EF476F', bg: 'rgba(239,71,111,0.10)',  border: 'rgba(239,71,111,0.20)' },
+            };
+
+            const filterCounts = {
+              all:      accessRequests.length,
+              pending:  accessRequests.filter(r => r.status === 'pending').length,
+              invited:  accessRequests.filter(r => r.status === 'invited').length,
+              approved: accessRequests.filter(r => r.status === 'approved').length,
+              rejected: accessRequests.filter(r => r.status === 'rejected').length,
+            };
+
+            const filtered = accessRequests
+              .filter(r => requestFilter === 'all' || r.status === requestFilter)
+              .filter(r => {
+                const q = requestSearch.toLowerCase();
+                return !q || r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q) || r.role.toLowerCase().includes(q);
+              });
+
+            const isInternal = (email: string) => email.toLowerCase().endsWith('@edutechex.in');
+
+            return (
+              <div className="card-premium p-6" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div style={{ height: 3, background: 'linear-gradient(90deg,#EF476F,#F57A98)', borderRadius: 3 }} />
+
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                  <div>
+                    <h2 style={{ fontFamily: "'Sora',sans-serif", fontSize: 17, fontWeight: 800, color: '#1A1B3A', margin: 0 }}>
+                      User Requests
+                    </h2>
+                    <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.55)', margin: '2px 0 0' }}>
+                      {filterCounts.all} total &nbsp;&middot;&nbsp; {filterCounts.pending} pending &nbsp;&middot;&nbsp; {filterCounts.approved} approved
+                    </p>
+                  </div>
+                  {/* Search */}
+                  <div style={{ position: 'relative' }}>
+                    <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'rgba(90,95,128,0.40)' }} />
+                    <input
+                      type="text"
+                      placeholder="Search users..."
+                      value={requestSearch}
+                      onChange={e => setRequestSearch(e.target.value)}
+                      style={{ paddingLeft: 30, paddingRight: 12, height: 34, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.10)', background: '#F7F8FC', fontSize: 12, color: '#1A1B3A', outline: 'none', width: 200 }}
+                    />
+                  </div>
+                </div>
+
+                {/* Filter pills */}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {(['all', 'pending', 'invited', 'approved', 'rejected'] as const).map(f => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setRequestFilter(f)}
+                      style={{ height: 28, padding: '0 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, textTransform: 'capitalize', cursor: 'pointer', transition: 'all .15s',
+                        background: requestFilter === f ? '#1A1B3A' : 'rgba(26,27,58,0.05)',
+                        color: requestFilter === f ? '#fff' : 'rgba(90,95,128,0.70)',
+                        border: requestFilter === f ? 'none' : '1.5px solid rgba(26,27,58,0.08)',
+                      }}
                     >
-                      <div className="mb-4 flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div style={{ width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,71,111,0.10)', border: '1.5px solid rgba(239,71,111,0.20)', flexShrink: 0 }}>
-                            <span style={{ fontSize: 13, fontWeight: 900, color: '#EF476F' }}>
-                              {request.name
-                                .split(' ')
-                                .map((p) => p[0])
-                                .join('')
-                                .slice(0, 2)
-                                .toUpperCase()}
-                            </span>
-                          </div>
-                          <div className="min-w-0">
-                            <p style={{ fontSize: 13, fontWeight: 600, color: '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {request.name}
-                            </p>
-                            <p style={{ fontSize: 11, color: 'rgba(90,95,128,0.65)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{request.email}</p>
-                            <p style={{ marginTop: 3, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#EF476F' }}>
-                              {request.role} request
-                            </p>
-                          </div>
-                        </div>
-                        <span style={{ flexShrink: 0, borderRadius: 8, border: '1px solid rgba(239,71,111,0.20)', background: 'rgba(239,71,111,0.08)', padding: '3px 10px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', color: '#EF476F' }}>
-                          Pending
-                        </span>
-                      </div>
-                      {/* Multi-channel picker */}
-                      {extraChannels.length > 0 && (
-                        <div style={{ marginBottom: 12, borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.14)', background: '#ECEAF8', padding: '10px 12px' }}>
-                          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)', marginBottom: 8 }}>
-                            Assign channels Â· #general is always included
-                          </p>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            {extraChannels.map((c) => {
-                              const picked = (requestChannelsByReq[request.id] ?? []).includes(c.id);
-                              const pickedCount = (requestChannelsByReq[request.id] ?? []).length;
-                              return (
-                                <label key={`req-${request.id}-${c.id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: (!picked && pickedCount >= 3) ? 'not-allowed' : 'pointer', opacity: (!picked && pickedCount >= 3) ? 0.45 : 1 }}>
-                                  <input
-                                    type="checkbox"
-                                    checked={picked}
-                                    disabled={!picked && pickedCount >= 3}
-                                    onChange={(e) => {
-                                      setRequestChannelsByReq((prev) => {
-                                        const cur = prev[request.id] ?? [];
-                                        const next = e.target.checked
-                                          ? [...cur, c.id]
-                                          : cur.filter((id) => id !== c.id);
-                                        return { ...prev, [request.id]: next };
-                                      });
-                                    }}
-                                    style={{ width: 14, height: 14, accentColor: '#5B4FDB', cursor: 'inherit' }}
-                                  />
-                                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: picked ? '#5B4FDB' : '#1A1B3A' }}>
-                                    #{c.name}
-                                  </span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                          <p style={{ marginTop: 8, fontSize: 9.5, color: 'rgba(90,95,128,0.50)', fontFamily: "'JetBrains Mono', monospace" }}>
-                            {(requestChannelsByReq[request.id] ?? []).length}/3 selected
-                          </p>
-                        </div>
-                      )}
-                      {/* Generated password display (shown after generation if email failed) */}
-                      {shownPasswords[request.id] && (
-                        <div style={{ marginBottom: 10, padding: '8px 12px', background: 'rgba(16,201,138,0.06)', border: '1px solid rgba(16,201,138,0.22)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: '#065F46', flexShrink: 0 }}>Password:</span>
-                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: '#065F46', flex: 1, wordBreak: 'break-all' }}>{shownPasswords[request.id]}</span>
-                          <button
-                            type="button"
-                            onClick={() => { navigator.clipboard.writeText(shownPasswords[request.id]); toast.success('Password copied!'); }}
-                            style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5, background: '#10C98A', color: '#fff', border: 'none', cursor: 'pointer' }}
-                          >Copy</button>
-                        </div>
-                      )}
-                      <div className="flex gap-2">
-                        {request.email.toLowerCase().endsWith('@edutechex.in') ? (
-                          /* Internal user — generate password directly */
-                          <button
-                            type="button"
-                            onClick={() => generatePasswordForRequest(request)}
-                            disabled={request.status === 'approved' || generatingFor === request.id}
-                            style={{ display: 'flex', height: 36, flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, background: request.status === 'approved' ? 'rgba(16,201,138,0.12)' : 'linear-gradient(135deg,#10C98A,#059669)', color: request.status === 'approved' ? '#059669' : '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', border: request.status === 'approved' ? '1.5px solid rgba(16,201,138,0.30)' : 'none', cursor: request.status === 'approved' ? 'default' : 'pointer', transition: 'all .2s', boxShadow: request.status === 'approved' ? 'none' : '0 3px 12px rgba(16,201,138,0.28)' }}
-                            onMouseEnter={e => { if (request.status !== 'approved') { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(16,201,138,0.38)'; } }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = request.status === 'approved' ? 'none' : '0 3px 12px rgba(16,201,138,0.28)'; }}
-                          >
-                            {request.status === 'approved' ? (
-                              <><CheckCircle2 size={13} /> Access Granted</>
-                            ) : generatingFor === request.id ? (
-                              <><RefreshCw size={13} className="animate-spin" /> Generating...</>
-                            ) : (
-                              <><KeyRound size={13} /> Generate Password</>
-                            )}
-                          </button>
-                        ) : (
-                          /* External user — send invite link */
-                          <button
-                            type="button"
-                            onClick={() => sendInvite(request)}
-                            disabled={request.status === 'invited'}
-                            style={{ display: 'flex', height: 36, flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, background: request.status === 'invited' ? 'rgba(129,140,248,0.12)' : 'linear-gradient(135deg,#6366f1,#4f46e5)', color: request.status === 'invited' ? '#818CF8' : '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', border: request.status === 'invited' ? '1.5px solid rgba(129,140,248,0.35)' : 'none', cursor: request.status === 'invited' ? 'default' : 'pointer', transition: 'all .2s', boxShadow: request.status === 'invited' ? 'none' : '0 3px 12px rgba(99,102,241,0.28)' }}
-                            onMouseEnter={e => { if (request.status !== 'invited') { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(99,102,241,0.38)'; } }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = request.status === 'invited' ? 'none' : '0 3px 12px rgba(99,102,241,0.28)'; }}
-                          >
-                            {request.status === 'invited' ? (
-                              <><CheckCircle2 size={13} /> Invite Sent</>
-                            ) : (
-                              <><Mail size={13} /> Send Invite</>
-                            )}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => rejectRequest(request.id)}
-                          disabled={request.status === 'approved'}
-                          style={{ height: 36, borderRadius: 12, border: '1.5px solid rgba(239,71,111,0.18)', background: '#FFFFFF', padding: '0 14px', fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: request.status === 'approved' ? 'rgba(239,71,111,0.35)' : '#EF476F', cursor: request.status === 'approved' ? 'default' : 'pointer', transition: 'all .2s', opacity: request.status === 'approved' ? 0.5 : 1 }}
-                          onMouseEnter={e => { if (request.status !== 'approved') { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.06)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.35)'; } }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#FFFFFF'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.18)'; }}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </div>
+                      {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+                      <span style={{ marginLeft: 5, fontSize: 9.5, opacity: 0.75 }}>
+                        {filterCounts[f]}
+                      </span>
+                    </button>
                   ))}
                 </div>
-              ) : (
-                <div style={{ borderRadius: 16, border: '1.5px dashed rgba(239,71,111,0.20)', background: '#FFF8F9', padding: '56px 32px', textAlign: 'center' }}>
-                  <UserPlus size={28} style={{ margin: '0 auto 12px', color: 'rgba(239,71,111,0.40)' }} />
-                  <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(90,95,128,0.70)' }}>No pending access requests</p>
-                  <p style={{ marginTop: 4, fontSize: 11, color: 'rgba(90,95,128,0.45)' }}>
-                    New sign-up requests will appear here for review.
-                  </p>
-                </div>
-              )}
 
-              {/* Approved users */}
-              {approvedRequests.length > 0 && (
-                <div style={{ borderRadius: 16, border: '1.5px solid rgba(16,201,138,0.16)', background: '#FFFFFF', padding: 20, boxShadow: '0 2px 12px rgba(16,201,138,0.06)' }}>
-                  <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 700, color: '#1A1B3A', marginBottom: 16 }}>
-                    <CheckCircle2 size={16} style={{ color: '#10C98A' }} />
-                    Approved users
-                    <span style={{ marginLeft: 'auto', borderRadius: 20, background: 'rgba(16,201,138,0.10)', padding: '2px 10px', fontSize: 9.5, fontWeight: 700, color: '#10C98A' }}>
-                      {approvedRequests.length}
-                    </span>
-                  </h3>
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {approvedRequests.map((request) => (
-                      <div
-                        key={`approved-${request.id}`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 12, borderRadius: 12, border: '1.5px solid rgba(16,201,138,0.12)', background: '#F7FFFC', padding: 12 }}
-                      >
-                        <div style={{ width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,201,138,0.10)', flexShrink: 0 }}>
-                          <CheckCircle2 size={14} style={{ color: '#10C98A' }} />
+                {/* View modal */}
+                {viewingRequest && (
+                  <div style={{ borderRadius: 14, border: '1.5px solid rgba(91,79,219,0.18)', background: 'rgba(91,79,219,0.04)', padding: '16px 20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 14, background: 'linear-gradient(135deg,#6366f1,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <span style={{ fontSize: 14, fontWeight: 900, color: '#fff' }}>
+                            {viewingRequest.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()}
+                          </span>
                         </div>
-                        <div style={{ minWidth: 0 }}>
-                          <p style={{ fontSize: 13, fontWeight: 600, color: '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {request.name}
-                          </p>
-                          <p style={{ fontSize: 11, color: 'rgba(90,95,128,0.65)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{request.email}</p>
+                        <div>
+                          <p style={{ fontSize: 15, fontWeight: 700, color: '#1A1B3A', margin: 0 }}>{viewingRequest.name}</p>
+                          <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.65)', margin: '2px 0 0', fontFamily: "'JetBrains Mono',monospace" }}>{viewingRequest.email}</p>
                         </div>
-                        <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 9.5, fontWeight: 700, color: '#10C98A', fontFamily: "'JetBrains Mono', monospace" }}>
-                          Active
-                        </span>
                       </div>
-                    ))}
+                      <button type="button" onClick={() => setViewingRequest(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(90,95,128,0.50)', padding: 4 }}>
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px 16px', marginBottom: 14 }}>
+                      {[
+                        { label: 'Role', value: viewingRequest.role },
+                        { label: 'Type', value: isInternal(viewingRequest.email) ? 'Internal (@edutechex.in)' : 'External' },
+                        { label: 'Status', value: statusCfg[viewingRequest.status]?.label ?? viewingRequest.status },
+                      ].map(({ label, value }) => (
+                        <div key={label}>
+                          <p style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: 'rgba(90,95,128,0.45)', margin: '0 0 3px' }}>{label}</p>
+                          <p style={{ fontSize: 12, fontWeight: 600, color: '#1A1B3A', margin: 0 }}>{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {shownPasswords[viewingRequest.id] && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(16,201,138,0.06)', border: '1px solid rgba(16,201,138,0.22)', borderRadius: 8 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#065F46', flexShrink: 0 }}>Generated password:</span>
+                        <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: '#065F46', flex: 1 }}>{shownPasswords[viewingRequest.id]}</span>
+                        <button type="button" onClick={() => { navigator.clipboard.writeText(shownPasswords[viewingRequest.id]); toast.success('Copied!'); }} style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 5, background: '#10C98A', color: '#fff', border: 'none', cursor: 'pointer' }}>Copy</button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Rejected users */}
-              {rejectedRequests.length > 0 && (
-                <div style={{ borderRadius: 16, border: '1.5px solid rgba(239,71,111,0.14)', background: '#FFFFFF', padding: 20, boxShadow: '0 2px 12px rgba(239,71,111,0.04)' }}>
-                  <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 700, color: '#1A1B3A', marginBottom: 16 }}>
-                    <X size={16} style={{ color: '#EF476F' }} />
-                    Rejected requests
-                    <span style={{ marginLeft: 'auto', borderRadius: 20, background: 'rgba(239,71,111,0.08)', padding: '2px 10px', fontSize: 9.5, fontWeight: 700, color: '#EF476F' }}>
-                      {rejectedRequests.length}
-                    </span>
-                  </h3>
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {rejectedRequests.map((request) => (
-                      <div
-                        key={`rejected-${request.id}`}
-                        style={{ display: 'flex', alignItems: 'center', gap: 12, borderRadius: 12, border: '1.5px solid rgba(239,71,111,0.12)', background: '#FFF8F9', padding: 12 }}
-                      >
-                        <div style={{ width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,71,111,0.08)', flexShrink: 0 }}>
-                          <X size={14} style={{ color: '#EF476F' }} />
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <p style={{ fontSize: 13, fontWeight: 600, color: '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {request.name}
-                          </p>
-                          <p style={{ fontSize: 11, color: 'rgba(90,95,128,0.65)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{request.email}</p>
-                        </div>
-                        <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 9.5, fontWeight: 700, color: '#EF476F', fontFamily: "'JetBrains Mono', monospace" }}>
-                          Rejected
-                        </span>
-                      </div>
-                    ))}
+                {/* Table */}
+                {filtered.length === 0 ? (
+                  <div style={{ borderRadius: 14, border: '1.5px dashed rgba(26,27,58,0.12)', background: '#F7F8FC', padding: '48px 24px', textAlign: 'center' }}>
+                    <UserPlus size={26} style={{ margin: '0 auto 10px', color: 'rgba(90,95,128,0.30)' }} />
+                    <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(90,95,128,0.55)' }}>No users match this filter</p>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                ) : (
+                  <div style={{ borderRadius: 14, border: '1.5px solid rgba(26,27,58,0.08)', overflow: 'hidden' }}>
+                    {/* Table head */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 90px 100px 180px', padding: '9px 16px', background: 'rgba(26,27,58,0.03)', borderBottom: '1px solid rgba(26,27,58,0.07)' }}>
+                      {['User', 'Role', 'Type', 'Status', 'Actions'].map(h => (
+                        <span key={h} style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.45)' }}>{h}</span>
+                      ))}
+                    </div>
+
+                    {/* Rows */}
+                    {filtered.map((request, i) => {
+                      const cfg = statusCfg[request.status] ?? statusCfg.pending;
+                      const internal = isInternal(request.email);
+                      const canApprove = request.status === 'pending' || request.status === 'invited';
+                      const isRevoked = request.status === 'rejected';
+
+                      return (
+                        <div
+                          key={request.id}
+                          style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 90px 100px 180px', padding: '11px 16px', borderBottom: i < filtered.length - 1 ? '1px solid rgba(26,27,58,0.06)' : 'none', background: viewingRequest?.id === request.id ? 'rgba(99,102,241,0.04)' : i % 2 === 0 ? '#fff' : 'rgba(26,27,58,0.012)', alignItems: 'center', transition: 'background .15s' }}
+                        >
+                          {/* User */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 10, background: isRevoked ? 'rgba(239,71,111,0.10)' : request.status === 'approved' ? 'rgba(16,201,138,0.10)' : 'rgba(91,79,219,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <span style={{ fontSize: 11, fontWeight: 900, color: isRevoked ? '#EF476F' : request.status === 'approved' ? '#10C98A' : '#5B4FDB' }}>
+                                {request.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()}
+                              </span>
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <p style={{ fontSize: 12.5, fontWeight: 700, color: '#1A1B3A', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{request.name}</p>
+                              <p style={{ fontSize: 10.5, color: 'rgba(90,95,128,0.60)', margin: '1px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'JetBrains Mono',monospace" }}>{request.email}</p>
+                            </div>
+                          </div>
+
+                          {/* Role */}
+                          <span style={{ fontSize: 11, fontWeight: 600, color: '#5B4FDB' }}>{request.role}</span>
+
+                          {/* Type */}
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, display: 'inline-block',
+                            background: internal ? 'rgba(16,201,138,0.08)' : 'rgba(245,158,11,0.08)',
+                            color: internal ? '#059669' : '#B45309',
+                            border: internal ? '1px solid rgba(16,201,138,0.20)' : '1px solid rgba(245,158,11,0.20)',
+                          }}>
+                            {internal ? 'Internal' : 'External'}
+                          </span>
+
+                          {/* Status */}
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20, display: 'inline-block', background: cfg.bg, color: cfg.color, border: '1px solid ' + cfg.border }}>
+                            {cfg.label}
+                          </span>
+
+                          {/* Actions */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {/* View */}
+                            <button
+                              type="button"
+                              title="View details"
+                              onClick={() => setViewingRequest(viewingRequest?.id === request.id ? null : request)}
+                              style={{ width: 30, height: 30, borderRadius: 8, border: '1.5px solid rgba(26,27,58,0.10)', background: viewingRequest?.id === request.id ? 'rgba(99,102,241,0.10)' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: viewingRequest?.id === request.id ? '#6366f1' : 'rgba(90,95,128,0.55)', transition: 'all .15s', flexShrink: 0 }}
+                            >
+                              <Eye size={13} />
+                            </button>
+
+                            {/* Approve */}
+                            {internal ? (
+                              <button
+                                type="button"
+                                title={request.status === 'approved' ? 'Already approved' : 'Generate password and email credentials'}
+                                onClick={() => canApprove && generatePasswordForRequest(request)}
+                                disabled={!canApprove || generatingFor === request.id}
+                                style={{ height: 30, padding: '0 10px', borderRadius: 8, fontSize: 10.5, fontWeight: 700, border: 'none', cursor: canApprove ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: 4, transition: 'all .15s', flexShrink: 0,
+                                  background: request.status === 'approved' ? 'rgba(16,201,138,0.10)' : 'linear-gradient(135deg,#10C98A,#059669)',
+                                  color: request.status === 'approved' ? '#059669' : '#fff',
+                                  opacity: !canApprove && request.status !== 'approved' ? 0.45 : 1,
+                                }}
+                              >
+                                {generatingFor === request.id ? <><RefreshCw size={11} className="animate-spin" /> Working</> : request.status === 'approved' ? <><CheckCircle2 size={11} /> Approved</> : <><KeyRound size={11} /> Gen. Password</>}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                title={request.status === 'invited' ? 'Invite already sent' : request.status === 'approved' ? 'Already approved' : 'Send invite link'}
+                                onClick={() => canApprove && sendInvite(request)}
+                                disabled={!canApprove}
+                                style={{ height: 30, padding: '0 10px', borderRadius: 8, fontSize: 10.5, fontWeight: 700, border: 'none', cursor: canApprove ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: 4, transition: 'all .15s', flexShrink: 0,
+                                  background: request.status === 'approved' || request.status === 'invited' ? 'rgba(99,102,241,0.10)' : 'linear-gradient(135deg,#6366f1,#4f46e5)',
+                                  color: request.status === 'approved' || request.status === 'invited' ? '#6366f1' : '#fff',
+                                  opacity: !canApprove && request.status !== 'approved' && request.status !== 'invited' ? 0.45 : 1,
+                                }}
+                              >
+                                {request.status === 'approved' ? <><CheckCircle2 size={11} /> Approved</> : request.status === 'invited' ? <><CheckCircle2 size={11} /> Invited</> : <><Mail size={11} /> Send Invite</>}
+                              </button>
+                            )}
+
+                            {/* Revoke */}
+                            <button
+                              type="button"
+                              title={isRevoked ? 'Already revoked' : 'Revoke access'}
+                              onClick={() => !isRevoked && request.status !== 'pending' && rejectRequest(request.id)}
+                              disabled={isRevoked || request.status === 'pending'}
+                              style={{ width: 30, height: 30, borderRadius: 8, border: '1.5px solid rgba(239,71,111,0.18)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isRevoked || request.status === 'pending' ? 'default' : 'pointer', color: '#EF476F', transition: 'all .15s', flexShrink: 0, opacity: isRevoked || request.status === 'pending' ? 0.35 : 1 }}
+                              onMouseEnter={e => { if (!isRevoked && request.status !== 'pending') { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.08)'; } }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#fff'; }}
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               TAB: CHANNELS
