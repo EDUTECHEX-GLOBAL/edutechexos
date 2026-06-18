@@ -7,7 +7,7 @@ import AuthCard from './components/AuthCard';
 
 function SignUpLoginScreen() {
   const searchParams = useSearchParams();
-  const isSignup = searchParams.get('mode') === 'signup';
+  const isSignup = searchParams?.get('mode') === 'signup';
   return (
     <div className="w-full min-h-screen overflow-hidden" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif", background: '#ECEAF8' }}>
       <style>{`

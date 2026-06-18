@@ -26,7 +26,7 @@ async function main() {
       console.log('Meeting invitation sent');
       break;
     case 'access':
-      await sendAccessVerificationCode('Test User', 'test@example.com', '123456');
+      await sendAccessVerificationCode('Test User', 'test@example.com', '123456', 'temp-password-123');
       console.log('Access verification email sent');
       break;
     case 'mention':

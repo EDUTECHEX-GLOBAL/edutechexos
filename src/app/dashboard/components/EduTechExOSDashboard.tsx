@@ -117,6 +117,7 @@ type CurrentUser = {
   role: string;
   initials: string;
   status?: string;
+  color?: string;
 };
 
 const DEFAULT_COMPANY_MEET_LINK = 'https://meet.google.com/uie-jxkt-vkx';
@@ -1608,10 +1609,11 @@ export default function EduTechExOSDashboard() {
   }
 
   async function handleJoinMeeting(messageId: string, link: string) {
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
     const token = localStorage.getItem('token');
     setMeetJoinState((prev) => ({ ...prev, [messageId]: 'checking' }));
     try {
-      const res = await fetch(`${BACKEND}/api/meeting-access/check/${messageId}`, {
+      const res = await fetch(`${API_BASE}/api/meeting-access/check/${messageId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json().catch(() => ({}));

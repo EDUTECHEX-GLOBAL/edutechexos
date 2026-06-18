@@ -6,7 +6,7 @@ import SignupForm from './SignupForm';
 
 export default function AuthCard({ darkMode = false }: { darkMode?: boolean }) {
   const searchParams = useSearchParams();
-  const mode = searchParams.get('mode');
+  const mode = searchParams?.get('mode');
   const authMode = mode === 'admin' ? 'admin' : 'user';
   const isSignup = mode === 'signup';
 

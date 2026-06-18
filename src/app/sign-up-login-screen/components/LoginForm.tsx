@@ -148,7 +148,7 @@ export default function LoginForm({
     trackEvent('login', { role: loginAccount.role });
     setIsLoading(false);
 
-    const redirectPath = searchParams.get('redirect');
+    const redirectPath = searchParams?.get('redirect');
     if (redirectPath) router.push(redirectPath);
     else if (loginAccount.role === 'Admin') router.push('/admin');
     else router.push('/dashboard');

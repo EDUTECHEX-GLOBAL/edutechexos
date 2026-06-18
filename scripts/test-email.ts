@@ -24,7 +24,8 @@ async function main() {
         const name = args.get('name') || 'Test User';
         const email = args.get('email') || 'test@example.com';
         const code = args.get('code') || Math.floor(100000 + Math.random() * 900000).toString();
-        const result = await sendAccessVerificationCode(name, email, code);
+        const tempPassword = args.get('password') || 'temp-password-123';
+        const result = await sendAccessVerificationCode(name, email, code, tempPassword);
         console.log('Account verification email result:', result);
         break;
       }
@@ -51,7 +52,8 @@ async function main() {
         const name = args.get('name') || 'Employee';
         const email = args.get('email') || 'employee@example.com';
         const code = 'APPROVED'; // Simple approval code
-        const result = await sendAccessVerificationCode(name, email, code);
+        const tempPassword = 'approved-temp-password';
+        const result = await sendAccessVerificationCode(name, email, code, tempPassword);
         console.log('Leave approval email result:', result);
         break;
       }

@@ -87,6 +87,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@netlify/plugin-nextjs": "^5.11.1",
+    "@types/bcrypt": "^5.0.2",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.0",
     "@types/react": "^19.2.0",
@@ -108,7 +109,6 @@
     "tailwindcss": "3.4.6",
     "tailwindcss-animate": "^1.0.7",
     "ts-node": "^10.9.2",
-    "typescript": "^5",
-    "@types/bcrypt": "^5.0.0"
+    "typescript": "^5"
   }
 }

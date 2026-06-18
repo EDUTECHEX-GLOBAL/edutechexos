@@ -80,7 +80,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 function InviteContent() {
   const params    = useSearchParams();
   const router    = useRouter();
-  const token     = params.get('token') ?? '';
+  const token     = params?.get('token') ?? '';
 
   const [phase, setPhase]       = useState<Phase>('loading');
   const [invite, setInvite]     = useState<InviteInfo | null>(null);
