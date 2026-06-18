@@ -105,18 +105,62 @@ if (!JWT_SECRET) {
 }
 const JWT_EXPIRY = '7d';
 
-// ── Brevo HTTP API email helper ───────────────────────────────────────────
-// Uses BREVO_API_KEY env var. No IP allowlist required — HTTP API only.
-// BREVO_FROM_EMAIL / BREVO_FROM_NAME optionally override the sender.
+// ── Email helper — SMTP primary (no IP allowlist), HTTP API fallback ─────────
+// Brevo's HTTP API (api.brevo.com) blocks unrecognised IP addresses with 401.
+// SMTP relay (smtp-relay.brevo.com:587) has NO IP restriction — only SMTP
+// credentials are checked — so we use SMTP as primary transport.
+const nodemailer = require('nodemailer');
+
+function _smtpTransporter() {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER || '',
+      pass: process.env.SMTP_PASS || '',
+    },
+  });
+}
+
 async function sendBrevoEmail({ to, bcc, subject, html }) {
   const toList = Array.isArray(to) ? to : [{ email: String(to) }];
   const totalRecipients = toList.length + (Array.isArray(bcc) ? bcc.length : 0);
   console.log(`[Mail] Sending "${subject}" → ${totalRecipients} recipient(s)`);
 
+  const fromAddr = process.env.SMTP_FROM || 'EduTechExOS <edutechexos121@gmail.com>';
+
+  // ── Try SMTP first (no IP allowlist restriction) ──────────────────────────
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+
+  if (smtpUser && smtpPass) {
+    try {
+      const transporter = _smtpTransporter();
+      const toStr = toList.map(r => r.name ? `"${r.name}" <${r.email}>` : r.email).join(', ');
+      const bccStr = Array.isArray(bcc) && bcc.length > 0
+        ? bcc.map(r => (typeof r === 'string' ? r : r.email)).join(', ')
+        : undefined;
+
+      await transporter.sendMail({
+        from:    fromAddr,
+        to:      toStr,
+        bcc:     bccStr,
+        subject,
+        html,
+      });
+      console.log(`[Mail] SMTP OK — sent to ${totalRecipients} recipient(s)`);
+      return { ok: true };
+    } catch (smtpErr) {
+      console.warn('[Mail] SMTP failed, trying Brevo HTTP API fallback:', smtpErr.message);
+    }
+  }
+
+  // ── Fallback: Brevo HTTP API ──────────────────────────────────────────────
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
-    console.error('[Mail] BREVO_API_KEY not configured');
-    return { ok: false, brevoError: 'BREVO_API_KEY_NOT_CONFIGURED' };
+    console.error('[Mail] BREVO_API_KEY not configured and SMTP also failed');
+    return { ok: false, brevoError: 'NO_TRANSPORT_AVAILABLE' };
   }
 
   const sender = {
@@ -144,11 +188,11 @@ async function sendBrevoEmail({ to, bcc, subject, html }) {
 
     if (!res.ok) {
       const errText = await res.text().catch(() => res.statusText);
-      console.error(`[Mail] Brevo API error ${res.status}:`, errText);
+      console.error(`[Mail] Brevo HTTP API error ${res.status}:`, errText);
       return { ok: false, brevoError: `${res.status} ${errText}` };
     }
 
-    console.log(`[Mail] OK — queued for ${totalRecipients} recipient(s)`);
+    console.log(`[Mail] HTTP API OK — queued for ${totalRecipients} recipient(s)`);
     return { ok: true };
   } catch (err) {
     console.error('[Mail] Brevo HTTP request failed:', err.message);

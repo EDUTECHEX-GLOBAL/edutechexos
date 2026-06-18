@@ -5,8 +5,9 @@ import path from 'path';
 import connectToDatabase from '@/lib/mongoose';
 import Message from '@/models/Message';
 import Note from '@/models/Note';
+import nodemailer from 'nodemailer';
 
-// ── Email helper — routes through Render backend so only Render's IP hits Brevo ──
+// ── Email helper — routes through Render backend (SMTP primary, no IP allowlist issues) ──
 export async function sendBrevoEmail(opts: {
   to: { email: string; name?: string }[];
   subject: string;
@@ -22,7 +23,6 @@ export async function sendBrevoEmail(opts: {
     if (!res.ok) {
       const body = await res.text().catch(() => `HTTP ${res.status}`);
       console.error('[email-relay] failed:', res.status, body);
-      // Try to parse JSON error from relay
       let errorMsg = `relay ${res.status}: ${body}`;
       try {
         const j = JSON.parse(body);
@@ -30,12 +30,49 @@ export async function sendBrevoEmail(opts: {
       } catch {
         /* raw text */
       }
+      // Fallback to SMTP if relay fails
+      if (res.status === 401 || res.status >= 500) {
+        console.log('Attempting SMTP fallback for email send');
+        const smtpResult = await sendBrevoEmailViaSmtp(opts);
+        return smtpResult;
+      }
       return { success: false, error: errorMsg };
     }
     return { success: true };
   } catch (err) {
     console.error('[email-relay] network error:', err);
-    return { success: false, error: String(err) };
+    // Attempt SMTP fallback on network error too
+    return sendBrevoEmailViaSmtp(opts);
+  }
+}
+
+// SMTP fallback implementation (no IP allowlist restriction)
+async function sendBrevoEmailViaSmtp(opts: {
+  to: { email: string; name?: string }[];
+  subject: string;
+  htmlContent: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST ?? 'smtp-relay.brevo.com',
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER ?? '',
+      pass: process.env.SMTP_PASS ?? '',
+    },
+  });
+  try {
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM ?? 'EduTechExOS <no-reply@edutechexos.com>',
+      to: opts.to.map((r) => r.email).join(','),
+      subject: opts.subject,
+      html: opts.htmlContent,
+    });
+    console.log('SMTP email sent successfully');
+    return { success: true };
+  } catch (e) {
+    console.error('SMTP send error:', e);
+    return { success: false, error: String(e) };
   }
 }
 
@@ -308,7 +345,19 @@ export async function sendMentionEmailNotification(
   });
 }
 
-// Note CRUD functions moved to src/app/actions/noteActions.ts
+// ── Broadcast email helper ──
+/**
+ * Send a single email to multiple recipients (broadcast).
+ * This is a thin wrapper around sendBrevoEmail.
+ */
+export async function sendBroadcastEmail(
+  subject: string,
+  htmlContent: string,
+  recipients: { email: string; name?: string }[]
+) {
+  return sendBrevoEmail({ to: recipients, subject, htmlContent });
+}
+
 /**
  * Fetch a single note for a given channel.
  */
@@ -342,9 +391,6 @@ export async function getAllNotesAction() {
   }
 }
 
-/**
- * Save or update a note for a channel.
- */
 export async function changePassword(
   email: string,
   currentPassword: string,
