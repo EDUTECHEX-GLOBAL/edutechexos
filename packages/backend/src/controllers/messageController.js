@@ -1,0 +1,249 @@
+const { getUserEmail, formatMessage, PAGE_SIZE } = require('../utils/helpers');
+const { encryptField, decryptField } = require('../services/encryptionService');
+const Message = require('../models/Message');
+const WikiPage = require('../models/WikiPage');
+const KanbanTask = require('../models/KanbanTask');
+
+async function getMessages(req, res) {
+  try {
+    const requestingUser = getUserEmail(req);
+    const { channelId, before, limit } = req.query;
+    const pageSize = Math.min(parseInt(limit) || PAGE_SIZE, 100);
+
+    if (channelId) {
+      const filter = { channelId: String(channelId) };
+      if (before) filter.timestamp = { $lt: new Date(before) };
+
+      const msgs = await Message.find(filter)
+        .sort({ timestamp: -1 })
+        .limit(pageSize + 1)
+        .lean();
+
+      const hasMore = msgs.length > pageSize;
+      const page = msgs.slice(0, pageSize).reverse();
+
+      const formatted = page.map((m) => formatMessage(m, requestingUser)).filter(Boolean);
+      return res.json({ success: true, messages: formatted, hasMore, channelId });
+    }
+
+    const allChannelIds = await Message.distinct('channelId');
+    const grouped  = {};
+    const hasMoreMap = {};
+
+    for (const chId of allChannelIds) {
+      const msgs = await Message.find({ channelId: chId })
+        .sort({ timestamp: -1 })
+        .limit(pageSize + 1)
+        .lean();
+
+      hasMoreMap[chId] = msgs.length > pageSize;
+      const page = msgs.slice(0, pageSize).reverse();
+      grouped[chId] = page.map((m) => formatMessage(m, requestingUser)).filter(Boolean);
+    }
+
+    res.json({ success: true, messages: grouped, hasMore: hasMoreMap });
+  } catch (err) {
+    console.error('[GET /api/messages] Error:', err);
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+async function postMessage(req, res) {
+  try {
+    const { id, ...messageData } = req.body;
+    const userEmail = getUserEmail(req);
+    if (userEmail && !messageData.senderEmail) {
+      messageData.senderEmail = userEmail;
+    }
+
+    const preSaveText = messageData.text;
+
+    if (messageData.text) messageData.text = encryptField(messageData.text);
+    const newMessage = new Message({ ...messageData, clientId: id });
+    const savedMsg = await newMessage.save();
+    const { _id, __v, ...rest } = savedMsg.toObject();
+
+    const base = {
+      ...rest,
+      id: _id.toString(),
+      timestamp: rest.timestamp instanceof Date ? rest.timestamp.toISOString() : rest.timestamp,
+      ...(rest.editedAt ? { editedAt: rest.editedAt instanceof Date ? rest.editedAt.toISOString() : rest.editedAt } : {}),
+    };
+
+    const socketPayload = { ...base, text: preSaveText };
+    const io = req.app.get('io');
+    if (io) io.to(base.channelId).emit('new_message', { channelId: base.channelId, message: socketPayload });
+
+    res.json({ success: true, message: base });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+async function deleteMessage(req, res) {
+  try {
+    const { id } = req.params;
+    const { scope, userEmail, hard } = req.query;
+
+    if (hard === 'true') {
+      const msg = await Message.findByIdAndDelete(id).lean();
+      if (msg) {
+        const io = req.app.get('io');
+        if (io) io.to(msg.channelId).emit('message_deleted', { channelId: msg.channelId, messageId: id });
+      }
+      return res.json({ success: true, deleted: 'permanent' });
+    }
+
+    if (scope === 'me' && userEmail) {
+      await Message.findByIdAndUpdate(id, { $addToSet: { deletedForUsers: userEmail } });
+      return res.json({ success: true, deleted: 'for-me' });
+    }
+
+    const updated = await Message.findByIdAndUpdate(
+      id,
+      { deletedAt: new Date(), deletedForEveryone: true, deletedBy: userEmail || 'unknown' },
+      { new: true }
+    ).lean();
+
+    if (updated) {
+      const io = req.app.get('io');
+      if (io) io.to(updated.channelId).emit('message_deleted', { channelId: updated.channelId, messageId: id });
+    }
+
+    res.json({ success: true, deleted: 'for-everyone' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+async function patchMessage(req, res) {
+  try {
+    const { id } = req.params;
+    const { text, editedAt, reactions, poll } = req.body;
+    const updates = {};
+    const plainText = text;
+    if (text     !== undefined) updates.text     = encryptField(text);
+    if (editedAt !== undefined) updates.editedAt = editedAt;
+    if (reactions !== undefined) updates.reactions = reactions;
+    if (poll     !== undefined) updates.poll     = poll;
+
+    const updated = await Message.findByIdAndUpdate(
+      id,
+      { $set: updates },
+      { new: true }
+    ).lean();
+
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Message not found' });
+    }
+
+    const { _id, __v, ...rest } = updated;
+    const base = {
+      ...rest,
+      id: _id.toString(),
+      timestamp: rest.timestamp instanceof Date ? rest.timestamp.toISOString() : rest.timestamp,
+      ...(rest.editedAt ? { editedAt: rest.editedAt instanceof Date ? rest.editedAt.toISOString() : rest.editedAt } : {}),
+    };
+
+    const socketPayload = text !== undefined ? { ...base, text: plainText } : base;
+    const io = req.app.get('io');
+    if (io) io.to(base.channelId).emit('message_updated', { channelId: base.channelId, message: socketPayload });
+
+    res.json({ success: true, message: base });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+async function search(req, res) {
+  try {
+    const q = String(req.query.q || '').trim();
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    if (!q) return res.json({ success: true, results: [], total: 0 });
+
+    const textFilter = { $text: { $search: q } };
+    const scoreProj = { score: { $meta: 'textScore' } };
+
+    const [msgDocs, wikiDocs, taskDocs] = await Promise.all([
+      Message.find(textFilter, scoreProj).sort({ score: { $meta: 'textScore' } }).limit(limit).lean(),
+      WikiPage.find(textFilter, scoreProj).sort({ score: { $meta: 'textScore' } }).limit(10).lean(),
+      KanbanTask.find(textFilter, scoreProj).sort({ score: { $meta: 'textScore' } }).limit(10).lean(),
+    ]);
+
+    const results = [
+      ...msgDocs.map(d => ({
+        type: 'message', id: String(d._id), channelId: d.channelId,
+        text: decryptField(d.text), sender: d.sender, timestamp: d.timestamp, score: d.score,
+      })),
+      ...wikiDocs.map(d => ({
+        type: 'wiki', id: String(d._id), channelId: d.channelId,
+        text: `${d.title}: ${String(d.content).replace(/<[^>]*>/g, '').slice(0, 200)}`,
+        sender: d.createdBy, timestamp: d.updatedAt, score: d.score,
+      })),
+      ...taskDocs.map(d => ({
+        type: 'task', id: String(d._id), channelId: d.sourceChannel,
+        text: `${d.text} → ${d.assignee} [${d.status}]`,
+        sender: d.assignee, timestamp: d.createdAt, score: d.score,
+      })),
+    ].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, limit);
+
+    res.json({ success: true, results, total: results.length });
+  } catch (err) {
+    if (String(err).includes('text index')) {
+      const q = String(req.query.q || '').trim();
+      const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      const allMsgs = await Message.find({}).sort({ timestamp: -1 }).limit(500).lean();
+      const matched = allMsgs.filter(d => re.test(decryptField(d.text) || '')).slice(0, 20);
+      return res.json({
+        success: true,
+        results: matched.map(d => ({ type: 'message', id: String(d._id), channelId: d.channelId, text: decryptField(d.text), sender: d.sender, timestamp: d.timestamp })),
+        total: matched.length,
+      });
+    }
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+async function ogLinkPreview(req, res) {
+  const url = String(req.query.url || '');
+  if (!url || !/^https?:\/\//i.test(url)) {
+    return res.status(400).json({ success: false, error: 'Valid URL required' });
+  }
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    const resp = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; EduTechExOSBot/1.0; +https://edutechexos.vercel.app)' },
+      signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+    const html = await resp.text();
+
+    const og = (prop) => {
+      const m = html.match(new RegExp(`<meta[^>]+property=["']og:${prop}["'][^>]+content=["']([^"']{1,400})["']`, 'i'))
+               || html.match(new RegExp(`<meta[^>]+content=["']([^"']{1,400})["'][^>]+property=["']og:${prop}["']`, 'i'));
+      return m?.[1]?.trim() || '';
+    };
+    const meta = (name) => {
+      const m = html.match(new RegExp(`<meta[^>]+name=["']${name}["'][^>]+content=["']([^"']{1,400})["']`, 'i'))
+               || html.match(new RegExp(`<meta[^>]+content=["']([^"']{1,400})["'][^>]+name=["']${name}["']`, 'i'));
+      return m?.[1]?.trim() || '';
+    };
+    const titleTag = (html.match(/<title[^>]*>([^<]{1,200})<\/title>/i) || [])[1]?.trim() || '';
+
+    res.json({
+      success: true,
+      preview: {
+        url,
+        title:       og('title')       || meta('title')       || titleTag,
+        description: og('description') || meta('description') || '',
+        image:       og('image')       || '',
+        siteName:    og('site_name')   || '',
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+module.exports = { getMessages, postMessage, deleteMessage, patchMessage, search, ogLinkPreview };

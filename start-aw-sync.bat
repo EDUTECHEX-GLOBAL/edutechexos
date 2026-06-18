@@ -31,7 +31,7 @@ echo [aw-sync] Starting EduTechExOS ActivityWatch bridge...
 echo [aw-sync] Minimise this window — it syncs every 5 minutes automatically.
 echo.
 
-node aw-sync.js
+node scripts/aw-sync.js
 
 :: If node exits unexpectedly, pause so the user can read the error
 echo.

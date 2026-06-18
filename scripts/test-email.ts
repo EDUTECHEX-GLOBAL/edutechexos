@@ -3,7 +3,7 @@
 // Usage: npx ts-node scripts/test-email.ts --flow=<flow> [options]
 // Available flows: createAccount, scheduleMeeting, leaveRequest, leaveApproval, broadcast
 
-import { sendMeetingEmailInvitation, sendAccessVerificationCode, sendMentionEmailNotification, sendBroadcastEmail } from '../src/app/actions/dbActions';
+import { sendMeetingEmailInvitation, sendAccessVerificationCode, sendMentionEmailNotification, sendBroadcastEmail } from '../packages/frontend/src/app/actions/dbActions';
 
 async function main() {
   const args = new Map<string, string>();

@@ -1,0 +1,96 @@
+// ── Safety: remove stale express-rate-limit from Render's cached node_modules ─
+try {
+  const path = require('path');
+  const fs   = require('fs');
+  const rlDir = path.join(__dirname, 'node_modules', 'express-rate-limit');
+  if (fs.existsSync(rlDir)) {
+    fs.rmSync(rlDir, { recursive: true, force: true });
+    console.log('[startup] Removed stale express-rate-limit from node_modules cache.');
+  }
+} catch (_) {}
+
+const dns = require('dns');
+try { dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']); } catch (_) {}
+
+const express = require('express');
+const http = require('http');
+const mongoose = require('mongoose');
+const cors = require('cors');
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+
+const { connectDatabase } = require('./src/config/database');
+const { createSocketServer } = require('./src/socket/index');
+const { startCronJobs } = require('./src/cron/jobs');
+const routes = require('./src/routes/index');
+const { RemovedMember } = require('./src/models/index');
+const { revokedEmails } = require('./src/utils/helpers');
+const { errorHandler } = require('./src/middleware/errorHandler');
+
+const app = express();
+app.set('trust proxy', 1);
+
+const httpServer = http.createServer(app);
+
+const io = createSocketServer(httpServer);
+app.set('io', io);
+
+const { ALLOWED_ORIGINS } = require('./src/utils/helpers');
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const allowed = ALLOWED_ORIGINS.some((o) =>
+      typeof o === 'string' ? o === origin : o.test(origin)
+    );
+    if (allowed) return callback(null, true);
+    console.warn(`[CORS] Blocked origin: ${origin}`);
+    callback(new Error(`CORS policy: origin ${origin} not allowed`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
+app.use(express.json());
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+connectDatabase();
+
+app.use(routes);
+
+app.use(errorHandler);
+
+startCronJobs(io);
+
+const PORT = process.env.PORT || 10002;
+httpServer.listen(PORT, () => {
+  console.log(`Backend Server running on port ${PORT}`);
+
+  RemovedMember.find({}).lean().then((docs) => {
+    docs.forEach((d) => revokedEmails.add(d.email.toLowerCase()));
+    if (docs.length) console.log(`[startup] ${docs.length} revoked email(s) loaded`);
+  }).catch(() => {});
+
+  const SELF_URL = process.env.RENDER_EXTERNAL_URL;
+  if (SELF_URL) {
+    const pinger = require('https');
+    setInterval(() => {
+      pinger.get(`${SELF_URL}/health`, (res) => res.resume()).on('error', () => {});
+    }, 14 * 60 * 1000);
+  }
+});
+
+httpServer.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Waiting 3 seconds before retry...`);
+    setTimeout(() => {
+      httpServer.close();
+      httpServer.listen(PORT);
+    }, 3000);
+  } else {
+    throw err;
+  }
+});

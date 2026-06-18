@@ -5,8 +5,8 @@ services:
     # Build and run from the backend sub-folder so its own package.json
     # (which lists express, cors, socket.io, etc. as *dependencies*, not devDependencies)
     # is used — avoids production builds skipping devDeps from the root.
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && node server.js
+    buildCommand: cd packages/backend && npm install
+    startCommand: cd packages/backend && node server.js
     healthCheckPath: /health
     envVars:
       # Required — set these in the Render dashboard (Environment tab)
@@ -18,17 +18,10 @@ services:
       # Optional — OpenAI fallback
       - key: OPENAI_API_KEY
         sync: false
-      # Optional — enables real email delivery. Falls back to Ethereal preview if missing.
-      - key: SMTP_HOST
+      # Brevo transactional email API key — required for email delivery.
+      - key: BREVO_API_KEY
         sync: false
-      - key: SMTP_PORT
-        sync: false
-      - key: SMTP_SECURE
-        sync: false
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASS
-        sync: false
+      # Sender address in "Name <email>" format (e.g. "EduTechExOS <noreply@edutechex.in>")
       - key: SMTP_FROM
         sync: false
       # JWT signing secret — MUST match the secret used when tokens were issued.

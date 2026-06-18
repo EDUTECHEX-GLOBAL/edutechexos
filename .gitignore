@@ -50,6 +50,9 @@ public/uploads/
 # Dev-only scripts
 test_gemini.js
 
+# Local email preview output
+mail-preview/
+
 # Backend node_modules only — source is tracked so Render can deploy it
 backend/node_modules/
 .vercel

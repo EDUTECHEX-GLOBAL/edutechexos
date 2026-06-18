@@ -10,7 +10,7 @@ const {
   sendMeetingEmailInvitation,
   sendMentionEmailNotification,
   sendBroadcastEmail,
-} = require('../src/app/actions/dbActions');
+} = require('../packages/frontend/src/app/actions/dbActions');
 
 async function main() {
   const args = process.argv.slice(2);
