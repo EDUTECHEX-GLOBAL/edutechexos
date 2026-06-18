@@ -1,5 +1,9 @@
-IPs previously authorised for Brevo HTTP API (no longer needed if IP restriction is disabled):
+Brevo email is sent via SMTP relay (smtp-relay.brevo.com:587).
+SMTP has NO IP allowlist — Brevo HTTP API IP restrictions do not apply.
 
-43.205.238.201
-13.232.23.217
-49.205.97.159
+Required env vars (Render + Vercel):
+  SMTP_HOST=smtp-relay.brevo.com
+  SMTP_PORT=587
+  SMTP_USER=<your Brevo SMTP login>
+  SMTP_PASS=<your Brevo SMTP key>
+  SMTP_FROM=EduTechExOS <noreply@edutechex.in>

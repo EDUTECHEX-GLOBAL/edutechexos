@@ -35,6 +35,5 @@ services:
       # If not set, falls back to the hardcoded default (less secure).
       - key: JWT_SECRET
         sync: false
-      # Brevo API key for transactional email (meeting invites, mentions)
-      - key: BREVO_API_KEY
-        sync: false
+      # Brevo SMTP credentials — transactional email (no IP allowlist on SMTP relay)
+      # Get SMTP login + key from Brevo → Settings → SMTP & API

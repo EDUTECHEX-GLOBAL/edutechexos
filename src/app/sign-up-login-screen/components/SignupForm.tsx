@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Loader2, Mail, User, Briefcase, ArrowRight, KeyRound } from 'lucide-react';
+import { Loader2, Mail, User, Briefcase, ArrowRight, KeyRound, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 type SignupFormData = { name: string; email: string; role: string };
@@ -26,6 +26,31 @@ const inputIvyStyle = {
 
 export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState('');
+  const [isResending, setIsResending] = useState(false);
+
+  const handleResendPassword = async () => {
+    if (!submittedEmail) return;
+    setIsResending(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: submittedEmail }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Password email resent! Check your inbox.', { duration: 6000 });
+      } else {
+        toast.error(data.error ?? 'Failed to resend. Please try again.');
+      }
+    } catch {
+      toast.error('Network error. Please check your connection.');
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const {
     register,
@@ -71,9 +96,10 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
           };
           localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify([localEntry, ...localRequests]));
         }
-        toast.success('Account created! Check your email for your temporary password — you can sign in now.', { duration: 7000 });
+        toast.success('Account created! Check your email for your temporary password.', { duration: 7000 });
+        setSubmittedEmail(emailClean);
+        setSubmitted(true);
         reset();
-        onSwitchToLogin();
         return;
       }
 
@@ -99,6 +125,74 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
       setIsLoading(false);
     }
   };
+
+  if (submitted) {
+    return (
+      <div style={{ textAlign: 'center', padding: '32px 8px' }}>
+        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(79,70,229,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+          <Mail size={24} style={{ color: '#4f46e5' }} />
+        </div>
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0A1128', marginBottom: 8 }}>Check your inbox</h2>
+        <p style={{ fontSize: 13, color: 'rgba(10,17,40,0.55)', marginBottom: 6, lineHeight: 1.6 }}>
+          A temporary password has been sent to
+        </p>
+        <p style={{ fontSize: 14, fontWeight: 700, color: '#4f46e5', marginBottom: 28 }}>{submittedEmail}</p>
+        <p style={{ fontSize: 12, color: 'rgba(10,17,40,0.4)', marginBottom: 24 }}>
+          Use that password to sign in, then change it from your profile settings.
+        </p>
+
+        <button
+          type="button"
+          onClick={onSwitchToLogin}
+          style={{
+            width: '100%',
+            background: '#0A1128',
+            color: '#D4AF37',
+            padding: '14px 0',
+            fontWeight: 800,
+            fontSize: 11,
+            letterSpacing: '0.3em',
+            textTransform: 'uppercase',
+            border: 'none',
+            borderRadius: 4,
+            cursor: 'pointer',
+            marginBottom: 12,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+          }}
+        >
+          Go to Sign In <ArrowRight size={14} />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleResendPassword}
+          disabled={isResending}
+          style={{
+            width: '100%',
+            background: 'transparent',
+            color: 'rgba(10,17,40,0.55)',
+            padding: '12px 0',
+            fontWeight: 600,
+            fontSize: 12,
+            border: '1px solid rgba(10,17,40,0.12)',
+            borderRadius: 4,
+            cursor: isResending ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            opacity: isResending ? 0.6 : 1,
+          }}
+        >
+          {isResending ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+          {isResending ? 'Resending…' : "Didn't receive it? Resend password"}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>

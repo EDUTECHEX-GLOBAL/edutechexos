@@ -103,19 +103,24 @@ if (!JWT_SECRET) {
   console.error('[FATAL] JWT_SECRET environment variable is not set. Refusing to start.');
   process.exit(1);
 }
+// Validate required SMTP environment variables on startup
+const requiredSmtpVars = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS'];
+const missingSmtp = requiredSmtpVars.filter(v => !process.env[v]);
+if (missingSmtp.length) {
+  console.error(`[FATAL] Missing SMTP environment variables: ${missingSmtp.join(', ')}. Refusing to start.`);
+  process.exit(1);
+}
 const JWT_EXPIRY = '7d';
 
-// ── Email helper — SMTP primary (no IP allowlist), HTTP API fallback ─────────
-// Brevo's HTTP API (api.brevo.com) blocks unrecognised IP addresses with 401.
-// SMTP relay (smtp-relay.brevo.com:587) has NO IP restriction — only SMTP
-// credentials are checked — so we use SMTP as primary transport.
+// ── Email helper — Brevo SMTP relay only (no IP allowlist) ───────────────────
+// Brevo's HTTP API (api.brevo.com) enforces IP allowlists. SMTP relay does not.
 const nodemailer = require('nodemailer');
 
 function _smtpTransporter() {
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
     port: Number(process.env.SMTP_PORT) || 587,
-    secure: false,
+    secure: process.env.SMTP_SECURE === 'true',
     auth: {
       user: process.env.SMTP_USER || '',
       pass: process.env.SMTP_PASS || '',
@@ -128,75 +133,34 @@ async function sendBrevoEmail({ to, bcc, subject, html }) {
   const totalRecipients = toList.length + (Array.isArray(bcc) ? bcc.length : 0);
   console.log(`[Mail] Sending "${subject}" → ${totalRecipients} recipient(s)`);
 
-  const fromAddr = process.env.SMTP_FROM || 'EduTechExOS <edutechexos121@gmail.com>';
-
-  // ── Try SMTP first (no IP allowlist restriction) ──────────────────────────
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;
-
-  if (smtpUser && smtpPass) {
-    try {
-      const transporter = _smtpTransporter();
-      const toStr = toList.map(r => r.name ? `"${r.name}" <${r.email}>` : r.email).join(', ');
-      const bccStr = Array.isArray(bcc) && bcc.length > 0
-        ? bcc.map(r => (typeof r === 'string' ? r : r.email)).join(', ')
-        : undefined;
-
-      await transporter.sendMail({
-        from:    fromAddr,
-        to:      toStr,
-        bcc:     bccStr,
-        subject,
-        html,
-      });
-      console.log(`[Mail] SMTP OK — sent to ${totalRecipients} recipient(s)`);
-      return { ok: true };
-    } catch (smtpErr) {
-      console.warn('[Mail] SMTP failed, trying Brevo HTTP API fallback:', smtpErr.message);
-    }
+  if (!smtpUser || !smtpPass) {
+    console.error('[Mail] SMTP_USER and SMTP_PASS not configured');
+    return { ok: false, brevoError: 'SMTP_NOT_CONFIGURED' };
   }
 
-  // ── Fallback: Brevo HTTP API ──────────────────────────────────────────────
-  const apiKey = process.env.BREVO_API_KEY;
-  if (!apiKey) {
-    console.error('[Mail] BREVO_API_KEY not configured and SMTP also failed');
-    return { ok: false, brevoError: 'NO_TRANSPORT_AVAILABLE' };
-  }
-
-  const sender = {
-    email: process.env.BREVO_FROM_EMAIL || 'edutechexos121@gmail.com',
-    name:  process.env.BREVO_FROM_NAME  || 'EduTechExOS',
-  };
-
-  const body = {
-    sender,
-    to: toList.map(r => ({ email: r.email, name: r.name || r.email })),
-    subject,
-    htmlContent: html,
-  };
-
-  if (Array.isArray(bcc) && bcc.length > 0) {
-    body.bcc = bcc.map(r => ({ email: typeof r === 'string' ? r : r.email }));
-  }
+  const fromAddr = process.env.SMTP_FROM || 'EduTechExOS <noreply@edutechex.in>';
 
   try {
-    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: { 'api-key': apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+    const transporter = _smtpTransporter();
+    const toStr = toList.map(r => r.name ? `"${r.name}" <${r.email}>` : r.email).join(', ');
+    const bccStr = Array.isArray(bcc) && bcc.length > 0
+      ? bcc.map(r => (typeof r === 'string' ? r : r.email)).join(', ')
+      : undefined;
+
+    await transporter.sendMail({
+      from:    fromAddr,
+      to:      toStr,
+      bcc:     bccStr,
+      subject,
+      html,
     });
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => res.statusText);
-      console.error(`[Mail] Brevo HTTP API error ${res.status}:`, errText);
-      return { ok: false, brevoError: `${res.status} ${errText}` };
-    }
-
-    console.log(`[Mail] HTTP API OK — queued for ${totalRecipients} recipient(s)`);
+    console.log(`[Mail] SMTP OK — sent to ${totalRecipients} recipient(s)`);
     return { ok: true };
-  } catch (err) {
-    console.error('[Mail] Brevo HTTP request failed:', err.message);
-    return { ok: false, brevoError: err.message };
+  } catch (smtpErr) {
+    console.error('[Mail] SMTP failed:', smtpErr);
+    return { ok: false, brevoError: smtpErr.message };
   }
 }
 
@@ -336,6 +300,24 @@ app.use('/api/auth/', authLimiter);
 app.use('/api/messages', apiLimiter);
 app.use('/api/kanban', apiLimiter);
 app.use('/api/', globalLimiter);
+
+// ---------------------------------------------------
+// Test Email Endpoint (admin/authenticated)
+// ---------------------------------------------------
+app.post('/api/test-email', authMiddleware, async (req, res) => {
+  const { to, subject, htmlContent } = req.body;
+  if (!to || !subject || !htmlContent) {
+    return res.status(400).json({ success: false, error: 'Missing required fields: to, subject, htmlContent' });
+  }
+  // Normalize to array of {email, name?}
+  const toArray = Array.isArray(to) ? to : [to];
+  const formattedTo = toArray.map((t) => typeof t === 'string' ? { email: t } : t);
+  const result = await sendBrevoEmail({ to: formattedTo, subject, html: htmlContent });
+  if (result.ok) {
+    return res.json({ success: true, message: 'Test email sent' });
+  }
+  return res.status(500).json({ success: false, error: result.brevoError || 'SMTP failed' });
+});
 
 // --- 1. MongoDB Connection ---
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -505,7 +487,7 @@ const VALID_ACCOUNTS = [
 const AccessRequestSchema = new mongoose.Schema({
   name:        { type: String, required: true },
   email:       { type: String, required: true, index: true },
-  password:    { type: String, required: true },
+  password:    { type: String, default: '' },
   role:        { type: String, required: true },
   status:      { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
   requestedAt: { type: Date, default: Date.now },
@@ -3267,8 +3249,7 @@ app.post('/api/notifications', requireAuth, async (req, res) => {
   }
 });
 
-// ─── Generic email relay endpoint ─────────────────────────────────────────────
-// Called by Vercel server actions so ALL emails go through Render's stable IP.
+// ─── Generic email endpoint ───────────────────────────────────────────────────
 // POST /api/email  { to, subject, htmlContent }
 app.post('/api/email', requireAuth, async (req, res) => {
   try {

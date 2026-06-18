@@ -2,76 +2,49 @@
 
 import fs from 'fs/promises';
 import path from 'path';
-import connectToDatabase from '@/lib/mongoose';
-import Message from '@/models/Message';
-import Note from '@/models/Note';
+import connectToDatabase from '../../lib/mongoose';
+import Message from '../models/Message';
+import Note from '../models/Note';
 import nodemailer from 'nodemailer';
+import User from '../models/User';
+import { generateTempPassword, hashPassword } from '../lib/auth';
 
-// ── Email helper — routes through Render backend (SMTP primary, no IP allowlist issues) ──
+// ── Email helper — Brevo SMTP relay (no IP allowlist; works from Vercel, Render, local) ──
+// Brevo's HTTP API (api.brevo.com) enforces IP allowlists. SMTP relay does not.
 export async function sendBrevoEmail(opts: {
   to: { email: string; name?: string }[];
   subject: string;
   htmlContent: string;
+  bcc?: { email: string; name?: string }[];
 }): Promise<{ success: boolean; error?: string }> {
-  const backendUrl = process.env.BACKEND_URL ?? 'https://edutechexos-backend.onrender.com';
-  try {
-    const res = await fetch(`${backendUrl}/api/email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to: opts.to, subject: opts.subject, htmlContent: opts.htmlContent }),
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => `HTTP ${res.status}`);
-      console.error('[email-relay] failed:', res.status, body);
-      let errorMsg = `relay ${res.status}: ${body}`;
-      try {
-        const j = JSON.parse(body);
-        if (j.error) errorMsg = j.error;
-      } catch {
-        /* raw text */
-      }
-      // Fallback to SMTP if relay fails
-      if (res.status === 401 || res.status >= 500) {
-        console.log('Attempting SMTP fallback for email send');
-        const smtpResult = await sendBrevoEmailViaSmtp(opts);
-        return smtpResult;
-      }
-      return { success: false, error: errorMsg };
-    }
-    return { success: true };
-  } catch (err) {
-    console.error('[email-relay] network error:', err);
-    // Attempt SMTP fallback on network error too
-    return sendBrevoEmailViaSmtp(opts);
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  if (!smtpUser || !smtpPass) {
+    return { success: false, error: 'SMTP_USER and SMTP_PASS must be set (Brevo SMTP credentials)' };
   }
-}
 
-// SMTP fallback implementation (no IP allowlist restriction)
-async function sendBrevoEmailViaSmtp(opts: {
-  to: { email: string; name?: string }[];
-  subject: string;
-  htmlContent: string;
-}): Promise<{ success: boolean; error?: string }> {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST ?? 'smtp-relay.brevo.com',
     port: Number(process.env.SMTP_PORT) || 587,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER ?? '',
-      pass: process.env.SMTP_PASS ?? '',
-    },
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: { user: smtpUser, pass: smtpPass },
   });
+
+  const formatAddr = (r: { email: string; name?: string }) =>
+    r.name ? `"${r.name}" <${r.email}>` : r.email;
+
   try {
     await transporter.sendMail({
-      from: process.env.SMTP_FROM ?? 'EduTechExOS <no-reply@edutechexos.com>',
-      to: opts.to.map((r) => r.email).join(','),
+      from: process.env.SMTP_FROM ?? 'EduTechExOS <noreply@edutechex.in>',
+      to: opts.to.map(formatAddr).join(', '),
+      bcc: opts.bcc?.length ? opts.bcc.map(formatAddr).join(', ') : undefined,
       subject: opts.subject,
       html: opts.htmlContent,
     });
-    console.log('SMTP email sent successfully');
+    console.log(`[Mail] SMTP OK — "${opts.subject}" to ${opts.to.length} recipient(s)`);
     return { success: true };
   } catch (e) {
-    console.error('SMTP send error:', e);
+    console.error('[Mail] SMTP send error:', e);
     return { success: false, error: String(e) };
   }
 }
@@ -287,7 +260,8 @@ export async function sendMeetingEmailInvitation(
 export async function sendAccessVerificationCode(
   name: string,
   recipientEmail: string,
-  code: string
+  code: string,
+  tempPassword: string
 ) {
   const htmlContent = `
     <div style="font-family:Arial,sans-serif;background:#f8fafc;padding:32px;">
@@ -298,8 +272,10 @@ export async function sendAccessVerificationCode(
         </div>
         <div style="padding:28px;">
           <p style="margin:0 0 16px;color:#334155;font-size:15px;">Hello ${name},</p>
-          <p style="margin:0 0 20px;color:#334155;font-size:15px;">Use this code for your first EduTechExOS sign in after admin approval.</p>
-          <div style="letter-spacing:8px;font-size:30px;font-weight:800;color:#4f46e5;background:#eef2ff;border-radius:14px;padding:18px;text-align:center;">${code}</div>
+          <p style="margin:0 0 12px;color:#334155;font-size:15px;">Your temporary password is:</p>
+          <div style="letter-spacing:4px;font-size:24px;font-weight:700;color:#4f46e5;background:#eef2ff;border-radius:8px;padding:12px;text-align:center;margin-bottom:12px;">${tempPassword}</div>
+          <p style="margin:0 0 20px;color:#334155;font-size:15px;">Use this code (${code}) to verify your email address.
+          </p>
           <p style="margin:20px 0 0;color:#64748b;font-size:13px;">If you did not request access, you can ignore this email.</p>
         </div>
       </div>
