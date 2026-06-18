@@ -105,52 +105,53 @@ if (!JWT_SECRET) {
 }
 const JWT_EXPIRY = '7d';
 
-// ── SMTP email helper (nodemailer) ────────────────────────────────────────
-// Uses SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM env vars.
-// For Gmail: SMTP_HOST=smtp.gmail.com  SMTP_PORT=587  SMTP_USER=you@gmail.com
-//            SMTP_PASS=<16-char App Password>  SMTP_FROM=EduTechExOS <you@gmail.com>
-const nodemailer = require('nodemailer');
-
-let _transporter = null;
-function getTransporter() {
-  if (_transporter) return _transporter;
-  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const port = parseInt(process.env.SMTP_PORT || '587', 10);
-  const secure = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true';
-  const user = process.env.SMTP_USER || '';
-  const pass = process.env.SMTP_PASS || '';
-  _transporter = nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
-  return _transporter;
-}
-
+// ── Brevo HTTP API email helper ───────────────────────────────────────────
+// Uses BREVO_API_KEY env var. No IP allowlist required — HTTP API only.
+// BREVO_FROM_EMAIL / BREVO_FROM_NAME optionally override the sender.
 async function sendBrevoEmail({ to, bcc, subject, html }) {
   const toList = Array.isArray(to) ? to : [{ email: String(to) }];
   const totalRecipients = toList.length + (Array.isArray(bcc) ? bcc.length : 0);
   console.log(`[Mail] Sending "${subject}" → ${totalRecipients} recipient(s)`);
 
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
-  if (!smtpUser || !smtpPass) {
-    console.error('[Mail] SMTP_USER / SMTP_PASS not configured');
-    return { ok: false, brevoError: 'SMTP_NOT_CONFIGURED' };
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) {
+    console.error('[Mail] BREVO_API_KEY not configured');
+    return { ok: false, brevoError: 'BREVO_API_KEY_NOT_CONFIGURED' };
   }
 
-  const fromAddr = process.env.SMTP_FROM || `EduTechExOS <${smtpUser}>`;
+  const sender = {
+    email: process.env.BREVO_FROM_EMAIL || 'edutechexos121@gmail.com',
+    name:  process.env.BREVO_FROM_NAME  || 'EduTechExOS',
+  };
 
-  const toAddresses = toList.map(r => r.name ? `${r.name} <${r.email}>` : r.email).join(', ');
-  const mailOpts = { from: fromAddr, to: toAddresses, subject, html };
+  const body = {
+    sender,
+    to: toList.map(r => ({ email: r.email, name: r.name || r.email })),
+    subject,
+    htmlContent: html,
+  };
 
   if (Array.isArray(bcc) && bcc.length > 0) {
-    mailOpts.bcc = bcc.map(r => (typeof r === 'string' ? r : r.email)).join(', ');
+    body.bcc = bcc.map(r => ({ email: typeof r === 'string' ? r : r.email }));
   }
 
   try {
-    await getTransporter().sendMail(mailOpts);
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText);
+      console.error(`[Mail] Brevo API error ${res.status}:`, errText);
+      return { ok: false, brevoError: `${res.status} ${errText}` };
+    }
+
     console.log(`[Mail] OK — queued for ${totalRecipients} recipient(s)`);
     return { ok: true };
   } catch (err) {
-    console.error('[Mail] SMTP send failed:', err.message);
-    _transporter = null; // reset so next call retries with a fresh connection
+    console.error('[Mail] Brevo HTTP request failed:', err.message);
     return { ok: false, brevoError: err.message };
   }
 }
