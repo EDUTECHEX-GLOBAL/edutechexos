@@ -223,4 +223,35 @@ async function reviewRequest(req, res) {
   }
 }
 
-module.exports = { submitRequest, getRequests, reviewRequest };
+async function deleteRequest(req, res) {
+  if (!req.user || req.user.role !== 'Admin') {
+    return res.status(403).json({ success: false, error: 'Admin access required.' });
+  }
+  try {
+    const { id } = req.params;
+    const deleted = await AccessRequest.findByIdAndDelete(id).lean();
+    if (!deleted) return res.status(404).json({ success: false, error: 'Request not found.' });
+
+    const { revokedEmails } = require('../utils/helpers');
+    const { RemovedMember } = require('../models/index');
+    await RemovedMember.findOneAndUpdate(
+      { email: deleted.email.toLowerCase() },
+      { email: deleted.email.toLowerCase(), removedAt: new Date() },
+      { upsert: true, new: true }
+    );
+    revokedEmails.add(deleted.email.toLowerCase());
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('member_removed', { memberId: `member-${id}` });
+      io.emit('user_forcefully_removed', { email: deleted.email.toLowerCase() });
+    }
+
+    await logAudit(req, 'member.removed', deleted.email, deleted.name, { role: deleted.role });
+    res.json({ success: true, removedEmail: deleted.email });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+module.exports = { submitRequest, getRequests, reviewRequest, deleteRequest };
