@@ -1,6 +1,9 @@
 {
   "framework": "nextjs",
   "regions": ["bom1"],
+  "installCommand": "npm install --ignore-scripts",
+  "buildCommand": "npm run build --workspace=@edutechexos/frontend",
+  "outputDirectory": "packages/frontend/.next",
   "build": {
     "env": {
       "NEXT_PUBLIC_API_URL": "https://edutechexos-ueoq.onrender.com"

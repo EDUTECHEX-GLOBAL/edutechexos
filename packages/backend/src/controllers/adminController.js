@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { AccessRequest, AuditLog, InviteToken, RemovedMember } = require('../models/index');
 const { VALID_ACCOUNTS, revokedEmails } = require('../utils/helpers');
-const { sendBrevoEmail } = require('../services/emailService');
+const { sendBrevoEmail, diagnoseBrevo } = require('../services/emailService');
 const { encryptField, _encKey } = require('../services/encryptionService');
 const { JWT_SECRET, JWT_EXPIRY } = require('../middleware/auth');
 const { logAudit } = require('../services/auditService');
@@ -328,4 +328,54 @@ async function acceptInvite(req, res) {
   }
 }
 
-module.exports = { setPassword, generatePassword, sendInvite, broadcastEmail, migrateEncrypt, getAuditLog, validateInvite, acceptInvite };
+async function emailDiagnostics(req, res) {
+  if (!req.user || req.user.role !== 'Admin') {
+    return res.status(403).json({ success: false, error: 'Admin access required.' });
+  }
+  try {
+    const diag = await diagnoseBrevo();
+
+    const fromConfig = process.env.SMTP_FROM || 'EduTechExOS <edutechexos121@gmail.com>';
+    const match = fromConfig.match(/(.*)<(.*)>/);
+    const configuredSender = match ? match[2].trim() : fromConfig.trim();
+
+    const senderVerified = (diag.senders?.list || []).some(
+      s => s.email.toLowerCase() === configuredSender.toLowerCase() && s.active
+    );
+
+    diag.configuredSender = configuredSender;
+    diag.senderVerified = senderVerified;
+    if (!senderVerified) {
+      diag.fix = `The sender email "${configuredSender}" is NOT verified in your Brevo account. Go to Brevo → Settings → Senders & IPs → Add/verify this email. Until verified, Brevo accepts API calls but silently drops emails.`;
+    }
+
+    res.json({ success: true, diagnostics: diag });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+async function testEmail(req, res) {
+  if (!req.user || req.user.role !== 'Admin') {
+    return res.status(403).json({ success: false, error: 'Admin access required.' });
+  }
+  try {
+    const { to } = req.body;
+    const recipient = to || req.user.email;
+    const result = await sendBrevoEmail({
+      to: [{ email: recipient, name: 'Test' }],
+      subject: 'EduTechExOS — Email Delivery Test',
+      html: `<div style="font-family:Arial,sans-serif;padding:24px;">
+        <h2 style="color:#4f46e5;">Email Delivery Test</h2>
+        <p>If you are reading this, email delivery from EduTechExOS is working.</p>
+        <p style="color:#64748b;font-size:12px;">Sent at: ${new Date().toISOString()}</p>
+        <p style="color:#64748b;font-size:12px;">Server: ${process.env.RENDER_EXTERNAL_URL || 'localhost'}</p>
+      </div>`,
+    });
+    res.json({ success: result.ok, messageId: result.messageId, error: result.brevoError || null, sentTo: recipient });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+module.exports = { setPassword, generatePassword, sendInvite, broadcastEmail, migrateEncrypt, getAuditLog, validateInvite, acceptInvite, emailDiagnostics, testEmail };

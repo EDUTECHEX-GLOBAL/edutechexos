@@ -7,7 +7,7 @@ function makeRateLimiter({ windowMs, max, message }) {
     }
   }, 10 * 60 * 1000).unref();
 
-  return function rateLimitMiddleware(req, res, next) {
+  function rateLimitMiddleware(req, res, next) {
     const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || 'unknown';
     const now = Date.now();
     let entry = store.get(ip);
@@ -22,7 +22,10 @@ function makeRateLimiter({ windowMs, max, message }) {
       );
     }
     next();
-  };
+  }
+
+  rateLimitMiddleware.resetAll = () => store.clear();
+  return rateLimitMiddleware;
 }
 
 const authLimiter = makeRateLimiter({

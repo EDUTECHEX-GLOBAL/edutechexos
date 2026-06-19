@@ -81,16 +81,23 @@ async function sendBrevoEmail({ to, bcc, subject, html }) {
       req.end();
     });
 
+    let parsedBody;
+    try { parsedBody = JSON.parse(apiResult.body); } catch (_) { parsedBody = null; }
+
     if (apiResult.statusCode >= 200 && apiResult.statusCode < 300) {
-      console.log(`[Mail] OK — delivered to ${totalRecipients} recipient(s)`);
-      return { ok: true };
+      const msgId = parsedBody?.messageId || 'no-id';
+      console.log(`[Mail] OK (${apiResult.statusCode}) msgId=${msgId} → ${toList.map(r => r.email).join(', ')}`);
+      return { ok: true, messageId: msgId };
     }
 
-    const errMsg = `${apiResult.statusCode}: ${apiResult.body}`;
-    console.error(`[Mail] HTTP API returned ${errMsg}`);
-    return { ok: false, brevoError: errMsg };
+    const code = parsedBody?.code || 'unknown';
+    const message = parsedBody?.message || apiResult.body;
+    console.error(`[Mail] FAILED (${apiResult.statusCode}) code=${code} → ${message}`);
+    console.error(`[Mail] Payload was: sender=${payload.sender.email}, to=${toList.map(r=>r.email).join(',')}, subject="${subject}"`);
+    return { ok: false, brevoError: `${apiResult.statusCode} ${code}: ${message}` };
   } catch (err) {
     console.error('[Mail] HTTP API call failed:', err.message);
+    console.error('[Mail] Stack:', err.stack);
     return { ok: false, brevoError: err.message };
   }
 }
@@ -117,4 +124,65 @@ async function sendResetEmail(toEmail, toName, code) {
   return { ok };
 }
 
-module.exports = { sendBrevoEmail, sendResetEmail };
+async function diagnoseBrevo() {
+  const https = require('https');
+  const results = { apiKey: false, account: null, senders: null, error: null };
+
+  if (!process.env.BREVO_API_KEY) {
+    results.error = 'BREVO_API_KEY not set';
+    return results;
+  }
+  results.apiKey = true;
+
+  const brevoGet = (path) => new Promise((resolve, reject) => {
+    const req = https.request(`https://api.brevo.com/v3${path}`, {
+      method: 'GET',
+      headers: { 'accept': 'application/json', 'api-key': process.env.BREVO_API_KEY },
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, data: JSON.parse(data) }); }
+        catch (_) { resolve({ status: res.statusCode, data }); }
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+
+  try {
+    const acct = await brevoGet('/account');
+    results.account = {
+      status: acct.status,
+      email: acct.data?.email,
+      plan: acct.data?.plan?.[0]?.type,
+      credits: acct.data?.plan?.[0]?.credits,
+      creditsUsed: acct.data?.plan?.[0]?.creditsUsed ?? null,
+    };
+  } catch (e) { results.account = { error: e.message }; }
+
+  try {
+    const senders = await brevoGet('/senders');
+    results.senders = {
+      status: senders.status,
+      list: (senders.data?.senders || []).map(s => ({
+        email: s.email, name: s.name, active: s.active,
+      })),
+    };
+  } catch (e) { results.senders = { error: e.message }; }
+
+  try {
+    const events = await brevoGet('/smtp/statistics/events?limit=5&offset=0');
+    results.recentEvents = {
+      status: events.status,
+      events: (events.data?.events || []).map(e => ({
+        email: e.email, event: e.event, date: e.date,
+        subject: e.subject, reason: e.reason || '',
+      })),
+    };
+  } catch (e) { results.recentEvents = { error: e.message }; }
+
+  return results;
+}
+
+module.exports = { sendBrevoEmail, sendResetEmail, diagnoseBrevo };

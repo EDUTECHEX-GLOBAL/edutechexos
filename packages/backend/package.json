@@ -7,7 +7,8 @@
     "dev": "nodemon server.js",
     "build": "echo \"No build needed\"",
     "start": "node server.js",
-    "postinstall": "npm prune --production 2>/dev/null || npm prune 2>/dev/null || true"
+    "postinstall": "node -e \"try{require('child_process').execSync('npm prune --production',{stdio:'ignore'})}catch(e){}\"",
+    "test": "jest --forceExit --detectOpenHandles"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -18,5 +19,10 @@
     "mongoose": "^7.5.0",
     "node-cron": "^4.2.1",
     "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "mongodb-memory-server": "^11.2.0",
+    "supertest": "^7.2.2"
   }
 }
