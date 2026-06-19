@@ -25,27 +25,6 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend
 // Hardcoded fallback for when backend is unreachable
 const VALID_ACCOUNTS = [
   { email: 'admin@edutechex.in', password: 'Admin@Edx2026', name: 'Admin', role: 'Admin' },
-  {
-    email: 'aditya@edutechex.in',
-    password: 'Aditya@Edx2026',
-    name: 'Aditya Cherikuri',
-    role: 'Manager',
-  },
-  {
-    email: 'dev.rk@edutechex.in',
-    password: 'DevRK@Edx2026',
-    name: 'Developer RK',
-    role: 'Developer',
-  },
-  {
-    email: 'design.sa@edutechex.in',
-    password: 'Design@Edx2026',
-    name: 'Designer SA',
-    role: 'Designer',
-  },
-  { email: 'mohan.kumar@edutechex.in', password: 'MohanK@Edx2026', name: 'Mohan K.', role: 'Member' },
-  { email: 'mohan.reddy@edutechex.in', password: 'MohanR@Edx2026', name: 'Mohan R.', role: 'Member' },
-  { email: 'mohan.sen@edutechex.in', password: 'MohanS@Edx2026', name: 'Mohan S.', role: 'Member' },
 ];
 
 export default function LoginForm({

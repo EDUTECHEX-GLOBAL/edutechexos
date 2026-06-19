@@ -86,13 +86,6 @@ const MAX_ADMINS = 3;
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
 const systemEmails = [
   'admin@edutechex.in',
-  'aditya@edutechex.in',
-  'dev.rk@edutechex.in',
-  'design.sa@edutechex.in',
-  'tarun@edutechex.in',
-  'mohan.kumar@edutechex.in',
-  'mohan.reddy@edutechex.in',
-  'mohan.sen@edutechex.in',
 ];
 
 export default function AdminPage() {
