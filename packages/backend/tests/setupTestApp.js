@@ -8,12 +8,6 @@ process.env.ENCRYPTION_KEY = crypto.randomBytes(32).toString('hex');
 process.env.MAIL_PREVIEW = 'true';
 process.env.INTERNAL_API_SECRET = 'test-internal-secret';
 process.env.SYS_PASS_ADMIN = 'AdminPass123';
-process.env.SYS_PASS_ADITYA = 'AdityaPass123';
-process.env.SYS_PASS_DEV_RK = 'DevRKPass123';
-process.env.SYS_PASS_DESIGN = 'DesignPass123';
-process.env.SYS_PASS_MOHAN_K = 'MohanKPass123';
-process.env.SYS_PASS_MOHAN_R = 'MohanRPass123';
-process.env.SYS_PASS_MOHAN_S = 'MohanSPass123';
 
 const express = require('express');
 const http = require('http');

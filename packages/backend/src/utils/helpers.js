@@ -2,13 +2,7 @@ const crypto = require('crypto');
 const { decryptField } = require('../services/encryptionService');
 
 const VALID_ACCOUNTS = [
-  { email: 'admin@edutechex.in',        password: process.env.SYS_PASS_ADMIN   || '', name: 'Admin',            role: 'Admin'    },
-  { email: 'aditya@edutechex.in',       password: process.env.SYS_PASS_ADITYA  || '', name: 'Aditya Cherikuri', role: 'Manager'  },
-  { email: 'dev.rk@edutechex.in',       password: process.env.SYS_PASS_DEV_RK  || '', name: 'Developer RK',     role: 'Developer'},
-  { email: 'design.sa@edutechex.in',    password: process.env.SYS_PASS_DESIGN  || '', name: 'Designer SA',      role: 'Designer' },
-  { email: 'mohan.kumar@edutechex.in',  password: process.env.SYS_PASS_MOHAN_K || '', name: 'Mohan K.',         role: 'Member'   },
-  { email: 'mohan.reddy@edutechex.in',  password: process.env.SYS_PASS_MOHAN_R || '', name: 'Mohan R.',         role: 'Member'   },
-  { email: 'mohan.sen@edutechex.in',    password: process.env.SYS_PASS_MOHAN_S || '', name: 'Mohan S.',         role: 'Member'   },
+  { email: 'admin@edutechex.in', password: process.env.SYS_PASS_ADMIN || '', name: 'Admin', role: 'Admin' },
 ];
 
 const DEFAULT_WORKSPACE_CHANNELS = [

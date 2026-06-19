@@ -52,13 +52,6 @@ async function getMembers(req, res) {
 
     const allHardcoded = [
       { id: 'member-admin', name: 'Admin', email: 'admin@edutechex.in', role: 'Admin', initials: 'AD', status: 'online', color: '#3E4A89' },
-      { id: 'member-ac', name: 'Aditya Cherikuri', email: 'aditya@edutechex.in', role: 'Manager', initials: 'AC', status: 'online', color: '#2563eb' },
-      { id: 'member-rk', name: 'Ram K Aluru', email: 'dev.rk@edutechex.in', role: 'Developer', initials: 'RK', status: 'online', color: '#7c3aed' },
-      { id: 'member-sa', name: 'Sneha Agarwal', email: 'design.sa@edutechex.in', role: 'Designer', initials: 'SA', status: 'away', color: '#0891b2' },
-      { id: 'member-tm', name: 'Tarun Mehta', email: 'tarun@edutechex.in', role: 'Lead', initials: 'TM', status: 'offline', color: '#059669' },
-      { id: 'member-mk', name: 'Mohan Kumar', email: 'mohan.kumar@edutechex.in', role: 'Developer', initials: 'MK', status: 'online', color: '#dc2626' },
-      { id: 'member-mr', name: 'Mohan Reddy', email: 'mohan.reddy@edutechex.in', role: 'Developer', initials: 'MR', status: 'online', color: '#eab308' },
-      { id: 'member-ms', name: 'Mohan Sen', email: 'mohan.sen@edutechex.in', role: 'Developer', initials: 'MS', status: 'online', color: '#0891b2' },
     ];
 
     const removedDocs = await RemovedMember.find({}).lean();
@@ -112,12 +105,7 @@ async function createMember(req, res) {
     const { name, email, role, channelId } = req.body;
     const emailClean = String(email).trim().toLowerCase();
 
-    const VALID_EMAILS = [
-      'admin@edutechex.in', 'aditya@edutechex.in', 'dev.rk@edutechex.in',
-      'design.sa@edutechex.in', 'tarun@edutechex.in', 'mohan.kumar@edutechex.in',
-      'mohan.reddy@edutechex.in', 'mohan.sen@edutechex.in'
-    ];
-    if (VALID_EMAILS.includes(emailClean)) {
+    if (VALID_ACCOUNTS.some(a => a.email === emailClean)) {
       return res.status(409).json({ success: false, error: 'This email belongs to a system account.' });
     }
 
