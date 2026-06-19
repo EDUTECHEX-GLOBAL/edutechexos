@@ -7,7 +7,7 @@
     "dev": "nodemon server.js",
     "build": "echo \"No build needed\"",
     "start": "node server.js",
-    "postinstall": "node -e \"try{require('child_process').execSync('npm prune --production',{stdio:'ignore'})}catch(e){}\"",
+    "postinstall": "echo 'install done'",
     "test": "jest --forceExit --detectOpenHandles"
   },
   "dependencies": {
