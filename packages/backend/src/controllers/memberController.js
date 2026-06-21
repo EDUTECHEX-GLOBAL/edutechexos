@@ -224,7 +224,6 @@ async function exportMembers(req, res) {
       { header: 'Email',       key: 'email',       width: 30 },
       { header: 'Role',        key: 'role',        width: 14 },
       { header: 'Status',      key: 'status',      width: 12 },
-      { header: 'Password',    key: 'password',    width: 20 },
       { header: 'Created At',  key: 'createdAt',   width: 22 },
     ];
 
@@ -241,7 +240,6 @@ async function exportMembers(req, res) {
         email:     m.email,
         role:      m.role,
         status:    'approved',
-        password:  '(hidden)',
         createdAt: m.requestedAt ? new Date(m.requestedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '',
       });
     });

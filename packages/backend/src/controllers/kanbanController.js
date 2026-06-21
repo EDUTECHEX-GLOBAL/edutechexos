@@ -78,6 +78,14 @@ async function updateTask(req, res) {
 async function deleteTask(req, res) {
   try {
     const { id } = req.params;
+    const userEmail = getUserEmail(req);
+    const task = await KanbanTask.findById(id).lean();
+    if (!task) return res.status(404).json({ success: false, error: 'Task not found.' });
+    const isOwner = task.assigneeEmail && userEmail && task.assigneeEmail.toLowerCase() === userEmail.toLowerCase();
+    const isAdmin = req.user?.role === 'Admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ success: false, error: 'You can only delete your own tasks.' });
+    }
     await KanbanTask.findByIdAndDelete(id);
     res.json({ success: true });
   } catch (err) {

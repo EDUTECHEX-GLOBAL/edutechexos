@@ -2,7 +2,11 @@ const crypto = require('crypto');
 
 function _encKey() {
   const hex = process.env.ENCRYPTION_KEY || '';
-  return hex.length === 64 ? Buffer.from(hex, 'hex') : null;
+  if (hex.length !== 64) return null;
+  try {
+    const buf = Buffer.from(hex, 'hex');
+    return buf.length === 32 ? buf : null;
+  } catch { return null; }
 }
 
 function encryptField(text) {

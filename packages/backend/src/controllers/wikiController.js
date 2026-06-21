@@ -14,7 +14,7 @@ async function getPages(req, res) {
       title: p.title,
       content: p.content,
       createdBy: p.createdBy ?? null,
-      isPrivate: p.isPrivate !== false,
+      isPrivate: p.isPrivate === true,
       createdAt: p.createdAt ? p.createdAt.toISOString() : new Date().toISOString(),
       updatedAt: p.updatedAt ? p.updatedAt.toISOString() : new Date().toISOString(),
     }));
@@ -28,7 +28,17 @@ async function upsertPage(req, res) {
   try {
     const { id, channelId, title, content, isPrivate } = req.body;
     const userEmail = getUserEmail(req);
-    const privacy = isPrivate !== false;
+    const privacy = isPrivate === true;
+
+    if (id) {
+      const existing = await WikiPage.findById(id).lean();
+      if (existing && existing.createdBy && userEmail &&
+          existing.createdBy.toLowerCase() !== userEmail.toLowerCase() &&
+          req.user?.role !== 'Admin') {
+        return res.status(403).json({ success: false, error: 'You can only edit your own wiki pages.' });
+      }
+    }
+
     const setFields = { channelId, title, content, isPrivate: privacy, updatedAt: new Date() };
     const setOnInsertFields = userEmail ? { createdBy: userEmail } : {};
     const updated = await WikiPage.findOneAndUpdate(

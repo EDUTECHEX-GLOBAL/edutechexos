@@ -8,6 +8,11 @@ async function submitRequest(req, res) {
     const { name, email, role } = req.body;
     const emailClean = String(email).trim().toLowerCase();
 
+    const ALLOWED_DOMAIN = 'edutechex.in';
+    if (!emailClean.endsWith('@' + ALLOWED_DOMAIN)) {
+      return res.status(400).json({ success: false, error: `Only @${ALLOWED_DOMAIN} email addresses are allowed to request access.` });
+    }
+
     if (VALID_ACCOUNTS.some((a) => a.email === emailClean)) {
       return res.status(409).json({ success: false, error: 'This email is already registered as a system account.' });
     }

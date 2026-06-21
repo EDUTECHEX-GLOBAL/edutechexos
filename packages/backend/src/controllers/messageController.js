@@ -83,9 +83,13 @@ async function postMessage(req, res) {
 async function deleteMessage(req, res) {
   try {
     const { id } = req.params;
-    const { scope, userEmail, hard } = req.query;
+    const { scope, hard } = req.query;
+    const userEmail = req.user?.email?.toLowerCase() || 'unknown';
 
     if (hard === 'true') {
+      if (req.user?.role !== 'Admin') {
+        return res.status(403).json({ success: false, error: 'Only admins can permanently delete messages.' });
+      }
       const msg = await Message.findByIdAndDelete(id).lean();
       if (msg) {
         const io = req.app.get('io');
@@ -94,14 +98,14 @@ async function deleteMessage(req, res) {
       return res.json({ success: true, deleted: 'permanent' });
     }
 
-    if (scope === 'me' && userEmail) {
+    if (scope === 'me') {
       await Message.findByIdAndUpdate(id, { $addToSet: { deletedForUsers: userEmail } });
       return res.json({ success: true, deleted: 'for-me' });
     }
 
     const updated = await Message.findByIdAndUpdate(
       id,
-      { deletedAt: new Date(), deletedForEveryone: true, deletedBy: userEmail || 'unknown' },
+      { deletedAt: new Date(), deletedForEveryone: true, deletedBy: userEmail },
       { new: true }
     ).lean();
 
@@ -204,14 +208,33 @@ async function search(req, res) {
   }
 }
 
+function isPrivateUrl(rawUrl) {
+  try {
+    const u = new URL(rawUrl);
+    if (!['http:', 'https:'].includes(u.protocol)) return true;
+    const host = u.hostname.toLowerCase();
+    if (host === 'localhost' || host === '0.0.0.0' || host === '::1') return true;
+    const parts = host.split('.').map(Number);
+    if (parts[0] === 127) return true;
+    if (parts[0] === 10) return true;
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+    if (parts[0] === 192 && parts[1] === 168) return true;
+    if (parts[0] === 169 && parts[1] === 254) return true;
+    return false;
+  } catch { return true; }
+}
+
 async function ogLinkPreview(req, res) {
   const url = String(req.query.url || '');
   if (!url || !/^https?:\/\//i.test(url)) {
     return res.status(400).json({ success: false, error: 'Valid URL required' });
   }
+  if (isPrivateUrl(url)) {
+    return res.status(400).json({ success: false, error: 'URL not allowed' });
+  }
   try {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 5000);
+    const timer = setTimeout(() => ctrl.abort(), 3000);
     const resp = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; EduTechExOSBot/1.0; +https://edutechexos.vercel.app)' },
       signal: ctrl.signal,

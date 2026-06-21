@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongoose';
 import KanbanTask from '@/models/KanbanTask';
+import { getApiUser, unauthorized } from '@/lib/apiAuth';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const user = getApiUser(req);
+  if (!user) return unauthorized();
+
   try {
     await connectToDatabase();
-    const tasks = await KanbanTask.find({}).sort({ createdAt: -1 }).lean();
+    const tasks = await KanbanTask.find({ assigneeEmail: user.email }).sort({ createdAt: -1 }).lean();
     const formatted = tasks.map(({ _id, __v, ...rest }: any) => ({ ...rest, id: _id.toString() }));
     return NextResponse.json({ success: true, tasks: formatted });
   } catch (err) {
@@ -15,9 +19,13 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const user = getApiUser(req);
+  if (!user) return unauthorized();
+
   try {
     await connectToDatabase();
     const body = await req.json();
+    if (!body.assigneeEmail) body.assigneeEmail = user.email;
     const task = await KanbanTask.create(body);
     const { _id, __v, ...rest } = task.toObject();
     return NextResponse.json(

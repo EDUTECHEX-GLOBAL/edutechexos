@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongoose';
 import NotificationModel from '@/models/Notification';
+import { getApiUser, unauthorized } from '@/lib/apiAuth';
 
 export async function GET(req: NextRequest) {
+  const user = getApiUser(req);
+  if (!user) return unauthorized();
+
   try {
     await connectToDatabase();
-    const email = req.nextUrl.searchParams.get('email');
-    const query = email
-      ? { $or: [{ recipientEmails: { $size: 0 } }, { recipientEmails: email }] }
-      : {};
+    const email = user.email;
+    const query = { $or: [{ recipientEmails: { $size: 0 } }, { recipientEmails: email }] };
     const docs = await NotificationModel.find(query).sort({ createdAt: -1 }).limit(100).lean();
     const notifications = docs.map(({ _id, __v, ...rest }: any) => ({
       ...rest,
@@ -23,6 +25,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const user = getApiUser(req);
+  if (!user) return unauthorized();
+
   try {
     await connectToDatabase();
     const body = await req.json();

@@ -2,6 +2,15 @@
 
 import fs from 'fs/promises';
 import path from 'path';
+
+function esc(str: string): string {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 import connectToDatabase from '../../lib/mongoose';
 import Message from '../models/Message';
 import Note from '../models/Note';
@@ -226,8 +235,8 @@ export async function sendMeetingEmailInvitation(
           <div style="background:#f1f5f9;border-radius:16px;padding:24px;margin-bottom:32px;border:1px solid #e2e8f0;">
             <h2 style="font-size:16px;font-weight:800;margin:0 0 16px;color:#1e293b;text-transform:uppercase;letter-spacing:.5px;">Session Details</h2>
             <table style="width:100%;border-collapse:collapse;font-size:14px;">
-              <tr><td style="padding:6px 0;color:#64748b;font-weight:600;width:100px;">Topic:</td><td style="padding:6px 0;color:#0f172a;font-weight:700;">${meetingTitle}</td></tr>
-              <tr><td style="padding:6px 0;color:#64748b;font-weight:600;">Time:</td><td style="padding:6px 0;color:#0f172a;font-weight:700;">${timeStr}</td></tr>
+              <tr><td style="padding:6px 0;color:#64748b;font-weight:600;width:100px;">Topic:</td><td style="padding:6px 0;color:#0f172a;font-weight:700;">${esc(meetingTitle)}</td></tr>
+              <tr><td style="padding:6px 0;color:#64748b;font-weight:600;">Time:</td><td style="padding:6px 0;color:#0f172a;font-weight:700;">${esc(timeStr)}</td></tr>
             </table>
           </div>
           <div style="text-align:center;margin-bottom:32px;">
@@ -261,10 +270,10 @@ export async function sendAccessVerificationCode(
           <p style="margin:6px 0 0;color:#cbd5e1;font-size:13px;">Access verification</p>
         </div>
         <div style="padding:28px;">
-          <p style="margin:0 0 16px;color:#334155;font-size:15px;">Hello ${name},</p>
+          <p style="margin:0 0 16px;color:#334155;font-size:15px;">Hello ${esc(name)},</p>
           <p style="margin:0 0 12px;color:#334155;font-size:15px;">Your temporary password is:</p>
-          <div style="letter-spacing:4px;font-size:24px;font-weight:700;color:#4f46e5;background:#eef2ff;border-radius:8px;padding:12px;text-align:center;margin-bottom:12px;">${tempPassword}</div>
-          <p style="margin:0 0 20px;color:#334155;font-size:15px;">Use this code (${code}) to verify your email address.
+          <div style="letter-spacing:4px;font-size:24px;font-weight:700;color:#4f46e5;background:#eef2ff;border-radius:8px;padding:12px;text-align:center;margin-bottom:12px;">${esc(tempPassword)}</div>
+          <p style="margin:0 0 20px;color:#334155;font-size:15px;">Use this code (${esc(code)}) to verify your email address.
           </p>
           <p style="margin:20px 0 0;color:#64748b;font-size:13px;">If you did not request access, you can ignore this email.</p>
         </div>
@@ -293,9 +302,9 @@ export async function sendMentionEmailNotification(
           <p style="color:#e0e7ff;margin:4px 0 0;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Chat Mention</p>
         </div>
         <div style="padding:40px;">
-          <p style="font-size:15px;line-height:1.6;margin:0 0 20px;color:#475569;font-weight:700;">Hello ${recipientName},</p>
-          <p style="font-size:15px;line-height:1.6;margin:0 0 24px;color:#475569;"><span style="color:#4f46e5;font-weight:700;">${senderName}</span> mentioned you in <span style="font-weight:700;color:#0f172a;">#${channelName}</span>.</p>
-          <div style="background:#f8fafc;border-left:4px solid #4f46e5;border-radius:8px;padding:20px;margin-bottom:32px;font-style:italic;color:#334155;font-size:14px;line-height:1.6;">"${messageText}"</div>
+          <p style="font-size:15px;line-height:1.6;margin:0 0 20px;color:#475569;font-weight:700;">Hello ${esc(recipientName)},</p>
+          <p style="font-size:15px;line-height:1.6;margin:0 0 24px;color:#475569;"><span style="color:#4f46e5;font-weight:700;">${esc(senderName)}</span> mentioned you in <span style="font-weight:700;color:#0f172a;">#${esc(channelName)}</span>.</p>
+          <div style="background:#f8fafc;border-left:4px solid #4f46e5;border-radius:8px;padding:20px;margin-bottom:32px;font-style:italic;color:#334155;font-size:14px;line-height:1.6;">"${esc(messageText)}"</div>
           <div style="text-align:center;margin-bottom:24px;">
             <a href="https://edutechexos.vercel.app/dashboard" target="_blank" style="background:#4f46e5;color:#fff;padding:14px 32px;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;display:inline-block;">Open Dashboard &amp; Reply</a>
           </div>

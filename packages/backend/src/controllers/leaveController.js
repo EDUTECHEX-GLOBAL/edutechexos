@@ -21,6 +21,22 @@ async function createLeave(req, res) {
     if (!type || !startDate || !reason) {
       return res.status(400).json({ success: false, error: 'type, startDate and reason are required.' });
     }
+    const start = new Date(startDate);
+    if (isNaN(start.getTime())) {
+      return res.status(400).json({ success: false, error: 'startDate must be a valid date.' });
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      if (isNaN(end.getTime())) {
+        return res.status(400).json({ success: false, error: 'endDate must be a valid date.' });
+      }
+      if (end < start) {
+        return res.status(400).json({ success: false, error: 'endDate must be on or after startDate.' });
+      }
+    }
+    if (duration && !['full', 'half'].includes(String(duration))) {
+      return res.status(400).json({ success: false, error: 'duration must be full or half.' });
+    }
     const leave = new Leave({
       email: req.user.email,
       name:  req.user.name,

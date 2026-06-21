@@ -3,7 +3,7 @@ const Notification = require('../models/Notification');
 
 async function getNotifications(req, res) {
   try {
-    const email = getUserEmail(req) || req.query.email;
+    const email = getUserEmail(req);
     const query = email
       ? { $or: [{ recipientEmails: { $size: 0 } }, { recipientEmails: email.toLowerCase() }] }
       : {};

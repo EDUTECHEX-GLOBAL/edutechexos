@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Loader2, Lock, ArrowRight, Mail, X } from 'lucide-react';
 
@@ -22,10 +22,6 @@ type AccessRequest = {
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
-// Hardcoded fallback for when backend is unreachable
-const VALID_ACCOUNTS = [
-  { email: 'admin@edutechex.in', password: 'Admin@Edx2026', name: 'Admin', role: 'Admin' },
-];
 
 export default function LoginForm({
   authMode,
@@ -40,6 +36,7 @@ export default function LoginForm({
   const [isLoading, setIsLoading] = useState(false);
 
   // ── Forgot-password modal state ────────────────────────────────────────────
+  const lastForgotRef = useRef<number>(0);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotStep, setForgotStep] = useState<1 | 2>(1);
   const [forgotEmail, setForgotEmail] = useState('');
@@ -82,7 +79,12 @@ export default function LoginForm({
     }
     if (authMode === 'user' && loginAccount.role === 'Admin') {
       // Admin logged in from the regular page — just send them to /admin
-      const token = jwtToken || `mock-jwt-${Date.now()}`;
+      if (!jwtToken) {
+        setIsLoading(false);
+        setError('password', { message: 'Authentication failed: no token received from server.' });
+        return;
+      }
+      const token = jwtToken;
       localStorage.setItem('edutechex_token', JSON.stringify({ user: loginAccount, token }));
       document.cookie = 'auth_session=1; path=/; max-age=604800; SameSite=Lax';
       toast.success(`Welcome back, ${loginAccount.name.split(' ')[0]}!`);
@@ -106,7 +108,12 @@ export default function LoginForm({
       /* ignore parse errors */
     }
 
-    const token = jwtToken || `mock-jwt-${Date.now()}`;
+    if (!jwtToken) {
+      setIsLoading(false);
+      setError('password', { message: 'Authentication failed: no token received from server.' });
+      return;
+    }
+    const token = jwtToken;
     localStorage.setItem('edutechex_token', JSON.stringify({ user: loginAccount, token }));
     document.cookie = 'auth_session=1; path=/; max-age=604800; SameSite=Lax';
 
@@ -128,7 +135,8 @@ export default function LoginForm({
     setIsLoading(false);
 
     const redirectPath = searchParams?.get('redirect');
-    if (redirectPath) router.push(redirectPath);
+    const safeRedirect = redirectPath && redirectPath.startsWith('/') && !redirectPath.startsWith('//') ? redirectPath : null;
+    if (safeRedirect) router.push(safeRedirect);
     else if (loginAccount.role === 'Admin') router.push('/admin');
     else router.push('/dashboard');
   }
@@ -162,37 +170,8 @@ export default function LoginForm({
 
       finishLogin(result.user, result.token);
     } catch {
-      const hardcoded = VALID_ACCOUNTS.find(
-        (a) => a.email === emailClean && a.password === data.password
-      );
-      if (hardcoded) {
-        finishLogin(hardcoded);
-        return;
-      }
-
-      const requests: AccessRequest[] = JSON.parse(
-        localStorage.getItem(ACCESS_REQUESTS_KEY) || '[]'
-      );
-      const requestedAccount = requests.find(
-        (r) => r.email.toLowerCase() === emailClean && r.password === data.password
-      );
-
-      if (!requestedAccount) {
-        setIsLoading(false);
-        setError('password', { message: 'Invalid credentials. Use an approved user account.' });
-        return;
-      }
-      if (requestedAccount.status === 'pending') {
-        setIsLoading(false);
-        setError('password', { message: 'Your request is waiting for admin approval.' });
-        return;
-      }
-
-      finishLogin({
-        email: requestedAccount.email,
-        name: requestedAccount.name,
-        role: requestedAccount.role,
-      });
+      setIsLoading(false);
+      setError('password', { message: 'Service temporarily unavailable, please try again later.' });
     }
   };
 
@@ -277,7 +256,7 @@ export default function LoginForm({
               }}
               {...register('password', {
                 required: 'Password is required',
-                minLength: { value: 6, message: 'Password must be at least 6 characters' },
+                minLength: { value: 8, message: 'Password must be at least 8 characters' },
               })}
             />
             <button
@@ -372,6 +351,12 @@ export default function LoginForm({
                       setForgotError('Enter your email address.');
                       return;
                     }
+                    const now = Date.now();
+                    if (now - lastForgotRef.current < 60000) {
+                      setForgotError('Please wait 60 seconds before requesting another reset.');
+                      return;
+                    }
+                    lastForgotRef.current = now;
                     setForgotLoading(true);
                     setForgotError('');
                     try {

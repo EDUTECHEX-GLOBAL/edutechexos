@@ -202,6 +202,13 @@ async function createMeetingRequest(req, res) {
   try {
     const { date, time, purpose, adminEmail } = req.body;
     if (!date || !time) return res.status(400).json({ success: false, error: 'date and time required.' });
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ success: false, error: 'date must be a valid date.' });
+    }
+    if (parsedDate < new Date(new Date().toDateString())) {
+      return res.status(400).json({ success: false, error: 'Meeting date cannot be in the past.' });
+    }
     const mr = new MeetingRequest({
       userEmail: req.user.email,
       userName:  req.user.name,

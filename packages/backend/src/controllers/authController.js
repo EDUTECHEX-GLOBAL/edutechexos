@@ -49,14 +49,8 @@ async function login(req, res) {
       return res.status(401).json({ success: false, error: 'invalid', message: 'Invalid credentials. Use an approved user account.' });
     }
     const bcryptMatch = await bcrypt.compare(password, request.password).catch(() => false);
-    const plainMatch  = !bcryptMatch && request.password === password;
-    if (!bcryptMatch && !plainMatch) {
+    if (!bcryptMatch) {
       return res.status(401).json({ success: false, error: 'invalid', message: 'Invalid credentials. Use an approved user account.' });
-    }
-    if (plainMatch) {
-      bcrypt.hash(password, 10).then((h) =>
-        AccessRequest.findOneAndUpdate({ email: emailClean }, { $set: { password: h } })
-      ).catch(() => {});
     }
     if (request.status === 'rejected') {
       return res.status(401).json({ success: false, error: 'rejected', message: 'Your access request was declined. Contact admin.' });
@@ -150,8 +144,11 @@ async function resetPassword(req, res) {
       await ResetCode.findByIdAndDelete(resetCode._id);
       return res.status(400).json({ success: false, error: 'Reset code has expired. Please request a new one.' });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters.' });
+    if (newPassword.length < 8) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters.' });
+    }
+    if (!/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[!@#$%^&*]/.test(newPassword)) {
+      return res.status(400).json({ success: false, error: 'Password must contain at least one uppercase letter, one number, and one special character.' });
     }
 
     await AccessRequest.findOneAndUpdate({ email: emailClean }, { $set: { password: await bcrypt.hash(newPassword, 10) } });
@@ -189,8 +186,7 @@ async function changePassword(req, res) {
     }
     const passwordMatch = await bcrypt.compare(currentPassword, request.password)
       .catch(() => false);
-    const legacyMatch = !passwordMatch && request.password === currentPassword;
-    if (!passwordMatch && !legacyMatch) {
+    if (!passwordMatch) {
       return res.status(401).json({ success: false, error: 'Current password is incorrect.' });
     }
 

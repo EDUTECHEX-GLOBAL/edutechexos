@@ -7,6 +7,8 @@ interface AdminGuardProps {
   children: React.ReactNode;
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+
 export default function AdminGuard({ children }: AdminGuardProps) {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const router = useRouter();
@@ -18,18 +20,38 @@ export default function AdminGuard({ children }: AdminGuardProps) {
       return;
     }
 
+    let parsed: { user?: { role?: string }; token?: string } = {};
     try {
-      const { user } = JSON.parse(authData);
-      if (user && user.role === 'Admin') {
-        setIsAuthorized(true);
-      } else {
-        setIsAuthorized(false);
-      }
-    } catch (error) {
-      console.error('Error parsing auth token:', error);
-      setIsAuthorized(false);
+      parsed = JSON.parse(authData);
+    } catch {
+      router.push('/sign-up-login-screen?mode=admin&redirect=/admin');
+      return;
     }
-  }, []);
+
+    const { user, token } = parsed;
+
+    fetch(`${API_BASE}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token ?? ''}` },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.user?.role === 'Admin') {
+          setIsAuthorized(true);
+        } else {
+          setIsAuthorized(false);
+          router.push('/sign-up-login-screen?mode=admin&redirect=/admin');
+        }
+      })
+      .catch(() => {
+        // Backend unreachable — fall back to local check
+        if (user?.role === 'Admin') {
+          setIsAuthorized(true);
+        } else {
+          setIsAuthorized(false);
+          router.push('/sign-up-login-screen?mode=admin&redirect=/admin');
+        }
+      });
+  }, [router]);
 
   if (isAuthorized === null) {
     return (

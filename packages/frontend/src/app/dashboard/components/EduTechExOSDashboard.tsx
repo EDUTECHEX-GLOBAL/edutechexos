@@ -2941,7 +2941,7 @@ export default function EduTechExOSDashboard() {
                                     <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(155,166,211,0.65)', margin: 0 }}>Task Assigned</p>
                                     <p style={{ fontSize: 11, fontWeight: 700, color: '#fff', margin: '1px 0 0' }}>#{channel?.name}</p>
                                   </div>
-                                  <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 800, color: '#10C98A', background: 'rgba(16,201,138,0.15)', padding: '3px 8px', borderRadius: 6, letterSpacing: '.06em', textTransform: 'uppercase' }}>TODO</span>
+                                  <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 800, color: '#10C98A', background: 'rgba(16,201,138,0.15)', padding: '3px 8px', borderRadius: 6, letterSpacing: '.06em', textTransform: 'uppercase' }}>TASK</span>
                                 </div>
                                 <p style={{ fontSize: 13, fontWeight: 500, color: 'rgba(212,216,235,0.90)', margin: 0, lineHeight: 1.5 }}>
                                   {taskCard.taskText.slice(0, 120)}

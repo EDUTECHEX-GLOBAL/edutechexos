@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongoose';
 import Message from '@/models/Message';
+import { getApiUser, unauthorized } from '@/lib/apiAuth';
 
 export async function GET(req: NextRequest) {
+  const user = getApiUser(req);
+  if (!user) return unauthorized();
+
   const { searchParams } = new URL(req.url);
-  const requestingUser = searchParams.get('userEmail') ?? '';
+  const requestingUser = user.email;
 
   try {
     await connectToDatabase();
-    // Fetch last 100 messages per channel (avoid full-table scan as history grows)
     const messages = await Message.find({}).sort({ timestamp: -1 }).limit(1000).lean();
     const grouped: Record<string, any[]> = {};
 
@@ -17,10 +20,8 @@ export async function GET(req: NextRequest) {
       const channelId = rest.channelId;
       if (!grouped[channelId]) grouped[channelId] = [];
 
-      // If hidden for this specific user, skip entirely
       if (requestingUser && (rest.deletedForUsers ?? []).includes(requestingUser)) continue;
 
-      // Soft-deleted for everyone → keep in list but scrub content (WhatsApp style)
       if (rest.deletedForEveryone) {
         grouped[channelId].push({
           id: _id.toString(),
@@ -47,10 +48,14 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const user = getApiUser(req);
+  if (!user) return unauthorized();
+
   try {
     await connectToDatabase();
     const body = await req.json();
     const { id, ...rest } = body;
+    if (!rest.senderEmail) rest.senderEmail = user.email;
     const msg = await Message.create({ ...rest, clientId: id });
     const { _id, __v, ...saved } = msg.toObject();
     return NextResponse.json({ success: true, ...saved, id: _id.toString() }, { status: 201 });

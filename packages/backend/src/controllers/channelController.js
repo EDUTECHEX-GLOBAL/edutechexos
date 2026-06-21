@@ -26,6 +26,8 @@ async function createChannel(req, res) {
     if (!req.user || req.user.role !== 'Admin') return res.status(403).json({ success: false, error: 'Only admins can create channels.' });
     const { name, description } = req.body;
     if (!name) return res.status(400).json({ success: false, error: 'name is required.' });
+    if (String(name).length > 50) return res.status(400).json({ success: false, error: 'Channel name must be 50 characters or fewer.' });
+    if (description && String(description).length > 500) return res.status(400).json({ success: false, error: 'Description must be 500 characters or fewer.' });
     const id = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     const exists = await WorkspaceChannel.findById(id).lean();
     if (exists) return res.status(409).json({ success: false, error: 'A channel with this name already exists.' });
@@ -51,8 +53,14 @@ async function updateChannel(req, res) {
       return res.status(403).json({ success: false, error: 'Only admins can edit channels.' });
     }
     const updates = {};
-    if (req.body.name)        updates.name        = req.body.name;
-    if (req.body.description !== undefined) updates.description = req.body.description;
+    if (req.body.name) {
+      if (String(req.body.name).length > 50) return res.status(400).json({ success: false, error: 'Channel name must be 50 characters or fewer.' });
+      updates.name = req.body.name;
+    }
+    if (req.body.description !== undefined) {
+      if (String(req.body.description).length > 500) return res.status(400).json({ success: false, error: 'Description must be 500 characters or fewer.' });
+      updates.description = req.body.description;
+    }
     const updated = await WorkspaceChannel.findByIdAndUpdate(
       req.params.id, { $set: updates }, { new: true }
     ).lean();
