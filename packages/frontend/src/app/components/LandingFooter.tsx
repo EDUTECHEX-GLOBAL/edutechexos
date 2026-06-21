@@ -31,7 +31,7 @@ const footerGroups = [
 
 export default function LandingFooter() {
   return (
-    <footer className="relative" style={{ background: '#FFFFFF', borderTop: '1px solid #E5E5E5' }}>
+    <footer className="relative" style={{ background: '#E9EBFA', borderTop: '1px solid #DADCEF' }}>
 
       <div className="relative max-w-screen-xl mx-auto px-6 lg:px-10 py-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-16">
@@ -39,7 +39,7 @@ export default function LandingFooter() {
           {/* Brand column */}
           <AnimatedSection direction="up" className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2.5 no-underline group mb-5">
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#111111', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'transform .25s' }} className="group-hover:scale-105">
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'transform .25s' }} className="group-hover:scale-105">
                 <span style={{ color: '#FFFFFF', fontSize: 10, fontWeight: 900 }}>EX</span>
               </div>
               <div>

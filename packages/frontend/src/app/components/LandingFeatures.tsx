@@ -192,7 +192,7 @@ function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
               className="feat-tile group-hover:scale-105"
               style={{
                 width: 50, height: 50, borderRadius: 14, flexShrink: 0,
-                background: '#111111',
+                background: '#3730A3',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.3s',
               }}
@@ -254,7 +254,7 @@ function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
 
 export default function LandingFeatures() {
   return (
-    <section id="features" className="relative py-28 px-6 lg:px-10 overflow-hidden" style={{ background: '#FFFFFF', borderTop: '1px solid #E5E5E5' }}>
+    <section id="features" className="relative py-28 px-6 lg:px-10 overflow-hidden" style={{ background: '#E9EBFA', borderTop: '1px solid #DADCEF' }}>
       <style>{`.group:hover .feat-tile { background: #4F46E5 !important; }`}</style>
 
       <div className="relative max-w-screen-xl mx-auto">

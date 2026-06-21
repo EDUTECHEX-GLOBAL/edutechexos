@@ -5,13 +5,13 @@ import AnimatedSection from './AnimatedSection';
 
 export default function LandingCTA() {
   return (
-    <section id="cta" className="relative overflow-hidden py-32 px-6 lg:px-10" style={{ background: '#111111' }}>
+    <section id="cta" className="relative overflow-hidden py-32 px-6 lg:px-10" style={{ background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)' }}>
 
       {/* Faint grid overlay */}
-      <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+      <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
 
-      {/* Accent glow */}
-      <div className="absolute pointer-events-none" style={{ width: 520, height: 520, top: '-30%', left: '-8%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,70,229,0.22) 0%, transparent 65%)', filter: 'blur(80px)' }} />
+      {/* Soft light glow */}
+      <div className="absolute pointer-events-none" style={{ width: 520, height: 520, top: '-30%', left: '-8%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 65%)', filter: 'blur(80px)' }} />
 
       <div className="relative max-w-screen-xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-16">
 
@@ -48,9 +48,9 @@ export default function LandingCTA() {
           <Link
             href="/sign-up-login-screen?mode=user"
             className="inline-flex items-center justify-center gap-3 px-9 py-4 rounded-xl transition-all duration-200 w-full lg:w-auto"
-            style={{ background: '#4F46E5', color: '#FFFFFF', fontWeight: 800, letterSpacing: '.04em', fontSize: 13, border: '1px solid #4F46E5' }}
-            onMouseEnter={e => { const t = e.currentTarget as HTMLElement; t.style.background = '#4338CA'; t.style.transform = 'translateY(-2px)'; }}
-            onMouseLeave={e => { const t = e.currentTarget as HTMLElement; t.style.background = '#4F46E5'; t.style.transform = 'translateY(0)'; }}
+            style={{ background: '#FFFFFF', color: '#4338CA', fontWeight: 800, letterSpacing: '.04em', fontSize: 13, border: '1px solid #FFFFFF' }}
+            onMouseEnter={e => { const t = e.currentTarget as HTMLElement; t.style.background = '#EEF0FB'; t.style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={e => { const t = e.currentTarget as HTMLElement; t.style.background = '#FFFFFF'; t.style.transform = 'translateY(0)'; }}
           >
             Enter the System
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none">

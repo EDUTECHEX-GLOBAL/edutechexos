@@ -132,14 +132,14 @@ export default function WidgetPage() {
           display: 'flex',
           flexDirection: 'column',
           fontFamily: "'Inter', system-ui, sans-serif",
-          background: '#FAFAFA',
+          background: '#E9EBFA',
           overflow: 'hidden',
         }}
       >
         {/* ── Header ──────────────────────────────────────────────────── */}
         <div
           style={{
-            background: 'linear-gradient(135deg, #111111 0%, #111111 45%, #4F46E5 100%)',
+            background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)',
             backgroundSize: '200% 200%',
             animation: 'gradientShift 8s ease infinite',
             padding: '14px 16px',
@@ -266,7 +266,7 @@ export default function WidgetPage() {
                       width: 28,
                       height: 28,
                       borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #111111, #4F46E5)',
+                      background: 'linear-gradient(135deg, #4F46E5, #3730A3)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -450,7 +450,7 @@ export default function WidgetPage() {
               outline: 'none',
               fontFamily: 'inherit',
               color: '#191919',
-              background: '#FAFAFA',
+              background: '#E9EBFA',
               transition: 'border-color 0.15s, background 0.15s',
             }}
             onFocus={(e) => {
@@ -459,7 +459,7 @@ export default function WidgetPage() {
             }}
             onBlur={(e) => {
               e.currentTarget.style.borderColor = '#E5E5E5';
-              e.currentTarget.style.background = '#FAFAFA';
+              e.currentTarget.style.background = '#E9EBFA';
             }}
           />
 

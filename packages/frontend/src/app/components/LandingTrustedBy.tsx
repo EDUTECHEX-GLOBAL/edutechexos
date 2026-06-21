@@ -48,7 +48,7 @@ function CapabilityCard({ cap }: { cap: typeof capabilities[0] }) {
 
 export default function LandingTrustedBy() {
   return (
-    <section id="trusted" className="relative py-24 px-6 lg:px-10 overflow-hidden" style={{ background: '#FAFAFA', borderTop: '1px solid #E5E5E5' }}>
+    <section id="trusted" className="relative py-24 px-6 lg:px-10 overflow-hidden" style={{ background: '#E9EBFA', borderTop: '1px solid #E5E5E5' }}>
 
       <div className="relative max-w-screen-xl mx-auto flex flex-col items-center">
 

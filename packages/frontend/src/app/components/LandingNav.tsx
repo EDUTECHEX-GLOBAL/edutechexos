@@ -83,7 +83,7 @@ export default function LandingNav() {
             <div
               style={{
                 width: 32, height: 32, borderRadius: 8,
-                background: '#111111',
+                background: '#4F46E5',
                 flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'transform .25s',

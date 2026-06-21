@@ -14,7 +14,7 @@ const steps = [
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
           {['AK', 'SA', 'TM', 'JM'].map((l, i) => (
-            <div key={l} style={{ width: 42, height: 42, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111111', color: '#fff', fontSize: 12, fontWeight: 800, border: '2.5px solid #FFFFFF', marginLeft: i === 0 ? 0 : -12, zIndex: 4 - i, boxShadow: '0 4px 12px rgba(17,17,17,0.10)' }}>{l}</div>
+            <div key={l} style={{ width: 42, height: 42, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3730A3', color: '#fff', fontSize: 12, fontWeight: 800, border: '2.5px solid #FFFFFF', marginLeft: i === 0 ? 0 : -12, zIndex: 4 - i, boxShadow: '0 4px 12px rgba(55,48,163,0.18)' }}>{l}</div>
           ))}
           <div style={{ width: 42, height: 42, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#4F46E5', color: '#FFFFFF', fontSize: 12, fontWeight: 800, border: '2.5px solid #FFFFFF', marginLeft: -12, zIndex: 0 }}>+3</div>
         </div>
@@ -74,7 +74,7 @@ const steps = [
 
 export default function LandingHowItWorks() {
   return (
-    <section id="how-it-works" className="relative overflow-hidden" style={{ background: '#FAFAFA' }}>
+    <section id="how-it-works" className="relative overflow-hidden" style={{ background: '#E9EBFA' }}>
 
       <div className="relative max-w-screen-xl mx-auto px-6 lg:px-10">
 
@@ -125,7 +125,7 @@ export default function LandingHowItWorks() {
 
                     {/* Step badge */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, position: 'relative' }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 13, background: '#111111', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 13, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Icon size={20} style={{ color: '#FFFFFF' }} />
                       </div>
                       <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: '#4F46E5' }}>
@@ -144,7 +144,7 @@ export default function LandingHowItWorks() {
                   {/* Demo side */}
                   <div
                     className={`flex flex-col justify-center px-8 lg:px-16 py-16 ${isEven ? 'lg:order-1' : 'lg:order-2'}`}
-                    style={{ background: '#FAFAFA' }}
+                    style={{ background: '#E9EBFA' }}
                   >
                     <div style={{ padding: 24, borderRadius: 16, background: '#FFFFFF', border: '1px solid #E5E5E5', boxShadow: '0 8px 24px rgba(17,17,17,0.04)' }}>
                       {step.demo}

@@ -54,7 +54,7 @@ function PasswordRule({ ok, label }: { ok: boolean; label: string }) {
 export default function InvitePage() {
   return (
     <React.Suspense fallback={
-      <div style={{ minHeight: '100vh', background: '#FAFAFA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: '#E9EBFA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ width: 36, height: 36, border: `3px solid ${LINE}`, borderTop: `3px solid ${ACCENT}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -66,7 +66,7 @@ export default function InvitePage() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ minHeight: '100vh', background: '#FAFAFA', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#E9EBFA', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <div style={{ position: 'absolute', inset: 0, backgroundImage: `radial-gradient(${LINE} 1px, transparent 1px)`, backgroundSize: '28px 28px', opacity: 0.5, pointerEvents: 'none' }} />
       <div style={{ width: '100%', maxWidth: 420, position: 'relative' }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
@@ -182,7 +182,7 @@ function InviteContent() {
         <Clock size={44} color={INK} style={{ margin: '0 auto 14px' }} />
         <h2 style={{ color: INK, fontSize: 18, fontWeight: 800, margin: '0 0 8px' }}>Invite Expired</h2>
         <p style={{ color: MUTE, fontSize: 13, lineHeight: 1.6 }}>This invite link expired after 4.5 hours. Please ask your admin to send a new invite.</p>
-        <div style={{ marginTop: 20, background: '#FAFAFA', border: `1px solid ${LINE}`, borderRadius: 10, padding: '12px 14px', fontSize: 12, color: MUTE, textAlign: 'left' }}>
+        <div style={{ marginTop: 20, background: '#E9EBFA', border: `1px solid ${LINE}`, borderRadius: 10, padding: '12px 14px', fontSize: 12, color: MUTE, textAlign: 'left' }}>
           Admins can resend an invite from the <strong style={{ color: INK }}>Admin Panel → Requests</strong> tab.
         </div>
       </div>
@@ -236,7 +236,7 @@ function InviteContent() {
       </div>
 
       {/* Invite info card */}
-      <div style={{ background: '#FAFAFA', border: `1px solid ${LINE}`, borderRadius: 12, padding: '12px 14px', marginBottom: 16 }}>
+      <div style={{ background: '#E9EBFA', border: `1px solid ${LINE}`, borderRadius: 12, padding: '12px 14px', marginBottom: 16 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px' }}>
           <div>
             <p style={{ fontSize: 10, color: FAINT, margin: '0 0 2px', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '.06em' }}>Name</p>
@@ -312,7 +312,7 @@ function InviteContent() {
 
         {/* Rules */}
         {password.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', marginBottom: 14, padding: '10px 12px', background: '#FAFAFA', border: `1px solid ${LINE}`, borderRadius: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', marginBottom: 14, padding: '10px 12px', background: '#E9EBFA', border: `1px solid ${LINE}`, borderRadius: 8 }}>
             <PasswordRule ok={rules.len}    label="8+ characters" />
             <PasswordRule ok={rules.upper}  label="Uppercase letter" />
             <PasswordRule ok={rules.number} label="Number" />

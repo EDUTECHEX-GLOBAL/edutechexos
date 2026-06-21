@@ -33,7 +33,7 @@ function HeroDashboardMockup({ dotCount }: { dotCount: number }) {
       {/* App shell */}
       <div style={{ display: 'flex', height: 320 }}>
         {/* Icon rail */}
-        <div style={{ width: 46, background: '#111111', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 0', gap: 4 }}>
+        <div style={{ width: 46, background: '#312E81', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 0', gap: 4 }}>
           <div style={{ width: 28, height: 28, borderRadius: 7, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10, flexShrink: 0 }}>
             <span style={{ color: '#FFFFFF', fontSize: 8, fontWeight: 900 }}>EX</span>
           </div>
@@ -99,7 +99,7 @@ function HeroDashboardMockup({ dotCount }: { dotCount: number }) {
 
           <div style={{ margin: '0 8px 8px', display: 'flex', alignItems: 'center', gap: 7, padding: '6px 9px 6px 11px', background: '#FFFFFF', borderRadius: 8, border: '1px solid #E5E5E5' }}>
             <span style={{ flex: 1, fontSize: 10, color: '#A3A3A3' }}>Message #general…</span>
-            <div style={{ width: 22, height: 22, borderRadius: 6, background: '#111111', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#FFFFFF', fontWeight: 900 }}>↑</div>
+            <div style={{ width: 22, height: 22, borderRadius: 6, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#FFFFFF', fontWeight: 900 }}>↑</div>
           </div>
         </div>
       </div>
@@ -133,7 +133,7 @@ export default function LandingHero() {
   }, []);
 
   return (
-    <section className="relative w-full min-h-screen flex items-center overflow-hidden" style={{ background: '#FFFFFF' }}>
+    <section className="relative w-full min-h-screen flex items-center overflow-hidden" style={{ background: '#E9EBFA' }}>
       <style>{`
         @keyframes hero-in {
           from { opacity: 0; transform: translateY(24px); }
@@ -200,7 +200,7 @@ export default function LandingHero() {
 
       {/* ── Background: faint grid wash ── */}
       <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#E5E5E5 1px, transparent 1px)', backgroundSize: '32px 32px', opacity: 0.5 }} />
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0) 60%, #FFFFFF 100%)' }} />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(233,235,250,0) 60%, #E9EBFA 100%)' }} />
 
       {/* ══════════════════════════════════════
           CONTENT

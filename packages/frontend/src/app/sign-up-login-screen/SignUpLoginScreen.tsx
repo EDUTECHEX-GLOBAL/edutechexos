@@ -9,7 +9,7 @@ function SignUpLoginScreen() {
   const searchParams = useSearchParams();
   const isSignup = searchParams?.get('mode') === 'signup';
   return (
-    <div className="w-full min-h-screen overflow-hidden" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif", background: '#FFFFFF' }}>
+    <div className="w-full min-h-screen overflow-hidden" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif", background: '#E9EBFA' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
 
@@ -75,22 +75,22 @@ function SignUpLoginScreen() {
         {/* ══════════════════════════════════════════════════
             LEFT — Ink brand panel
         ══════════════════════════════════════════════════ */}
-        <section className="relative lg:w-[44%] flex flex-col justify-center px-10 md:px-14 lg:px-20 xl:px-24 py-20 lg:py-0 min-h-[360px] lg:min-h-screen overflow-hidden" style={{ background: '#111111' }}>
+        <section className="relative lg:w-[44%] flex flex-col justify-center px-10 md:px-14 lg:px-20 xl:px-24 py-20 lg:py-0 min-h-[360px] lg:min-h-screen overflow-hidden" style={{ background: 'linear-gradient(150deg, #4F46E5 0%, #3730A3 100%)' }}>
 
           {/* Mesh grid */}
-          <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+          <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
 
-          {/* Accent glow */}
-          <div className="absolute pointer-events-none" style={{ width: 500, height: 500, top: '-15%', left: '-12%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,70,229,0.20) 0%, transparent 65%)', filter: 'blur(80px)' }} />
+          {/* Light glow */}
+          <div className="absolute pointer-events-none" style={{ width: 500, height: 500, top: '-15%', left: '-12%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.14) 0%, transparent 65%)', filter: 'blur(80px)' }} />
 
-          {/* Accent edge line */}
-          <div className="absolute top-0 right-0 bottom-0 pointer-events-none" style={{ width: 2, background: '#4F46E5', opacity: 0.6 }} />
+          {/* Edge line */}
+          <div className="absolute top-0 right-0 bottom-0 pointer-events-none" style={{ width: 2, background: '#FFFFFF', opacity: 0.4 }} />
 
           {/* Content */}
           <div className="relative" style={{ maxWidth: 420 }}>
             {/* Logo */}
             <Link href="/" className="auth-enter ae-1 flex items-center gap-3 no-underline mb-12 w-fit group">
-              <div style={{ width: 42, height: 42, borderRadius: 10, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform .3s' }} className="group-hover:scale-105">
+              <div style={{ width: 42, height: 42, borderRadius: 10, background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.30)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform .3s' }} className="group-hover:scale-105">
                 <span style={{ color: '#FFFFFF', fontSize: 13, fontWeight: 900 }}>EX</span>
               </div>
               <div>
@@ -128,7 +128,7 @@ function SignUpLoginScreen() {
             {/* Status chips */}
             <div className="auth-enter ae-4 flex flex-wrap gap-3">
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 20, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)' }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4F46E5' }} />
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#FFFFFF' }} />
                 <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)', fontFamily: "'JetBrains Mono', monospace" }}>System online</span>
               </div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)' }}>
@@ -152,7 +152,7 @@ function SignUpLoginScreen() {
         {/* ══════════════════════════════════════════════════
             RIGHT — Light elevated form panel
         ══════════════════════════════════════════════════ */}
-        <section className="relative flex-1 flex flex-col overflow-y-auto min-h-screen lg:h-screen" style={{ background: '#FAFAFA' }}>
+        <section className="relative flex-1 flex flex-col overflow-y-auto min-h-screen lg:h-screen" style={{ background: '#E9EBFA' }}>
 
           {/* Subtle dot grid */}
           <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#E5E5E5 1px, transparent 1px)', backgroundSize: '28px 28px', opacity: 0.5 }} />
