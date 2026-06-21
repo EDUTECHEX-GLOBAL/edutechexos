@@ -20,8 +20,8 @@ async function setPassword(req, res) {
     }
     const emailClean = String(email).trim().toLowerCase();
     const pwStr = String(password);
-    if (pwStr.length < 8 || !/[A-Z]/.test(pwStr) || !/[0-9]/.test(pwStr) || !/[^A-Za-z0-9]/.test(pwStr)) {
-      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters with an uppercase letter, number, and special character.' });
+    if (pwStr.length < 8 || !/[A-Z]/.test(pwStr) || !/[0-9]/.test(pwStr)) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters with an uppercase letter and a number.' });
     }
     if (VALID_ACCOUNTS.some((a) => a.email === emailClean)) {
       return res.status(409).json({ success: false, error: 'Cannot override a system account via this endpoint.' });
@@ -293,8 +293,8 @@ async function acceptInvite(req, res) {
     const { token, password } = req.body;
     if (!token || !password) return res.status(400).json({ success: false, error: 'token and password are required.' });
     const pwStr = String(password);
-    if (pwStr.length < 8 || !/[A-Z]/.test(pwStr) || !/[0-9]/.test(pwStr) || !/[^A-Za-z0-9]/.test(pwStr)) {
-      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters with an uppercase letter, number, and special character.' });
+    if (pwStr.length < 8 || !/[A-Z]/.test(pwStr) || !/[0-9]/.test(pwStr)) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters with an uppercase letter and a number.' });
     }
     const invite = await InviteToken.findOne({ token: String(token) }).lean();
     if (!invite)       return res.status(404).json({ success: false, error: 'Invalid invite link.' });

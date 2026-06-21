@@ -131,7 +131,9 @@ describe('Auth — Login', () => {
     expect(res.body.error).toBe('rejected');
   });
 
-  test('login with plaintext password auto-hashes it', async () => {
+  test('login with a plaintext-stored password is rejected (no plaintext fallback)', async () => {
+    // Security: a record whose password was stored in plaintext (never hashed)
+    // must NOT authenticate. The old plaintext-compare + auto-hash path was removed.
     await AccessRequest.create({
       name: 'Plain', email: 'plain@example.com',
       password: 'PlainPass123', role: 'Member', status: 'approved',
@@ -140,14 +142,8 @@ describe('Auth — Login', () => {
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'plain@example.com', password: 'PlainPass123' });
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-
-    // Wait for async hash
-    await new Promise(r => setTimeout(r, 500));
-    const updated = await AccessRequest.findOne({ email: 'plain@example.com' }).lean();
-    expect(updated.password).not.toBe('PlainPass123');
-    expect(updated.password.startsWith('$2')).toBe(true);
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBeFalsy();
   });
 
   test('login with unknown email returns 401', async () => {
@@ -450,16 +446,23 @@ describe('Messages', () => {
     expect(res.body.hasMore).toBe(true);
   });
 
-  test('DELETE /api/messages/:id hard delete', async () => {
+  test('DELETE /api/messages/:id hard delete is admin-only', async () => {
     const msg = await Message.create({
       channelId: 'general', sender: 'User', initials: 'U',
       color: '#000', text: 'will delete',
     });
 
-    const res = await request(app)
+    // A regular member cannot permanently delete.
+    const memberRes = await request(app)
       .delete(`/api/messages/${msg._id}?hard=true`)
       .set('Authorization', `Bearer ${token()}`);
+    expect(memberRes.status).toBe(403);
+    expect(await Message.findById(msg._id)).not.toBeNull();
 
+    // An admin can.
+    const res = await request(app)
+      .delete(`/api/messages/${msg._id}?hard=true`)
+      .set('Authorization', `Bearer ${adminToken()}`);
     expect(res.status).toBe(200);
     expect(res.body.deleted).toBe('permanent');
     const deleted = await Message.findById(msg._id);
@@ -951,11 +954,11 @@ describe('Access Requests', () => {
   test('POST /api/access-requests submits new request', async () => {
     const res = await request(app)
       .post('/api/access-requests')
-      .send({ name: 'New User', email: 'new@example.com', role: 'Member' });
+      .send({ name: 'New User', email: 'new@edutechex.in', role: 'Member' });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.request.email).toBe('new@example.com');
+    expect(res.body.request.email).toBe('new@edutechex.in');
     expect(res.body.request.status).toBe('pending');
   });
 
@@ -969,13 +972,13 @@ describe('Access Requests', () => {
 
   test('POST /api/access-requests returns existing status if already submitted', async () => {
     await AccessRequest.create({
-      name: 'Existing', email: 'exist@example.com',
+      name: 'Existing', email: 'exist@edutechex.in',
       password: '', role: 'Member', status: 'pending',
     });
 
     const res = await request(app)
       .post('/api/access-requests')
-      .send({ name: 'Existing', email: 'exist@example.com', role: 'Member' });
+      .send({ name: 'Existing', email: 'exist@edutechex.in', role: 'Member' });
 
     expect(res.status).toBe(200);
     expect(res.body.exists).toBe(true);

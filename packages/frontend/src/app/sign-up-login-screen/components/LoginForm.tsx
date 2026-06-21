@@ -416,8 +416,8 @@ export default function LoginForm({
                       setForgotError('Enter the 6-digit code.');
                       return;
                     }
-                    if (forgotNewPass.length < 6) {
-                      setForgotError('Password must be at least 6 characters.');
+                    if (forgotNewPass.length < 8 || !/[A-Z]/.test(forgotNewPass) || !/[0-9]/.test(forgotNewPass)) {
+                      setForgotError('Password must be at least 8 characters and include an uppercase letter and a number.');
                       return;
                     }
                     setForgotLoading(true);
@@ -491,7 +491,7 @@ export default function LoginForm({
                         type={forgotShowPass ? 'text' : 'password'}
                         value={forgotNewPass}
                         onChange={(e) => setForgotNewPass(e.target.value)}
-                        placeholder="Min. 6 characters"
+                        placeholder="Min. 8 chars, 1 uppercase, 1 number"
                         className="input-ivy w-full pl-4 pr-12 py-4 text-sm text-[#0A1128] font-medium"
                         style={inputIvyStyle}
                       />

@@ -147,8 +147,8 @@ async function resetPassword(req, res) {
     if (newPassword.length < 8) {
       return res.status(400).json({ success: false, error: 'Password must be at least 8 characters.' });
     }
-    if (!/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[!@#$%^&*]/.test(newPassword)) {
-      return res.status(400).json({ success: false, error: 'Password must contain at least one uppercase letter, one number, and one special character.' });
+    if (!/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      return res.status(400).json({ success: false, error: 'Password must contain at least one uppercase letter and one number.' });
     }
 
     await AccessRequest.findOneAndUpdate({ email: emailClean }, { $set: { password: await bcrypt.hash(newPassword, 10) } });
