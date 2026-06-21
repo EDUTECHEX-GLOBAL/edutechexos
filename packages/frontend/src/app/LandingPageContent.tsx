@@ -11,7 +11,7 @@ import ClientOnlyEffects from './components/ClientOnlyEffects';
 
 export default function LandingPageContent() {
   return (
-    <div className="relative min-h-screen bg-background">
+    <div className="relative min-h-screen" style={{ background: '#FFFFFF' }}>
       <ClientOnlyEffects />
       <LandingNav />
       <main className="relative z-10">

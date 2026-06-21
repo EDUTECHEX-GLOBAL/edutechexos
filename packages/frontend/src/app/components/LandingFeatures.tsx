@@ -1,10 +1,10 @@
 'use client';
-import React, { useRef } from 'react';
+import React from 'react';
 import AnimatedSection from './AnimatedSection';
 
-/* ── Custom SVG icons — one per feature ──────────────────────────────────── */
+/* ── Custom SVG icons — one per feature (white stroke, sit on ink tile) ───── */
 const IconChannels = () => (
-  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+  <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
     <rect x="2" y="3" width="14" height="11" rx="2.5" stroke="white" strokeWidth="1.7" />
     <path d="M5 7.5h8M5 10h6" stroke="white" strokeWidth="1.4" strokeLinecap="round" opacity=".75" />
     <path d="M6 14l-3 3.5h3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity=".75" />
@@ -14,7 +14,7 @@ const IconChannels = () => (
 );
 
 const IconAI = () => (
-  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+  <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
     <circle cx="13" cy="13" r="3" fill="white" />
     <circle cx="5"  cy="6"  r="1.8" fill="white" opacity=".7" />
     <circle cx="21" cy="6"  r="1.8" fill="white" opacity=".7" />
@@ -26,7 +26,7 @@ const IconAI = () => (
 );
 
 const IconTasks = () => (
-  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+  <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
     <rect x="4" y="3" width="14" height="18" rx="2.5" stroke="white" strokeWidth="1.7" />
     <path d="M8 9l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     <path d="M8 15h6M8 18h4" stroke="white" strokeWidth="1.4" strokeLinecap="round" opacity=".65" />
@@ -35,7 +35,7 @@ const IconTasks = () => (
 );
 
 const IconDigest = () => (
-  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+  <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
     <circle cx="19" cy="7" r="3.5" stroke="white" strokeWidth="1.6" fill="none" />
     <path d="M19 2.5V4M19 10v1.5M13.5 7H15M23 7h1.5M15 3.5l1 1M22.5 10.5l1 1M15 10.5l1-1M22.5 3.5l1-1" stroke="white" strokeWidth="1.3" strokeLinecap="round" opacity=".65" />
     <rect x="3" y="10" width="13" height="14" rx="2" stroke="white" strokeWidth="1.7" />
@@ -44,7 +44,7 @@ const IconDigest = () => (
 );
 
 const IconAttendance = () => (
-  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+  <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
     <rect x="3" y="6" width="20" height="17" rx="2.5" stroke="white" strokeWidth="1.7" />
     <path d="M3 11.5h20" stroke="white" strokeWidth="1.3" opacity=".5" />
     <path d="M9 3v5M17 3v5" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
@@ -56,7 +56,7 @@ const IconAttendance = () => (
 );
 
 const IconBroadcast = () => (
-  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+  <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
     <circle cx="13" cy="15" r="2.5" fill="white" />
     <path d="M8.5 11.5C10 9.5 11.4 8.5 13 8.5s3 1 4.5 3" stroke="white" strokeWidth="1.6" strokeLinecap="round" fill="none" />
     <path d="M5 8C7.5 4.5 10 2.5 13 2.5S18.5 4.5 21 8" stroke="white" strokeWidth="1.6" strokeLinecap="round" fill="none" opacity=".55" />
@@ -66,7 +66,7 @@ const IconBroadcast = () => (
 );
 
 const IconKnowledge = () => (
-  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+  <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
     <ellipse cx="13" cy="19.5" rx="8" ry="3" stroke="white" strokeWidth="1.6" fill="none" />
     <ellipse cx="13" cy="13"   rx="8" ry="3" stroke="white" strokeWidth="1.6" fill="none" />
     <ellipse cx="13" cy="6.5"  rx="8" ry="3" stroke="white" strokeWidth="1.6" fill="none" />
@@ -76,14 +76,14 @@ const IconKnowledge = () => (
 );
 
 const IconActivity = () => (
-  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+  <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
     <path d="M2 13h4l2.5-7 4 13 3-10 2 4h6.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     <circle cx="21" cy="13" r="2" fill="white" opacity=".7" />
   </svg>
 );
 
 const IconOnboarding = () => (
-  <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+  <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
     <circle cx="10" cy="8" r="3.5" stroke="white" strokeWidth="1.7" fill="none" />
     <path d="M3 22c0-4.5 3.2-7 7-7" stroke="white" strokeWidth="1.7" strokeLinecap="round" fill="none" />
     <path d="M20 9.5C19 9 17 10 16 11.8c0 4.5 4 6.2 4 6.2s4-1.7 4-6.2C23 10 21 9 20 9.5Z" stroke="white" strokeWidth="1.6" fill="none" />
@@ -98,161 +98,78 @@ const CUSTOM_ICONS = [
 
 const features = [
   {
-
-    accent: '#0DAFCE',
-    accentBg: 'rgba(13,175,206,0.10)',
-    accentBorder: 'rgba(13,175,206,0.20)',
-    accentGlow: 'rgba(13,175,206,0.15)',
     title: 'Project Channels',
     description: 'Dedicated channels for every project. Context stays where work happens. Every message indexed for instant AI retrieval.',
     tag: 'Real-time · Organised',
-    animClass: 'click-bubble-pop',
-    gradient: 'linear-gradient(135deg, rgba(13,175,206,0.08), rgba(59,130,246,0.08))',
   },
   {
-
-    accent: '#8B3FDB',
-    accentBg: 'rgba(139,63,219,0.10)',
-    accentBorder: 'rgba(139,63,219,0.20)',
-    accentGlow: 'rgba(139,63,219,0.15)',
     title: 'Embedded AI Agent',
     description: 'AI lives inside your workspace — answers cited from your actual channel history, not the internet. Your institutional memory, made searchable.',
     tag: 'AI · Context-aware',
-    animClass: 'click-neural-pulse',
-    gradient: 'linear-gradient(135deg, rgba(139,63,219,0.08), rgba(26,27,58,0.14))',
   },
   {
-
-    accent: '#10C98A',
-    accentBg: 'rgba(16,201,138,0.10)',
-    accentBorder: 'rgba(16,201,138,0.20)',
-    accentGlow: 'rgba(16,201,138,0.15)',
     title: 'Auto Task Extraction',
     description: 'AI reads every message and surfaces actionable tasks automatically. Nothing slips through during busy project sprints.',
     tag: 'AI · Productivity',
-    animClass: 'click-card-flip',
-    gradient: 'linear-gradient(135deg, rgba(16,201,138,0.08), rgba(5,150,105,0.08))',
   },
   {
-
-    accent: '#F97316',
-    accentBg: 'rgba(249,115,22,0.10)',
-    accentBorder: 'rgba(249,115,22,0.20)',
-    accentGlow: 'rgba(249,115,22,0.15)',
     title: 'Morning Digest',
     description: 'Wake up to a crisp AI-generated summary of everything that happened across all channels since you were last online.',
     tag: 'Async · Summary',
-    animClass: 'click-page-unfold',
-    gradient: 'linear-gradient(135deg, rgba(249,115,22,0.08), rgba(245,158,11,0.08))',
   },
   {
-
-    accent: '#F59E0B',
-    accentBg: 'rgba(245,158,11,0.10)',
-    accentBorder: 'rgba(245,158,11,0.20)',
-    accentGlow: 'rgba(245,158,11,0.15)',
     title: 'Attendance Tracking',
     description: 'Per-user login calendars, admin attendance dashboards, and daily presence tracking — all automated from login events.',
     tag: 'Ops · HR',
-    animClass: 'click-cell-bloom',
-    gradient: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(239,71,111,0.06))',
   },
   {
-
-    accent: '#C026D3',
-    accentBg: 'rgba(192,38,211,0.10)',
-    accentBorder: 'rgba(192,38,211,0.20)',
-    accentGlow: 'rgba(192,38,211,0.15)',
     title: 'Broadcast & Alerts',
     description: 'Send institution-wide announcements to all members in one click. Channel activity feeds and admin monitoring built in.',
     tag: 'Comms · Admin',
-    animClass: 'click-send-whoosh',
-    gradient: 'linear-gradient(135deg, rgba(192,38,211,0.08), rgba(139,63,219,0.08))',
   },
   {
-
-    accent: '#059669',
-    accentBg: 'rgba(5,150,105,0.10)',
-    accentBorder: 'rgba(5,150,105,0.20)',
-    accentGlow: 'rgba(5,150,105,0.15)',
     title: 'Org Knowledge Base',
     description: 'Every decision, doc, and discussion becomes searchable org memory — forever. New members get instant context from day one.',
     tag: 'Search · Memory',
-    animClass: 'click-page-unfold',
-    gradient: 'linear-gradient(135deg, rgba(5,150,105,0.08), rgba(16,201,138,0.08))',
   },
   {
-
-    accent: '#3B82F6',
-    accentBg: 'rgba(59,130,246,0.10)',
-    accentBorder: 'rgba(59,130,246,0.20)',
-    accentGlow: 'rgba(59,130,246,0.15)',
     title: 'Activity Monitoring',
     description: 'Admin-level engagement dashboards: session time, message counts, active days, and weekly engagement rates per team member.',
     tag: 'Analytics · Admin',
-    animClass: 'click-bar-rise',
-    gradient: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(26,27,58,0.14))',
   },
   {
-
-    accent: '#EF476F',
-    accentBg: 'rgba(239,71,111,0.10)',
-    accentBorder: 'rgba(239,71,111,0.20)',
-    accentGlow: 'rgba(239,71,111,0.15)',
     title: 'Member Onboarding',
     description: 'New members request access, admin approves, and channels are assigned in seconds. Role-based access control out of the box.',
     tag: 'Onboarding · Access',
-    animClass: 'click-slide-deck',
-    gradient: 'linear-gradient(135deg, rgba(239,71,111,0.08), rgba(255,107,74,0.08))',
   },
 ];
 
 function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
-  const cardRef = useRef<HTMLDivElement>(null);
   const CustomIcon = CUSTOM_ICONS[i];
-
-  function handleClick() {
-    const el = cardRef.current;
-    if (!el) return;
-    el.classList.remove(feat.animClass);
-    void el.offsetWidth;
-    el.classList.add(feat.animClass);
-    setTimeout(() => el.classList.remove(feat.animClass), 600);
-  }
 
   return (
     <AnimatedSection direction="up" delay={i * 0.06}>
       <div
-        ref={cardRef}
-        onClick={handleClick}
-        className="group relative flex flex-col rounded-2xl cursor-pointer overflow-hidden"
+        className="group relative flex flex-col rounded-2xl overflow-hidden"
         style={{
           background: '#FFFFFF',
-          border: `1.5px solid ${feat.accentBorder}`,
-          boxShadow: `0 2px 12px rgba(0,0,0,0.04)`,
+          border: '1px solid #E5E5E5',
           minHeight: 240,
-          transition: 'all 0.35s cubic-bezier(0.22,1,0.36,1)',
+          transition: 'all 0.3s cubic-bezier(0.22,1,0.36,1)',
         }}
         onMouseEnter={e => {
           const el = e.currentTarget;
-          el.style.borderColor = feat.accent + '55';
-          el.style.boxShadow = `0 20px 56px ${feat.accentGlow}, 0 4px 16px rgba(0,0,0,0.05)`;
-          el.style.transform = 'translateY(-5px)';
+          el.style.borderColor = '#111111';
+          el.style.boxShadow = '0 16px 40px rgba(17,17,17,0.08)';
+          el.style.transform = 'translateY(-4px)';
         }}
         onMouseLeave={e => {
           const el = e.currentTarget;
-          el.style.borderColor = feat.accentBorder;
-          el.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)';
+          el.style.borderColor = '#E5E5E5';
+          el.style.boxShadow = 'none';
           el.style.transform = 'translateY(0)';
         }}
       >
-        {/* Top colour band */}
-        <div style={{
-          height: 4,
-          background: `linear-gradient(90deg, ${feat.accent}, ${feat.accent}80)`,
-          flexShrink: 0,
-        }} />
-
         {/* Card body */}
         <div style={{ padding: '22px 22px 20px', display: 'flex', flexDirection: 'column', flex: 1 }}>
 
@@ -263,34 +180,23 @@ function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
             <span style={{
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: 11, fontWeight: 800,
-              color: feat.accent,
-              background: feat.accentBg,
-              border: `1px solid ${feat.accentBorder}`,
-              borderRadius: 8, padding: '3px 8px',
+              color: '#A3A3A3',
               letterSpacing: '0.05em',
+              paddingTop: 6,
             }}>
               {String(i + 1).padStart(2, '0')}
             </span>
 
-            {/* Icon container — gradient bg, white icon */}
+            {/* Icon container — ink tile, white icon; accent on hover */}
             <div
-              className="group-hover:scale-110"
+              className="feat-tile group-hover:scale-105"
               style={{
-                width: 52, height: 52, borderRadius: 16, flexShrink: 0,
-                background: `linear-gradient(140deg, ${feat.accent}, ${feat.accent}aa)`,
+                width: 50, height: 50, borderRadius: 14, flexShrink: 0,
+                background: '#111111',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: `0 6px 20px ${feat.accent}40, 0 2px 6px ${feat.accent}25`,
-                transition: 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s',
-                position: 'relative',
+                transition: 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.3s',
               }}
             >
-              {/* Inner shine */}
-              <div style={{
-                position: 'absolute', top: 0, left: 0, right: 0, height: '50%',
-                borderRadius: '16px 16px 0 0',
-                background: 'rgba(255,255,255,0.18)',
-                pointerEvents: 'none',
-              }} />
               <CustomIcon />
             </div>
           </div>
@@ -299,7 +205,7 @@ function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
           <h3 style={{
             fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif",
             fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em',
-            color: '#1A1B3A', marginBottom: 10, lineHeight: 1.25,
+            color: '#111111', marginBottom: 10, lineHeight: 1.25,
           }}>
             {feat.title}
           </h3>
@@ -307,7 +213,7 @@ function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
           {/* Description */}
           <p style={{
             fontSize: 13, fontWeight: 400, lineHeight: 1.70,
-            color: 'rgba(90,95,128,0.78)', flex: 1,
+            color: '#737373', flex: 1,
           }}>
             {feat.description}
           </p>
@@ -315,14 +221,14 @@ function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
           {/* Bottom row — tag + arrow */}
           <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              fontSize: 9, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase',
-              color: feat.accent, background: feat.accentBg,
-              border: `1px solid ${feat.accentBorder}`,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              fontSize: 9, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase',
+              color: '#737373', background: '#F5F5F5',
+              border: '1px solid #E5E5E5',
               padding: '4px 10px', borderRadius: 20,
               fontFamily: "'JetBrains Mono', monospace",
             }}>
-              <span style={{ width: 4, height: 4, borderRadius: '50%', background: feat.accent, display: 'inline-block' }} />
+              <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#4F46E5', display: 'inline-block' }} />
               {feat.tag}
             </span>
 
@@ -332,9 +238,9 @@ function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
               style={{
                 opacity: 0, transition: 'opacity 0.25s',
                 width: 28, height: 28, borderRadius: 8,
-                background: feat.accentBg, border: `1px solid ${feat.accentBorder}`,
+                background: '#4F46E5',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 13, color: feat.accent, fontWeight: 700,
+                fontSize: 13, color: '#FFFFFF', fontWeight: 700,
               }}
             >
               →
@@ -348,14 +254,8 @@ function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
 
 export default function LandingFeatures() {
   return (
-    <section id="features" className="relative py-28 px-6 lg:px-10 overflow-hidden" style={{ background: '#ECEAF8' }}>
-      {/* Dot grid */}
-      <div className="absolute inset-0 dot-grid pointer-events-none" />
-
-      {/* Colorful orbs */}
-      <div className="absolute pointer-events-none" style={{ width: 520, height: 520, top: '-12%', right: '-6%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(13,175,206,0.08) 0%, transparent 65%)', filter: 'blur(64px)' }} />
-      <div className="absolute pointer-events-none" style={{ width: 440, height: 440, bottom: '0%', left: '-6%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(26,27,58,0.14) 0%, transparent 65%)', filter: 'blur(56px)' }} />
-      <div className="absolute pointer-events-none" style={{ width: 360, height: 360, top: '40%', left: '40%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,201,138,0.06) 0%, transparent 65%)', filter: 'blur(48px)' }} />
+    <section id="features" className="relative py-28 px-6 lg:px-10 overflow-hidden" style={{ background: '#FFFFFF', borderTop: '1px solid #E5E5E5' }}>
+      <style>{`.group:hover .feat-tile { background: #4F46E5 !important; }`}</style>
 
       <div className="relative max-w-screen-xl mx-auto">
 
@@ -364,23 +264,23 @@ export default function LandingFeatures() {
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-20">
             <div>
               <div className="flex items-center gap-3 mb-5">
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#5B4FDB', display: 'inline-block', boxShadow: '0 0 8px rgba(91,79,219,0.50)' }} />
-                <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '.30em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)', fontFamily: "'JetBrains Mono', monospace" }}>What lives inside</span>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4F46E5', display: 'inline-block' }} />
+                <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '.30em', textTransform: 'uppercase', color: '#737373', fontFamily: "'JetBrains Mono', monospace" }}>What lives inside</span>
               </div>
-              <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(2.8rem, 5.5vw, 4.8rem)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 0.92, color: '#1A1B3A' }}>
+              <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(2.8rem, 5.5vw, 4.8rem)', fontWeight: 900, letterSpacing: '-0.045em', lineHeight: 0.92, color: '#111111' }}>
                 Every tool<br />
-                <span style={{ background: 'linear-gradient(135deg, #5B4FDB, #0DAFCE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>your team</span><br />
+                <span style={{ color: '#4F46E5' }}>your team</span><br />
                 needs.
               </h2>
             </div>
             <div className="lg:max-w-xs">
-              <p style={{ fontSize: 15, fontWeight: 400, lineHeight: 1.72, color: 'rgba(90,95,128,0.75)', marginBottom: 20 }}>
-                Nine tightly integrated capabilities that replace five disconnected tools — in one vibrant, precision interface. Click any card to see its unique animation.
+              <p style={{ fontSize: 15, fontWeight: 400, lineHeight: 1.72, color: '#525252', marginBottom: 20 }}>
+                Nine tightly integrated capabilities that replace five disconnected tools — in one focused, precision interface.
               </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 10, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace", color: '#5B4FDB' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 10, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace", color: '#111111' }}>
                 <span>09 capabilities</span>
-                <div style={{ height: 1.5, flex: 1, background: 'linear-gradient(90deg, #5B4FDB, transparent)', maxWidth: 40, borderRadius: 1 }} />
-                <span style={{ color: 'rgba(90,95,128,0.55)' }}>1 platform</span>
+                <div style={{ height: 1, flex: 1, background: '#E5E5E5', maxWidth: 40 }} />
+                <span style={{ color: '#A3A3A3' }}>1 platform</span>
               </div>
             </div>
           </div>
@@ -396,11 +296,11 @@ export default function LandingFeatures() {
         {/* ── Bottom rule ── */}
         <AnimatedSection direction="up" delay={0.35}>
           <div className="flex items-center gap-6 mt-20">
-            <div style={{ flex: 1, height: 1.5, background: 'linear-gradient(90deg, transparent, rgba(91,79,219,0.15))', borderRadius: 1 }} />
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.28em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.45)', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>
+            <div style={{ flex: 1, height: 1, background: '#E5E5E5' }} />
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.26em', textTransform: 'uppercase', color: '#A3A3A3', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>
               Designed for EduTechEx · Built for institutions
             </span>
-            <div style={{ flex: 1, height: 1.5, background: 'linear-gradient(90deg, rgba(91,79,219,0.15), transparent)', borderRadius: 1 }} />
+            <div style={{ flex: 1, height: 1, background: '#E5E5E5' }} />
           </div>
         </AnimatedSection>
       </div>

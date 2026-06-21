@@ -132,7 +132,7 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
         <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(79,70,229,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
           <Mail size={24} style={{ color: '#4f46e5' }} />
         </div>
-        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0A1128', marginBottom: 8 }}>Check your inbox</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111111', marginBottom: 8 }}>Check your inbox</h2>
         <p style={{ fontSize: 13, color: 'rgba(10,17,40,0.55)', marginBottom: 6, lineHeight: 1.6 }}>
           A temporary password has been sent to
         </p>
@@ -146,8 +146,8 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
           onClick={onSwitchToLogin}
           style={{
             width: '100%',
-            background: '#0A1128',
-            color: '#D4AF37',
+            background: '#111111',
+            color: '#4F46E5',
             padding: '14px 0',
             fontWeight: 800,
             fontSize: 11,
@@ -198,17 +198,17 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
     <>
       <style>{`
         .input-ivy:focus {
-          border-color: #D4AF37 !important;
-          box-shadow: 0 0 0 1px #D4AF37 !important;
+          border-color: #4F46E5 !important;
+          box-shadow: 0 0 0 1px #4F46E5 !important;
           background: white !important;
           outline: none;
         }
       `}</style>
 
       {/* Info banner */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: 'rgba(91,79,219,0.06)', border: '1px solid rgba(91,79,219,0.14)', borderRadius: 8, padding: '10px 14px', marginBottom: 20 }}>
-        <KeyRound size={14} style={{ color: '#5B4FDB', flexShrink: 0, marginTop: 1 }} />
-        <p style={{ margin: 0, fontSize: 11.5, color: 'rgba(26,27,58,0.65)', lineHeight: 1.5 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: 'rgba(79,70,229,0.06)', border: '1px solid rgba(79,70,229,0.14)', borderRadius: 8, padding: '10px 14px', marginBottom: 20 }}>
+        <KeyRound size={14} style={{ color: '#4F46E5', flexShrink: 0, marginTop: 1 }} />
+        <p style={{ margin: 0, fontSize: 11.5, color: 'rgba(17,17,17,0.65)', lineHeight: 1.5 }}>
           This workspace is <strong>invite-only</strong>. Only <strong>@{ALLOWED_DOMAIN}</strong> addresses may request access. If you do not have one, ask your admin for an invite link.
         </p>
       </div>
@@ -216,16 +216,16 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
         {/* Full Name */}
         <div className="space-y-2.5">
-          <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">
+          <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#111111]/80 ml-1">
             Full Name
           </label>
           <div className="relative group">
-            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0A1128]/30 group-focus-within:text-[#D4AF37] transition-colors" />
+            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#111111]/30 group-focus-within:text-[#4F46E5] transition-colors" />
             <input
               type="text"
               autoComplete="name"
               placeholder="Your full name"
-              className={`input-ivy w-full pl-12 pr-4 py-4 text-sm text-[#0A1128] font-medium placeholder:text-[#0A1128]/20 ${errors.name ? 'border-red-300 bg-red-50/30' : ''}`}
+              className={`input-ivy w-full pl-12 pr-4 py-4 text-sm text-[#111111] font-medium placeholder:text-[#111111]/20 ${errors.name ? 'border-red-300 bg-red-50/30' : ''}`}
               style={{
                 ...inputIvyStyle,
                 borderColor: errors.name ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)',
@@ -243,16 +243,16 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
 
         {/* Email */}
         <div className="space-y-2.5">
-          <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">
+          <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#111111]/80 ml-1">
             Institutional Email
           </label>
           <div className="relative group">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0A1128]/30 group-focus-within:text-[#D4AF37] transition-colors" />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#111111]/30 group-focus-within:text-[#4F46E5] transition-colors" />
             <input
               type="email"
               autoComplete="email"
               placeholder="you@edutechex.com"
-              className={`input-ivy w-full pl-12 pr-4 py-4 text-sm text-[#0A1128] font-medium placeholder:text-[#0A1128]/20 ${errors.email ? 'border-red-300 bg-red-50/30' : ''}`}
+              className={`input-ivy w-full pl-12 pr-4 py-4 text-sm text-[#111111] font-medium placeholder:text-[#111111]/20 ${errors.email ? 'border-red-300 bg-red-50/30' : ''}`}
               style={{
                 ...inputIvyStyle,
                 borderColor: errors.email ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)',
@@ -277,13 +277,13 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
 
         {/* Role */}
         <div className="space-y-2.5">
-          <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">
+          <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#111111]/80 ml-1">
             Role
           </label>
           <div className="relative group">
-            <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0A1128]/30 group-focus-within:text-[#D4AF37] transition-colors pointer-events-none" />
+            <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#111111]/30 group-focus-within:text-[#4F46E5] transition-colors pointer-events-none" />
             <select
-              className={`input-ivy w-full pl-12 pr-4 py-4 text-sm text-[#0A1128] font-medium appearance-none cursor-pointer ${errors.role ? 'border-red-300 bg-red-50/30' : ''}`}
+              className={`input-ivy w-full pl-12 pr-4 py-4 text-sm text-[#111111] font-medium appearance-none cursor-pointer ${errors.role ? 'border-red-300 bg-red-50/30' : ''}`}
               style={{
                 ...inputIvyStyle,
                 borderColor: errors.role ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)',
@@ -311,7 +311,7 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
           <button
             type="submit"
             disabled={isLoading}
-            className="group relative w-full bg-[#0A1128] text-[#D4AF37] py-5 font-black uppercase tracking-[0.3em] text-[11px] overflow-hidden transition-all hover:shadow-[0_0_32px_rgba(212,175,55,0.25)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#0A1128]/30 border border-[#0A1128]"
+            className="group relative w-full bg-[#111111] text-[#4F46E5] py-5 font-black uppercase tracking-[0.3em] text-[11px] overflow-hidden transition-all hover:shadow-[0_0_32px_rgba(212,175,55,0.25)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#111111]/30 border border-[#111111]"
           >
             <span className="relative z-10 flex items-center justify-center gap-2">
               {isLoading ? (
@@ -329,17 +329,17 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
                 </>
               )}
             </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#D4AF37]/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#4F46E5]/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
           </button>
         </div>
 
         <div className="text-center pt-2">
-          <p className="text-xs text-[#0A1128]/40">
+          <p className="text-xs text-[#111111]/40">
             Already have access?{' '}
             <button
               type="button"
               onClick={onSwitchToLogin}
-              className="text-[#0A1128] font-bold hover:text-[#D4AF37] underline underline-offset-4 transition-colors ml-1"
+              className="text-[#111111] font-bold hover:text-[#4F46E5] underline underline-offset-4 transition-colors ml-1"
             >
               Sign in
             </button>

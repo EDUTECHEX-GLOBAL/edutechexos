@@ -1,66 +1,42 @@
 'use client';
-import React, { useRef } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import AnimatedSection from './AnimatedSection';
 
 export default function LandingCTA() {
-  const btnRef = useRef<HTMLAnchorElement>(null);
-
-  function handleCtaClick() {
-    const el = btnRef.current;
-    if (!el) return;
-    el.classList.remove('click-bubble-pop');
-    void el.offsetWidth;
-    el.classList.add('click-bubble-pop');
-    setTimeout(() => el.classList.remove('click-bubble-pop'), 500);
-  }
-
   return (
-    <section id="cta" className="relative overflow-hidden py-32 px-6 lg:px-10" style={{ background: 'linear-gradient(135deg, #5B4FDB 0%, #8B3FDB 60%, #C026D3 100%)' }}>
+    <section id="cta" className="relative overflow-hidden py-32 px-6 lg:px-10" style={{ background: '#111111' }}>
 
-      {/* Mesh overlay */}
-      <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+      {/* Faint grid overlay */}
+      <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
 
-      {/* Light orbs */}
-      <div className="absolute pointer-events-none" style={{ width: 560, height: 560, top: '-25%', left: '-10%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.10) 0%, transparent 65%)', filter: 'blur(72px)' }} />
-      <div className="absolute pointer-events-none" style={{ width: 480, height: 480, bottom: '-20%', right: '-8%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 65%)', filter: 'blur(64px)' }} />
-
-      {/* Corner arcs (white, subtle) */}
-      <div className="absolute top-0 left-0 overflow-hidden pointer-events-none" style={{ width: 380, height: 380 }}>
-        {[320, 220, 120].map(s => (
-          <div key={s} className="absolute rounded-full" style={{ width: s, height: s, top: -s / 2, left: -s / 2, border: '1px solid rgba(255,255,255,0.08)' }} />
-        ))}
-      </div>
-      <div className="absolute bottom-0 right-0 overflow-hidden pointer-events-none" style={{ width: 380, height: 380 }}>
-        {[320, 220, 120].map(s => (
-          <div key={s} className="absolute rounded-full" style={{ width: s, height: s, bottom: -s / 2, right: -s / 2, border: '1px solid rgba(255,255,255,0.06)' }} />
-        ))}
-      </div>
+      {/* Accent glow */}
+      <div className="absolute pointer-events-none" style={{ width: 520, height: 520, top: '-30%', left: '-8%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,70,229,0.22) 0%, transparent 65%)', filter: 'blur(80px)' }} />
 
       <div className="relative max-w-screen-xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-16">
 
         {/* Heading */}
         <AnimatedSection direction="up" className="flex-1">
           <div className="flex items-center gap-3 mb-7">
-            <div style={{ height: 1.5, width: 32, background: 'rgba(255,255,255,0.40)', borderRadius: 1 }} />
-            <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '.30em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.60)', fontFamily: "'JetBrains Mono', monospace" }}>
+            <div style={{ height: 1, width: 32, background: 'rgba(255,255,255,0.35)' }} />
+            <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '.30em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', fontFamily: "'JetBrains Mono', monospace" }}>
               Get started today
             </span>
           </div>
-          <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(2.8rem, 5.5vw, 4.8rem)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 0.92, color: '#FFFFFF', marginBottom: 24 }}>
+          <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(2.8rem, 5.5vw, 4.8rem)', fontWeight: 900, letterSpacing: '-0.045em', lineHeight: 0.92, color: '#FFFFFF', marginBottom: 24 }}>
             Ready to bring<br />
             your team<br />
-            <span style={{ color: 'rgba(255,255,255,0.55)' }}>together?</span>
+            <span style={{ color: '#A5B4FC' }}>together?</span>
           </h2>
-          <p style={{ fontSize: 15, fontWeight: 400, lineHeight: 1.72, color: 'rgba(255,255,255,0.65)', maxWidth: '40ch' }}>
+          <p style={{ fontSize: 15, fontWeight: 400, lineHeight: 1.72, color: 'rgba(255,255,255,0.60)', maxWidth: '40ch' }}>
             EduTechExOS is live and running. Request access or sign in to your existing account right now.
           </p>
 
           {/* Feature pills */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 24 }}>
             {['AI-powered', 'Real-time channels', 'Admin controls', 'Attendance tracking'].map(f => (
-              <span key={f} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 20, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.80)' }}>
-                <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.70)', display: 'inline-block' }} />
+              <span key={f} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.78)' }}>
+                <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#4F46E5', display: 'inline-block' }} />
                 {f}
               </span>
             ))}
@@ -70,13 +46,11 @@ export default function LandingCTA() {
         {/* CTAs */}
         <AnimatedSection direction="up" delay={0.15} className="flex flex-col gap-4 lg:items-end w-full lg:w-auto">
           <Link
-            ref={btnRef}
             href="/sign-up-login-screen?mode=user"
-            onClick={handleCtaClick}
-            className="inline-flex items-center justify-center gap-3 px-9 py-4 rounded-xl font-bold text-sm transition-all duration-300 w-full lg:w-auto"
-            style={{ background: '#FFFFFF', color: '#5B4FDB', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', fontWeight: 800, letterSpacing: '.04em', fontSize: 13 }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px) scale(1.02)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 40px rgba(0,0,0,0.22)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0) scale(1)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 32px rgba(0,0,0,0.18)'; }}
+            className="inline-flex items-center justify-center gap-3 px-9 py-4 rounded-xl transition-all duration-200 w-full lg:w-auto"
+            style={{ background: '#4F46E5', color: '#FFFFFF', fontWeight: 800, letterSpacing: '.04em', fontSize: 13, border: '1px solid #4F46E5' }}
+            onMouseEnter={e => { const t = e.currentTarget as HTMLElement; t.style.background = '#4338CA'; t.style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={e => { const t = e.currentTarget as HTMLElement; t.style.background = '#4F46E5'; t.style.transform = 'translateY(0)'; }}
           >
             Enter the System
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
@@ -85,10 +59,10 @@ export default function LandingCTA() {
           </Link>
           <Link
             href="/sign-up-login-screen?mode=user"
-            className="inline-flex items-center justify-center gap-3 px-9 py-4 rounded-xl font-bold text-sm transition-all duration-200 w-full lg:w-auto"
-            style={{ color: 'rgba(255,255,255,0.80)', border: '1.5px solid rgba(255,255,255,0.25)', fontSize: 13, background: 'rgba(255,255,255,0.10)', backdropFilter: 'blur(12px)' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.18)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.40)'; (e.currentTarget as HTMLElement).style.color = '#FFFFFF'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.10)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.25)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.80)'; }}
+            className="inline-flex items-center justify-center gap-3 px-9 py-4 rounded-xl transition-all duration-200 w-full lg:w-auto"
+            style={{ color: 'rgba(255,255,255,0.80)', border: '1px solid rgba(255,255,255,0.20)', fontSize: 13, fontWeight: 700, background: 'transparent' }}
+            onMouseEnter={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = 'rgba(255,255,255,0.50)'; t.style.color = '#FFFFFF'; }}
+            onMouseLeave={e => { const t = e.currentTarget as HTMLElement; t.style.borderColor = 'rgba(255,255,255,0.20)'; t.style.color = 'rgba(255,255,255,0.80)'; }}
           >
             Sign in to your account
           </Link>

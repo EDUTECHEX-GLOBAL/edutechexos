@@ -22,95 +22,86 @@ export default function LandingNav() {
       <style>{`
         .nav-link-item {
           position: relative;
-          font-size: 9.5px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase;
-          color: rgba(90,95,128,0.70);
+          font-size: 9.5px; font-weight: 700; letter-spacing: .26em; text-transform: uppercase;
+          color: #737373;
           text-decoration: none;
           font-family: 'JetBrains Mono', monospace;
-          transition: color .25s;
+          transition: color .2s;
         }
         .nav-link-item::after {
           content: '';
           position: absolute;
-          bottom: -4px; left: 0;
-          width: 0; height: 2px;
-          background: linear-gradient(90deg, #5B4FDB, #8B3FDB);
-          border-radius: 1px;
-          transition: width .35s cubic-bezier(.19,1,.22,1);
+          bottom: -5px; left: 0;
+          width: 0; height: 1.5px;
+          background: #4F46E5;
+          transition: width .3s cubic-bezier(.19,1,.22,1);
         }
-        .nav-link-item:hover { color: #5B4FDB; }
+        .nav-link-item:hover { color: #111111; }
         .nav-link-item:hover::after { width: 100%; }
 
         .nav-cta-ghost {
-          padding: 9px 22px; font-size: 9.5px; font-weight: 700; letter-spacing: .22em;
+          padding: 9px 20px; font-size: 9.5px; font-weight: 700; letter-spacing: .20em;
           text-transform: uppercase; font-family: 'JetBrains Mono', monospace;
-          color: #5A5F80; border: 1px solid rgba(26,27,58,0.24);
+          color: #404040; border: 1px solid #E5E5E5;
           border-radius: 8px; text-decoration: none;
-          background: transparent;
-          transition: all .25s cubic-bezier(.22,1,.36,1);
+          background: #FFFFFF;
+          transition: all .2s cubic-bezier(.22,1,.36,1);
         }
         .nav-cta-ghost:hover {
-          background: rgba(91,79,219,0.06);
-          border-color: rgba(91,79,219,0.35);
-          color: #5B4FDB;
-          transform: translateY(-1px);
+          border-color: #111111;
+          color: #111111;
         }
         .nav-cta-primary {
-          padding: 9px 22px; font-size: 9.5px; font-weight: 800; letter-spacing: .20em;
+          padding: 9px 20px; font-size: 9.5px; font-weight: 800; letter-spacing: .18em;
           text-transform: uppercase; font-family: 'JetBrains Mono', monospace;
-          background: linear-gradient(135deg, #5B4FDB 0%, #7B6FEB 100%);
+          background: #4F46E5;
           color: #FFFFFF; border-radius: 8px; text-decoration: none;
-          box-shadow: 0 4px 16px rgba(91,79,219,0.28);
-          transition: all .25s cubic-bezier(.22,1,.36,1);
-          border: 1px solid rgba(91,79,219,0.20);
+          transition: all .2s cubic-bezier(.22,1,.36,1);
+          border: 1px solid #4F46E5;
         }
         .nav-cta-primary:hover {
-          background: linear-gradient(135deg, #4238C8 0%, #6B5FDB 100%);
-          box-shadow: 0 6px 24px rgba(91,79,219,0.40);
-          transform: translateY(-1px) scale(1.02);
+          background: #4338CA;
+          border-color: #4338CA;
+          transform: translateY(-1px);
         }
-        .nav-cta-primary:active { transform: scale(0.97); }
+        .nav-cta-primary:active { transform: translateY(0); }
       `}</style>
 
       <header
-        className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
+        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
         style={{
-          backgroundColor: scrolled ? 'rgba(255,255,255,0.97)' : 'rgba(255,255,255,0.90)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          borderBottom: scrolled ? '1px solid rgba(26,27,58,0.15)' : '1px solid rgba(91,79,219,0.05)',
-          boxShadow: scrolled ? '0 4px 32px rgba(26,27,58,0.14)' : 'none',
+          backgroundColor: scrolled ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.80)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderBottom: scrolled ? '1px solid #E5E5E5' : '1px solid transparent',
         }}
       >
-        {/* Spectrum bar at very top */}
-        <div className="spectrum-bar" />
-
         <div className="max-w-screen-xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 no-underline group">
             <div
               style={{
-                width: 34, height: 34, borderRadius: 9,
-                background: 'linear-gradient(135deg, #5B4FDB 0%, #8B3FDB 100%)',
+                width: 32, height: 32, borderRadius: 8,
+                background: '#111111',
                 flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(91,79,219,0.30)',
-                transition: 'transform .3s, box-shadow .3s',
+                transition: 'transform .25s',
               }}
-              className="group-hover:scale-105 group-hover:shadow-[0_6px_22px_rgba(91,79,219,0.45)]"
+              className="group-hover:scale-105"
             >
               <span style={{ color: '#FFFFFF', fontSize: 10, fontWeight: 900, letterSpacing: '-.02em' }}>EX</span>
             </div>
             <div>
               <span style={{
                 fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif",
-                fontSize: 17, fontWeight: 800, color: '#1A1B3A', letterSpacing: '-0.025em'
+                fontSize: 17, fontWeight: 800, color: '#111111', letterSpacing: '-0.025em'
               }}>
-                EduTechEx<span style={{ color: '#5B4FDB' }}>OS</span>
+                EduTechEx<span style={{ color: '#4F46E5' }}>OS</span>
               </span>
               <span style={{
-                display: 'block', fontSize: 7, fontWeight: 700, letterSpacing: '.38em',
-                textTransform: 'uppercase', color: 'rgba(91,79,219,0.45)', marginTop: 1,
+                display: 'block', fontSize: 7, fontWeight: 700, letterSpacing: '.36em',
+                textTransform: 'uppercase', color: '#A3A3A3', marginTop: 1,
                 fontFamily: "'JetBrains Mono', monospace",
               }}>
                 Institutional OS
@@ -120,11 +111,11 @@ export default function LandingNav() {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-8">
-            <div style={{ height: 14, width: 1, background: 'rgba(26,27,58,0.18)' }} />
+            <div style={{ height: 14, width: 1, background: '#E5E5E5' }} />
             {navLinks.map(item => (
               <a key={item.label} href={item.href} className="nav-link-item">{item.label}</a>
             ))}
-            <div style={{ height: 14, width: 1, background: 'rgba(26,27,58,0.18)' }} />
+            <div style={{ height: 14, width: 1, background: '#E5E5E5' }} />
           </nav>
 
           {/* Right CTAs */}
@@ -133,7 +124,7 @@ export default function LandingNav() {
               Admin
             </Link>
             <Link href="/sign-up-login-screen?mode=user" className="nav-cta-ghost">
-              Sign In here
+              Sign In
             </Link>
             <Link href="/sign-up-login-screen?mode=signup" className="nav-cta-primary">
               Create Account
@@ -147,8 +138,8 @@ export default function LandingNav() {
               width: 40, height: 40,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               borderRadius: 8,
-              border: '1.5px solid rgba(91,79,219,0.15)',
-              background: mobileOpen ? 'rgba(91,79,219,0.06)' : 'transparent',
+              border: '1px solid #E5E5E5',
+              background: mobileOpen ? '#F5F5F5' : '#FFFFFF',
               cursor: 'pointer',
               transition: 'background .2s',
             }}
@@ -159,7 +150,7 @@ export default function LandingNav() {
               {[0, 1, 2].map(i => (
                 <span key={i} style={{
                   display: 'block', width: 18, height: 2, borderRadius: 2,
-                  background: '#5B4FDB',
+                  background: '#111111',
                   transition: 'all .3s',
                   transform:
                     mobileOpen && i === 0 ? 'rotate(45deg) translateY(6px)' :
@@ -176,7 +167,7 @@ export default function LandingNav() {
         {mobileOpen && (
           <div style={{
             background: 'rgba(255,255,255,0.98)',
-            borderTop: '1px solid rgba(26,27,58,0.14)',
+            borderTop: '1px solid #E5E5E5',
             padding: '16px 24px 24px',
             display: 'flex', flexDirection: 'column', gap: 4,
           }}>
@@ -190,7 +181,7 @@ export default function LandingNav() {
                 {item.label}
               </a>
             ))}
-            <div style={{ height: 1, background: 'rgba(26,27,58,0.14)', margin: '8px 0' }} />
+            <div style={{ height: 1, background: '#E5E5E5', margin: '8px 0' }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
               <div style={{ display: 'flex', gap: 10 }}>
                 <Link
