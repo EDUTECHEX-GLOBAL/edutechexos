@@ -1,7 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { sendBrevoEmail } from '@/app/actions/dbActions';
+import { getApiUser, unauthorized } from '@/lib/apiAuth';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const user = getApiUser(request);
+  if (!user) return unauthorized();
+
   try {
     const { to, subject, htmlContent } = await request.json();
     if (!to || !subject || !htmlContent) {

@@ -52,7 +52,7 @@ async function upsertPage(req, res) {
       page: {
         ...rest,
         id: _id,
-        isPrivate: updated.isPrivate !== false,
+        isPrivate: updated.isPrivate === true,
         createdAt: updated.createdAt ? updated.createdAt.toISOString() : new Date().toISOString(),
         updatedAt: updated.updatedAt ? updated.updatedAt.toISOString() : new Date().toISOString(),
       }

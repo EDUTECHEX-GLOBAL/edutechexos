@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AccessToken } from 'livekit-server-sdk';
+import { getApiUser, unauthorized } from '@/lib/apiAuth';
 
 export async function POST(req: NextRequest) {
+  const user = getApiUser(req);
+  if (!user) return unauthorized();
+
   const { roomName, participantName } = await req.json();
 
   const apiKey = process.env.LIVEKIT_API_KEY;

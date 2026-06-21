@@ -171,6 +171,14 @@ export async function POST(req: Request) {
   const { uiMessages, channelName, channelId, channelTranscript, accessibleChannels, userToken, userEmail } =
     await req.json();
 
+  // Validate JWT is present and structurally valid (edge-runtime compatible)
+  if (!userToken || String(userToken).startsWith('mock-jwt') || String(userToken).split('.').length !== 3) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const model = getModel();
   if (!model) {
     return new Response(JSON.stringify({ error: 'No AI API key configured' }), {

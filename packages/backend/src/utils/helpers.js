@@ -22,8 +22,6 @@ const revokedEmails = new Set();
 
 function getUserEmail(req) {
   if (req.user && req.user.email) return req.user.email.toLowerCase();
-  if (req.query.userEmail) return String(req.query.userEmail).toLowerCase();
-  if (req.body && req.body.userEmail) return String(req.body.userEmail).toLowerCase();
   return null;
 }
 

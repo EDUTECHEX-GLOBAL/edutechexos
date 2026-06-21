@@ -19,8 +19,9 @@ async function setPassword(req, res) {
       return res.status(400).json({ success: false, error: 'email and password are required.' });
     }
     const emailClean = String(email).trim().toLowerCase();
-    if (password.length < 4) {
-      return res.status(400).json({ success: false, error: 'Password must be at least 4 characters.' });
+    const pwStr = String(password);
+    if (pwStr.length < 8 || !/[A-Z]/.test(pwStr) || !/[0-9]/.test(pwStr) || !/[^A-Za-z0-9]/.test(pwStr)) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters with an uppercase letter, number, and special character.' });
     }
     if (VALID_ACCOUNTS.some((a) => a.email === emailClean)) {
       return res.status(409).json({ success: false, error: 'Cannot override a system account via this endpoint.' });
@@ -280,6 +281,7 @@ async function validateInvite(req, res) {
     if (!invite)       return res.status(404).json({ success: false, error: 'Invalid invite link.' });
     if (invite.used)   return res.status(410).json({ success: false, error: 'This invite has already been used.' });
     if (invite.expiresAt < new Date()) return res.status(410).json({ success: false, error: 'This invite link has expired. Ask the admin to resend.' });
+    if (revokedEmails.has(invite.email.toLowerCase())) return res.status(403).json({ success: false, error: 'This account has been revoked.' });
     res.json({ success: true, email: invite.email, name: invite.name, role: invite.role, expiresAt: invite.expiresAt.toISOString() });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
@@ -290,11 +292,15 @@ async function acceptInvite(req, res) {
   try {
     const { token, password } = req.body;
     if (!token || !password) return res.status(400).json({ success: false, error: 'token and password are required.' });
-    if (String(password).length < 8) return res.status(400).json({ success: false, error: 'Password must be at least 8 characters.' });
+    const pwStr = String(password);
+    if (pwStr.length < 8 || !/[A-Z]/.test(pwStr) || !/[0-9]/.test(pwStr) || !/[^A-Za-z0-9]/.test(pwStr)) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters with an uppercase letter, number, and special character.' });
+    }
     const invite = await InviteToken.findOne({ token: String(token) }).lean();
     if (!invite)       return res.status(404).json({ success: false, error: 'Invalid invite link.' });
     if (invite.used)   return res.status(410).json({ success: false, error: 'This invite has already been used.' });
     if (invite.expiresAt < new Date()) return res.status(410).json({ success: false, error: 'This invite link has expired. Ask the admin to resend.' });
+    if (revokedEmails.has(invite.email.toLowerCase())) return res.status(403).json({ success: false, error: 'This account has been revoked.' });
     const hashed = await bcrypt.hash(String(password), 12);
     await AccessRequest.findOneAndUpdate(
       { email: invite.email },

@@ -16,7 +16,6 @@ import {
   ClipboardList,
   Users,
 } from 'lucide-react';
-import { MOCK_TASKS } from '@/data/mockData';
 import { toast } from 'sonner';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { extractActionItems } from '@/app/actions/aiActions';
@@ -156,12 +155,13 @@ function getUserEmail(): string {
 
 export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
   const [activeTab, setActiveTab] = useState<'chat' | 'tasks'>('chat');
-  const [tasks, setTasks] = useState(MOCK_TASKS);
+  const [tasks, setTasks] = useState<Array<{ id: string; text: string; assignee: string; assigneeInitials: string; sourceChannel: string; timestamp: string; done: boolean }>>([]);
   const [inputValue, setInputValue] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const channelMessages = useDashboardStore((s) => s.messages[activeChannel] || []);
+  const addKanbanTask = useDashboardStore((s) => s.addKanbanTask);
   const transcriptRef = useRef('');
 
   // Keep transcript ref fresh
@@ -258,6 +258,9 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
           })
         );
         setTasks((prev) => [...newTasks, ...prev]);
+        newTasks.forEach((t) =>
+          addKanbanTask({ text: t.text, assignee: t.assignee, assigneeInitials: t.assigneeInitials, sourceChannel: t.sourceChannel, status: 'todo' })
+        );
         toast.success(`${newTasks.length} task${newTasks.length !== 1 ? 's' : ''} extracted`);
       } else {
         toast.error('Could not parse tasks from AI response.');

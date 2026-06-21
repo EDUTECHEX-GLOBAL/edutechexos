@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongoose';
 import KanbanTask from '@/models/KanbanTask';
-import { getApiUser, unauthorized } from '@/lib/apiAuth';
+import { getApiUser, unauthorized, forbidden } from '@/lib/apiAuth';
 
 export async function GET(req: NextRequest) {
   const user = getApiUser(req);
@@ -25,7 +25,11 @@ export async function POST(req: NextRequest) {
   try {
     await connectToDatabase();
     const body = await req.json();
-    if (!body.assigneeEmail) body.assigneeEmail = user.email;
+    if (!body.assigneeEmail) {
+      body.assigneeEmail = user.email;
+    } else if (body.assigneeEmail.toLowerCase() !== user.email.toLowerCase() && user.role !== 'Admin') {
+      return forbidden();
+    }
     const task = await KanbanTask.create(body);
     const { _id, __v, ...rest } = task.toObject();
     return NextResponse.json(

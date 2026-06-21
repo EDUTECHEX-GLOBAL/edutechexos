@@ -11,6 +11,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     await connectToDatabase();
     const body = await req.json();
+    const existing = await Message.findById(id).lean() as any;
+    if (existing?.senderEmail &&
+        existing.senderEmail.toLowerCase() !== user.email.toLowerCase() &&
+        user.role !== 'Admin') {
+      return forbidden();
+    }
     const updated = await Message.findByIdAndUpdate(
       id,
       { ...body, updatedAt: new Date() },
