@@ -186,8 +186,8 @@ export default function LoginForm({
     <>
       <style>{`
         .input-ivy:focus {
-          border-color: #4F46E5 !important;
-          box-shadow: 0 0 0 3px rgba(79,70,229,0.12) !important;
+          border-color: #D4AF37 !important;
+          box-shadow: 0 0 0 1px #D4AF37 !important;
           background: white !important;
           outline: none;
         }
@@ -196,16 +196,16 @@ export default function LoginForm({
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
         {/* Email */}
         <div className="space-y-2.5">
-          <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#111111]/80 ml-1">
+          <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">
             Institutional Email
           </label>
           <div className="relative group">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#111111]/30 group-focus-within:text-[#4F46E5] transition-colors" />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0A1128]/30 group-focus-within:text-[#D4AF37] transition-colors" />
             <input
               type="email"
               autoComplete="email"
               placeholder="email@institution.edu"
-              className={`input-ivy w-full pl-12 pr-4 py-4 text-sm text-[#111111] font-medium placeholder:text-[#111111]/20 ${errors.email ? 'border-red-300 bg-red-50/30' : ''}`}
+              className={`input-ivy w-full pl-12 pr-4 py-4 text-sm text-[#0A1128] font-medium placeholder:text-[#0A1128]/20 ${errors.email ? 'border-red-300 bg-red-50/30' : ''}`}
               style={{
                 ...inputIvyStyle,
                 borderColor: errors.email ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)',
@@ -227,7 +227,7 @@ export default function LoginForm({
         {/* Password */}
         <div className="space-y-2.5">
           <div className="flex justify-between items-center ml-1">
-            <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#111111]/80">
+            <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80">
               Security Key
             </label>
             <button
@@ -238,18 +238,18 @@ export default function LoginForm({
                 setForgotError('');
                 setForgotEmail('');
               }}
-              className="text-[10px] font-bold text-[#4F46E5] hover:underline transition-all"
+              className="text-[10px] font-bold text-[#D4AF37] hover:underline transition-all"
             >
               Forgot Key?
             </button>
           </div>
           <div className="relative group">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#111111]/30 group-focus-within:text-[#4F46E5] transition-colors" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0A1128]/30 group-focus-within:text-[#D4AF37] transition-colors" />
             <input
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               placeholder="••••••••••••"
-              className={`input-ivy w-full pl-12 pr-12 py-4 text-sm text-[#111111] font-medium placeholder:text-[#111111]/20 ${errors.password ? 'border-red-300 bg-red-50/30' : ''}`}
+              className={`input-ivy w-full pl-12 pr-12 py-4 text-sm text-[#0A1128] font-medium placeholder:text-[#0A1128]/20 ${errors.password ? 'border-red-300 bg-red-50/30' : ''}`}
               style={{
                 ...inputIvyStyle,
                 borderColor: errors.password ? 'rgba(248,113,113,0.6)' : 'rgba(10, 17, 40, 0.08)',
@@ -262,7 +262,7 @@ export default function LoginForm({
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#111111]/20 hover:text-[#111111]/60 transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#0A1128]/20 hover:text-[#0A1128]/60 transition-colors"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -278,7 +278,7 @@ export default function LoginForm({
           <button
             type="submit"
             disabled={isLoading}
-            className="group relative w-full bg-[#111111] text-[#4F46E5] py-5 font-black uppercase tracking-[0.3em] text-[11px] overflow-hidden transition-all hover:shadow-[0_0_32px_rgba(212,175,55,0.25)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#111111]/30 border border-[#111111]"
+            className="group relative w-full bg-[#0A1128] text-[#D4AF37] py-5 font-black uppercase tracking-[0.3em] text-[11px] overflow-hidden transition-all hover:shadow-[0_0_32px_rgba(212,175,55,0.25)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#0A1128]/30 border border-[#0A1128]"
           >
             <span className="relative z-10 flex items-center justify-center gap-2">
               {isLoading ? (
@@ -297,18 +297,18 @@ export default function LoginForm({
               )}
             </span>
             {/* Gold shimmer sweep on hover */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#4F46E5]/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#D4AF37]/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
           </button>
         </div>
 
         {authMode === 'user' && (
           <div className="text-center pt-4">
-            <p className="text-xs text-[#111111]/40">
+            <p className="text-xs text-[#0A1128]/40">
               New to the institution?
               <button
                 type="button"
                 onClick={onSwitchToSignup}
-                className="text-[#111111] font-bold hover:text-[#4F46E5] underline underline-offset-4 transition-colors ml-1"
+                className="text-[#0A1128] font-bold hover:text-[#D4AF37] underline underline-offset-4 transition-colors ml-1"
               >
                 Request Access
               </button>
@@ -319,18 +319,18 @@ export default function LoginForm({
 
       {/* Forgot Password Modal Refactored for Ivy Style */}
       {forgotOpen && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#111111]/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#0A1128]/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl border border-white/40 bg-white/80 backdrop-blur-xl shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between border-b border-[#111111]/5 px-8 py-6">
+            <div className="flex items-center justify-between border-b border-[#0A1128]/5 px-8 py-6">
               <div>
-                <h3 className="font-extrabold tracking-tight text-2xl text-[#111111]">
+                <h3 className="font-serif text-2xl text-[#0A1128]">
                   {forgotStep === 1 ? 'Reset Security Key' : 'Verify Key'}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setForgotOpen(false)}
-                className="text-[#111111]/30 hover:text-[#111111] transition-colors"
+                className="text-[#0A1128]/30 hover:text-[#0A1128] transition-colors"
               >
                 <X size={20} />
               </button>
@@ -381,7 +381,7 @@ export default function LoginForm({
                   className="space-y-6"
                 >
                   <div className="space-y-2.5">
-                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#111111]/80 ml-1">
+                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">
                       Email address
                     </label>
                     <input
@@ -389,7 +389,7 @@ export default function LoginForm({
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
                       placeholder="you@institution.edu"
-                      className="input-ivy w-full px-4 py-4 text-sm text-[#111111] font-medium"
+                      className="input-ivy w-full px-4 py-4 text-sm text-[#0A1128] font-medium"
                       style={inputIvyStyle}
                       autoFocus
                     />
@@ -397,7 +397,7 @@ export default function LoginForm({
                   <button
                     type="submit"
                     disabled={forgotLoading}
-                    className="w-full bg-[#111111] text-white py-4 font-black uppercase tracking-[0.2em] text-[10px] rounded-xs transition-all hover:bg-[#4F46E5] hover:text-[#111111]"
+                    className="w-full bg-[#0A1128] text-white py-4 font-black uppercase tracking-[0.2em] text-[10px] rounded-xs transition-all hover:bg-[#D4AF37] hover:text-[#0A1128]"
                   >
                     {forgotLoading ? (
                       <span className="flex items-center justify-center gap-2">
@@ -454,20 +454,20 @@ export default function LoginForm({
                   className="space-y-6"
                 >
                   {forgotPreviewUrl && (
-                    <div className="rounded-lg border border-[#4F46E5]/20 bg-[#4F46E5]/5 px-4 py-2.5 text-xs text-[#111111]">
-                      <span className="font-semibold text-[#4F46E5]">Dev mode:</span>{' '}
+                    <div className="rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/5 px-4 py-2.5 text-xs text-[#0A1128]">
+                      <span className="font-semibold text-[#D4AF37]">Dev mode:</span>{' '}
                       <a
                         href={forgotPreviewUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="underline text-[#4F46E5]"
+                        className="underline text-[#D4AF37]"
                       >
                         Preview email →
                       </a>
                     </div>
                   )}
                   <div className="space-y-2.5">
-                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#111111]/80 ml-1">
+                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">
                       6-Digit Code
                     </label>
                     <input
@@ -477,13 +477,13 @@ export default function LoginForm({
                       value={forgotCode}
                       onChange={(e) => setForgotCode(e.target.value.replace(/\D/g, ''))}
                       placeholder="123456"
-                      className="input-ivy w-full px-4 py-4 text-center font-mono text-xl tracking-[0.4em] text-[#111111]"
+                      className="input-ivy w-full px-4 py-4 text-center font-mono text-xl tracking-[0.4em] text-[#0A1128]"
                       style={inputIvyStyle}
                       autoFocus
                     />
                   </div>
                   <div className="space-y-2.5">
-                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#111111]/80 ml-1">
+                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#0A1128]/80 ml-1">
                       New Security Key
                     </label>
                     <div className="relative">
@@ -492,13 +492,13 @@ export default function LoginForm({
                         value={forgotNewPass}
                         onChange={(e) => setForgotNewPass(e.target.value)}
                         placeholder="Min. 6 characters"
-                        className="input-ivy w-full pl-4 pr-12 py-4 text-sm text-[#111111] font-medium"
+                        className="input-ivy w-full pl-4 pr-12 py-4 text-sm text-[#0A1128] font-medium"
                         style={inputIvyStyle}
                       />
                       <button
                         type="button"
                         onClick={() => setForgotShowPass((v) => !v)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[#111111]/20 hover:text-[#111111]/60"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[#0A1128]/20 hover:text-[#0A1128]/60"
                       >
                         {forgotShowPass ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
@@ -511,14 +511,14 @@ export default function LoginForm({
                         setForgotStep(1);
                         setForgotError('');
                       }}
-                      className="flex-1 bg-transparent border border-[#111111]/10 text-[#111111] py-4 font-black uppercase tracking-[0.2em] text-[10px] rounded-sm hover:bg-[#111111]/5 transition-all"
+                      className="flex-1 bg-transparent border border-[#0A1128]/10 text-[#0A1128] py-4 font-black uppercase tracking-[0.2em] text-[10px] rounded-sm hover:bg-[#0A1128]/5 transition-all"
                     >
                       ← Back
                     </button>
                     <button
                       type="submit"
                       disabled={forgotLoading}
-                      className="flex-1 bg-[#111111] text-white py-4 font-black uppercase tracking-[0.2em] text-[10px] rounded-sm transition-all hover:bg-[#4F46E5] hover:text-[#111111]"
+                      className="flex-1 bg-[#0A1128] text-white py-4 font-black uppercase tracking-[0.2em] text-[10px] rounded-sm transition-all hover:bg-[#D4AF37] hover:text-[#0A1128]"
                     >
                       {forgotLoading ? (
                         <span className="flex items-center justify-center gap-2">

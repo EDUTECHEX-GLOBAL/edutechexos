@@ -116,7 +116,7 @@ export default function WidgetPage() {
         .prose-widget p:last-child { margin-bottom: 0; }
         .prose-widget strong { font-weight: 650; }
         .prose-widget code {
-          background: rgba(79,70,229,0.08);
+          background: rgba(62,74,137,0.08);
           border-radius: 4px;
           padding: 1px 5px;
           font-size: 12px;
@@ -132,14 +132,14 @@ export default function WidgetPage() {
           display: 'flex',
           flexDirection: 'column',
           fontFamily: "'Inter', system-ui, sans-serif",
-          background: '#E9EBFA',
+          background: '#F2F0EC',
           overflow: 'hidden',
         }}
       >
         {/* ── Header ──────────────────────────────────────────────────── */}
         <div
           style={{
-            background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)',
+            background: 'linear-gradient(135deg, #191E2F 0%, #191E2F 45%, #3E4A89 100%)',
             backgroundSize: '200% 200%',
             animation: 'gradientShift 8s ease infinite',
             padding: '14px 16px',
@@ -166,9 +166,9 @@ export default function WidgetPage() {
           <motion.div
             animate={{
               boxShadow: [
-                '0 0 0 0px rgba(79,70,229,0)',
-                '0 0 0 8px rgba(79,70,229,0.20)',
-                '0 0 0 0px rgba(79,70,229,0)',
+                '0 0 0 0px rgba(62,74,137,0)',
+                '0 0 0 8px rgba(62,74,137,0.20)',
+                '0 0 0 0px rgba(62,74,137,0)',
               ],
             }}
             transition={{ repeat: Infinity, duration: 2.8, ease: 'easeInOut' }}
@@ -177,7 +177,7 @@ export default function WidgetPage() {
               height: 42,
               borderRadius: '50%',
               background: 'rgba(255,255,255,0.10)',
-              border: '1.5px solid rgba(79,70,229,0.35)',
+              border: '1.5px solid rgba(62,74,137,0.35)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -186,7 +186,7 @@ export default function WidgetPage() {
               zIndex: 1,
             }}
           >
-            <Sparkles size={20} color="#A5B4FC" />
+            <Sparkles size={20} color="#9BA6D3" />
           </motion.div>
 
           <div style={{ position: 'relative', zIndex: 1 }}>
@@ -201,7 +201,7 @@ export default function WidgetPage() {
                   width: 6,
                   height: 6,
                   borderRadius: '50%',
-                  background: '#A5B4FC',
+                  background: '#9BA6D3',
                   flexShrink: 0,
                 }}
               />
@@ -266,15 +266,15 @@ export default function WidgetPage() {
                       width: 28,
                       height: 28,
                       borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #4F46E5, #3730A3)',
+                      background: 'linear-gradient(135deg, #191E2F, #3E4A89)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
-                      boxShadow: '0 1px 4px rgba(79,70,229,0.25)',
+                      boxShadow: '0 1px 4px rgba(62,74,137,0.25)',
                     }}
                   >
-                    <Sparkles size={13} color="#A5B4FC" />
+                    <Sparkles size={13} color="#74c69d" />
                   </div>
                 )}
 
@@ -284,13 +284,13 @@ export default function WidgetPage() {
                     maxWidth: '76%',
                     padding: '10px 13px',
                     borderRadius: msg.role === 'user' ? '16px 16px 3px 16px' : '16px 16px 16px 3px',
-                    background: msg.role === 'user' ? '#111111' : '#ffffff',
+                    background: msg.role === 'user' ? '#191E2F' : '#ffffff',
                     color: msg.role === 'user' ? '#ffffff' : '#191919',
                     fontSize: 13.5,
                     lineHeight: 1.52,
                     boxShadow:
                       msg.role === 'user'
-                        ? '0 2px 10px rgba(79,70,229,0.28)'
+                        ? '0 2px 10px rgba(62,74,137,0.28)'
                         : '0 1px 4px rgba(0,0,0,0.07)',
                     wordBreak: 'break-word',
                   }}
@@ -322,15 +322,15 @@ export default function WidgetPage() {
                     width: 28,
                     height: 28,
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #111111, #4F46E5)',
+                    background: 'linear-gradient(135deg, #191E2F, #3E4A89)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
-                    boxShadow: '0 1px 4px rgba(79,70,229,0.25)',
+                    boxShadow: '0 1px 4px rgba(62,74,137,0.25)',
                   }}
                 >
-                  <Sparkles size={13} color="#A5B4FC" />
+                  <Sparkles size={13} color="#74c69d" />
                 </div>
                 <div
                   style={{
@@ -350,7 +350,7 @@ export default function WidgetPage() {
                         width: 6,
                         height: 6,
                         borderRadius: '50%',
-                        background: '#A5B4FC',
+                        background: '#9BA6D3',
                       }}
                       animate={{ y: [0, -6, 0], opacity: [0.4, 1, 0.4] }}
                       transition={{
@@ -394,9 +394,9 @@ export default function WidgetPage() {
                       gap: 5,
                       padding: '6px 11px',
                       borderRadius: 20,
-                      border: '1.5px solid #E5E5E5',
+                      border: '1.5px solid #E0DDE8',
                       background: 'white',
-                      color: '#111111',
+                      color: '#1E2636',
                       fontSize: 12,
                       fontWeight: 500,
                       cursor: 'pointer',
@@ -404,10 +404,10 @@ export default function WidgetPage() {
                       transition: 'border-color 0.15s',
                     }}
                     onMouseEnter={(e) =>
-                      ((e.currentTarget as HTMLButtonElement).style.borderColor = '#4F46E5')
+                      ((e.currentTarget as HTMLButtonElement).style.borderColor = '#3E4A89')
                     }
                     onMouseLeave={(e) =>
-                      ((e.currentTarget as HTMLButtonElement).style.borderColor = '#E5E5E5')
+                      ((e.currentTarget as HTMLButtonElement).style.borderColor = '#E0DDE8')
                     }
                   >
                     <Icon size={12} />
@@ -425,7 +425,7 @@ export default function WidgetPage() {
         <form
           onSubmit={handleSubmit}
           style={{
-            borderTop: '1px solid #E5E5E5',
+            borderTop: '1px solid #E0DDE8',
             padding: '10px 12px',
             background: '#ffffff',
             display: 'flex',
@@ -443,23 +443,23 @@ export default function WidgetPage() {
             autoComplete="off"
             style={{
               flex: 1,
-              border: '1.5px solid #E5E5E5',
+              border: '1.5px solid #E0DDE8',
               borderRadius: 12,
               padding: '9px 13px',
               fontSize: 13.5,
               outline: 'none',
               fontFamily: 'inherit',
               color: '#191919',
-              background: '#E9EBFA',
+              background: '#F2F0EC',
               transition: 'border-color 0.15s, background 0.15s',
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = '#4F46E5';
+              e.currentTarget.style.borderColor = '#3E4A89';
               e.currentTarget.style.background = '#ffffff';
             }}
             onBlur={(e) => {
-              e.currentTarget.style.borderColor = '#E5E5E5';
-              e.currentTarget.style.background = '#E9EBFA';
+              e.currentTarget.style.borderColor = '#E0DDE8';
+              e.currentTarget.style.background = '#F2F0EC';
             }}
           />
 
@@ -479,7 +479,7 @@ export default function WidgetPage() {
               justifyContent: 'center',
               flexShrink: 0,
               transition: 'background 0.18s',
-              background: input.trim() && !thinking ? '#111111' : '#E5E5E5',
+              background: input.trim() && !thinking ? '#191E2F' : '#E0DDE8',
               color: input.trim() && !thinking ? '#ffffff' : '#a3a3a0',
             }}
           >
@@ -495,13 +495,13 @@ export default function WidgetPage() {
             fontSize: 10,
             color: '#b0afac',
             background: '#ffffff',
-            borderTop: '1px solid #F5F5F5',
+            borderTop: '1px solid #FAF8F5',
             flexShrink: 0,
             letterSpacing: '0.02em',
           }}
         >
           <span style={{ color: '#c0bfbc' }}>Powered by </span>
-          <span style={{ color: '#4F46E5', fontWeight: 600 }}>EduTechExOS</span>
+          <span style={{ color: '#3E4A89', fontWeight: 600 }}>EduTechExOS</span>
         </div>
       </div>
     </>
