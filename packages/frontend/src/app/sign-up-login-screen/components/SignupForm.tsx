@@ -9,7 +9,7 @@ type SignupFormData = { name: string; email: string; role: string };
 const roles = ['Developer', 'Designer', 'Manager', 'Other'];
 const ACCESS_REQUESTS_KEY = 'edutechex_access_requests';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
-const ALLOWED_DOMAIN = 'edutechex.com';
+const ALLOWED_DOMAIN = 'edutechex.in';
 
 type AccessRequest = SignupFormData & {
   id: string;
@@ -34,14 +34,14 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
     if (!submittedEmail) return;
     setIsResending(true);
     try {
-      const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+      const res = await fetch(`${API_BASE}/api/auth/resend-confirmation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: submittedEmail }),
       });
       const data = await res.json();
       if (data.success) {
-        toast.success('Password email resent! Check your inbox.', { duration: 6000 });
+        toast.success('Confirmation email resent! Check your inbox.', { duration: 6000 });
       } else {
         toast.error(data.error ?? 'Failed to resend. Please try again.');
       }
@@ -96,7 +96,7 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
           };
           localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify([localEntry, ...localRequests]));
         }
-        toast.success('Account created! Check your email for your temporary password.', { duration: 7000 });
+        toast.success('Access request submitted! Check your email for a confirmation.', { duration: 7000 });
         setSubmittedEmail(emailClean);
         setSubmitted(true);
         reset();
@@ -132,13 +132,13 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
         <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(79,70,229,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
           <Mail size={24} style={{ color: '#4f46e5' }} />
         </div>
-        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0A1128', marginBottom: 8 }}>Check your inbox</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0A1128', marginBottom: 8 }}>Request submitted!</h2>
         <p style={{ fontSize: 13, color: 'rgba(10,17,40,0.55)', marginBottom: 6, lineHeight: 1.6 }}>
-          A temporary password has been sent to
+          A confirmation email has been sent to
         </p>
         <p style={{ fontSize: 14, fontWeight: 700, color: '#4f46e5', marginBottom: 28 }}>{submittedEmail}</p>
         <p style={{ fontSize: 12, color: 'rgba(10,17,40,0.4)', marginBottom: 24 }}>
-          Use that password to sign in, then change it from your profile settings.
+          An admin will review your request. You&apos;ll receive a separate email with your login credentials once approved.
         </p>
 
         <button
@@ -188,7 +188,7 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
           }}
         >
           {isResending ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
-          {isResending ? 'Resending…' : "Didn't receive it? Resend password"}
+          {isResending ? 'Resending…' : "Didn't receive it? Resend confirmation"}
         </button>
       </div>
     );

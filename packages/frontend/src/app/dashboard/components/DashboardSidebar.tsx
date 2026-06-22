@@ -577,7 +577,17 @@ export default function DashboardSidebar({
             </button>
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
+                try {
+                  const raw = localStorage.getItem('edutechex_token');
+                  const token = raw ? JSON.parse(raw).token : null;
+                  if (token) {
+                    await fetch(`${API_BASE}/api/auth/logout`, {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}` },
+                    }).catch(() => {});
+                  }
+                } catch { /* ignore */ }
                 localStorage.removeItem('edutechex_token');
                 localStorage.removeItem('edutechex_access_requests');
                 window.location.href = '/sign-up-login-screen';

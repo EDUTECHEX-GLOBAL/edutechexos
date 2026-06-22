@@ -16,6 +16,10 @@ router.use('/api/notifications', globalLimiter, require('./notificationRoutes'))
 router.use('/api/webhooks', globalLimiter, require('./webhookRoutes'));
 router.use('/api/channels', globalLimiter, require('./channelRoutes'));
 router.use('/api/activity', globalLimiter, require('./activityRoutes'));
+router.use('/api/availability', globalLimiter, require('./availabilityRoutes'));
+router.use('/api/settings', globalLimiter, require('./settingsRoutes'));
+router.use('/api/pinned', globalLimiter, require('./pinnedRoutes'));
+router.use('/api/keys', globalLimiter, require('./keysRoutes'));
 router.use('/api/leaves', globalLimiter, require('./leaveRoutes'));
 router.use('/api/access-requests', globalLimiter, require('./accessRequestRoutes'));
 router.use('/api/admin', globalLimiter, require('./adminRoutes'));
@@ -24,7 +28,7 @@ router.use('/api/digest', globalLimiter, require('./digestRoutes'));
 
 router.use('/api', globalLimiter, require('./meetingRoutes'));
 
-router.get('/api/search', apiLimiter, authMiddleware, search);
+router.get('/api/search', apiLimiter, authMiddleware, requireAuth, search);
 router.get('/api/og', apiLimiter, authMiddleware, requireAuth, ogLinkPreview);
 
 router.post('/webhook/github/:token', express.json({ type: '*/*' }), githubReceiver);

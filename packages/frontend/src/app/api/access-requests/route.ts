@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const allowedDomain = process.env.ALLOWED_DOMAIN ?? 'edutechex.com';
+    const allowedDomain = process.env.ALLOWED_DOMAIN ?? 'edutechex.in';
     const emailClean = email.trim().toLowerCase();
     if (!emailClean.endsWith(`@${allowedDomain}`)) {
       return NextResponse.json(

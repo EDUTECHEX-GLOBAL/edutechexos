@@ -12,7 +12,7 @@ router.get('/meeting-access/:messageId', authMiddleware, checkMeetingAccess);
 router.patch('/meeting-access/:messageId/grant', authMiddleware, grantMeetingAccess);
 
 router.post('/meetings/invite', authMiddleware, sendMeetingInvite);
-router.get('/meetings/code/:code', lookupMeetingByCode);
+router.get('/meetings/code/:code', authMiddleware, requireAuth, lookupMeetingByCode);
 
 router.post('/media', authMiddleware, registerMedia);
 router.get('/media/:id', authMiddleware, getMedia);

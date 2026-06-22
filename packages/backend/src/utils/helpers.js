@@ -14,7 +14,6 @@ const DEFAULT_WORKSPACE_CHANNELS = [
 
 const ALLOWED_ORIGINS = [
   'https://edutechexos.vercel.app',
-  /\.vercel\.app$/,
   /^http:\/\/localhost(:\d+)?$/,
 ];
 

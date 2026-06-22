@@ -110,14 +110,15 @@ async function githubReceiver(req, res) {
     const hook = await Webhook.findOne({ token: req.params.token, type: 'github', active: true }).lean();
     if (!hook) return res.status(404).json({ error: 'Webhook not found or inactive' });
 
-    if (hook.secret) {
-      const sig = req.headers['x-hub-signature-256'] || '';
-      const expected = 'sha256=' + crypto.createHmac('sha256', hook.secret).update(JSON.stringify(req.body)).digest('hex');
-      const sigBuf = Buffer.from(sig);
-      const expBuf = Buffer.from(expected);
-      const valid = sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf);
-      if (!valid) return res.status(401).json({ error: 'Invalid signature' });
+    if (!hook.secret) {
+      return res.status(400).json({ error: 'Webhook secret not configured. Set a secret in webhook settings.' });
     }
+    const sig = req.headers['x-hub-signature-256'] || '';
+    const expected = 'sha256=' + crypto.createHmac('sha256', hook.secret).update(JSON.stringify(req.body)).digest('hex');
+    const sigBuf = Buffer.from(sig);
+    const expBuf = Buffer.from(expected);
+    const valid = sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf);
+    if (!valid) return res.status(401).json({ error: 'Invalid signature' });
 
     const event   = req.headers['x-github-event'] || 'push';
     const payload = req.body;
@@ -166,7 +167,12 @@ async function genericReceiver(req, res) {
     if (!hook) return res.status(404).json({ error: 'Webhook not found or inactive' });
 
     const { text, title } = req.body;
-    if (!text) return res.status(400).json({ error: '`text` field is required in payload' });
+    if (!text || typeof text !== 'string' || text.length > 10000) {
+      return res.status(400).json({ error: '`text` is required and must be under 10000 characters' });
+    }
+    if (title && (typeof title !== 'string' || title.length > 500)) {
+      return res.status(400).json({ error: '`title` must be under 500 characters' });
+    }
 
     const message = title ? `**${title}**\n${text}` : text;
     await Webhook.findByIdAndUpdate(hook._id, { lastUsed: new Date() });

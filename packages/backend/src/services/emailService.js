@@ -56,30 +56,21 @@ async function sendBrevoEmail({ to, bcc, subject, html }) {
       });
     }
 
-    const postData = JSON.stringify(payload);
-    const https = require('https');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
 
-    const apiResult = await new Promise((resolve, reject) => {
-      const req = https.request('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          'api-key': process.env.BREVO_API_KEY,
-          'content-type': 'application/json',
-          'content-length': Buffer.byteLength(postData)
-        }
-      }, (res) => {
-        let data = '';
-        res.on('data', chunk => { data += chunk; });
-        res.on('end', () => {
-          resolve({ statusCode: res.statusCode, body: data });
-        });
-      });
+    const rawResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': process.env.BREVO_API_KEY,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timer));
 
-      req.on('error', err => reject(err));
-      req.write(postData);
-      req.end();
-    });
+    const apiResult = { statusCode: rawResponse.status, body: await rawResponse.text() };
 
     let parsedBody;
     try { parsedBody = JSON.parse(apiResult.body); } catch (_) { parsedBody = null; }

@@ -51,10 +51,27 @@ const corsOptions = {
 };
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '20mb' }));
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
+  const { getConnectionStatus } = require('./src/config/database');
+  const db = getConnectionStatus();
+  const readyStateLabel = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+  res.json({
+    status: 'ok',
+    time: new Date().toISOString(),
+    db: {
+      connected: db.connected,
+      state: readyStateLabel[db.readyState] ?? db.readyState,
+      lastError: db.lastError ?? null,
+    },
+    env: {
+      MONGODB_URI: process.env.MONGODB_URI ? 'SET' : 'MISSING',
+      JWT_SECRET: process.env.JWT_SECRET ? 'SET' : 'MISSING',
+      BREVO_API_KEY: process.env.BREVO_API_KEY ? 'SET' : 'MISSING',
+      INTERNAL_API_SECRET: process.env.INTERNAL_API_SECRET ? 'SET' : 'MISSING',
+    },
+  });
 });
 
 connectDatabase();

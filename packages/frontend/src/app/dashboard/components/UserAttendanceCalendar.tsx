@@ -32,7 +32,7 @@ export default function UserAttendanceCalendar() {
     try { token = JSON.parse(raw!).token; } catch { return; }
     if (!token) return;
 
-    fetch(`${API_BASE}/api/my-attendance`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API_BASE}/api/activity/my-attendance`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then((data: { success: boolean; dates?: string[] } | null) => {
         if (data?.success && Array.isArray(data.dates)) setLoginDates(data.dates);

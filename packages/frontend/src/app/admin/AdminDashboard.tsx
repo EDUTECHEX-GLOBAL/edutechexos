@@ -185,7 +185,7 @@ export default function AdminPage() {
     setAuditLoading(true);
     try {
       const { token } = JSON.parse(raw);
-      const r = await fetch(`${API_BASE}/api/audit-log?limit=200`, {
+      const r = await fetch(`${API_BASE}/api/admin/audit-log?limit=200`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await r.json();
@@ -1706,6 +1706,39 @@ export default function AdminPage() {
                               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#fff'; }}
                             >
                               <X size={12} />
+                            </button>
+
+                            {/* Remove user permanently */}
+                            <button
+                              type="button"
+                              title="Remove user permanently"
+                              onClick={async () => {
+                                if (!confirm(`Permanently remove ${request.name} from the system? This cannot be undone.`)) return;
+                                const token = getAdminToken();
+                                try {
+                                  const res = await fetch(`${API_BASE}/api/access-requests/${request.id}`, {
+                                    method: 'DELETE',
+                                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                                  });
+                                  const data = await res.json().catch(() => ({}));
+                                  if (res.ok && data.success) {
+                                    const next = accessRequests.filter(r => r.id !== request.id);
+                                    setAccessRequests(next);
+                                    localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify(next));
+                                    if (viewingRequest?.id === request.id) setViewingRequest(null);
+                                    toast.success(`${request.name} permanently removed.`);
+                                  } else {
+                                    toast.error(data.error ?? 'Failed to remove user.');
+                                  }
+                                } catch {
+                                  toast.error('Could not reach server.');
+                                }
+                              }}
+                              style={{ width: 30, height: 30, borderRadius: 8, border: '1.5px solid rgba(91,79,219,0.20)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--a-rose)', transition: 'all .15s', flexShrink: 0 }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.08)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.35)'; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#fff'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.20)'; }}
+                            >
+                              <Trash2 size={12} />
                             </button>
                           </div>
                         </div>

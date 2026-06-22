@@ -179,6 +179,9 @@ async function changePassword(req, res) {
     if (String(newPassword).length < 8) {
       return res.status(400).json({ success: false, error: 'New password must be at least 8 characters.' });
     }
+    if (!/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      return res.status(400).json({ success: false, error: 'Password must contain at least one uppercase letter and one number.' });
+    }
 
     const request = await AccessRequest.findOne({ email: emailClean }).lean();
     if (!request) {
@@ -198,4 +201,88 @@ async function changePassword(req, res) {
   }
 }
 
-module.exports = { login, forgotPassword, resetPassword, changePassword };
+async function resendConfirmation(req, res) {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, error: 'Email is required.' });
+    const emailClean = String(email).trim().toLowerCase();
+
+    const { sendBrevoEmail } = require('../services/emailService');
+    const request = await AccessRequest.findOne({ email: emailClean }).lean();
+    if (!request) {
+      return res.json({ success: true });
+    }
+    if (request.status === 'approved') {
+      return res.json({ success: true });
+    }
+
+    const appUrl = process.env.APP_URL || 'https://edutechexos.vercel.app';
+    sendBrevoEmail({
+      to: [{ email: emailClean, name: request.name }],
+      subject: 'EduTechExOS — Access Request Received (reminder)',
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#FAF8F5;border-radius:12px;">
+          <div style="background:linear-gradient(135deg,#191E2F,#252D45);border-radius:10px;padding:24px;text-align:center;margin-bottom:24px;">
+            <h1 style="color:#fff;margin:0;font-size:22px;">EduTechExOS</h1>
+          </div>
+          <h2 style="color:#1E2636;font-size:18px;margin:0 0 12px;">Hi ${request.name}, your request is still pending.</h2>
+          <p style="color:#4A5578;font-size:14px;line-height:1.6;margin:0 0 16px;">
+            Your access request to <strong>EduTechExOS</strong> is awaiting admin review. You'll receive a separate email with your login credentials once approved.
+          </p>
+          <p style="color:#9BA6D3;font-size:12px;">If you don't hear back within 24 hours, contact your workspace admin directly.</p>
+          <hr style="border:none;border-top:1px solid rgba(62,74,137,0.10);margin:24px 0;" />
+          <p style="color:#B0B8D1;font-size:11px;text-align:center;margin:0;">EduTechExOS - Powered by EduTechEx</p>
+        </div>`,
+    }).catch((err) => console.error('[email] resend-confirmation failed:', err));
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[resend-confirmation]', err);
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+async function logout(req, res) {
+  try {
+    const email = req.user?.email;
+    if (!email) return res.json({ success: true });
+
+    const emailClean = email.toLowerCase();
+    const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const logoutAt = new Date();
+
+    const event = await LoginEvent.findOne({ email: emailClean, dateStr }).lean();
+    if (event && event.loginAt) {
+      const hoursWorked = (logoutAt - new Date(event.loginAt)) / (1000 * 60 * 60);
+
+      const Leave = require('../models/Leave');
+      const approvedLeave = await Leave.findOne({
+        email: emailClean,
+        status: 'approved',
+        startDate: { $lte: dateStr },
+        $or: [{ endDate: { $gte: dateStr } }, { endDate: '' }, { endDate: null }],
+      }).lean();
+
+      let attendance;
+      if (approvedLeave) {
+        attendance = 'absent';
+      } else if (hoursWorked >= 8) {
+        attendance = 'full';
+      } else {
+        attendance = 'half';
+      }
+
+      await LoginEvent.findOneAndUpdate(
+        { email: emailClean, dateStr },
+        { $set: { logoutAt, hoursWorked: Math.round(hoursWorked * 100) / 100, attendance } }
+      );
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[logout]', err);
+    res.json({ success: true });
+  }
+}
+
+module.exports = { login, forgotPassword, resetPassword, changePassword, resendConfirmation, logout };

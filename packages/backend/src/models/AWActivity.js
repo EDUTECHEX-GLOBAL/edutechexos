@@ -10,6 +10,10 @@ const AWActivitySchema = new mongoose.Schema({
   totalActiveMinutes: { type: Number, default: 0 },
   totalAfkMinutes:    { type: Number, default: 0 },
   appBreakdown:       [{ app: String, minutes: Number }],
+  // aw-watcher-web fields
+  currentUrl:         { type: String, default: '' },
+  currentPageTitle:   { type: String, default: '' },
+  webBreakdown:       [{ domain: String, minutes: Number, title: String }],
   lastSync:           { type: Date, default: Date.now },
 }, { timestamps: true });
 AWActivitySchema.index({ email: 1, dateStr: 1 }, { unique: true });

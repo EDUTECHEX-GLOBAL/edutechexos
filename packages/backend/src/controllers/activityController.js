@@ -71,7 +71,7 @@ async function getHistory(req, res) {
     }
     const istOffset = 5.5 * 60 * 60 * 1000;
     const todayStr  = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
-    const dateStr   = req.query.date || todayStr;
+    const dateStr   = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date) ? req.query.date : todayStr;
     const sessions = await ActivitySession.find({ dateStr }).sort({ totalMinutes: -1 }).lean();
     const rows = sessions.map((s) => ({
       email:           s.email,
@@ -134,24 +134,40 @@ async function awSync(req, res) {
     if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized.' });
     const email = req.user.email.toLowerCase();
     const name  = req.user.name || '';
-    const { currentApp, currentTitle, isAfk, totalActiveMinutes, totalAfkMinutes, appBreakdown } = req.body;
+    const {
+      currentApp, currentTitle, isAfk,
+      totalActiveMinutes, totalAfkMinutes,
+      appBreakdown,
+      currentUrl, currentPageTitle, webBreakdown,
+    } = req.body;
     const istOffset = 5.5 * 60 * 60 * 1000;
     const dateStr = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
     await AWActivity.findOneAndUpdate(
       { email, dateStr },
       {
         $set: {
-          name, currentApp: currentApp || '', currentTitle: currentTitle || '',
-          isAfk: isAfk ?? false, totalActiveMinutes: totalActiveMinutes || 0,
-          totalAfkMinutes: totalAfkMinutes || 0,
-          appBreakdown: Array.isArray(appBreakdown) ? appBreakdown.slice(0, 15) : [],
+          name,
+          currentApp:       currentApp       || '',
+          currentTitle:     currentTitle     || '',
+          isAfk:            isAfk            ?? false,
+          totalActiveMinutes: totalActiveMinutes || 0,
+          totalAfkMinutes:  totalAfkMinutes  || 0,
+          appBreakdown:     Array.isArray(appBreakdown)  ? appBreakdown.slice(0, 15)  : [],
+          currentUrl:       currentUrl       || '',
+          currentPageTitle: currentPageTitle || '',
+          webBreakdown:     Array.isArray(webBreakdown)  ? webBreakdown.slice(0, 20)  : [],
           lastSync: new Date(),
         },
       },
       { upsert: true, new: true }
     );
     const io = req.app.get('io');
-    if (io) io.emit('aw_sync', { email, currentApp: currentApp || '', isAfk: isAfk ?? false });
+    if (io) io.emit('aw_sync', {
+      email,
+      currentApp:  currentApp  || '',
+      currentUrl:  currentUrl  || '',
+      isAfk:       isAfk       ?? false,
+    });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
@@ -191,4 +207,92 @@ async function logMessage(req, res) {
   }
 }
 
-module.exports = { heartbeat, getLive, getHistory, getStats, awSync, getAw, logMessage };
+async function getLoginHistory(req, res) {
+  try {
+    if (!req.user || req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Admin only.' });
+    }
+    const events = await LoginEvent.find({}).sort({ loginAt: -1 }).lean();
+
+    const history = {};
+    const attendance = {};
+    for (const e of events) {
+      const email = e.email;
+      if (!history[email]) history[email] = [];
+      if (!history[email].includes(e.dateStr)) history[email].push(e.dateStr);
+      if (!attendance[email]) attendance[email] = {};
+      if (e.attendance) attendance[email][e.dateStr] = e.attendance;
+    }
+
+    res.json({ success: true, history, attendance });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+async function getAttendance(req, res) {
+  try {
+    if (!req.user || req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Admin only.' });
+    }
+    const { date } = req.query;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ success: false, error: 'date query param required (YYYY-MM-DD).' });
+    }
+
+    const Leave = require('../models/Leave');
+    const [events, leaves] = await Promise.all([
+      LoginEvent.find({ dateStr: date }).lean(),
+      Leave.find({ status: 'approved', startDate: { $lte: date } }).lean(),
+    ]);
+
+    const approvedLeaveEmails = new Set(
+      leaves
+        .filter(l => !l.endDate || l.endDate >= date)
+        .map(l => l.email.toLowerCase())
+    );
+
+    const records = events.map(e => {
+      let attendance = e.attendance;
+      if (!attendance) {
+        if (approvedLeaveEmails.has(e.email.toLowerCase())) {
+          attendance = 'absent';
+        } else if (e.logoutAt) {
+          const hrs = (new Date(e.logoutAt) - new Date(e.loginAt)) / (1000 * 60 * 60);
+          attendance = hrs >= 8 ? 'full' : 'half';
+        } else {
+          attendance = null;
+        }
+      }
+      if (!attendance && approvedLeaveEmails.has(e.email.toLowerCase())) {
+        attendance = 'absent';
+      }
+      return {
+        email: e.email,
+        name: e.name,
+        loginAt: e.loginAt,
+        logoutAt: e.logoutAt ?? null,
+        hoursWorked: e.hoursWorked ?? null,
+        attendance,
+      };
+    });
+
+    res.json({ success: true, date, records });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+async function getMyAttendance(req, res) {
+  try {
+    const email = req.user?.email?.toLowerCase();
+    if (!email) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    const events = await LoginEvent.find({ email }).sort({ loginAt: -1 }).lean();
+    const dates = [...new Set(events.map(e => e.dateStr).filter(Boolean))];
+    res.json({ success: true, dates });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+module.exports = { heartbeat, getLive, getHistory, getStats, awSync, getAw, logMessage, getAttendance, getLoginHistory, getMyAttendance };

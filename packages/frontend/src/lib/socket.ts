@@ -20,10 +20,19 @@ const API_BASE =
   process.env.NEXT_PUBLIC_SOCKET_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
   (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
-    ? 'https://edutechexos-backend.onrender.com'
+    ? 'https://edutechexos-ueoq.onrender.com'
     : 'http://localhost:10002');
 
 let socket: Socket | null = null;
+
+function getStoredToken(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    return JSON.parse(localStorage.getItem('edutechex_token') ?? '').token ?? '';
+  } catch {
+    return '';
+  }
+}
 
 export function getSocket(): Socket {
   if (!socket) {
@@ -35,6 +44,12 @@ export function getSocket(): Socket {
       reconnectionDelay: 2000,
       reconnectionDelayMax: 60000,
       timeout: 20000,
+      auth: { token: getStoredToken() },
+    });
+
+    // Refresh the JWT on every reconnect so an updated token is always sent.
+    socket.on('reconnect_attempt', () => {
+      if (socket) socket.auth = { token: getStoredToken() };
     });
 
     socket.on('connect', () => {

@@ -81,7 +81,7 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
       setUserColor(COLORS[user.role] || '#3E4A89');
 
       const apiBase = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
-      fetch(`${apiBase}/api/login-history`, {
+      fetch(`${apiBase}/api/activity/login-history`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
         .then((r) => (r.ok ? r.json() : null))

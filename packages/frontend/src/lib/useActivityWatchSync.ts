@@ -67,6 +67,11 @@ async function getTodayEvents(bucketId: string): Promise<Record<string, unknown>
   } catch { return []; }
 }
 
+function extractDomain(url: string): string {
+  try { return new URL(url).hostname.replace(/^www\./, ''); }
+  catch { return url.split('/')[0] || url; }
+}
+
 async function buildSummary() {
   const buckets = await getBuckets();
   const keys    = Object.keys(buckets);
@@ -77,10 +82,14 @@ async function buildSummary() {
   const afkBucket = keys.find(
     (k) => (buckets[k] as { type: string }).type === 'afkstatus' || k.includes('aw-watcher-afk')
   );
+  // aw-watcher-web creates buckets like: aw-watcher-web-chrome, aw-watcher-web-firefox, aw-watcher-web-edge
+  const webBuckets = keys.filter(
+    (k) => k.includes('aw-watcher-web') || (buckets[k] as { type: string }).type === 'web.tab.current'
+  );
 
   if (!windowBucket) return null;
 
-  // Current app
+  // Current active app + title (from window watcher)
   const cur          = await getLatestEvent(windowBucket);
   const curData      = cur?.data as Record<string, string> | undefined;
   const currentApp   = curData?.app   || curData?.title || '';
@@ -118,13 +127,50 @@ async function buildSummary() {
     }
   }
 
+  // ── Web watcher (aw-watcher-web-chrome / firefox / edge) ──────────────────
+  let currentUrl       = '';
+  let currentPageTitle = '';
+  const domainSecs: Record<string, { minutes: number; title: string }> = {};
+
+  for (const wb of webBuckets) {
+    // Current tab in this browser
+    const latestWeb = await getLatestEvent(wb);
+    if (latestWeb) {
+      const wd = latestWeb.data as { url?: string; title?: string; incognito?: boolean } | undefined;
+      if (wd?.url && !wd.incognito) {
+        currentUrl       = wd.url;
+        currentPageTitle = wd.title || '';
+      }
+    }
+
+    // All today's web events for domain breakdown
+    const webEvents = await getTodayEvents(wb);
+    for (const ev of webEvents) {
+      const dur = (ev.duration as number) || 0;
+      const d   = ev.data as { url?: string; title?: string; incognito?: boolean } | undefined;
+      if (!d?.url || d.incognito) continue; // skip incognito tabs
+
+      const domain = extractDomain(d.url);
+      if (!domainSecs[domain]) domainSecs[domain] = { minutes: 0, title: d.title || domain };
+      domainSecs[domain].minutes += dur / 60;
+    }
+  }
+
+  const webBreakdown = Object.entries(domainSecs)
+    .map(([domain, v]) => ({ domain, minutes: Math.round(v.minutes), title: v.title }))
+    .sort((a, b) => b.minutes - a.minutes)
+    .slice(0, 20);
+
   return {
     currentApp,
     currentTitle,
+    currentUrl,
+    currentPageTitle,
     isAfk,
     totalActiveMinutes: Math.round(totalActiveSec / 60),
     totalAfkMinutes:    Math.round(totalAfkSec / 60),
     appBreakdown,
+    webBreakdown,
   };
 }
 

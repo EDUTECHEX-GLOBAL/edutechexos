@@ -8,6 +8,13 @@ export async function POST(req: NextRequest) {
 
   const { roomName, participantName } = await req.json();
 
+  if (!roomName || typeof roomName !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(roomName) || roomName.length > 100) {
+    return NextResponse.json({ error: 'Invalid roomName' }, { status: 400 });
+  }
+  if (!participantName || typeof participantName !== 'string' || participantName.length > 100) {
+    return NextResponse.json({ error: 'Invalid participantName' }, { status: 400 });
+  }
+
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
 

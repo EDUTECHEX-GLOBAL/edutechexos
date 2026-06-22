@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 
 let connected = false;
 let connectionPromise = null;
+let lastError = null;
+let retryTimer = null;
 
 function connectDatabase() {
   if (connected) return Promise.resolve();
@@ -13,18 +15,51 @@ function connectDatabase() {
     return Promise.resolve();
   }
 
-  connectionPromise = mongoose.connect(MONGODB_URI)
+  connectionPromise = mongoose.connect(MONGODB_URI, {
+    serverSelectionTimeoutMS: 15000,
+    socketTimeoutMS: 45000,
+  })
     .then(() => {
       connected = true;
+      lastError = null;
       console.log('Successfully connected to MongoDB Atlas');
+
+      mongoose.connection.on('disconnected', () => {
+        connected = false;
+        connectionPromise = null;
+        console.warn('[DB] MongoDB disconnected — will retry in 30s');
+        if (!retryTimer) {
+          retryTimer = setTimeout(() => {
+            retryTimer = null;
+            connectDatabase();
+          }, 30000);
+        }
+      });
+
       dropTtlIndexes();
     })
     .catch((err) => {
-      console.error('Failed to connect to MongoDB Atlas (non-fatal):', err);
+      lastError = err.message;
+      console.error('Failed to connect to MongoDB Atlas:', err.message);
       connectionPromise = null;
+      if (!retryTimer) {
+        retryTimer = setTimeout(() => {
+          retryTimer = null;
+          console.log('[DB] Retrying MongoDB connection…');
+          connectDatabase();
+        }, 30000);
+      }
     });
 
   return connectionPromise;
+}
+
+function getConnectionStatus() {
+  return {
+    connected,
+    readyState: mongoose.connection.readyState,
+    lastError,
+  };
 }
 
 async function dropTtlIndexes() {
@@ -45,4 +80,4 @@ function isConnected() {
   return connected;
 }
 
-module.exports = { connectDatabase, isConnected };
+module.exports = { connectDatabase, isConnected, getConnectionStatus };

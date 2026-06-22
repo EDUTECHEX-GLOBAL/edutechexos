@@ -1,5 +1,8 @@
 const { Server } = require('socket.io');
-const { ALLOWED_ORIGINS } = require('../utils/helpers');
+const jwt = require('jsonwebtoken');
+const { ALLOWED_ORIGINS, revokedEmails } = require('../utils/helpers');
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 function createSocketServer(httpServer) {
   const io = new Server(httpServer, {
@@ -18,13 +21,39 @@ function createSocketServer(httpServer) {
     transports: ['websocket', 'polling'],
   });
 
+  // ── Mandatory authentication ─────────────────────────────────────────────
+  // Every socket connection MUST present a valid JWT (same token used for the
+  // REST API). Without this, anyone could connect and join_channel to receive
+  // live plaintext messages — bypassing the at-rest encryption entirely.
+  io.use((socket, next) => {
+    try {
+      const token =
+        socket.handshake.auth?.token ||
+        socket.handshake.headers?.authorization?.replace(/^Bearer /, '') ||
+        '';
+      if (!token) return next(new Error('Authentication required'));
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (revokedEmails.has(decoded.email?.toLowerCase())) {
+        return next(new Error('Account removed'));
+      }
+      socket.user = decoded;
+      next();
+    } catch (_) {
+      next(new Error('Invalid or expired token'));
+    }
+  });
+
   io.on('connection', (socket) => {
+    const userEmail = socket.user?.email?.toLowerCase() || '';
+
     socket.on('join_channel', (channelId) => {
-      socket.join(channelId);
+      if (!channelId) return;
+      socket.join(String(channelId));
     });
 
     socket.on('leave_channel', (channelId) => {
-      socket.leave(channelId);
+      if (!channelId) return;
+      socket.leave(String(channelId));
     });
 
     socket.on('typing_start', ({ channelId, userName }) => {
@@ -37,26 +66,29 @@ function createSocketServer(httpServer) {
       socket.to(channelId).emit('user_stopped_typing', { channelId, userName });
     });
 
+    // ── Direct messages: a socket may only join its OWN dm rooms ────────────
+    const ownsDm = (myEmail) => myEmail && myEmail.toLowerCase() === userEmail;
+
     socket.on('join_dm', ({ myEmail, partnerEmail }) => {
-      if (!myEmail || !partnerEmail) return;
+      if (!myEmail || !partnerEmail || !ownsDm(myEmail)) return;
       const room = 'dm:' + [myEmail.toLowerCase(), partnerEmail.toLowerCase()].sort().join('::');
       socket.join(room);
     });
 
     socket.on('leave_dm', ({ myEmail, partnerEmail }) => {
-      if (!myEmail || !partnerEmail) return;
+      if (!myEmail || !partnerEmail || !ownsDm(myEmail)) return;
       const room = 'dm:' + [myEmail.toLowerCase(), partnerEmail.toLowerCase()].sort().join('::');
       socket.leave(room);
     });
 
     socket.on('dm_typing_start', ({ myEmail, partnerEmail }) => {
-      if (!myEmail || !partnerEmail) return;
+      if (!myEmail || !partnerEmail || !ownsDm(myEmail)) return;
       const room = 'dm:' + [myEmail.toLowerCase(), partnerEmail.toLowerCase()].sort().join('::');
       socket.to(room).emit('dm_user_typing', { fromEmail: myEmail });
     });
 
     socket.on('dm_typing_stop', ({ myEmail, partnerEmail }) => {
-      if (!myEmail || !partnerEmail) return;
+      if (!myEmail || !partnerEmail || !ownsDm(myEmail)) return;
       const room = 'dm:' + [myEmail.toLowerCase(), partnerEmail.toLowerCase()].sort().join('::');
       socket.to(room).emit('dm_user_stopped_typing', { fromEmail: myEmail });
     });
