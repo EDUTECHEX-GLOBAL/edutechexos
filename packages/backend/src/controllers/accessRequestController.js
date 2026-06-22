@@ -2,6 +2,7 @@ const { VALID_ACCOUNTS } = require('../utils/helpers');
 const { sendBrevoEmail } = require('../services/emailService');
 const { logAudit } = require('../services/auditService');
 const AccessRequest = require('../models/AccessRequest');
+const { RemovedMember } = require('../models/index');
 
 async function submitRequest(req, res) {
   try {
@@ -15,6 +16,11 @@ async function submitRequest(req, res) {
 
     if (VALID_ACCOUNTS.some((a) => a.email === emailClean)) {
       return res.status(409).json({ success: false, error: 'This email is already registered as a system account.' });
+    }
+
+    const isRemoved = await RemovedMember.exists({ email: emailClean });
+    if (isRemoved) {
+      return res.status(403).json({ success: false, error: 'This account has been removed from the workspace. Contact admin for assistance.' });
     }
 
     const existing = await AccessRequest.findOne({ email: emailClean }).lean();
