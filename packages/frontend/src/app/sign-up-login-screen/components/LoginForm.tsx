@@ -68,6 +68,13 @@ export default function LoginForm({
     return () => window.removeEventListener('demo-autofill', handler);
   }, [setValue]);
 
+  // Tell the user why they were bounced back here when a session expires.
+  useEffect(() => {
+    if (searchParams?.get('expired') === '1') {
+      toast.info('Your session expired — please sign in again.', { duration: 5000 });
+    }
+  }, [searchParams]);
+
   function finishLogin(
     loginAccount: { name: string; email: string; role: string },
     jwtToken?: string

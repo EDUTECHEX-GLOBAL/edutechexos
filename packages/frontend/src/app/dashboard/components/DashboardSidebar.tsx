@@ -37,6 +37,7 @@ export default function DashboardSidebar({
     setActiveChannel,
     channels,
     addChannel,
+    createWorkspaceChannel,
     members,
     addMember,
     removeMember,
@@ -73,7 +74,7 @@ export default function DashboardSidebar({
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [editSelectedChannels, setEditSelectedChannels] = useState<string[]>(['general']);
 
-  const handleCreateChannel = (e: React.FormEvent) => {
+  const handleCreateChannel = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newChannelName.trim()) return;
 
@@ -88,19 +89,14 @@ export default function DashboardSidebar({
       return;
     }
 
-    const newChan = {
-      id: cleanName,
-      name: cleanName,
-      description: newChannelDesc.trim() || 'Custom created discussion channel',
-      memberCount: members.length,
-      unread: 0,
-      memberIds: members.map((m) => m.id),
-    };
-
-    addChannel(newChan);
-    setActiveChannel(cleanName);
-
-    toast.success(`#${cleanName} created! ✨`);
+    // Persist to the backend so the channel survives logout/login.
+    const result = await createWorkspaceChannel(cleanName, newChannelDesc.trim());
+    if (!result.ok) {
+      toast.error(result.error || 'Failed to create channel.');
+      return;
+    }
+    setActiveChannel(result.id ?? cleanName);
+    toast.success(`#${result.id ?? cleanName} created! ✨`);
 
     setNewChannelName('');
     setNewChannelDesc('');

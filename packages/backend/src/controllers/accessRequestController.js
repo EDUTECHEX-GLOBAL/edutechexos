@@ -102,6 +102,10 @@ async function submitRequest(req, res) {
       }).catch((err) => console.error('[email] admin new-request alert failed:', err));
     }
 
+    // Notify any admin currently viewing the panel so the new pending request
+    // shows up without a manual refresh.
+    req.app.get('io')?.emit('access_request_created', { email: emailClean, name });
+
     res.json({
       success: true,
       request: {

@@ -3,6 +3,7 @@ const express = require('express');
 const { authLimiter, apiLimiter, globalLimiter } = require('../config/rateLimiter');
 const { authMiddleware, requireAuth } = require('../middleware/auth');
 const { search, ogLinkPreview } = require('../controllers/messageController');
+const { getLoginStatus } = require('../controllers/activityController');
 const { githubReceiver, genericReceiver } = require('../controllers/webhookController');
 
 router.use('/api/auth', authLimiter, require('./authRoutes'));
@@ -30,6 +31,7 @@ router.use('/api', globalLimiter, require('./meetingRoutes'));
 
 router.get('/api/search', apiLimiter, authMiddleware, requireAuth, search);
 router.get('/api/og', apiLimiter, authMiddleware, requireAuth, ogLinkPreview);
+router.get('/api/login-status', globalLimiter, authMiddleware, requireAuth, getLoginStatus);
 
 router.post('/webhook/github/:token', express.json({ type: '*/*' }), githubReceiver);
 router.post('/webhook/incoming/:token', express.json({ type: '*/*' }), genericReceiver);

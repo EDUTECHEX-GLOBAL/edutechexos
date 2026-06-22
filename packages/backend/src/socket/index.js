@@ -19,6 +19,11 @@ function createSocketServer(httpServer) {
       credentials: true,
     },
     transports: ['websocket', 'polling'],
+    // Allow large message payloads (e.g. base64 file/image/voice fallbacks when
+    // cloud storage is unavailable). The default is 1 MB, which silently drops
+    // file messages so other users never receive them. Kept in line with the
+    // 20 MB express.json limit used by the REST API.
+    maxHttpBufferSize: 25 * 1024 * 1024,
   });
 
   // ── Mandatory authentication ─────────────────────────────────────────────

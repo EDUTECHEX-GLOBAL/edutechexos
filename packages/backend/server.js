@@ -51,7 +51,7 @@ const corsOptions = {
 };
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '20mb' }));
+app.use(express.json({ limit: '25mb' }));
 
 app.get('/health', (req, res) => {
   const { getConnectionStatus } = require('./src/config/database');

@@ -295,4 +295,19 @@ async function getMyAttendance(req, res) {
   }
 }
 
-module.exports = { heartbeat, getLive, getHistory, getStats, awSync, getAw, logMessage, getAttendance, getLoginHistory, getMyAttendance };
+// Returns the list of emails that have logged in TODAY (IST). Drives the
+// green/red presence dots in the sidebar. Kept consistent with the dateStr
+// computed in authController on login (en-CA + Asia/Kolkata → YYYY-MM-DD).
+async function getLoginStatus(req, res) {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const events = await LoginEvent.find({ dateStr }).select('email').lean();
+    const loggedInEmails = [...new Set(events.map(e => e.email.toLowerCase()).filter(Boolean))];
+    res.json({ success: true, loggedInEmails, dateStr });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+module.exports = { heartbeat, getLive, getHistory, getStats, awSync, getAw, logMessage, getAttendance, getLoginHistory, getMyAttendance, getLoginStatus };

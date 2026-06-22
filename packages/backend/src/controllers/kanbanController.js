@@ -29,6 +29,7 @@ async function createTask(req, res) {
     const task = new KanbanTask(body);
     const saved = await task.save();
     const { _id, __v, ...rest } = saved.toObject();
+    req.app.get('io')?.emit('kanban_changed');
     res.json({
       success: true,
       task: {
@@ -62,6 +63,7 @@ async function updateTask(req, res) {
     ).lean();
     if (!updated) return res.status(404).json({ success: false, error: 'Task not found' });
     const { _id, __v, ...rest } = updated;
+    req.app.get('io')?.emit('kanban_changed');
     res.json({
       success: true,
       task: {
@@ -87,6 +89,7 @@ async function deleteTask(req, res) {
       return res.status(403).json({ success: false, error: 'You can only delete your own tasks.' });
     }
     await KanbanTask.findByIdAndDelete(id);
+    req.app.get('io')?.emit('kanban_changed');
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });

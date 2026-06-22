@@ -47,6 +47,7 @@ async function upsertPage(req, res) {
       { upsert: true, new: true }
     ).lean();
     const { _id, ...rest } = updated;
+    req.app.get('io')?.emit('wiki_changed');
     res.json({
       success: true,
       page: {
@@ -72,6 +73,7 @@ async function deletePage(req, res) {
       return res.status(403).json({ success: false, error: 'You can only delete your own private notes.' });
     }
     await WikiPage.findByIdAndDelete(id);
+    req.app.get('io')?.emit('wiki_changed');
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });

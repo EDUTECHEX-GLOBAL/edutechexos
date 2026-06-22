@@ -28,6 +28,25 @@ function getCurrentUserEmail(): string | undefined {
   return getStoredAuth()?.user?.email;
 }
 
+// Guards against firing multiple redirects when several requests 401 at once.
+let sessionExpiredHandled = false;
+
+/**
+ * Called when an authenticated request comes back 401 (expired/invalid token).
+ * Without this, every loader silently returns and the user is left staring at
+ * an empty dashboard with no idea their session ended. We clear the stale token
+ * once and bounce them to login so they can sign back in.
+ */
+function handleSessionExpired() {
+  if (sessionExpiredHandled || typeof window === 'undefined') return;
+  sessionExpiredHandled = true;
+  try { localStorage.removeItem('edutechex_token'); } catch { /* ignore */ }
+  const onAuthPage = window.location.pathname.startsWith('/sign-up-login-screen');
+  if (!onAuthPage) {
+    window.location.replace('/sign-up-login-screen?mode=user&redirect=/dashboard&expired=1');
+  }
+}
+
 /** Wraps fetch with Authorization header and userEmail injection. */
 async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const token = getToken();
@@ -62,7 +81,11 @@ async function apiFetch(url: string, options: RequestInit = {}): Promise<Respons
     }
   }
 
-  return fetch(url, { ...options, headers });
+  const res = await fetch(url, { ...options, headers });
+  // A 401 on an authenticated request means the token expired — redirect to
+  // login instead of letting every loader silently fail into an empty UI.
+  if (res.status === 401 && token) handleSessionExpired();
+  return res;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -238,6 +261,7 @@ type DashboardState = {
 
   channels: Channel[];
   addChannel: (channel: Channel) => void;
+  createWorkspaceChannel: (name: string, description?: string) => Promise<{ ok: boolean; id?: string; error?: string }>;
   loadWorkspaceChannels: () => Promise<void>;
 
   members: Member[];
@@ -292,9 +316,19 @@ export const useDashboardStore = create<DashboardState>()(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...message, channelId }),
-        }).catch(() => {
-          /* backend unavailable — message saved locally */
-        });
+        })
+          .then((res) => {
+            // A failed POST (e.g. 413 payload too large for a big file) means the
+            // message was never persisted and other users will never receive it.
+            // Warn the sender instead of silently showing it only to themselves.
+            if (!res.ok && (message as { files?: unknown[] }).files?.length) {
+              const why = res.status === 413 ? 'file is too large to share' : 'could not send file';
+              import('sonner').then(({ toast }) => toast.error(`Message failed — ${why}.`)).catch(() => {});
+            }
+          })
+          .catch(() => {
+            /* backend unreachable — message kept locally, will not reach others */
+          });
 
         set((s) => ({
           messages: { ...s.messages, [channelId]: [...(s.messages[channelId] ?? []), message] },
@@ -917,6 +951,35 @@ export const useDashboardStore = create<DashboardState>()(
             messages: { ...s.messages, [channel.id]: s.messages[channel.id] || [] },
           };
         }),
+      // Persist a new channel to the backend so it survives logout/login.
+      // (addChannel alone only mutates local state — the channel vanishes on the
+      //  next loadWorkspaceChannels, which replaces local channels with the DB list.)
+      createWorkspaceChannel: async (name, description) => {
+        try {
+          const res = await apiFetch(`${API_BASE}/api/channels`, {
+            method: 'POST',
+            body: JSON.stringify({ name, description: description ?? '' }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success || !data.channel) {
+            return { ok: false, error: data.error || `Failed to create channel (${res.status}).` };
+          }
+          const ch = data.channel as Channel;
+          set((s) => {
+            if (s.channels.some((c) => c.id === ch.id)) return s; // already added via socket echo
+            // Include all current members so the creator (admin) sees it immediately;
+            // loadLocalMembers will later reconcile exact per-member access.
+            const next = syncCount({ ...ch, memberIds: s.members.map((m) => m.id) });
+            return {
+              channels: [...s.channels, next],
+              messages: { ...s.messages, [ch.id]: s.messages[ch.id] || [] },
+            };
+          });
+          return { ok: true, id: ch.id };
+        } catch {
+          return { ok: false, error: 'Network error — could not create channel.' };
+        }
+      },
       loadWorkspaceChannels: async () => {
         try {
           const res = await apiFetch(`${API_BASE}/api/channels`);

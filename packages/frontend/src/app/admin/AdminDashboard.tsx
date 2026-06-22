@@ -246,15 +246,32 @@ export default function AdminPage() {
       }
     };
     const onLeaveRequested = () => { fetchLeaves(); };
+    // A new user submitted an access request — refresh the Requests list live.
+    const onAccessRequestCreated = ({ name }: { name?: string } = {}) => {
+      const token = getAdminToken();
+      if (!token) return;
+      fetch(`${API_BASE}/api/access-requests`, { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.json())
+        .then((data: { success: boolean; requests?: AccessRequest[] }) => {
+          if (data.success && Array.isArray(data.requests)) {
+            setAccessRequests(data.requests);
+            localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify(data.requests));
+            toast.info(`New access request${name ? ` from ${name}` : ''}.`);
+          }
+        })
+        .catch(() => { /* backend unreachable */ });
+    };
     socket.on('member_updated', onMemberUpdated);
     socket.on('member_removed', onMemberRemoved);
     socket.on('user_forcefully_removed', onForcefullyRemoved);
     socket.on('leave_requested', onLeaveRequested);
+    socket.on('access_request_created', onAccessRequestCreated);
     return () => {
       socket.off('member_updated', onMemberUpdated);
       socket.off('member_removed', onMemberRemoved);
       socket.off('user_forcefully_removed', onForcefullyRemoved);
       socket.off('leave_requested', onLeaveRequested);
+      socket.off('access_request_created', onAccessRequestCreated);
     };
   }, [loadLocalMembers]);
 

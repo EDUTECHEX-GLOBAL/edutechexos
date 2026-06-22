@@ -350,6 +350,7 @@ export default function EduTechExOSDashboard() {
     messages,
     members,
     addChannel,
+    createWorkspaceChannel,
     addMessage,
     addMessageFromSocket,
     updateMessageFromSocket,
@@ -863,9 +864,13 @@ export default function EduTechExOSDashboard() {
       }, 800);
     };
 
-    // Reload channel list when admin creates or deletes a channel
-    const handleChannelCreated = () => {
-      useDashboardStore.getState().loadWorkspaceChannels?.();
+    // Reload channel list when admin creates or deletes a channel.
+    // Also reload members so per-member channel access (memberIds) is recomputed
+    // for the new channel — otherwise it loads with empty memberIds and stays
+    // hidden in the sidebar until the next member refresh.
+    const handleChannelCreated = async () => {
+      await useDashboardStore.getState().loadWorkspaceChannels?.();
+      await useDashboardStore.getState().loadLocalMembers?.();
     };
     const handleChannelDeleted = () => {
       useDashboardStore.getState().loadWorkspaceChannels?.();
@@ -902,6 +907,11 @@ export default function EduTechExOSDashboard() {
       toast.error('Your access request has been declined by the admin.', { duration: 6000 });
     };
 
+    // Live-refresh Kanban and Wiki when anyone changes them (these reload the
+    // viewer's own filtered list, so per-user/privacy rules are preserved).
+    const handleKanbanChanged = () => useDashboardStore.getState().loadLocalKanbanTasks?.();
+    const handleWikiChanged = () => useDashboardStore.getState().loadLocalWikiPages?.();
+
     socket.on('connect', handleReconnect);
     socket.on('new_message', handleNewMessage);
     socket.on('message_updated', handleUpdatedMessage);
@@ -912,6 +922,8 @@ export default function EduTechExOSDashboard() {
     socket.on('channel_deleted', handleChannelDeleted);
     socket.on('access_approved', handleAccessApproved);
     socket.on('access_rejected', handleAccessRejected);
+    socket.on('kanban_changed', handleKanbanChanged);
+    socket.on('wiki_changed', handleWikiChanged);
 
     return () => {
       socket.off('connect', handleReconnect);
@@ -924,6 +936,8 @@ export default function EduTechExOSDashboard() {
       socket.off('channel_deleted', handleChannelDeleted);
       socket.off('access_approved', handleAccessApproved);
       socket.off('access_rejected', handleAccessRejected);
+      socket.off('kanban_changed', handleKanbanChanged);
+      socket.off('wiki_changed', handleWikiChanged);
       socket.emit('leave_channel', activeChannelId);
     };
   }, [activeChannelId, addMessageFromSocket, updateMessageFromSocket, deleteMessageFromSocket]);
@@ -1351,7 +1365,7 @@ export default function EduTechExOSDashboard() {
     }
   }
 
-  function createChannel(event: React.FormEvent) {
+  async function createChannel(event: React.FormEvent) {
     event.preventDefault();
     if (!isAdmin) {
       toast.error('Only an admin can create channels.');
@@ -1368,19 +1382,17 @@ export default function EduTechExOSDashboard() {
       toast.error('A channel with this name already exists.');
       return;
     }
-    addChannel({
-      id: cleanName,
-      name: cleanName,
-      description: newChannelDescription.trim() || 'Custom workspace channel',
-      memberCount: 0,
-      unread: 0,
-      memberIds: [],
-    });
-    setActiveChannel(cleanName);
+    // Persist to the backend so the channel survives logout/login.
+    const result = await createWorkspaceChannel(cleanName, newChannelDescription.trim());
+    if (!result.ok) {
+      toast.error(result.error || 'Failed to create channel.');
+      return;
+    }
+    setActiveChannel(result.id ?? cleanName);
     setNewChannelName('');
     setNewChannelDescription('');
     setNewChannelOpen(false);
-    toast.success(`#${cleanName} created`);
+    toast.success(`#${result.id ?? cleanName} created`);
   }
 
   useEffect(() => {

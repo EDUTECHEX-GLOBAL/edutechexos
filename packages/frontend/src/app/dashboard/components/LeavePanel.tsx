@@ -6,6 +6,7 @@ import {
   AlertTriangle, Stethoscope, Palmtree, User, HelpCircle, Send,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getSocket } from '@/lib/socket';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 
@@ -90,6 +91,23 @@ export default function LeavePanel({ onClose }: { onClose: () => void }) {
   }
 
   useEffect(() => { fetchLeaves(); }, []);
+
+  // Live-update the list when the admin approves/rejects this user's leave.
+  useEffect(() => {
+    let myEmail = '';
+    try { myEmail = (JSON.parse(localStorage.getItem('edutechex_token') ?? '').user?.email ?? '').toLowerCase(); }
+    catch { /* not logged in */ }
+
+    const socket = getSocket();
+    const handleLeaveUpdated = ({ email, status }: { email?: string; status?: LeaveStatus } = {}) => {
+      if (myEmail && email && email.toLowerCase() !== myEmail) return;
+      fetchLeaves();
+      if (status === 'approved') toast.success('Your leave request was approved.');
+      else if (status === 'rejected') toast.error('Your leave request was rejected.');
+    };
+    socket.on('leave_updated', handleLeaveUpdated);
+    return () => { socket.off('leave_updated', handleLeaveUpdated); };
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
