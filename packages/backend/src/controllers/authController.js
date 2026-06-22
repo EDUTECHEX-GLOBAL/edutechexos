@@ -285,4 +285,13 @@ async function logout(req, res) {
   }
 }
 
-module.exports = { login, forgotPassword, resetPassword, changePassword, resendConfirmation, logout };
+async function me(req, res) {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    res.json({ success: true, user: req.user });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+module.exports = { login, forgotPassword, resetPassword, changePassword, resendConfirmation, logout, me };
