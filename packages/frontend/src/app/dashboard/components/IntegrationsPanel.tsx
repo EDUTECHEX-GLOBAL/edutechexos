@@ -114,12 +114,17 @@ export default function IntegrationsPanel({
   }
 
   async function deleteWebhook(id: string) {
-    await fetch(`${API_BASE}/api/webhooks/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${getToken()}` },
-    });
-    setWebhooks((prev) => prev.filter((w) => w.id !== id));
-    toast.success('Integration deleted');
+    try {
+      const res = await fetch(`${API_BASE}/api/webhooks/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (!res.ok) { toast.error('Failed to delete integration'); return; }
+      setWebhooks((prev) => prev.filter((w) => w.id !== id));
+      toast.success('Integration deleted');
+    } catch {
+      toast.error('Network error — could not delete integration');
+    }
   }
 
   async function toggleWebhook(wh: Webhook) {

@@ -3,8 +3,11 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { CHANNELS } from '@/data/mockData';
 
 // Route message API calls through the backend so Socket.IO events are emitted.
-// Falls back to relative Next.js routes if the env var is not set.
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+    ? 'https://edutechexos-ueoq.onrender.com'
+    : 'http://localhost:10002');
 
 // ─── Auth helpers ────────────────────────────────────────────────────────────
 function getStoredAuth(): { token?: string; user?: { email?: string } } | null {

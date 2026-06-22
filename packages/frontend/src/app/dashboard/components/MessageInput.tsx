@@ -274,7 +274,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
   }, [message]);
 
   // URL detection for link preview — debounced 800 ms
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
   useEffect(() => {
     const urlMatch = message.match(/https?:\/\/[^\s]+/);
     if (!urlMatch) {

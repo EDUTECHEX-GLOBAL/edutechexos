@@ -13,7 +13,7 @@ export default function MeetingJoinPage() {
 
   useEffect(() => {
     if (!code) return;
-    const backend = process.env.NEXT_PUBLIC_API_URL || 'https://edutechexos-backend.onrender.com';
+    const backend = process.env.NEXT_PUBLIC_API_URL || 'https://edutechexos-ueoq.onrender.com';
     fetch(`${backend}/api/meetings/code/${encodeURIComponent(code)}`)
       .then((r) => r.json())
       .then((d) => {

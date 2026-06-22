@@ -2,6 +2,14 @@ const { VALID_ACCOUNTS } = require('../utils/helpers');
 const { sendBrevoEmail } = require('../services/emailService');
 const { logAudit } = require('../services/auditService');
 const Leave = require('../models/Leave');
+const UserSettings = require('../models/UserSettings');
+
+async function userWantsEmail(email) {
+  try {
+    const s = await UserSettings.findOne({ email: email.toLowerCase() }).lean();
+    return s ? s.emailNotifications !== false : true;
+  } catch { return true; }
+}
 
 async function getLeaves(req, res) {
   try {
@@ -114,7 +122,8 @@ async function reviewLeave(req, res) {
     const dateRange   = rest.type === 'instant'
       ? `${rest.startDate} (${rest.duration === 'half' ? 'Half day' : 'Full day'})`
       : `${rest.startDate} → ${rest.endDate || rest.startDate}`;
-    sendBrevoEmail({
+    const wantsEmail = await userWantsEmail(rest.email);
+    if (wantsEmail) sendBrevoEmail({
       to: [{ email: rest.email, name: rest.name }],
       subject: `EduTechExOS — Your leave request has been ${status}`,
       html: `

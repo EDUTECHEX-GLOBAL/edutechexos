@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 const AW_BASE      = 'http://localhost:5600';
-const API_BASE     = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+const API_BASE     = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 const SYNC_MS      = 5 * 60 * 1000;  // sync every 5 min
 const CHECK_MS     = 30 * 1000;      // re-check AW availability every 30 s when offline
 

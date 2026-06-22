@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS = ['S','M','T','W','T','F','S'];
 

@@ -375,7 +375,7 @@ export async function changePassword(
     const API_URL =
       process.env.BACKEND_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
-      'https://edutechexos-backend.onrender.com';
+      'https://edutechexos-ueoq.onrender.com';
     const res = await fetch(`${API_URL}/api/auth/change-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

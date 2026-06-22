@@ -9,7 +9,7 @@ const LoginEventSchema = new mongoose.Schema({
   attendance:  { type: String, enum: ['full', 'half', 'absent', null], default: null },
   dateStr:     { type: String, required: true, index: true },
 });
-LoginEventSchema.index({ email: 1, dateStr: 1 });
+LoginEventSchema.index({ email: 1, dateStr: 1 }, { unique: true });
 
 const LoginEvent = mongoose.model('LoginEvent', LoginEventSchema);
 module.exports = LoginEvent;

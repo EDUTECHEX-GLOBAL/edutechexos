@@ -40,27 +40,16 @@ interface ChannelMainProps {
   onOpenVideoCall?: () => void;
 }
 
+const MEET_LINK = process.env.NEXT_PUBLIC_MEET_LINK ?? null;
+
 function getMeetingState(now = new Date()) {
-  const day = now.getDay(),
-    hour = now.getHours();
+  const day = now.getDay();
   if (day === 0 || day === 6)
     return { label: 'No meeting', link: null, message: 'No meeting on weekends.' };
-  if (day === 5)
-    return {
-      label: 'Friday meet',
-      link: 'https://meet.google.com/eeq-maem-ztc',
-      message: 'Friday meeting.',
-    };
-  if (day === 4 && hour >= 14)
-    return {
-      label: 'Thursday PM',
-      link: 'https://meet.google.com/dss-wmvy-cuq',
-      message: 'Thursday afternoon.',
-    };
   return {
-    label: 'Main meet',
-    link: 'https://meet.google.com/uie-jxkt-vkx',
-    message: 'Main meeting.',
+    label: 'Team meet',
+    link: MEET_LINK,
+    message: 'Daily standup.',
   };
 }
 
@@ -89,7 +78,7 @@ export default function ChannelMain({
     setActiveThread,
     setTyping,
   } = useDashboardStore();
-  const channel = channels.find((c) => c.id === activeChannelId) ?? channels[0];
+  const channel = channels.find((c) => c.id === activeChannelId) ?? channels[0] ?? null;
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
   const [startMeetOpen, setStartMeetOpen] = useState(false);
@@ -131,6 +120,8 @@ export default function ChannelMain({
       m.name.toLowerCase().includes(memberSearch.toLowerCase()) ||
       m.email.toLowerCase().includes(memberSearch.toLowerCase())
   );
+
+  if (!channel) return null;
 
   const isDM = channel.id.startsWith('member-');
 

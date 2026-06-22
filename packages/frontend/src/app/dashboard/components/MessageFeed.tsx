@@ -355,7 +355,7 @@ function ForwardModal({
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
                     style={{ backgroundColor: (m as any).color ?? '#64748b' }}
                   >
-                    {(m as any).initials ?? m.name[0]}
+                    {(m as any).initials ?? (m.name?.[0] ?? '?')}
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-[#1E2636] dark:text-white">{m.name}</p>

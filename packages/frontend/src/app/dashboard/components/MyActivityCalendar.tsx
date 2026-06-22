@@ -90,22 +90,10 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
             setLoginDates(data.history[user.email]);
             return;
           }
-          const key = `edutechex_logins_${user.email}`;
-          let stored: string[] = JSON.parse(localStorage.getItem(key) || '[]');
-          if (!stored.length) {
-            const gen: string[] = [];
-            const t = new Date();
-            for (let i = 0; i < 30; i++) {
-              const d = new Date();
-              d.setDate(t.getDate() - i);
-              if (Math.random() < (d.getDay() === 0 || d.getDay() === 6 ? 0.1 : 0.85))
-                gen.push(d.toISOString().split('T')[0]);
-            }
-            const ts = t.toISOString().split('T')[0];
-            if (!gen.includes(ts)) gen.push(ts);
-            localStorage.setItem(key, JSON.stringify(gen));
-            stored = gen;
-          }
+          // Fall back to localStorage only (no fake random data)
+          const stored: string[] = JSON.parse(
+            localStorage.getItem(`edutechex_logins_${user.email}`) || '[]'
+          );
           setLoginDates(stored);
         })
         .catch(() =>

@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 export const runtime = 'edge';
 
-const BACKEND = process.env.BACKEND_URL ?? 'https://edutechexos-backend.onrender.com';
+const BACKEND = process.env.BACKEND_URL ?? 'https://edutechexos-ueoq.onrender.com';
 
 function getModel() {
   if (process.env.GEMINI_API_KEY) {

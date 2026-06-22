@@ -26,7 +26,7 @@ import type { Message } from '@/store/dashboardStore';
 import { GOOGLE_MEET_LINKS } from '@/lib/meetLinks';
 import { getSocket } from '@/lib/socket';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 // Per-user keys so each team member's calendar and deadline cache are isolated.
 function gcalEmailKey(userEmail: string) {
   return `edutechex_gcal_email_${userEmail}`;

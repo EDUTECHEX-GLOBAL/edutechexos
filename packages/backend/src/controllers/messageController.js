@@ -165,7 +165,7 @@ async function search(req, res) {
     const limit = Math.min(parseInt(req.query.limit) || 20, 50);
     if (!q) return res.json({ success: true, results: [], total: 0 });
 
-    const textFilter = { $text: { $search: q } };
+    const textFilter = { $text: { $search: q }, channelId: { $not: /^member-/ } };
     const scoreProj = { score: { $meta: 'textScore' } };
 
     const [msgDocs, wikiDocs, taskDocs] = await Promise.all([
@@ -196,7 +196,11 @@ async function search(req, res) {
     if (String(err).includes('text index')) {
       const q = String(req.query.q || '').trim();
       const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      const allMsgs = await Message.find({}).sort({ timestamp: -1 }).limit(500).lean();
+      // Only search non-DM channels (DMs have channelId starting with 'member-')
+      const allMsgs = await Message.find({
+        channelId: { $not: /^member-/ },
+        deletedAt: { $exists: false },
+      }).sort({ timestamp: -1 }).limit(500).lean();
       const matched = allMsgs.filter(d => re.test(decryptField(d.text) || '')).slice(0, 20);
       return res.json({
         success: true,
