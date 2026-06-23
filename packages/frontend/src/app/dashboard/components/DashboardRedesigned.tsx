@@ -10,8 +10,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Hash, MessageSquare, Send, Smile, Paperclip, Pin,
   Bookmark, Trash2, Users, Loader2, Bot, X, ChevronLeft,
-  Globe, Lock, AtSign, Sparkles,
+  Globe, Lock, AtSign, Sparkles, ExternalLink, CheckSquare, Menu,
 } from 'lucide-react';
+import { getSocket } from '@/lib/socket';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useRouter } from 'next/navigation';
@@ -22,6 +23,15 @@ import CalendarPanel from './CalendarPanel';
 import AIPanel from './AIPanel';
 import NotificationPanel from './NotificationPanel';
 import AdminControlPanel from './AdminControlPanel';
+import ProfileModal from './ProfileModal';
+import OfflineIndicator from './OfflineIndicator';
+import DMPanel from './DMPanel';
+import AnalyticsPanel from './AnalyticsPanel';
+import BookmarksPanel from './BookmarksPanel';
+import LeavePanel from './LeavePanel';
+import NotepadPanel from './NotepadPanel';
+import IntegrationsPanel from './IntegrationsPanel';
+import SearchPanel from './SearchPanel';
 
 export default function DashboardRedesigned() {
   const { theme, toggleTheme } = useTheme();
@@ -47,7 +57,7 @@ export default function DashboardRedesigned() {
   } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [composerMessage, setComposerMessage] = useState('');
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -120,6 +130,35 @@ export default function DashboardRedesigned() {
     }
   }, [visibleMessages.length]);
 
+  // Cmd/Ctrl+K → global search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setGlobalSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  // @mention notification via socket
+  useEffect(() => {
+    if (!currentUser) return;
+    const socket = getSocket();
+    const handler = (data: { mentionedEmail: string; senderName: string; channelId: string; preview: string }) => {
+      if (data.mentionedEmail?.toLowerCase() === currentUser.email?.toLowerCase()) {
+        addNotification?.({
+          type: 'mention',
+          title: `${data.senderName} mentioned you`,
+          body: data.preview,
+        });
+      }
+    };
+    socket.on('mention_notification', handler);
+    return () => { socket.off('mention_notification', handler); };
+  }, [currentUser]);
+
   const handleSend = useCallback(async () => {
     const text = composerMessage.trim();
     if (!text || !channel) return;
@@ -163,9 +202,14 @@ export default function DashboardRedesigned() {
   }
 
   const tabLabel = activeTab === 'chats' ? (channel?.name ?? 'general')
+    : activeTab === 'dms' ? 'Direct Messages'
     : activeTab === 'tasks' ? 'Task Board'
     : activeTab === 'docs' ? 'Wiki'
     : activeTab === 'calendar' ? 'Calendar'
+    : activeTab === 'leave' ? 'Leave'
+    : activeTab === 'bookmarks' ? 'Saved Messages'
+    : activeTab === 'notepad' ? 'Notes'
+    : activeTab === 'integrations' ? 'Integrations'
     : activeTab === 'reports' ? 'Reports'
     : 'Analytics';
 
@@ -177,7 +221,7 @@ export default function DashboardRedesigned() {
       currentUser={currentUser}
       darkMode={darkMode}
       onToggleTheme={() => { toggleTheme(); toggleDarkMode(); }}
-      onSettingsOpen={() => isAdmin ? setAdminPanelOpen(true) : setSettingsOpen(true)}
+      onSettingsOpen={() => isAdmin ? setAdminPanelOpen(true) : setProfileOpen(true)}
       topBar={
         <DashboardTopBar
           title={tabLabel}
@@ -185,6 +229,7 @@ export default function DashboardRedesigned() {
           unreadNotifications={unreadNotifications}
           onSearchOpen={() => setGlobalSearchOpen(true)}
           onNotificationsOpen={() => setNotificationsOpen(true)}
+          onMobileMenuOpen={() => setMobileSidebarOpen(true)}
         />
       }
       rightPanel={
@@ -221,6 +266,11 @@ export default function DashboardRedesigned() {
             onAiOpen={() => setAiPanelOpen(true)}
           />
         )}
+        {activeTab === 'dms' && (
+          <div className="flex-1 overflow-hidden">
+            <DMPanel currentUser={currentUser} members={members} />
+          </div>
+        )}
         {activeTab === 'tasks' && (
           <div className="flex-1 overflow-y-auto p-4 scrollbar-dark">
             <KanbanBoard onClose={() => {}} />
@@ -237,15 +287,33 @@ export default function DashboardRedesigned() {
           </div>
         )}
         {activeTab === 'analytics' && (
-          <div className="flex-1 overflow-y-auto p-6 scrollbar-dark">
-            <h2 className="text-xl font-black text-[#EEF2F6] mb-2">Analytics</h2>
-            <p className="text-sm text-[#4B5678]">Analytics dashboard coming soon...</p>
+          <div className="flex-1 overflow-y-auto scrollbar-dark">
+            <AnalyticsPanel onClose={() => setActiveTab('chats')} />
           </div>
         )}
         {activeTab === 'reports' && (
-          <div className="flex-1 overflow-y-auto p-6 scrollbar-dark">
-            <h2 className="text-xl font-black text-[#EEF2F6] mb-2">Reports</h2>
-            <p className="text-sm text-[#4B5678]">Reports dashboard coming soon...</p>
+          <div className="flex-1 overflow-y-auto scrollbar-dark">
+            <AnalyticsPanel onClose={() => setActiveTab('chats')} />
+          </div>
+        )}
+        {activeTab === 'leave' && (
+          <div className="flex-1 overflow-y-auto p-4 scrollbar-dark">
+            <LeavePanel onClose={() => setActiveTab('chats')} />
+          </div>
+        )}
+        {activeTab === 'bookmarks' && (
+          <div className="flex-1 overflow-y-auto scrollbar-dark">
+            <BookmarksPanel onClose={() => setActiveTab('chats')} />
+          </div>
+        )}
+        {activeTab === 'notepad' && (
+          <div className="flex-1 overflow-y-auto scrollbar-dark">
+            <NotepadPanel onClose={() => setActiveTab('chats')} activeChannel={channel?.id ?? ''} />
+          </div>
+        )}
+        {activeTab === 'integrations' && (
+          <div className="flex-1 overflow-y-auto scrollbar-dark">
+            <IntegrationsPanel onClose={() => setActiveTab('chats')} channels={channels} />
           </div>
         )}
       </div>
@@ -288,6 +356,83 @@ export default function DashboardRedesigned() {
       </AnimatePresence>
 
       <NotificationPanel open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+
+      <OfflineIndicator />
+
+      <AnimatePresence>
+        {profileOpen && (
+          <ProfileModal
+            open={profileOpen}
+            onClose={() => setProfileOpen(false)}
+            currentUser={currentUser}
+            onProfileUpdated={(name, avatarUrl) => {
+              setCurrentUser(prev => prev ? { ...prev, name, initials: name.split(' ').map((p: string) => p[0]).join('').toUpperCase().slice(0, 2) } : prev);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Mobile channel sidebar */}
+      <AnimatePresence>
+        {mobileSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 md:hidden bg-black/60 backdrop-blur-sm"
+            onClick={() => setMobileSidebarOpen(false)}
+          >
+            <motion.div
+              initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 340 }}
+              className="absolute left-0 top-0 bottom-0 w-64 flex flex-col overflow-y-auto"
+              style={{ background: '#0D1025', borderRight: '1px solid rgba(148,163,184,0.08)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-4 py-4 border-b border-[rgba(148,163,184,0.06)]">
+                <span className="text-sm font-black text-[#EEF2F6]">Channels</span>
+                <button onClick={() => setMobileSidebarOpen(false)}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-[#4B5678] hover:text-[#EEF2F6] hover:bg-[rgba(148,163,184,0.07)] transition-all">
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="flex-1 px-2 py-2">
+                {channels.filter((c: any) => c.type !== 'dm').map((ch: any) => (
+                  <button key={ch.id}
+                    onClick={() => { setActiveChannel(ch.id); setActiveTab('chats'); setMobileSidebarOpen(false); }}
+                    className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl transition-all text-left mb-0.5 ${
+                      channel?.id === ch.id ? 'bg-[rgba(10,232,208,0.10)] text-[#0AE8D0]' : 'text-[#4B5678] hover:bg-[rgba(148,163,184,0.06)] hover:text-[#EEF2F6]'
+                    }`}>
+                    <Hash size={13} className="shrink-0" />
+                    <span className="text-xs font-bold truncate">{ch.name}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {globalSearchOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm pt-20 px-4"
+            onClick={() => setGlobalSearchOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: -16, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+              className="w-full max-w-xl overflow-hidden rounded-2xl shadow-2xl border border-[rgba(148,163,184,0.10)]"
+              style={{ background: '#0D1025' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <SearchPanel onClose={() => setGlobalSearchOpen(false)} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }
@@ -337,6 +482,26 @@ function ChatView({
 }) {
   const channelId = channel?.id ?? 'general';
   const pinIds = pinnedMessageIds[channelId] ?? [];
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const mentionFiltered = members.filter(m => m.name.toLowerCase().startsWith(mentionQuery.toLowerCase())).slice(0, 6);
+
+  function handleComposerChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const val = e.target.value;
+    setComposerMessage(val);
+    const match = val.match(/@([a-zA-Z][\w ]*)$/);
+    if (match) { setMentionQuery(match[1]); setMentionOpen(true); }
+    else { setMentionOpen(false); setMentionQuery(''); }
+  }
+
+  function insertMention(name: string) {
+    const newVal = composerMessage.replace(/@([a-zA-Z][\w ]*)$/, `@${name} `);
+    setComposerMessage(newVal);
+    setMentionOpen(false);
+    setMentionQuery('');
+    composerRef.current?.focus();
+  }
+
   const firstMessageDate = messages[0]?.timestamp
     ? new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short' })
       .format(new Date(messages[0].timestamp)).toUpperCase()
@@ -429,18 +594,23 @@ function ChatView({
             >
               {!isOwn && (
                 <div className="shrink-0 pt-1">
-                  {isFirst ? (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-lg"
-                      style={{
-                        background: msg.color ?? 'linear-gradient(135deg, #FF6B7F, #FF4770)',
-                      }}
-                    >
-                      {msg.initials}
-                    </motion.div>
-                  ) : (
+                  {isFirst ? (() => {
+                    const senderMember = members.find(m => m.name === msg.sender);
+                    const avatarUrl = senderMember?.avatarUrl;
+                    return (
+                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+                        className="h-8 w-8 rounded-full overflow-hidden shadow-lg shrink-0">
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt={msg.sender} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[11px] font-bold text-white"
+                            style={{ background: msg.color ?? 'linear-gradient(135deg, #FF6B7F, #FF4770)' }}>
+                            {msg.initials}
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })() : (
                     <div className="h-8 w-8" />
                   )}
                 </div>
@@ -507,6 +677,50 @@ function ChatView({
                       {msg.text}
                     </ReactMarkdown>
                   </div>
+
+                  {/* Link Preview */}
+                  {msg.linkPreview && (
+                    <a href={msg.linkPreview.url} target="_blank" rel="noreferrer"
+                      className="mt-2 flex gap-2.5 rounded-xl border border-[rgba(148,163,184,0.10)] bg-black/20 p-2.5 hover:bg-black/30 transition-colors no-underline">
+                      {msg.linkPreview.image && (
+                        <img src={msg.linkPreview.image} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-[#EEF2F6] truncate">{msg.linkPreview.title}</div>
+                        {msg.linkPreview.description && (
+                          <div className="text-[10px] text-[#4B5678] line-clamp-2 mt-0.5">{msg.linkPreview.description}</div>
+                        )}
+                        <div className="flex items-center gap-1 mt-1 text-[#0AE8D0]">
+                          <ExternalLink size={9} />
+                          <span className="text-[9px] truncate">{msg.linkPreview.siteName ?? msg.linkPreview.url}</span>
+                        </div>
+                      </div>
+                    </a>
+                  )}
+
+                  {/* Task Card */}
+                  {msg.taskCard && (
+                    <div className="mt-2 flex items-start gap-2.5 rounded-xl border border-[rgba(10,232,208,0.15)] bg-[rgba(10,232,208,0.05)] p-2.5">
+                      <CheckSquare size={13} className="text-[#0AE8D0] mt-0.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold text-[#EEF2F6]">{msg.taskCard.taskText}</div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <div className="flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white shrink-0"
+                            style={{ background: msg.taskCard.assigneeColor }}>
+                            {msg.taskCard.assigneeInitials}
+                          </div>
+                          <span className="text-[10px] text-[#4B5678]">{msg.taskCard.assignee}</span>
+                          <span className={`ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                            msg.taskCard.status === 'done' ? 'bg-[rgba(16,185,129,0.15)] text-[#10B981]'
+                            : msg.taskCard.status === 'inprogress' ? 'bg-[rgba(245,158,11,0.15)] text-[#F59E0B]'
+                            : 'bg-[rgba(148,163,184,0.10)] text-[#4B5678]'
+                          }`}>
+                            {msg.taskCard.status === 'inprogress' ? 'In Progress' : msg.taskCard.status === 'done' ? 'Done' : 'To Do'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className={`mt-1.5 flex items-center justify-end gap-1 text-[10px] ${isOwn ? 'text-[#06080F]/60' : 'text-[#4B5678]'}`}>
                     <span>{formatTime(msg.timestamp)}</span>
@@ -580,14 +794,37 @@ function ChatView({
 
       <div className="shrink-0 px-4 pb-4 pt-2 bg-gradient-to-t from-[#06080F] via-[#06080F] to-transparent">
         <div className="relative group">
+          {/* @mention autocomplete */}
+          <AnimatePresence>
+            {mentionOpen && mentionFiltered.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+                transition={{ duration: 0.12 }}
+                className="absolute bottom-full left-4 mb-2 z-30 rounded-xl overflow-hidden shadow-xl border border-[rgba(148,163,184,0.12)]"
+                style={{ background: '#0D1025', minWidth: 200 }}
+              >
+                {mentionFiltered.map(m => (
+                  <button key={m.id} type="button" onMouseDown={() => insertMention(m.name)}
+                    className="flex items-center gap-2.5 w-full px-3 py-2 text-left hover:bg-[rgba(10,232,208,0.08)] transition-colors">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-[#06080F] shrink-0"
+                      style={{ background: m.color ?? '#0AE8D0' }}>{m.initials}</span>
+                    <div>
+                      <div className="text-xs font-bold text-[#EEF2F6]">{m.name}</div>
+                      <div className="text-[10px] text-[#4B5678]">{m.role}</div>
+                    </div>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
           <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-[#0AE8D0] to-[#7C5CFC] opacity-0 group-focus-within:opacity-20 blur-sm transition-all duration-500" />
           <div className="relative rounded-2xl border border-[rgba(148,163,184,0.08)] bg-[rgba(22,27,61,0.60)] backdrop-blur-xl shadow-lg shadow-black/20 transition-all duration-300 group-focus-within:border-[rgba(10,232,208,0.25)]">
             <textarea
               ref={composerRef}
               value={composerMessage}
-              onChange={(e) => setComposerMessage(e.target.value)}
+              onChange={handleComposerChange}
               onKeyDown={handleKeyDown}
-              placeholder={`Message #${channel?.name ?? 'general'}...`}
+              placeholder={`Message #${channel?.name ?? 'general'}... (type @ to mention)`}
               className="w-full resize-none bg-transparent px-4 py-3.5 text-sm text-[#EEF2F6] placeholder-[#4B5678] focus:outline-none"
               rows={1}
               style={{ maxHeight: '120px', overflowY: 'auto' }}

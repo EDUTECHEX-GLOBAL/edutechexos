@@ -136,6 +136,33 @@ module.exports = {
         'fade-up':    { from: { opacity: '0', transform: 'translateY(24px)' },  to: { opacity: '1', transform: 'translateY(0)' } },
         'fade-down':  { from: { opacity: '0', transform: 'translateY(-12px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
         'fade-in':    { from: { opacity: '0' }, to: { opacity: '1' } },
+        'aurora': {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '25%':      { backgroundPosition: '100% 0%' },
+          '50%':      { backgroundPosition: '50% 100%' },
+          '75%':      { backgroundPosition: '0% 100%' },
+        },
+        drift: {
+          '0%, 100%': { transform: 'translate(0, 0) rotate(0deg)' },
+          '33%':      { transform: 'translate(2%, 3%) rotate(1deg)' },
+          '66%':      { transform: 'translate(-1%, 2%) rotate(-1deg)' },
+        },
+        'float-subtle': {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%':      { transform: 'translateY(-6px)' },
+        },
+        'shimmer-slow': {
+          '0%':   { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+        'pulse-soft': {
+          '0%, 100%': { opacity: '1' },
+          '50%':      { opacity: '0.7' },
+        },
+        'slide-up': {
+          from: { opacity: '0', transform: 'translateY(16px) scale(0.98)' },
+          to:   { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
         'scale-in':   { from: { opacity: '0', transform: 'scale(0.92)' }, to: { opacity: '1', transform: 'scale(1)' } },
         float:        { '0%, 100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-12px)' } },
         'float-slow': { '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' }, '50%': { transform: 'translateY(-20px) rotate(2deg)' } },
@@ -273,11 +300,22 @@ module.exports = {
         'ring-expand':     'ring-expand 1.6s ease-out infinite',
         'spin-slow':       'spin-slow 16s linear infinite',
         'gradient-x':      'gradient-x 4s ease infinite',
+        'aurora':          'aurora 18s ease-in-out infinite',
+        'drift':           'drift 12s ease-in-out infinite',
+        'float-subtle':    'float-subtle 6s ease-in-out infinite',
+        'shimmer-slow':    'shimmer-slow 8s linear infinite',
+        'pulse-soft':      'pulse-soft 3s ease-in-out infinite',
+        'slide-up':        'slide-up 0.5s cubic-bezier(0.22,1,0.36,1) both',
       },
 
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic':  'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+        'aurora-dark': 'linear-gradient(135deg, #0A0D1E 0%, #0D1330 25%, #0A0D1E 50%, #0F1535 75%, #0A0D1E 100%)',
+        'glow-cyan': 'radial-gradient(circle at 20% 30%, rgba(10,232,208,0.08) 0%, transparent 60%)',
+        'glow-coral': 'radial-gradient(circle at 80% 70%, rgba(255,107,127,0.06) 0%, transparent 50%)',
+        'glow-violet': 'radial-gradient(circle at 50% 50%, rgba(124,92,252,0.06) 0%, transparent 55%)',
+        'noise': 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.75\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%%25\' height=\'100%%25\' filter=\'url(%23n)\' opacity=\'0.02\'/%3E%3C/svg%3E")',
       },
 
       transitionTimingFunction: {

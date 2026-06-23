@@ -1,6 +1,7 @@
 'use client';
 import React, { useRef } from 'react';
 import AnimatedSection from './AnimatedSection';
+import { DecoEyebrow, DecoDiamond, DECO_GOLD } from './LandingDeco';
 
 /* ── Custom SVG icons — one per feature ──────────────────────────────────── */
 const IconChannels = () => (
@@ -363,9 +364,8 @@ export default function LandingFeatures() {
         <AnimatedSection direction="up">
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-20">
             <div>
-              <div className="flex items-center gap-3 mb-5">
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#5B4FDB', display: 'inline-block', boxShadow: '0 0 8px rgba(91,79,219,0.50)' }} />
-                <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '.30em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)', fontFamily: "'JetBrains Mono', monospace" }}>What lives inside</span>
+              <div className="mb-5">
+                <DecoEyebrow label="What lives inside" />
               </div>
               <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(2.8rem, 5.5vw, 4.8rem)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 0.92, color: '#1A1B3A' }}>
                 Every tool<br />

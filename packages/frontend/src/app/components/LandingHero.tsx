@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { DecoEyebrow, DecoRule, DecoCorner, DecoSunburst, DECO_GOLD } from './LandingDeco';
 
 function HeroDashboardMockup({ dotCount }: { dotCount: number }) {
   const messages = [
@@ -227,6 +228,17 @@ export default function LandingHero() {
       {/* ── Spectrum bar at top ── */}
       <div className="absolute top-0 left-0 right-0 pointer-events-none spectrum-bar" />
 
+      {/* ── Art Deco sunburst backdrop + corner brackets ── */}
+      <div className="absolute pointer-events-none deco-shimmer" style={{ top: '12%', right: '6%', zIndex: 1 }}>
+        <DecoSunburst size={360} rays={36} opacity={0.10} />
+      </div>
+      <div className="absolute pointer-events-none" style={{ top: 84, left: 24, zIndex: 1 }}>
+        <DecoCorner corner="tl" size={96} opacity={0.4} />
+      </div>
+      <div className="absolute pointer-events-none" style={{ bottom: 24, right: 24, zIndex: 1 }}>
+        <DecoCorner corner="br" size={96} opacity={0.4} />
+      </div>
+
       {/* ══════════════════════════════════════
           CONTENT
       ══════════════════════════════════════ */}
@@ -234,12 +246,9 @@ export default function LandingHero() {
 
         {/* ── Left: Headline + CTAs ── */}
         <div>
-          {/* Overline */}
-          <div className="h-in h-d1 flex items-center gap-3 mb-8">
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10C98A', boxShadow: '0 0 8px rgba(16,201,138,0.6)', flexShrink: 0 }} />
-            <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '.32em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)', fontFamily: "'JetBrains Mono', monospace" }}>
-              EduTechExOS · Institutional Workspace
-            </span>
+          {/* Overline — Art Deco eyebrow */}
+          <div className="h-in h-d1 mb-8">
+            <DecoEyebrow label="EduTechExOS · Institutional Workspace" />
           </div>
 
           {/* Headline */}
@@ -254,8 +263,10 @@ export default function LandingHero() {
             <span style={{ background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>runs on.</span>
           </h1>
 
-          {/* Indigo signal hairline */}
-          <div className="h-in h-d2" style={{ maxWidth: 220, height: 2, background: 'linear-gradient(90deg, #5B4FDB, #8B3FDB, transparent)', borderRadius: 1, marginBottom: '1.75rem', opacity: 0.40 }} />
+          {/* Art Deco gold rule with center diamond */}
+          <div className="h-in h-d2" style={{ marginBottom: '1.75rem' }}>
+            <DecoRule width={220} />
+          </div>
 
           {/* Descriptor */}
           <p className="h-in h-d3" style={{ fontSize: '1rem', fontWeight: 400, lineHeight: 1.78, color: 'rgba(90,95,128,0.80)', maxWidth: '38ch', marginBottom: '2.4rem' }}>

@@ -2,6 +2,7 @@
 import React from 'react';
 import { Users, MessageSquare, Sparkles } from 'lucide-react';
 import AnimatedSection from './AnimatedSection';
+import { DecoEyebrow } from './LandingDeco';
 
 const steps = [
   {
@@ -101,9 +102,8 @@ export default function LandingHowItWorks() {
         <AnimatedSection direction="up">
           <div className="pt-28 pb-20 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
             <div>
-              <div className="flex items-center gap-3 mb-5">
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#5B4FDB', display: 'inline-block', boxShadow: '0 0 8px rgba(91,79,219,0.5)' }} />
-                <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '.30em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)', fontFamily: "'JetBrains Mono', monospace" }}>How it works</span>
+              <div className="mb-5">
+                <DecoEyebrow label="How it works" />
               </div>
               <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(2.8rem, 5.5vw, 4.8rem)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 0.92, color: '#1A1B3A' }}>
                 Three steps<br />

@@ -2,6 +2,7 @@
 import React, { useRef } from 'react';
 import { Bot, CheckSquare, Newspaper, Zap, Shield, Users } from 'lucide-react';
 import AnimatedSection from './AnimatedSection';
+import { DecoEyebrow } from './LandingDeco';
 
 const capabilities = [
   { name: 'AI Agent',        Icon: Bot,         desc: 'Ask anything about your projects',        accent: '#5B4FDB', animClass: 'click-neural-pulse' },
@@ -76,11 +77,10 @@ export default function LandingTrustedBy() {
 
         {/* Header */}
         <AnimatedSection direction="up">
-          <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 16px', borderRadius: 20, background: 'rgba(26,27,58,0.14)', border: '1px solid rgba(26,27,58,0.22)', fontSize: 9.5, fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: '#5B4FDB', fontFamily: "'JetBrains Mono', monospace", marginBottom: 20 }}>
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#5B4FDB', boxShadow: '0 0 6px rgba(91,79,219,0.5)' }} />
-              Capabilities
-            </span>
+          <div style={{ textAlign: 'center', marginBottom: 56, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ marginBottom: 20 }}>
+              <DecoEyebrow label="Capabilities" align="center" />
+            </div>
             <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(2.4rem, 5vw, 4rem)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 0.95, color: '#1A1B3A', display: 'block', marginTop: 8 }}>
               Everything{' '}
               <span style={{ background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>

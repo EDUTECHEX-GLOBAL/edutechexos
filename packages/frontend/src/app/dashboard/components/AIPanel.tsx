@@ -51,13 +51,13 @@ function ToolResultCard({
       <div
         className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 text-[12px] ${
           ok
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-            : 'border-red-200 bg-red-50 text-red-700'
+              ? 'border-[rgba(56,217,169,0.20)] bg-[rgba(56,217,169,0.08)] text-[#38D9A9]'
+            : 'border-[rgba(255,107,127,0.20)] bg-[rgba(255,107,127,0.08)] text-[#FF6B7F]'
         }`}
       >
         <CheckCircle2
           size={13}
-          className={`mt-0.5 shrink-0 ${ok ? 'text-emerald-500' : 'text-red-400'}`}
+          className={`mt-0.5 shrink-0 ${ok ? 'text-[#38D9A9]' : 'text-[#FF6B7F]'}`}
         />
         <span className="font-semibold">
           {ok
@@ -70,14 +70,14 @@ function ToolResultCard({
   if (toolName === 'search_messages') {
     const results = (result.results as Array<Record<string, unknown>>) ?? [];
     return (
-      <div className="rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#F0F4FF] px-3 py-2.5 text-[12px]">
-        <div className="flex items-center gap-1.5 mb-1.5 text-[#3E4A89] font-bold">
+      <div className="rounded-xl border border-[rgba(148,163,184,0.10)] bg-[rgba(22,27,61,0.50)] px-3 py-2.5 text-[12px]">
+        <div className="flex items-center gap-1.5 mb-1.5 text-[#0AE8D0] font-bold">
           <Search size={11} /> {results.length} result{results.length !== 1 ? 's' : ''} found
         </div>
         {results.slice(0, 3).map((r, i) => (
           <p
             key={i}
-            className="truncate text-[11px] text-[#4A5578] py-0.5 border-b border-[rgba(62,74,137,0.08)] last:border-0"
+            className="truncate text-[11px] text-[#8896B0] py-0.5 border-b border-[rgba(148,163,184,0.06)] last:border-0"
           >
             <span className="font-semibold">{String(r.sender ?? '')}:</span>{' '}
             {String(r.text ?? '').slice(0, 80)}
@@ -89,18 +89,18 @@ function ToolResultCard({
   if (toolName === 'list_tasks') {
     const tasks = (result.tasks as Array<Record<string, unknown>>) ?? [];
     return (
-      <div className="rounded-xl border border-[rgba(62,74,137,0.12)] bg-white px-3 py-2.5 text-[12px]">
-        <div className="flex items-center gap-1.5 mb-1.5 text-[#3E4A89] font-bold">
+      <div className="rounded-xl border border-[rgba(148,163,184,0.10)] bg-[rgba(22,27,61,0.50)] px-3 py-2.5 text-[12px]">
+        <div className="flex items-center gap-1.5 mb-1.5 text-[#0AE8D0] font-bold">
           <ClipboardList size={11} /> {(result.total as number) ?? tasks.length} task
           {((result.total as number) ?? 0) !== 1 ? 's' : ''}
         </div>
         {tasks.slice(0, 4).map((t, i) => (
           <p
             key={i}
-            className="truncate text-[11px] text-[#4A5578] py-0.5 border-b border-[rgba(62,74,137,0.06)] last:border-0"
+            className="truncate text-[11px] text-[#8896B0] py-0.5 border-b border-[rgba(148,163,184,0.06)] last:border-0"
           >
             <span
-              className={`inline-block w-14 font-bold ${t.status === 'done' ? 'text-emerald-600' : t.status === 'inprogress' ? 'text-amber-600' : 'text-[#9BA6D3]'}`}
+              className={`inline-block w-14 font-bold ${t.status === 'done' ? 'text-[#38D9A9]' : t.status === 'inprogress' ? 'text-[#F59E0B]' : 'text-[#4B5678]'}`}
             >
               {String(t.status)}
             </span>
@@ -113,15 +113,15 @@ function ToolResultCard({
   if (toolName === 'get_members') {
     const members = (result.members as Array<Record<string, unknown>>) ?? [];
     return (
-      <div className="rounded-xl border border-[rgba(62,74,137,0.12)] bg-white px-3 py-2.5 text-[12px]">
-        <div className="flex items-center gap-1.5 mb-1.5 text-[#3E4A89] font-bold">
+      <div className="rounded-xl border border-[rgba(148,163,184,0.10)] bg-[rgba(22,27,61,0.50)] px-3 py-2.5 text-[12px]">
+        <div className="flex items-center gap-1.5 mb-1.5 text-[#0AE8D0] font-bold">
           <Users size={11} /> {members.length} team member{members.length !== 1 ? 's' : ''}
         </div>
         <div className="flex flex-wrap gap-1 mt-1">
           {members.slice(0, 8).map((m, i) => (
             <span
               key={i}
-              className="rounded-full bg-[rgba(62,74,137,0.08)] px-2 py-0.5 text-[10px] font-semibold text-[#3E4A89]"
+              className="rounded-full bg-[rgba(10,232,208,0.08)] px-2 py-0.5 text-[10px] font-semibold text-[#0AE8D0]"
             >
               {String(m.name ?? '')}
             </span>
@@ -274,9 +274,9 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
   const pendingTasks = tasks.filter((t) => !t.done);
 
   return (
-    <div className="flex h-full flex-col bg-[#FAFAF8]">
+    <div className="flex h-full flex-col bg-transparent">
       {/* ── Header ── */}
-      <div className="shrink-0 bg-gradient-to-b from-[#1E2538] to-[#252D45] px-4 pt-4 pb-3">
+      <div className="shrink-0 bg-gradient-to-b from-[rgba(13,16,37,0.90)] to-[rgba(22,27,61,0.80)] px-4 pt-4 pb-3 border-b border-[rgba(148,163,184,0.06)]">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
@@ -360,11 +360,11 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
             {/* Welcome state */}
             {messages.length === 0 && (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
-                <div className="h-12 w-12 rounded-2xl bg-[#252D45] flex items-center justify-center">
-                  <Sparkles size={20} className="text-white/70" />
+                        <div className="h-12 w-12 rounded-2xl bg-[rgba(10,232,208,0.10)] flex items-center justify-center border border-[rgba(10,232,208,0.15)]">
+                  <Sparkles size={20} className="text-[#0AE8D0]" />
                 </div>
-                <p className="text-sm font-bold text-[#4A5578]">EduTechEx Copilot</p>
-                <p className="text-xs text-[#9BA6D3] max-w-[200px] leading-relaxed">
+                <p className="text-sm font-bold text-[#EEF2F6]">EduTechEx Copilot</p>
+                <p className="text-xs text-[#4B5678] max-w-[200px] leading-relaxed">
                   I can create tasks, search messages, list team members, and answer questions about
                   this workspace.
                 </p>
@@ -403,8 +403,8 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
                   className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
                 >
                   {msg.role === 'assistant' && (
-                    <div className="h-6 w-6 shrink-0 rounded-lg bg-[#252D45] flex items-center justify-center mt-1">
-                      <Bot size={12} className="text-white/70" />
+                    <div className="h-6 w-6 shrink-0 rounded-lg bg-[rgba(10,232,208,0.10)] flex items-center justify-center mt-1 border border-[rgba(10,232,208,0.12)]">
+                      <Bot size={12} className="text-[#0AE8D0]" />
                     </div>
                   )}
 
@@ -426,7 +426,7 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
 
                     {/* In-progress tool call spinner */}
                     {msg.role === 'assistant' && hasPendingTool && (
-                      <div className="flex items-center gap-1.5 rounded-xl bg-[#F0F4FF] border border-[rgba(62,74,137,0.12)] px-3 py-2 text-[11px] text-[#3E4A89] font-semibold">
+                      <div className="flex items-center gap-1.5 rounded-xl bg-[rgba(10,232,208,0.06)] border border-[rgba(10,232,208,0.12)] px-3 py-2 text-[11px] text-[#0AE8D0] font-semibold">
                         <Loader2 size={10} className="animate-spin" /> Running action…
                       </div>
                     )}
@@ -437,10 +437,10 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
                         msg === messages[messages.length - 1] &&
                         msg.role === 'assistant')) && (
                       <div
-                        className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
+                          className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
                           msg.role === 'user'
-                            ? 'bg-[#3E4A89] text-white rounded-tr-sm'
-                            : 'bg-white border border-[rgba(62,74,137,0.10)] text-[#2D3550] rounded-tl-sm shadow-sm'
+                            ? 'bg-gradient-to-br from-[#0AE8D0] to-[#06B8A5] text-[#06080F] rounded-tr-sm font-medium'
+                            : 'bg-[rgba(22,27,61,0.70)] border border-[rgba(148,163,184,0.08)] text-[#EEF2F6] rounded-tl-sm shadow-sm'
                         }`}
                       >
                         {msg.role === 'assistant' ? (
@@ -451,8 +451,8 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
                               </ReactMarkdown>
                             </div>
                           ) : (
-                            <span className="flex items-center gap-2 text-[#9BA6D3]">
-                              <Loader2 size={12} className="animate-spin" /> Thinking…
+                            <span className="flex items-center gap-2 text-[#4B5678]">
+                              <Loader2 size={12} className="animate-spin text-[#0AE8D0]" /> Thinking…
                             </span>
                           )
                         ) : (
@@ -466,7 +466,7 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
                       </div>
                     )}
 
-                    <span className="text-[10px] text-[#9BA6D3] px-1">
+                    <span className="text-[10px] text-[#4B5678] px-1">
                       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       {((msg as any).createdAt ? new Date((msg as any).createdAt) : new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
@@ -483,14 +483,14 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
           <div className="p-4">
             <button
               onClick={extractTasksAction}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-[rgba(62,74,137,0.25)] bg-white py-3 text-xs font-bold text-[#3E4A89] hover:border-[#3E4A89] hover:bg-indigo-50 transition-all mb-4"
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-[rgba(10,232,208,0.20)] bg-[rgba(10,232,208,0.04)] py-3 text-xs font-bold text-[#0AE8D0] hover:border-[#0AE8D0] hover:bg-[rgba(10,232,208,0.08)] transition-all mb-4"
             >
               <Sparkles size={13} /> Extract action items from #{activeChannel}
             </button>
 
             {pendingTasks.length > 0 && (
               <div className="mb-4">
-                <p className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3] mb-2 px-0.5">
+                <p className="text-[9px] font-black uppercase tracking-widest text-[#4B5678] mb-2 px-0.5">
                   To do · {pendingTasks.length}
                 </p>
                 <div className="space-y-1.5">
@@ -498,25 +498,25 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
                     <div
                       key={task.id}
                       onClick={() => toggleTask(task.id)}
-                      className="flex items-start gap-3 rounded-xl bg-white border border-[rgba(62,74,137,0.08)] px-3.5 py-3 cursor-pointer hover:border-[rgba(62,74,137,0.20)] hover:shadow-sm transition-all group"
+                      className="flex items-start gap-3 rounded-xl bg-[rgba(22,27,61,0.50)] border border-[rgba(148,163,184,0.08)] px-3.5 py-3 cursor-pointer hover:border-[rgba(10,232,208,0.15)] hover:shadow-sm transition-all group"
                     >
                       <Square
                         size={15}
-                        className="mt-0.5 shrink-0 text-[#C4CAE0] group-hover:text-[#3E4A89] transition-colors"
+                        className="mt-0.5 shrink-0 text-[#4B5678] group-hover:text-[#0AE8D0] transition-colors"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-[#1E2636] leading-snug">
+                        <p className="text-xs font-semibold text-[#EEF2F6] leading-snug">
                           {task.text}
                         </p>
                         <div className="flex items-center gap-2 mt-1.5">
-                          <span className="flex items-center justify-center h-4 w-4 rounded-full bg-[#F0F1F7] text-[8px] font-black text-[#4A5578] border border-[rgba(62,74,137,0.12)]">
+                          <span className="flex items-center justify-center h-4 w-4 rounded-full bg-[rgba(10,232,208,0.10)] text-[8px] font-black text-[#0AE8D0] border border-[rgba(10,232,208,0.15)]">
                             {task.assigneeInitials}
                           </span>
-                          <span className="text-[10px] font-semibold text-[#9BA6D3]">
+                          <span className="text-[10px] font-semibold text-[#4B5678]">
                             {task.assignee}
                           </span>
                           {(task as { sourceChannel?: string }).sourceChannel && (
-                            <span className="ml-auto text-[10px] text-[#C4CAE0]">
+                            <span className="ml-auto text-[10px] text-[#4B5678]">
                               {(task as { sourceChannel?: string }).sourceChannel}
                             </span>
                           )}
@@ -530,7 +530,7 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
 
             {doneTasks.length > 0 && (
               <div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-[#C4CAE0] mb-2 px-0.5">
+                <p className="text-[9px] font-black uppercase tracking-widest text-[#4B5678] mb-2 px-0.5">
                   Completed · {doneTasks.length}
                 </p>
                 <div className="space-y-1.5">
@@ -538,10 +538,10 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
                     <div
                       key={task.id}
                       onClick={() => toggleTask(task.id)}
-                      className="flex items-start gap-3 rounded-xl bg-[#F7F6F2] border border-[rgba(62,74,137,0.05)] px-3.5 py-3 cursor-pointer opacity-55 hover:opacity-80 transition-all"
+                      className="flex items-start gap-3 rounded-xl bg-[rgba(22,27,61,0.30)] border border-[rgba(148,163,184,0.06)] px-3.5 py-3 cursor-pointer opacity-55 hover:opacity-80 transition-all"
                     >
-                      <CheckSquare size={15} className="mt-0.5 shrink-0 text-emerald-400" />
-                      <p className="text-xs font-semibold text-[#7C859E] line-through leading-snug">
+                      <CheckSquare size={15} className="mt-0.5 shrink-0 text-[#38D9A9]" />
+                      <p className="text-xs font-semibold text-[#4B5678] line-through leading-snug">
                         {task.text}
                       </p>
                     </div>
@@ -552,9 +552,9 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
 
             {tasks.length === 0 && (
               <div className="flex flex-col items-center gap-3 py-10 text-center">
-                <ListChecks size={24} className="text-slate-200" />
-                <p className="text-sm font-bold text-[#7C859E]">No tasks yet</p>
-                <p className="text-xs text-[#9BA6D3]">
+                <ListChecks size={24} className="text-[#4B5678]" />
+                <p className="text-sm font-bold text-[#4B5678]">No tasks yet</p>
+                <p className="text-xs text-[#4B5678]">
                   Click &quot;Extract action items&quot; to pull tasks from the chat.
                 </p>
               </div>
@@ -565,20 +565,20 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
 
       {/* ── Chat input ── */}
       {activeTab === 'chat' && (
-        <div className="shrink-0 p-3 bg-[#FAFAF8] border-t border-[rgba(62,74,137,0.08)]">
+        <div className="shrink-0 p-3 bg-transparent border-t border-[rgba(148,163,184,0.06)]">
           <div className="flex gap-1.5 mb-2.5 overflow-x-auto pb-0.5 scrollbar-none">
             {QUICK_PROMPTS.map((q) => (
               <button
                 key={q}
                 onClick={() => handleQuickPrompt(q)}
-                className="shrink-0 rounded-full border border-[rgba(62,74,137,0.12)] bg-white px-2.5 py-1 text-[10px] font-semibold text-[#4A5578] hover:border-[#3E4A89] hover:text-[#3E4A89] transition-all whitespace-nowrap"
+                className="shrink-0 rounded-full border border-[rgba(148,163,184,0.10)] bg-[rgba(22,27,61,0.50)] px-2.5 py-1 text-[10px] font-semibold text-[#8896B0] hover:border-[#0AE8D0] hover:text-[#0AE8D0] hover:bg-[rgba(10,232,208,0.06)] transition-all whitespace-nowrap"
               >
                 {q}
               </button>
             ))}
           </div>
 
-          <div className="flex items-center gap-2 rounded-xl border border-[rgba(62,74,137,0.14)] bg-white px-3 py-2 focus-within:border-[#3E4A89] focus-within:ring-2 focus-within:ring-[rgba(62,74,137,0.08)] transition-all shadow-sm">
+          <div className="flex items-center gap-2 rounded-xl border border-[rgba(148,163,184,0.10)] bg-[rgba(22,27,61,0.50)] px-3 py-2 focus-within:border-[rgba(10,232,208,0.25)] focus-within:ring-2 focus-within:ring-[rgba(10,232,208,0.06)] transition-all shadow-sm">
             <input
               ref={inputRef}
               type="text"
@@ -586,18 +586,18 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask me anything, or say 'create a task for…'"
-              className="flex-1 bg-transparent text-sm text-[#1E2636] placeholder-[#C4CAE0] outline-none font-medium"
+              className="flex-1 bg-transparent text-sm text-[#EEF2F6] placeholder-[#4B5678] outline-none font-medium"
             />
             <button
               onClick={handleSend}
               disabled={!inputValue.trim() || isLoading}
               className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 transition-all ${
                 inputValue.trim() && !isLoading
-                  ? 'bg-[#3E4A89] text-white hover:bg-[#2F3970] shadow-sm'
-                  : 'text-[#C4CAE0]'
+                  ? 'bg-gradient-to-br from-[#0AE8D0] to-[#06B8A5] text-[#06080F] hover:shadow-lg hover:shadow-[#0AE8D0]/20 shadow-sm'
+                  : 'text-[#4B5678]'
               }`}
             >
-              {isLoading ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+              {isLoading ? <Loader2 size={13} className="animate-spin text-[#0AE8D0]" /> : <Send size={13} />}
             </button>
           </div>
         </div>

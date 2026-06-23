@@ -1,7 +1,7 @@
 import ClientOnly from '../components/ClientOnly';
-import DashboardRedesigned from './components/DashboardRedesigned';
+import DashboardRedesigned from '@/app/dashboard/components/DashboardRedesigned';
 
-export default function DashboardPage() {
+export default function RedesignedDashboardPage() {
   return (
     <ClientOnly>
       <DashboardRedesigned />

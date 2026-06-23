@@ -2,6 +2,7 @@
 import React, { useRef } from 'react';
 import Link from 'next/link';
 import AnimatedSection from './AnimatedSection';
+import { DecoEyebrow, DecoCorner, DecoSunburst, DECO_GOLD_LIGHT } from './LandingDeco';
 
 export default function LandingCTA() {
   const btnRef = useRef<HTMLAnchorElement>(null);
@@ -37,15 +38,23 @@ export default function LandingCTA() {
         ))}
       </div>
 
+      {/* Art Deco gold corners + sunburst */}
+      <div className="absolute pointer-events-none deco-shimmer" style={{ top: 28, right: 36 }}>
+        <DecoSunburst size={300} rays={32} color={DECO_GOLD_LIGHT} opacity={0.16} />
+      </div>
+      <div className="absolute pointer-events-none" style={{ top: 26, left: 26 }}>
+        <DecoCorner corner="tl" size={92} color={DECO_GOLD_LIGHT} opacity={0.6} />
+      </div>
+      <div className="absolute pointer-events-none" style={{ bottom: 26, right: 26 }}>
+        <DecoCorner corner="br" size={92} color={DECO_GOLD_LIGHT} opacity={0.6} />
+      </div>
+
       <div className="relative max-w-screen-xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-16">
 
         {/* Heading */}
         <AnimatedSection direction="up" className="flex-1">
-          <div className="flex items-center gap-3 mb-7">
-            <div style={{ height: 1.5, width: 32, background: 'rgba(255,255,255,0.40)', borderRadius: 1 }} />
-            <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '.30em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.60)', fontFamily: "'JetBrains Mono', monospace" }}>
-              Get started today
-            </span>
+          <div className="mb-7">
+            <DecoEyebrow label="Get started today" color={DECO_GOLD_LIGHT} />
           </div>
           <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(2.8rem, 5.5vw, 4.8rem)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 0.92, color: '#FFFFFF', marginBottom: 24 }}>
             Ready to bring<br />

@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { DecoDiamond, DECO_GOLD } from './LandingDeco';
 
 export default function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -83,6 +84,8 @@ export default function LandingNav() {
       >
         {/* Spectrum bar at very top */}
         <div className="spectrum-bar" />
+        {/* Art Deco gold hairline */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${DECO_GOLD}55 30%, ${DECO_GOLD}55 70%, transparent)`, pointerEvents: 'none' }} />
 
         <div className="max-w-screen-xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
 
@@ -120,11 +123,11 @@ export default function LandingNav() {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-8">
-            <div style={{ height: 14, width: 1, background: 'rgba(26,27,58,0.18)' }} />
+            <DecoDiamond size={6} color={DECO_GOLD} />
             {navLinks.map(item => (
               <a key={item.label} href={item.href} className="nav-link-item">{item.label}</a>
             ))}
-            <div style={{ height: 14, width: 1, background: 'rgba(26,27,58,0.18)' }} />
+            <DecoDiamond size={6} color={DECO_GOLD} />
           </nav>
 
           {/* Right CTAs */}

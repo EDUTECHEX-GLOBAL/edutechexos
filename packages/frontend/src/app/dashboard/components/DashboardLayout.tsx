@@ -3,12 +3,13 @@
 import React from 'react';
 import {
   MessageSquare, CheckSquare, BookOpen, CalendarDays,
-  BarChart2, FileText, Sun, Moon, ChevronLeft, Layout,
+  BarChart2, FileText, Sun, Moon, Layout,
+  Bookmark, NotebookPen, Plug, CalendarOff, MessageSquareDot,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import AppLogo from '@/components/ui/AppLogo';
 
-export type LayoutTab = 'chats' | 'tasks' | 'docs' | 'calendar' | 'analytics' | 'reports';
+export type LayoutTab = 'chats' | 'tasks' | 'docs' | 'calendar' | 'analytics' | 'reports' | 'bookmarks' | 'notepad' | 'integrations' | 'leave' | 'dms';
 
 interface DashboardLayoutProps {
   activeTab: LayoutTab;
@@ -23,13 +24,18 @@ interface DashboardLayoutProps {
   onSettingsOpen?: () => void;
 }
 
-const tabs: { id: LayoutTab; label: string; icon: React.ElementType }[] = [
-  { id: 'chats', label: 'Chats', icon: MessageSquare },
-  { id: 'tasks', label: 'Tasks', icon: CheckSquare },
-  { id: 'docs', label: 'Docs', icon: BookOpen },
-  { id: 'calendar', label: 'Calendar', icon: CalendarDays },
-  { id: 'analytics', label: 'Analytics', icon: BarChart2 },
-  { id: 'reports', label: 'Reports', icon: FileText },
+const tabs: { id: LayoutTab; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
+  { id: 'chats',        label: 'Chats',        icon: MessageSquare },
+  { id: 'dms',          label: 'DMs',          icon: MessageSquareDot },
+  { id: 'tasks',        label: 'Tasks',        icon: CheckSquare },
+  { id: 'docs',         label: 'Docs',         icon: BookOpen },
+  { id: 'calendar',     label: 'Calendar',     icon: CalendarDays },
+  { id: 'leave',        label: 'Leave',        icon: CalendarOff },
+  { id: 'bookmarks',    label: 'Saved',        icon: Bookmark },
+  { id: 'notepad',      label: 'Notes',        icon: NotebookPen },
+  { id: 'integrations', label: 'Integrations', icon: Plug },
+  { id: 'analytics',    label: 'Analytics',    icon: BarChart2,   adminOnly: true },
+  { id: 'reports',      label: 'Reports',      icon: FileText,    adminOnly: true },
 ];
 
 export default function DashboardLayout({
@@ -63,7 +69,7 @@ export default function DashboardLayout({
 
         <div className="flex flex-col items-center gap-1.5 flex-1 w-full px-2.5">
           {tabs.map((tab, i) => {
-            if (tab.id === 'analytics' && !isAdmin) return null;
+            if (tab.adminOnly && !isAdmin) return null;
             const isActive = activeTab === tab.id;
             const Icon = tab.icon;
             return (
@@ -124,7 +130,7 @@ export default function DashboardLayout({
         </div>
       </nav>
 
-      <div className="relative z-10 flex flex-1 flex-col min-w-0">
+      <div className="relative z-10 flex flex-1 flex-col min-w-0 pb-[56px] md:pb-0">
         {topBar && (
           <div className="shrink-0 border-b border-[rgba(148,163,184,0.06)] bg-[rgba(13,16,37,0.50)] backdrop-blur-2xl">
             {topBar}
@@ -140,6 +146,40 @@ export default function DashboardLayout({
           {rightPanel}
         </aside>
       )}
+
+      {/* Mobile bottom nav */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-20 flex items-center justify-around px-1 py-1 border-t border-[rgba(148,163,184,0.08)] bg-[rgba(6,8,15,0.95)] backdrop-blur-2xl">
+        {tabs.filter(t => !t.adminOnly || isAdmin).slice(0, 5).map(tab => {
+          const isActive = activeTab === tab.id;
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              className={`flex flex-col items-center gap-0.5 flex-1 py-2 text-[8px] font-bold uppercase tracking-wider transition-all
+                ${isActive ? 'text-[#0AE8D0]' : 'text-[#4B5678]'}`}
+            >
+              <span className={`flex h-7 w-7 items-center justify-center rounded-xl transition-all
+                ${isActive ? 'bg-[rgba(10,232,208,0.12)]' : ''}`}>
+                <Icon size={15} strokeWidth={isActive ? 2.5 : 1.8} />
+              </span>
+              {tab.label}
+            </button>
+          );
+        })}
+        {currentUser && (
+          <button
+            onClick={onSettingsOpen}
+            className="flex flex-col items-center gap-0.5 flex-1 py-2 text-[8px] font-bold uppercase tracking-wider text-[#4B5678]"
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-xl text-[9px] font-black text-white"
+              style={{ background: 'linear-gradient(135deg,#FF6B7F,#FF4770)' }}>
+              {currentUser.initials}
+            </span>
+            Me
+          </button>
+        )}
+      </nav>
     </div>
   );
 }

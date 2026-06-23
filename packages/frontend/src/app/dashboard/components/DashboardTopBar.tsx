@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, Bell } from 'lucide-react';
+import { Search, Bell, Menu } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface DashboardTopBarProps {
@@ -10,6 +10,7 @@ interface DashboardTopBarProps {
   unreadNotifications?: number;
   onSearchOpen?: () => void;
   onNotificationsOpen?: () => void;
+  onMobileMenuOpen?: () => void;
 }
 
 export default function DashboardTopBar({
@@ -18,18 +19,27 @@ export default function DashboardTopBar({
   unreadNotifications = 0,
   onSearchOpen,
   onNotificationsOpen,
+  onMobileMenuOpen,
 }: DashboardTopBarProps) {
   return (
     <div className="flex h-14 items-center justify-between px-5">
-      <div className="min-w-0">
-        <h1 className="text-lg font-black text-[#EEF2F6] tracking-tight">
-          {title}
-        </h1>
-        {subtitle && (
-          <p className="text-xs font-medium text-[#4B5678] truncate">
-            {subtitle}
-          </p>
+      <div className="flex items-center gap-2 min-w-0">
+        {onMobileMenuOpen && (
+          <button onClick={onMobileMenuOpen}
+            className="md:hidden flex h-8 w-8 items-center justify-center rounded-lg text-[#4B5678] hover:text-[#EEF2F6] hover:bg-[rgba(148,163,184,0.08)] transition-all shrink-0">
+            <Menu size={16} />
+          </button>
         )}
+        <div className="min-w-0">
+          <h1 className="text-lg font-black text-[#EEF2F6] tracking-tight">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="text-xs font-medium text-[#4B5678] truncate">
+              {subtitle}
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-2">

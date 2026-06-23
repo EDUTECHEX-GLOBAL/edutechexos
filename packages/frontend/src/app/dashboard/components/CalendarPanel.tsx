@@ -505,7 +505,7 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
       onClick={onClose}
     >
       <motion.div
-        className="flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl"
+         className="flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-[rgba(148,163,184,0.10)] bg-[#0D1025] shadow-2xl"
         style={{ height: '88vh' }}
         initial={{ opacity: 0, y: 40, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -539,18 +539,18 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
         </div>
 
         {/* ── Tab Bar ── */}
-        <div className="flex shrink-0 gap-0.5 border-b border-[rgba(62,74,137,0.10)] bg-white px-3 pt-2">
+        <div className="flex shrink-0 gap-0.5 border-b border-[rgba(148,163,184,0.06)] bg-transparent px-3 pt-2">
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-bold transition-all ${tab === t.id ? 'border-b-2 border-[#3E4A89] text-[#3E4A89]' : 'text-[#7C859E] hover:text-[#4A5578]'}`}
+              className={`flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-bold transition-all ${tab === t.id ? 'border-b-2 border-[#0AE8D0] text-[#0AE8D0]' : 'text-[#4B5678] hover:text-[#8896B0]'}`}
             >
               {t.icon}
               {t.label}
               {t.badge !== undefined && (
                 <span
-                  className={`rounded-full px-1.5 py-0.5 text-[9px] font-black ${tab === t.id ? 'bg-[#3E4A89] text-white' : 'bg-[#F0F1F7] text-[#9BA6D3]'}`}
+                  className={`rounded-full px-1.5 py-0.5 text-[9px] font-black ${tab === t.id ? 'bg-[#0AE8D0] text-[#06080F]' : 'bg-[rgba(148,163,184,0.08)] text-[#4B5678]'}`}
                 >
                   {t.badge}
                 </span>
@@ -561,8 +561,8 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
 
         {/* ── Recurring Meet chips (meetings tabs only) ── */}
         {(tab === 'upcoming' || tab === 'past') && (
-          <div className="shrink-0 border-b border-[rgba(62,74,137,0.07)] bg-[#F7F6F2] px-4 py-2.5">
-            <p className="mb-1.5 text-[9px] font-black uppercase tracking-widest text-[#B0B8D1]">
+          <div className="shrink-0 border-b border-[rgba(148,163,184,0.06)] bg-[rgba(22,27,61,0.30)] px-4 py-2.5">
+            <p className="mb-1.5 text-[9px] font-black uppercase tracking-widest text-[#4B5678]">
               Quick join — Recurring meets
             </p>
             <div className="flex flex-wrap gap-2">
