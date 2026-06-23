@@ -63,6 +63,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return NextResponse.json({ success: true, deleted: 'for-me' });
     }
 
+    const msg = await Message.findById(id).lean() as any;
+    if (msg?.senderEmail &&
+        msg.senderEmail.toLowerCase() !== userEmail.toLowerCase() &&
+        user.role !== 'Admin') {
+      return forbidden();
+    }
     await Message.findByIdAndUpdate(id, {
       deletedAt: new Date(),
       deletedForEveryone: true,

@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, tasks: formatted });
   } catch (err) {
     console.error('GET /api/kanban error:', err);
-    return NextResponse.json({ success: false, tasks: [] });
+    return NextResponse.json({ success: false, tasks: [] }, { status: 500 });
   }
 }
 

@@ -22,6 +22,9 @@ export async function POST(request: NextRequest) {
       subject,
       htmlContent,
     });
+    if (!result.success) {
+      return NextResponse.json(result, { status: 502 });
+    }
     return NextResponse.json(result);
   } catch (err) {
     console.error('[email route] error:', err);

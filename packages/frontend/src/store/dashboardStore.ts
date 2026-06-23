@@ -680,6 +680,7 @@ export const useDashboardStore = create<DashboardState>()(
       loadLocalBookmarkedIds: async () => {
         try {
           const res = await apiFetch(`${API_BASE}/api/bookmarks`);
+          if (!res.ok) return;
           const data = await res.json();
           if (data.success && data.bookmarks) {
             set({ bookmarkedMessageIds: data.bookmarks.map((b: any) => b.messageId) });
@@ -825,11 +826,10 @@ export const useDashboardStore = create<DashboardState>()(
 
         const currentPage = get().wikiPages[channelId]?.find((p) => p.id === pageId);
         if (currentPage) {
-          apiFetch(`${API_BASE}/api/wikipages`, {
-            method: 'POST',
+          apiFetch(`${API_BASE}/api/wikipages/${pageId}`, {
+            method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              id: pageId,
               channelId,
               title: currentPage.title,
               content: currentPage.content,

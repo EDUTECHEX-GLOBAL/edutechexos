@@ -183,7 +183,7 @@ export default function LoginForm({
         return;
       }
 
-      finishLogin(result.user, result.token);
+      await finishLogin(result.user, result.token);
     } catch {
       setIsLoading(false);
       setError('password', { message: 'Service temporarily unavailable, please try again later.' });

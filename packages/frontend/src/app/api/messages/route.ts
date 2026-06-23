@@ -7,7 +7,6 @@ export async function GET(req: NextRequest) {
   const user = getApiUser(req);
   if (!user) return unauthorized();
 
-  const { searchParams } = new URL(req.url);
   const requestingUser = user.email;
 
   try {
@@ -43,7 +42,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, messages: grouped });
   } catch (err) {
     console.error('GET /api/messages error:', err);
-    return NextResponse.json({ success: false, messages: {} });
+    return NextResponse.json({ success: false, messages: {} }, { status: 500 });
   }
 }
 

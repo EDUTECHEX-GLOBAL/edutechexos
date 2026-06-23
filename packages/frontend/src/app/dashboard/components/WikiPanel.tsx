@@ -43,12 +43,12 @@ function ToolbarBtn({
       style={{
         width: 28, height: 28, borderRadius: 6, border: 'none', cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: active ? 'rgba(99,102,241,0.15)' : 'transparent',
-        color: active ? '#6366f1' : '#7C859E',
-        transition: 'all 0.12s',
+        background: active ? 'rgba(10,232,208,0.15)' : 'transparent',
+        color: active ? '#0AE8D0' : '#4B5678',
+        transition: 'all 0.15s',
       }}
-      onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(99,102,241,0.08)'; (e.currentTarget as HTMLButtonElement).style.color = '#1E2636'; } }}
-      onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#7C859E'; } }}
+      onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(10,232,208,0.08)'; (e.currentTarget as HTMLButtonElement).style.color = '#EEF2F6'; } }}
+      onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#4B5678'; } }}
     >
       {children}
     </button>
@@ -56,7 +56,7 @@ function ToolbarBtn({
 }
 
 function ToolbarDivider() {
-  return <div style={{ width: 1, height: 16, background: 'rgba(0,0,0,0.08)', margin: '0 3px', flexShrink: 0 }} />;
+  return <div style={{ width: 1, height: 16, background: 'rgba(148,163,184,0.08)', margin: '0 3px', flexShrink: 0 }} />;
 }
 
 export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
@@ -97,11 +97,17 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
       if (editor.getHTML() !== page.content) editor.commands.setContent(page.content || '', { emitUpdate: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPageId]);
+  }, [selectedPageId, editor]);
 
   useEffect(() => {
     if (!selectedPageId && pages.length > 0) setSelectedPageId(pages[0].id);
   }, [pages, selectedPageId]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
 
   const selectedPage = pages.find(p => p.id === selectedPageId) ?? null;
   // Default to private; track per-page via the stored isPrivate flag
@@ -173,7 +179,7 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
   const wordCount = editor?.storage.characterCount.words() ?? 0;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden" style={{ background: 'white' }}>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden" style={{ background: 'transparent' }}>
       {/* ── Header ── */}
       <div style={{
         background: 'linear-gradient(135deg,#191E2F 0%,#1E2538 100%)',
@@ -306,7 +312,7 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
         </aside>
 
         {/* ── Editor ── */}
-        <section style={{ display: 'flex', flexDirection: 'column', minHeight: 0, background: 'white' }}>
+        <section style={{ display: 'flex', flexDirection: 'column', minHeight: 0, background: '#0D1025' }}>
           {!selectedPage ? (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, padding: '32px 28px', textAlign: 'center' }}>
               <div style={{
@@ -320,10 +326,10 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
                   : <BookOpen size={30} style={{ color: '#60a5fa' }} strokeWidth={1.5} />}
               </div>
               <div>
-                <p style={{ fontSize: 14, fontWeight: 800, color: '#1E2636', marginBottom: 8 }}>
+                <p style={{ fontSize: 14, fontWeight: 800, color: '#EEF2F6', marginBottom: 8 }}>
                   {isPersonal ? 'Your notepad is empty' : 'No pages yet'}
                 </p>
-                <p style={{ fontSize: 13, color: '#7C859E', lineHeight: 1.65, maxWidth: 240 }}>
+                <p style={{ fontSize: 13, color: '#4B5678', lineHeight: 1.65, maxWidth: 240 }}>
                   {isPersonal
                     ? 'Jot down ideas or personal tasks. Only you can see these notes.'
                     : 'Create your first wiki page to capture knowledge for this channel.'}
@@ -347,7 +353,7 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
           ) : (
             <>
               {/* Editor sub-header: title + toolbar */}
-              <div style={{ flexShrink: 0, borderBottom: '1px solid rgba(0,0,0,0.07)', padding: '14px 18px 10px' }}>
+              <div style={{ flexShrink: 0, borderBottom: '1px solid rgba(148,163,184,0.06)', padding: '14px 18px 10px' }}>
                 <input
                   type="text"
                   value={title}
@@ -355,7 +361,7 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
                   placeholder="Page title…"
                   style={{
                     width: '100%', border: 'none', background: 'transparent',
-                    fontSize: 18, fontWeight: 900, color: '#1E2636',
+                    fontSize: 18, fontWeight: 900, color: '#EEF2F6',
                     outline: 'none', marginBottom: 10,
                   }}
                 />
@@ -363,8 +369,8 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
                 {/* Toolbar */}
                 <div style={{
                   display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1,
-                  background: '#F4F5FA', borderRadius: 8, padding: '4px 6px',
-                  border: '1px solid rgba(0,0,0,0.06)',
+                  background: 'rgba(22,27,61,0.50)', borderRadius: 8, padding: '4px 6px',
+                  border: '1px solid rgba(148,163,184,0.08)',
                 }}>
                   {/* Format */}
                   <ToolbarBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} title="Bold (Ctrl+B)">
@@ -408,7 +414,7 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
 
                   {/* Stats + autosave */}
                   <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: '#9CA3AF' }}>{wordCount}w · {charCount}c</span>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#4B5678' }}>{wordCount}w · {charCount}c</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 6, padding: '3px 7px' }}>
                       <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981' }} />
                       <span style={{ fontSize: 9, fontWeight: 800, color: '#10b981', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Auto-save</span>
@@ -421,24 +427,24 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
               <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                 <EditorContent
                   editor={editor}
-                  className="h-full [&_.ProseMirror]:h-full [&_.ProseMirror]:outline-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-[#9BA6D3] [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none"
+                  className="h-full [&_.ProseMirror]:h-full [&_.ProseMirror]:outline-none [&_.ProseMirror]:text-[#EEF2F6] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-[#4B5678] [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none"
                 />
               </div>
 
               {/* Footer */}
-              <div style={{ flexShrink: 0, borderTop: '1px solid rgba(0,0,0,0.07)', padding: '10px 14px' }}>
+              <div style={{ flexShrink: 0, borderTop: '1px solid rgba(148,163,184,0.06)', padding: '10px 14px' }}>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     type="button"
                     onClick={handleDeletePage}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 5,
-                      border: '1px solid rgba(0,0,0,0.09)', borderRadius: 9,
-                      background: 'white', padding: '8px 14px', cursor: 'pointer',
-                      fontSize: 11, fontWeight: 800, color: '#7C859E', letterSpacing: '0.04em',
+                      border: '1px solid rgba(148,163,184,0.10)', borderRadius: 9,
+                      background: 'transparent', padding: '8px 14px', cursor: 'pointer',
+                      fontSize: 11, fontWeight: 800, color: '#4B5678', letterSpacing: '0.04em',
                     }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(239,68,68,0.35)'; (e.currentTarget as HTMLButtonElement).style.color = '#ef4444'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.06)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(0,0,0,0.09)'; (e.currentTarget as HTMLButtonElement).style.color = '#7C859E'; (e.currentTarget as HTMLButtonElement).style.background = 'white'; }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,71,112,0.35)'; (e.currentTarget as HTMLButtonElement).style.color = '#FF6B7F'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,71,112,0.06)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(148,163,184,0.10)'; (e.currentTarget as HTMLButtonElement).style.color = '#4B5678'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
                   >
                     <Trash2 size={12} strokeWidth={2.5} /> Delete
                   </button>
@@ -484,8 +490,8 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
                   ) : (
                     <div style={{
                       flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                      borderRadius: 9, border: '1px dashed rgba(0,0,0,0.12)', padding: '8px 0',
-                      fontSize: 12, fontWeight: 600, color: '#7C859E',
+                      borderRadius: 9, border: '1px dashed rgba(148,163,184,0.12)', padding: '8px 0',
+                      fontSize: 12, fontWeight: 600, color: '#4B5678',
                     }}>
                       <Lock size={11} strokeWidth={2.5} /> Private — only visible to you
                     </div>

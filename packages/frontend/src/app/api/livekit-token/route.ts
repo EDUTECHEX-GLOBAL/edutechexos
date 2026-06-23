@@ -6,12 +6,18 @@ export async function POST(req: NextRequest) {
   const user = getApiUser(req);
   if (!user) return unauthorized();
 
-  const { roomName, participantName } = await req.json();
+  let roomName: string, participantName: string;
+  try {
+    ({ roomName, participantName } = await req.json());
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
 
-  if (!roomName || typeof roomName !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(roomName) || roomName.length > 100) {
+  const safeRoom = roomName ? String(roomName).replace(/[^a-zA-Z0-9_\-. ]/g, '').trim().slice(0, 100) : '';
+  if (!safeRoom) {
     return NextResponse.json({ error: 'Invalid roomName' }, { status: 400 });
   }
-  if (!participantName || typeof participantName !== 'string' || participantName.length > 100) {
+  if (!participantName || typeof participantName !== 'string' || participantName.trim().length === 0 || participantName.length > 100) {
     return NextResponse.json({ error: 'Invalid participantName' }, { status: 400 });
   }
 
@@ -35,7 +41,7 @@ export async function POST(req: NextRequest) {
 
   at.addGrant({
     roomJoin: true,
-    room: roomName,
+    room: safeRoom,
     canPublish: true,
     canSubscribe: true,
     canPublishData: true,

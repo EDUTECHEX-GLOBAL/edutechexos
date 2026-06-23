@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   try {
     await connectToDatabase();
     const email = user.email;
-    const query = { $or: [{ recipientEmails: { $size: 0 } }, { recipientEmails: email }] };
+    const query = { $or: [{ recipientEmails: { $exists: false } }, { recipientEmails: { $size: 0 } }, { recipientEmails: email }] };
     const docs = await NotificationModel.find(query).sort({ createdAt: -1 }).limit(100).lean();
     const notifications = docs.map(({ _id, __v, ...rest }: any) => ({
       ...rest,
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, notifications });
   } catch (err) {
     console.error('GET /api/notifications error:', err);
-    return NextResponse.json({ success: false, notifications: [] });
+    return NextResponse.json({ success: false, notifications: [] }, { status: 500 });
   }
 }
 
