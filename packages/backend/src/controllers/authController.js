@@ -242,6 +242,33 @@ async function resendConfirmation(req, res) {
   }
 }
 
+async function updateProfile(req, res) {
+  try {
+    const email = req.user?.email;
+    if (!email) return res.status(401).json({ success: false, error: 'Not authenticated.' });
+    const emailClean = email.toLowerCase();
+    const { name, bio, timezone, avatarUrl } = req.body;
+    const updates = {};
+    if (name && String(name).trim()) updates.name = String(name).trim();
+    if (bio !== undefined) updates.bio = String(bio).slice(0, 300);
+    if (timezone !== undefined) updates.timezone = String(timezone).slice(0, 100);
+    if (avatarUrl !== undefined) updates.avatarUrl = String(avatarUrl).slice(0, 500);
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ success: false, error: 'No fields to update.' });
+    }
+    if (VALID_ACCOUNTS.some(a => a.email === emailClean)) {
+      return res.status(400).json({ success: false, error: 'System accounts cannot update their profile here.' });
+    }
+    const updated = await AccessRequest.findOneAndUpdate(
+      { email: emailClean }, { $set: updates }, { new: true }
+    ).lean();
+    if (!updated) return res.status(404).json({ success: false, error: 'Account not found.' });
+    res.json({ success: true, user: { name: updated.name, email: updated.email, role: updated.role, bio: updated.bio, timezone: updated.timezone, avatarUrl: updated.avatarUrl } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
 async function logout(req, res) {
   try {
     const email = req.user?.email;
@@ -294,4 +321,4 @@ async function me(req, res) {
   }
 }
 
-module.exports = { login, forgotPassword, resetPassword, changePassword, resendConfirmation, logout, me };
+module.exports = { login, forgotPassword, resetPassword, changePassword, resendConfirmation, logout, me, updateProfile };

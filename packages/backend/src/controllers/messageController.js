@@ -1,8 +1,57 @@
-const { getUserEmail, formatMessage, PAGE_SIZE } = require('../utils/helpers');
+const { getUserEmail, formatMessage, PAGE_SIZE, VALID_ACCOUNTS } = require('../utils/helpers');
 const { encryptField, decryptField } = require('../services/encryptionService');
+const { sendBrevoEmail } = require('../services/emailService');
 const Message = require('../models/Message');
 const WikiPage = require('../models/WikiPage');
 const KanbanTask = require('../models/KanbanTask');
+const { AccessRequest } = require('../models/index');
+const Notification = require('../models/Notification');
+
+async function processMentions(text, senderName, channelId, messageId, io, appUrl) {
+  if (!text || !text.includes('@')) return;
+  const mentions = [...text.matchAll(/@([A-Za-z][A-Za-z0-9 ._-]{1,40})/g)].map(m => m[1].trim().toLowerCase());
+  if (mentions.length === 0) return;
+
+  const dbUsers = await AccessRequest.find({ status: 'approved' }).lean().catch(() => []);
+  const allUsers = [
+    ...VALID_ACCOUNTS.map(a => ({ email: a.email, name: a.name })),
+    ...dbUsers.map(u => ({ email: u.email, name: u.name })),
+  ];
+
+  for (const mention of mentions) {
+    const matched = allUsers.find(u => u.name.toLowerCase() === mention || u.name.toLowerCase().startsWith(mention));
+    if (!matched) continue;
+
+    if (io) {
+      io.emit('mention_notification', {
+        recipientEmail: matched.email,
+        senderName,
+        channelId,
+        messageId,
+        preview: text.slice(0, 120),
+      });
+    }
+
+    sendBrevoEmail({
+      to: [{ email: matched.email, name: matched.name }],
+      subject: `EduTechExOS — ${senderName} mentioned you`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#F8FAFC;border-radius:12px;">
+          <div style="background:linear-gradient(135deg,#191E2F,#252D45);border-radius:10px;padding:20px;text-align:center;margin-bottom:20px;">
+            <h1 style="color:#fff;margin:0;font-size:20px;">EduTechExOS</h1>
+          </div>
+          <h2 style="font-size:16px;color:#0F172A;margin:0 0 8px;">You were mentioned in #${channelId}</h2>
+          <p style="color:#64748B;font-size:13px;margin:0 0 16px;"><strong>${senderName}</strong> mentioned you:</p>
+          <div style="background:#fff;border-left:3px solid #0D9488;border-radius:6px;padding:12px 16px;margin-bottom:20px;">
+            <p style="color:#0F172A;font-size:13px;margin:0;">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,300)}</p>
+          </div>
+          <div style="text-align:center;">
+            <a href="${appUrl || 'https://edutechexos.vercel.app'}/dashboard" style="display:inline-block;background:#0D9488;color:#fff;text-decoration:none;padding:11px 28px;border-radius:8px;font-size:13px;font-weight:700;">View in Dashboard →</a>
+          </div>
+        </div>`,
+    }).catch(() => {});
+  }
+}
 
 async function getMessages(req, res) {
   try {
@@ -73,6 +122,12 @@ async function postMessage(req, res) {
     const socketPayload = { ...base, text: preSaveText };
     const io = req.app.get('io');
     if (io) io.to(base.channelId).emit('new_message', { channelId: base.channelId, message: socketPayload });
+
+    if (preSaveText) {
+      const senderName = messageData.sender || req.user?.name || 'Someone';
+      const appUrl = process.env.APP_URL || 'https://edutechexos.vercel.app';
+      processMentions(preSaveText, senderName, base.channelId, base.id, io, appUrl).catch(() => {});
+    }
 
     res.json({ success: true, message: base });
   } catch (err) {

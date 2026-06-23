@@ -384,4 +384,62 @@ async function testEmail(req, res) {
   }
 }
 
-module.exports = { setPassword, generatePassword, sendInvite, broadcastEmail, migrateEncrypt, getAuditLog, validateInvite, acceptInvite, emailDiagnostics, testEmail };
+async function getUsers(req, res) {
+  if (!req.user || req.user.role !== 'Admin') {
+    return res.status(403).json({ success: false, error: 'Admin access required.' });
+  }
+  try {
+    const dbUsers = await AccessRequest.find({}).sort({ createdAt: -1 }).lean();
+    const removed = new Set(
+      (await RemovedMember.find({}).lean().catch(() => [])).map(r => r.email.toLowerCase())
+    );
+    const systemUsers = VALID_ACCOUNTS
+      .filter(a => !removed.has(a.email.toLowerCase()))
+      .map(a => ({ id: a.email, email: a.email, name: a.name, role: a.role, status: 'system', source: 'system' }));
+    const dbFormatted = dbUsers.map(({ _id, __v, password, ...rest }) => ({
+      ...rest, id: _id.toString(), source: 'db',
+    }));
+    res.json({ success: true, users: [...systemUsers, ...dbFormatted] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+async function updateUserRole(req, res) {
+  if (!req.user || req.user.role !== 'Admin') {
+    return res.status(403).json({ success: false, error: 'Admin access required.' });
+  }
+  try {
+    const { userId } = req.params;
+    const { role } = req.body;
+    if (!role || !['Admin', 'Member', 'Viewer'].includes(role)) {
+      return res.status(400).json({ success: false, error: 'role must be Admin, Member, or Viewer.' });
+    }
+    const updated = await AccessRequest.findByIdAndUpdate(userId, { $set: { role } }, { new: true }).lean();
+    if (!updated) return res.status(404).json({ success: false, error: 'User not found.' });
+    await logAudit(req, 'member.role_changed', updated.email, updated.name, { newRole: role });
+    res.json({ success: true, user: { id: updated._id.toString(), email: updated.email, name: updated.name, role } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+async function removeUser(req, res) {
+  if (!req.user || req.user.role !== 'Admin') {
+    return res.status(403).json({ success: false, error: 'Admin access required.' });
+  }
+  try {
+    const { userId } = req.params;
+    const user = await AccessRequest.findByIdAndDelete(userId).lean();
+    if (!user) return res.status(404).json({ success: false, error: 'User not found.' });
+    await new RemovedMember({ email: user.email, name: user.name, removedBy: req.user.email }).save().catch(() => {});
+    await logAudit(req, 'member.removed', user.email, user.name, {});
+    const io = req.app.get('io');
+    if (io) io.emit('member_removed', { email: user.email });
+    res.json({ success: true, removed: user.email });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+module.exports = { setPassword, generatePassword, sendInvite, broadcastEmail, migrateEncrypt, getAuditLog, validateInvite, acceptInvite, emailDiagnostics, testEmail, getUsers, updateUserRole, removeUser };

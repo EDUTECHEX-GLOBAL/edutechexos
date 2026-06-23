@@ -7,6 +7,8 @@ const WorkspaceChannelSchema = new mongoose.Schema({
   isDefault:   { type: Boolean, default: false },
   createdBy:   { type: String, default: '' },
   order:       { type: Number, default: 0 },
+  type:        { type: String, enum: ['channel', 'dm'], default: 'channel' },
+  dmMembers:   { type: [String], default: [] },
 }, { timestamps: true });
 
 const WorkspaceChannel = mongoose.model('WorkspaceChannel', WorkspaceChannelSchema);

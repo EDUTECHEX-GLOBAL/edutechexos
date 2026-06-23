@@ -4,18 +4,43 @@ const { logAudit } = require('../services/auditService');
 
 async function getChannels(req, res) {
   try {
-    let channels = await WorkspaceChannel.find({}).sort({ order: 1 }).lean();
+    const userEmail = req.user?.email?.toLowerCase();
+    let channels = await WorkspaceChannel.find({ $or: [{ type: 'channel' }, { type: { $exists: false } }] }).sort({ order: 1 }).lean();
     if (channels.length === 0) {
       await WorkspaceChannel.insertMany(DEFAULT_WORKSPACE_CHANNELS);
       channels = DEFAULT_WORKSPACE_CHANNELS;
     }
-    const formatted = channels.map(({ _id, __v, ...rest }) => ({
+    const dms = userEmail
+      ? await WorkspaceChannel.find({ type: 'dm', dmMembers: userEmail }).sort({ updatedAt: -1 }).lean()
+      : [];
+    const all = [...channels, ...dms];
+    const formatted = all.map(({ _id, __v, ...rest }) => ({
       ...rest,
       id: _id,
       createdAt: rest.createdAt instanceof Date ? rest.createdAt.toISOString() : rest.createdAt,
       updatedAt: rest.updatedAt instanceof Date ? rest.updatedAt.toISOString() : rest.updatedAt,
     }));
     res.json({ success: true, channels: formatted });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+async function getOrCreateDM(req, res) {
+  try {
+    const myEmail = req.user?.email?.toLowerCase();
+    const { targetEmail } = req.body;
+    if (!myEmail || !targetEmail) return res.status(400).json({ success: false, error: 'targetEmail is required.' });
+    const other = targetEmail.toLowerCase();
+    const members = [myEmail, other].sort();
+    const dmId = `dm-${members[0].replace(/[@.]/g,'-')}-${members[1].replace(/[@.]/g,'-')}`;
+    let existing = await WorkspaceChannel.findById(dmId).lean();
+    if (!existing) {
+      const ch = new WorkspaceChannel({ _id: dmId, name: dmId, type: 'dm', dmMembers: members, isDefault: false, createdBy: myEmail, order: 9999 });
+      existing = (await ch.save()).toObject();
+    }
+    const { _id, __v, ...rest } = existing;
+    res.json({ success: true, channel: { ...rest, id: _id } });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
@@ -90,4 +115,4 @@ async function deleteChannel(req, res) {
   }
 }
 
-module.exports = { getChannels, createChannel, updateChannel, deleteChannel };
+module.exports = { getChannels, createChannel, updateChannel, deleteChannel, getOrCreateDM };
