@@ -15,11 +15,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const allowedDomain = process.env.ALLOWED_DOMAIN ?? 'edutechex.in';
     const emailClean = email.trim().toLowerCase();
-    if (!emailClean.endsWith(`@${allowedDomain}`)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailClean)) {
       return NextResponse.json(
-        { success: false, error: `Only @${allowedDomain} addresses are allowed` },
+        { success: false, error: 'Invalid email address' },
         { status: 400 }
       );
     }

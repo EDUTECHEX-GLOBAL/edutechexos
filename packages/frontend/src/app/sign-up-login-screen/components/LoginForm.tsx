@@ -93,7 +93,11 @@ export default function LoginForm({
       }
       const token = jwtToken;
       localStorage.setItem('edutechex_token', JSON.stringify({ user: loginAccount, token }));
-      document.cookie = 'auth_session=1; path=/; max-age=604800; SameSite=Lax';
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
       toast.success(`Welcome back, ${loginAccount.name.split(' ')[0]}!`);
       identifyUser(loginAccount.email, loginAccount.name);
       trackEvent('login', { role: loginAccount.role });
@@ -122,7 +126,11 @@ export default function LoginForm({
     }
     const token = jwtToken;
     localStorage.setItem('edutechex_token', JSON.stringify({ user: loginAccount, token }));
-    document.cookie = 'auth_session=1; path=/; max-age=604800; SameSite=Lax';
+    await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
 
     const today = new Date().toISOString().split('T')[0];
     const trackKey = `edutechex_logins_${loginAccount.email}`;

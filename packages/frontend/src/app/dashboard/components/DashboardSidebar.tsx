@@ -586,6 +586,7 @@ export default function DashboardSidebar({
                 } catch { /* ignore */ }
                 localStorage.removeItem('edutechex_token');
                 localStorage.removeItem('edutechex_access_requests');
+                await fetch('/api/auth/session', { method: 'DELETE' });
                 window.location.href = '/sign-up-login-screen';
               }}
               className="flex-1 flex justify-center items-center py-1.5 rounded-lg text-[#7C859E] hover:bg-red-50 hover:text-red-600 hover:shadow-sm transition-all"

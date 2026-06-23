@@ -2046,7 +2046,7 @@ export default function EduTechExOSDashboard() {
             <button
               onClick={() => {
                 localStorage.removeItem('edutechex_token');
-                document.cookie = 'auth_session=; path=/; max-age=0';
+                fetch('/api/auth/session', { method: 'DELETE' });
                 toast.success('Signed out');
                 router.push('/sign-up-login-screen');
               }}
@@ -2604,7 +2604,7 @@ export default function EduTechExOSDashboard() {
                 title="Sign out"
                 onClick={() => {
                   localStorage.removeItem('edutechex_token');
-                  document.cookie = 'auth_session=; path=/; max-age=0';
+                  fetch('/api/auth/session', { method: 'DELETE' });
                   toast.success('Signed out');
                   router.push('/sign-up-login-screen');
                 }}
@@ -4434,7 +4434,7 @@ export default function EduTechExOSDashboard() {
                     type="button"
                     onClick={() => {
                       localStorage.removeItem('edutechex_token');
-                      document.cookie = 'auth_session=; path=/; max-age=0';
+                      fetch('/api/auth/session', { method: 'DELETE' });
                       toast.success('Signed out');
                       router.push('/sign-up-login-screen');
                     }}

@@ -235,7 +235,7 @@ export default function AdminPage() {
         const me = JSON.parse(stored)?.user?.email?.toLowerCase();
         if (me && me === email.toLowerCase()) {
           localStorage.removeItem('edutechex_token');
-          document.cookie = 'auth_session=; path=/; max-age=0';
+          fetch('/api/auth/session', { method: 'DELETE' });
           toast.error('Your account has been removed by the admin.');
           setTimeout(() => {
             window.location.replace('/sign-up-login-screen');
