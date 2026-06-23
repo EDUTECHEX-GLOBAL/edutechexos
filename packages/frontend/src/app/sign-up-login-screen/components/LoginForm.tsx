@@ -75,7 +75,7 @@ export default function LoginForm({
     }
   }, [searchParams]);
 
-  function finishLogin(
+  async function finishLogin(
     loginAccount: { name: string; email: string; role: string },
     jwtToken?: string
   ) {
