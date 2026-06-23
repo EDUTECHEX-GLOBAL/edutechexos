@@ -1475,11 +1475,19 @@ export default function EduTechExOSDashboard() {
         kind === 'video'
           ? MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
             ? 'video/webm;codecs=vp9,opus'
-            : 'video/webm'
+            : MediaRecorder.isTypeSupported('video/webm')
+              ? 'video/webm'
+              : ''
           : MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
             ? 'audio/webm;codecs=opus'
-            : 'audio/webm';
-      const recorder = new MediaRecorder(stream, { mimeType });
+            : MediaRecorder.isTypeSupported('audio/webm')
+              ? 'audio/webm'
+              : MediaRecorder.isTypeSupported('audio/mp4')
+                ? 'audio/mp4'
+                : '';
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
       const chunks: BlobPart[] = [];
 
       recorder.ondataavailable = (event) => {
@@ -1513,12 +1521,19 @@ export default function EduTechExOSDashboard() {
       setRecordingType(kind);
       recorder.start();
       toast.success(`${kind === 'video' ? 'Screen' : 'Voice'} recording started`);
-    } catch {
+    } catch (err: unknown) {
       setRecordingBusy(false);
       setRecordingType(null);
       mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
-      toast.error(`Could not start ${kind} recording. Check browser permissions.`);
+      const isDenied =
+        err instanceof DOMException &&
+        (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError');
+      toast.error(
+        isDenied
+          ? `Browser blocked ${kind} access. Click the camera/mic icon in the address bar to allow.`
+          : `Could not start ${kind} recording. Try refreshing and allowing microphone access.`
+      );
     }
   }
 

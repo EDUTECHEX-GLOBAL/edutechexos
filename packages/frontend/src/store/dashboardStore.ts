@@ -318,12 +318,19 @@ export const useDashboardStore = create<DashboardState>()(
           body: JSON.stringify({ ...message, channelId }),
         })
           .then((res) => {
-            // A failed POST (e.g. 413 payload too large for a big file) means the
-            // message was never persisted and other users will never receive it.
+            // A failed POST (e.g. 413 payload too large for a big base64 file/video) means
+            // the message was never persisted and other users will never receive it.
             // Warn the sender instead of silently showing it only to themselves.
-            if (!res.ok && (message as { files?: unknown[] }).files?.length) {
-              const why = res.status === 413 ? 'file is too large to share' : 'could not send file';
-              import('sonner').then(({ toast }) => toast.error(`Message failed — ${why}.`)).catch(() => {});
+            if (!res.ok) {
+              const m = message as { files?: unknown[]; videoUrl?: string; audioUrl?: string };
+              const hasMedia = m.files?.length || m.videoUrl || m.audioUrl;
+              if (hasMedia) {
+                const why =
+                  res.status === 413
+                    ? 'media is too large — please set up Cloudinary upload preset'
+                    : 'could not send media to server (others won\'t see it)';
+                import('sonner').then(({ toast }) => toast.error(`Media failed: ${why}.`)).catch(() => {});
+              }
             }
           })
           .catch(() => {

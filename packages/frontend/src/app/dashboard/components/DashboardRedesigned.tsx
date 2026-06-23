@@ -21,6 +21,7 @@ import WikiPanel from './WikiPanel';
 import CalendarPanel from './CalendarPanel';
 import AIPanel from './AIPanel';
 import NotificationPanel from './NotificationPanel';
+import AdminControlPanel from './AdminControlPanel';
 
 export default function DashboardRedesigned() {
   const { theme, toggleTheme } = useTheme();
@@ -47,6 +48,7 @@ export default function DashboardRedesigned() {
   const [authChecked, setAuthChecked] = useState(false);
   const [composerMessage, setComposerMessage] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
@@ -151,6 +153,15 @@ export default function DashboardRedesigned() {
     );
   }
 
+  if (adminPanelOpen && isAdmin) {
+    return (
+      <AdminControlPanel
+        onDashboard={() => setAdminPanelOpen(false)}
+        currentUser={currentUser}
+      />
+    );
+  }
+
   const tabLabel = activeTab === 'chats' ? (channel?.name ?? 'general')
     : activeTab === 'tasks' ? 'Task Board'
     : activeTab === 'docs' ? 'Wiki'
@@ -166,7 +177,7 @@ export default function DashboardRedesigned() {
       currentUser={currentUser}
       darkMode={darkMode}
       onToggleTheme={() => { toggleTheme(); toggleDarkMode(); }}
-      onSettingsOpen={() => setSettingsOpen(true)}
+      onSettingsOpen={() => isAdmin ? setAdminPanelOpen(true) : setSettingsOpen(true)}
       topBar={
         <DashboardTopBar
           title={tabLabel}

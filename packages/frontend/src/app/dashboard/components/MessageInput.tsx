@@ -14,7 +14,8 @@ import {
   Zap,
 } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
-import { smartUpload, uploadToFirebase } from '@/lib/uploadToFirebase';
+import { smartUpload } from '@/lib/uploadToFirebase';
+import { cloudinaryConfigured } from '@/lib/uploadToCloudinary';
 import { blobToDataUrl } from '@/lib/uploadToR2';
 import { getSocket } from '@/lib/socket';
 import { toast } from 'sonner';
@@ -438,6 +439,12 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
       toast.error('Recording not supported in this browser.');
       return;
     }
+    if (!cloudinaryConfigured) {
+      toast.warning(
+        'Cloud storage not configured — recording will only be visible to you. Ask admin to add NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET in Vercel settings.',
+        { duration: 6000 }
+      );
+    }
     try {
       setRecordingBusy(true);
       discardRecordingRef.current = false;
@@ -461,11 +468,19 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
         kind === 'video'
           ? MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
             ? 'video/webm;codecs=vp9,opus'
-            : 'video/webm'
+            : MediaRecorder.isTypeSupported('video/webm')
+              ? 'video/webm'
+              : ''
           : MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
             ? 'audio/webm;codecs=opus'
-            : 'audio/webm';
-      const recorder = new MediaRecorder(stream, { mimeType });
+            : MediaRecorder.isTypeSupported('audio/webm')
+              ? 'audio/webm'
+              : MediaRecorder.isTypeSupported('audio/mp4')
+                ? 'audio/mp4'
+                : '';
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
       const chunks: BlobPart[] = [];
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
@@ -504,8 +519,8 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
         (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError');
       toast.error(
         isDenied
-          ? `Browser blocked ${kind} access "" allow permissions.`
-          : `Could not start ${kind} recording.`
+          ? `Browser blocked ${kind} access. Click the lock icon in the address bar to allow.`
+          : `Could not start ${kind} recording. Try refreshing and allowing microphone access.`
       );
     }
   }
