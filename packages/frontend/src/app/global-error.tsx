@@ -1,8 +1,17 @@
 'use client';
+import { useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
 
 export default function GlobalError({ error, reset }: { error: Error; reset: () => void }) {
   Sentry.captureException(error);
+
+  useEffect(() => {
+    // ChunkLoadError = browser has stale cache from old deployment — hard reload fixes it
+    if (error?.name === 'ChunkLoadError' || error?.message?.includes('Loading chunk')) {
+      window.location.reload();
+    }
+  }, [error]);
+
   return (
     <html>
       <body className="flex min-h-screen items-center justify-center bg-slate-50">
