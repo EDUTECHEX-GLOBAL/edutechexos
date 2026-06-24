@@ -94,20 +94,20 @@ export default function ProfileModal({ open, onClose, currentUser, onProfileUpda
   const initials = (name || currentUser?.name || '?').split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97, y: 8 }}
         transition={{ type: 'spring', damping: 28, stiffness: 380 }}
         className="w-full max-w-md rounded-2xl shadow-2xl overflow-hidden"
-        style={{ background: '#0D1025', border: '1px solid rgba(148,163,184,0.10)' }}
+        style={{ background: '#FFFFFF', border: '1px solid rgba(99,102,241,0.08)' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[rgba(148,163,184,0.07)]">
-          <span className="text-sm font-black text-[#EEF2F6]">My Profile</span>
-          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-[#4B5678] hover:text-[#EEF2F6] hover:bg-[rgba(148,163,184,0.07)] transition-all">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[rgba(99,102,241,0.08)]">
+          <span className="text-sm font-black text-slate-800">My Profile</span>
+          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
             <X size={14} />
           </button>
         </div>
@@ -116,7 +116,7 @@ export default function ProfileModal({ open, onClose, currentUser, onProfileUpda
         <div className="flex gap-1 px-5 pt-4">
           {(['profile', 'security'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${tab === t ? 'bg-[rgba(10,232,208,0.10)] text-[#0AE8D0]' : 'text-[#4B5678] hover:text-[#8896B0]'}`}>
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${tab === t ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
               {t === 'profile' ? <User size={11} /> : <Lock size={11} />}
               {t === 'profile' ? 'Profile' : 'Security'}
             </button>
@@ -138,39 +138,39 @@ export default function ProfileModal({ open, onClose, currentUser, onProfileUpda
                     </div>
                   )}
                   <button onClick={() => fileRef.current?.click()}
-                    className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-lg bg-[#0D9488] text-white shadow-lg">
+                    className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-lg">
                     <Camera size={10} />
                   </button>
                   <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-[#EEF2F6]">{currentUser?.name}</div>
-                  <div className="text-xs text-[#4B5678]">{currentUser?.email}</div>
-                  <div className="mt-1 text-[10px] font-bold px-2 py-0.5 rounded bg-[rgba(10,232,208,0.10)] text-[#0AE8D0] inline-block">{currentUser?.role}</div>
+                  <div className="text-sm font-bold text-slate-800">{currentUser?.name}</div>
+                  <div className="text-xs text-slate-500">{currentUser?.email}</div>
+                  <div className="mt-1 text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 inline-block">{currentUser?.role}</div>
                 </div>
               </div>
 
               {/* Fields */}
               <Field label="Display Name">
                 <input value={name} onChange={e => setName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-[rgba(148,163,184,0.05)] border border-[rgba(148,163,184,0.10)] text-[#EEF2F6] text-sm focus:outline-none focus:border-[#0AE8D0] transition-colors" />
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 transition-colors shadow-sm" />
               </Field>
               <Field label="Bio">
                 <textarea value={bio} onChange={e => setBio(e.target.value)} rows={2} maxLength={300}
                   placeholder="Tell your team a little about yourself..."
-                  className="w-full px-3 py-2 rounded-lg bg-[rgba(148,163,184,0.05)] border border-[rgba(148,163,184,0.10)] text-[#EEF2F6] text-sm focus:outline-none focus:border-[#0AE8D0] transition-colors resize-none" />
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 transition-colors resize-none shadow-sm" />
               </Field>
               <Field label="Timezone">
                 <select value={timezone} onChange={e => setTimezone(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-[rgba(148,163,184,0.05)] border border-[rgba(148,163,184,0.10)] text-[#EEF2F6] text-sm focus:outline-none focus:border-[#0AE8D0] transition-colors">
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 transition-colors shadow-sm">
                   {['Asia/Kolkata','Asia/Dubai','America/New_York','America/Los_Angeles','Europe/London','Europe/Berlin','Asia/Singapore','Asia/Tokyo','Australia/Sydney','UTC'].map(tz => (
-                    <option key={tz} value={tz} style={{ background: '#0D1025' }}>{tz.replace('_',' ')}</option>
+                    <option key={tz} value={tz}>{tz.replace('_',' ')}</option>
                   ))}
                 </select>
               </Field>
 
               <button onClick={saveProfile} disabled={saving}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold bg-[#0D9488] text-white transition-all hover:bg-[#0B7A6E] disabled:opacity-60">
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold bg-indigo-600 text-white transition-all hover:bg-indigo-700 disabled:opacity-60">
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                 Save Changes
               </button>
@@ -179,7 +179,7 @@ export default function ProfileModal({ open, onClose, currentUser, onProfileUpda
 
           {tab === 'security' && (
             <div className="space-y-4">
-              <div className="p-3 rounded-xl bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.15)] text-xs text-[#F59E0B]">
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
                 Min 8 characters, one uppercase letter, one number.
               </div>
               <Field label="Current Password">
@@ -193,7 +193,7 @@ export default function ProfileModal({ open, onClose, currentUser, onProfileUpda
               </Field>
 
               <button onClick={changePassword} disabled={changingPw || !currentPw || !newPw}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold bg-[#7C3AED] text-white transition-all hover:bg-[#6D28D9] disabled:opacity-60">
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold bg-indigo-600 text-white transition-all hover:bg-indigo-700 disabled:opacity-60">
                 {changingPw ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
                 Change Password
               </button>
@@ -208,7 +208,7 @@ export default function ProfileModal({ open, onClose, currentUser, onProfileUpda
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-[10px] font-bold uppercase tracking-widest text-[#4B5678] mb-1.5">{label}</label>
+      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">{label}</label>
       {children}
     </div>
   );
@@ -218,9 +218,9 @@ function PasswordInput({ value, onChange, show, onToggle }: { value: string; onC
   return (
     <div className="relative">
       <input type={show ? 'text' : 'password'} value={value} onChange={e => onChange(e.target.value)}
-        className="w-full px-3 py-2 pr-9 rounded-lg bg-[rgba(148,163,184,0.05)] border border-[rgba(148,163,184,0.10)] text-[#EEF2F6] text-sm focus:outline-none focus:border-[#7C3AED] transition-colors" />
+        className="w-full px-3 py-2 pr-9 rounded-lg bg-white border border-slate-200 text-slate-800 text-sm focus:outline-none focus:border-indigo-500 transition-colors shadow-sm" />
       <button type="button" onClick={onToggle}
-        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#4B5678] hover:text-[#8896B0] transition-colors">
+        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
         {show ? <EyeOff size={13} /> : <Eye size={13} />}
       </button>
     </div>

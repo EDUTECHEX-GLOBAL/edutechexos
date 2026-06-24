@@ -1,10 +1,10 @@
 import ClientOnly from '../components/ClientOnly';
-import DashboardRedesigned from './components/DashboardRedesigned';
+import EduTechExOSDashboard from './components/EduTechExOSDashboard';
 
 export default function DashboardPage() {
   return (
     <ClientOnly>
-      <DashboardRedesigned />
+      <EduTechExOSDashboard />
     </ClientOnly>
   );
 }

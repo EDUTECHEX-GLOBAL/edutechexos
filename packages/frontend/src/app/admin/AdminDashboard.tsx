@@ -121,6 +121,7 @@ export default function AdminPage() {
     count: number;
     at: string;
   } | null>(null);
+  const [activeSection, setActiveSection] = useState<'overview' | 'directory' | 'operations' | 'time-leave' | 'productivity'>('overview');
   const [activeTab, setActiveTab] = useState<
     'people' | 'requests' | 'invites' | 'channels' | 'broadcast' | 'activity' | 'attendance' | 'desktop' | 'availability' | 'leaves' | 'leave-calendar' | 'audit'
   >('people');
@@ -1013,169 +1014,333 @@ export default function AdminPage() {
     { id: 'audit' as const,           Icon: ScrollText,   label: 'Audit Log',      badge: 0,                                                     accent: '#6366F1', accentBg: 'rgba(99,102,241,0.10)',  accentBorder: 'rgba(99,102,241,0.22)',  animClass: 'click-bar-rise' },
   ];
 
-  const activeTabMeta = TABS.find(t => t.id === activeTab)!;
+  const activeTabMeta = TABS.find(t => t.id === activeTab)!;  const SECTIONS = useMemo(() => [
+    { id: 'overview' as const, label: 'Overview', Icon: ShieldCheck, badge: pendingRequests.length + leaves.filter(l => l.status === 'pending').length },
+    { id: 'directory' as const, label: 'Directory & Access', Icon: Users, badge: pendingRequests.length },
+    { id: 'operations' as const, label: 'Operations & Comms', Icon: Send, badge: 0 },
+    { id: 'time-leave' as const, label: 'Time & Attendance', Icon: CalendarDays, badge: leaves.filter(l => l.status === 'pending').length },
+    { id: 'productivity' as const, label: 'Productivity & Analytics', Icon: Activity, badge: liveUsers.length },
+  ], [pendingRequests.length, leaves, liveUsers.length]);
 
   return (
     <AdminGuard>
-      <div className="admin-control-root min-h-screen" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
-
-        {/*  Spectrum bar  */}
-        <div className="spectrum-bar fixed top-0 left-0 right-0 z-50 pointer-events-none" />
-
-        {/*  Header  */}
-        <header className="sticky top-[3px] z-40" style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(26,27,58,0.14)', boxShadow: '0 2px 16px rgba(91,79,219,0.06)' }}>
-          <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-6 lg:px-8">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="flex items-center gap-2.5 no-underline">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md" style={{ background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', boxShadow: '0 4px 14px rgba(91,79,219,0.28)' }}>
-                  <span style={{ fontSize: 9, fontWeight: 900, color: '#FFFFFF' }}>EX</span>
-                </div>
-                <span style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 16, fontWeight: 800, color: '#1A1B3A', letterSpacing: '-0.025em' }}>
-                  EduTechEx<span style={{ color: '#5B4FDB' }}>OS</span>
+      <div className="admin-control-root min-h-screen">
+        <div className="spectrum-stripe fixed top-0 left-0 right-0 z-50" />
+        
+        <div className="admin-shell">
+          {/* Sidebar */}
+          <aside className="admin-sidebar">
+            {/* Logo */}
+            <div className="mb-8 flex items-center gap-3 px-2">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md bg-gradient-to-br from-indigo-600 to-purple-600">
+                <span className="text-[10px] font-black text-white">EX</span>
+              </div>
+              <div>
+                <span className="font-extrabold text-[15px] tracking-tight text-slate-800">
+                  EduTechEx<span className="text-indigo-600">OS</span>
                 </span>
-              </Link>
-              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: 8, background: 'rgba(239,71,111,0.08)', border: '1px solid rgba(239,71,111,0.18)', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: '#EF476F', fontFamily: "'JetBrains Mono', monospace" }}>
-                Admin control
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 20, border: '1.5px solid rgba(26,27,58,0.18)', background: '#FFFFFF', fontSize: 12, fontWeight: 600, color: '#5A5F80', textDecoration: 'none', transition: 'all .2s' }}
-                className="hidden md:inline-flex"
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.28)'; (e.currentTarget as HTMLElement).style.color = '#5B4FDB'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(26,27,58,0.18)'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
-              >
-                Workspace
-              </Link>
-              <button
-                className="relative flex h-9 w-9 items-center justify-center rounded-xl transition-all"
-                style={{ color: '#9296B0', background: 'transparent', border: '1.5px solid rgba(26,27,58,0.15)' }}
-                title="Pending requests"
-                onClick={() => setActiveTab('requests')}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.06)'; (e.currentTarget as HTMLElement).style.color = '#EF476F'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#9296B0'; }}
-              >
-                <Bell size={17} />
-                {pendingRequests.length > 0 && (
-                  <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-white" style={{ background: '#EF476F' }} />
-                )}
-              </button>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold" style={{ background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', color: '#FFFFFF', boxShadow: '0 2px 10px rgba(91,79,219,0.25)' }}>
-                {(adminUser?.name ?? 'Admin')
-                  .split(' ')
-                  .map((p) => p[0])
-                  .join('')
-                  .slice(0, 2)
-                  .toUpperCase()}
+                <p className="text-[9px] font-bold text-rose-500 uppercase tracking-widest leading-none">Admin Hub</p>
               </div>
             </div>
-          </div>
-        </header>
 
-        <main className="mx-auto max-w-[1500px] px-6 py-10 lg:px-8">
-          {/*  Page hero  */}
-          <section className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: '#7C3AED', marginBottom: 8 }}>
-                Admin control
-              </p>
-              <h1 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(1.8rem, 3vw, 2.8rem)', fontWeight: 800, letterSpacing: '-0.03em', color: '#1A1B3A', marginBottom: 8 }}>
-                Workspace Control Center
-              </h1>
-              <p style={{ fontSize: 14, color: 'rgba(90,95,128,0.75)', lineHeight: 1.65, maxWidth: 560 }}>
-                Manage people, channel access, broadcast emails, and monitor team activity "" all in one place.
-              </p>
+            {/* Navigation links */}
+            <nav className="flex-1 flex flex-col gap-2">
+              {SECTIONS.map((sec) => {
+                const isActive = activeSection === sec.id;
+                return (
+                  <button
+                    key={sec.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveSection(sec.id);
+                      if (sec.id === 'directory') setActiveTab('people');
+                      else if (sec.id === 'operations') setActiveTab('invites');
+                      else if (sec.id === 'time-leave') setActiveTab('leaves');
+                      else if (sec.id === 'productivity') setActiveTab('desktop');
+                    }}
+                    className={`sidebar-link-btn ${isActive ? 'active' : ''}`}
+                  >
+                    <sec.Icon size={18} />
+                    <span>{sec.label}</span>
+                    {sec.badge > 0 && <span className="sidebar-badge">{sec.badge}</span>}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Profile widget */}
+            <div className="mt-auto pt-4 border-t border-slate-200/50 flex items-center gap-3 px-2">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                {(adminUser?.name ?? 'Admin').split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-slate-800 truncate">{adminUser?.name ?? 'Admin User'}</p>
+                <p className="text-[10px] text-slate-500 truncate">{adminUser?.email ?? 'admin@edutechex.in'}</p>
+              </div>
+              <Link href="/dashboard" className="text-slate-400 hover:text-indigo-600 transition-colors" title="Go to Workspace">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              </Link>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowAddModal(true)}
-              className="btn-primary px-5 py-3 text-sm whitespace-nowrap"
-            >
-              <UserPlus size={16} />
-              Add user
-            </button>
-          </section>
+          </aside>
 
-          {/*  Stat cards  */}
-          <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {statCards.map(({ label, value, icon: Icon, accent, accentBg, gradient }) => (
-              <div
-                key={label}
-                className="relative overflow-hidden rounded-2xl p-5 transition-all duration-300"
-                style={{ background: '#FFFFFF', border: `1.5px solid ${accent}18`, boxShadow: `0 2px 8px ${accent}0A`, cursor: 'default' }}
-                onMouseEnter={e => { const el = e.currentTarget; el.style.boxShadow = `0 12px 40px ${accent}16`; el.style.borderColor = `${accent}30`; el.style.transform = 'translateY(-2px)'; }}
-                onMouseLeave={e => { const el = e.currentTarget; el.style.boxShadow = `0 2px 8px ${accent}0A`; el.style.borderColor = `${accent}18`; el.style.transform = 'translateY(0)'; }}
-              >
-                {/* Left accent strip */}
-                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: gradient, borderRadius: '3px 0 0 3px' }} />
-                <div className="mb-4 flex items-center justify-between">
-                  <div style={{ width: 42, height: 42, borderRadius: 12, background: gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 14px ${accent}28` }}>
-                    <Icon size={19} style={{ color: '#FFFFFF' }} />
-                  </div>
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: accent, background: accentBg, padding: '3px 8px', borderRadius: 20 }}>
-                    Live
-                  </span>
+          {/* Main workspace */}
+          <main className="admin-main">
+            {/* Main Header */}
+            <header className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-slate-200/50">
+              <div>
+                <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-1.5 font-mono">
+                  {activeSection === 'overview' ? 'Command Center' : activeSection === 'directory' ? 'Directory & Permissions' : activeSection === 'operations' ? 'Operations & Comms' : activeSection === 'time-leave' ? 'Time & Leave' : 'Productivity & Analytics'}
+                </p>
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                  {activeSection === 'overview' ? 'Workspace Control Center' : activeSection === 'directory' ? 'Directory Manager' : activeSection === 'operations' ? 'Operations Control' : activeSection === 'time-leave' ? 'Time & Attendance Desk' : 'Productivity Hub'}
+                </h1>
+              </div>
+
+              {/* Sub-tabs segment switcher */}
+              {activeSection !== 'overview' && (
+                <div className="hub-subnav">
+                  {activeSection === 'directory' && [
+                    { id: 'people' as const, label: 'Members', Icon: Users },
+                    { id: 'requests' as const, label: 'Requests', Icon: UserPlus, badge: pendingRequests.length },
+                    { id: 'channels' as const, label: 'Channels', Icon: Hash },
+                  ].map(sub => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() => setActiveTab(sub.id)}
+                      className={`hub-subnav-btn ${activeTab === sub.id ? 'active' : ''}`}
+                    >
+                      <sub.Icon size={14} />
+                      {sub.label}
+                      {sub.badge ? <span className="ml-1 text-[9px] bg-rose-500 text-white px-1.5 py-0.5 rounded-full">{sub.badge}</span> : null}
+                    </button>
+                  ))}
+
+                  {activeSection === 'operations' && [
+                    { id: 'invites' as const, label: 'Invite Generator', Icon: Sparkles },
+                    { id: 'broadcast' as const, label: 'Broadcast Email', Icon: Send },
+                  ].map(sub => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() => setActiveTab(sub.id)}
+                      className={`hub-subnav-btn ${activeTab === sub.id ? 'active' : ''}`}
+                    >
+                      <sub.Icon size={14} />
+                      {sub.label}
+                    </button>
+                  ))}
+
+                  {activeSection === 'time-leave' && [
+                    { id: 'leaves' as const, label: 'Leave Requests', Icon: CalendarX, badge: leaves.filter(l => l.status === 'pending').length },
+                    { id: 'leave-calendar' as const, label: 'Leave Calendar', Icon: CalendarDays },
+                    { id: 'attendance' as const, label: 'Attendance', Icon: CalendarDays },
+                    { id: 'availability' as const, label: 'Availability', Icon: CalendarDays },
+                  ].map(sub => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() => setActiveTab(sub.id)}
+                      className={`hub-subnav-btn ${activeTab === sub.id ? 'active' : ''}`}
+                    >
+                      <sub.Icon size={14} />
+                      {sub.label}
+                      {sub.badge ? <span className="ml-1 text-[9px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full">{sub.badge}</span> : null}
+                    </button>
+                  ))}
+
+                  {activeSection === 'productivity' && [
+                    { id: 'desktop' as const, label: 'Desktop Activity', Icon: Monitor, badge: liveUsers.length },
+                    { id: 'activity' as const, label: 'App Session Activity', Icon: Activity },
+                    { id: 'audit' as const, label: 'Audit Log', Icon: ScrollText },
+                  ].map(sub => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() => setActiveTab(sub.id)}
+                      className={`hub-subnav-btn ${activeTab === sub.id ? 'active' : ''}`}
+                    >
+                      <sub.Icon size={14} />
+                      {sub.label}
+                      {sub.badge ? <span className="ml-1 text-[9px] bg-emerald-500 text-white px-1.5 py-0.5 rounded-full">{sub.badge}</span> : null}
+                    </button>
+                  ))}
                 </div>
-                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.65)', marginBottom: 4 }}>
-                  {label}
-                </p>
-                <p style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', color: '#1A1B3A', lineHeight: 1 }}>
-                  {value}
-                </p>
-              </div>
-            ))}
-          </section>
+              )}
+            </header>
 
-          {/*  Tab navigation  */}
-          <div className="mb-6 flex gap-2 overflow-x-auto rounded-2xl p-1.5" style={{ background: '#FFFFFF', border: '1.5px solid rgba(26,27,58,0.14)', boxShadow: '0 2px 8px rgba(91,79,219,0.04)' }}>
-            {TABS.map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    const btn = document.querySelector(`[data-tab="${tab.id}"]`) as HTMLElement;
-                    if (btn) {
-                      btn.classList.remove(tab.animClass);
-                      void btn.offsetWidth;
-                      btn.classList.add(tab.animClass);
-                      setTimeout(() => btn.classList.remove(tab.animClass), 600);
-                    }
-                  }}
-                  data-tab={tab.id}
-                  className="flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-250"
-                  style={isActive ? {
-                    background: tab.accentBg,
-                    color: tab.accent,
-                    border: `1.5px solid ${tab.accentBorder}`,
-                    boxShadow: `0 2px 12px ${tab.accent}18`,
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  } : {
-                    color: 'rgba(90,95,128,0.70)',
-                    border: '1.5px solid transparent',
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  }}
-                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(91,79,219,0.04)'; }}
-                  onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                >
-                  <tab.Icon size={15} />
-                  {tab.label}
-                  {tab.badge > 0 && (
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      height: 18, minWidth: 18, padding: '0 5px',
-                      borderRadius: 9, fontSize: 9, fontWeight: 800,
-                      background: isActive ? tab.accent : '#EF476F',
-                      color: '#FFFFFF',
-                    }}>
-                      {tab.badge}
+            {/* Overview / Command Deck View Content */}
+            {activeSection === 'overview' && (
+              <div className="flex flex-col gap-8">
+                {/* Stat cards grid */}
+                <div className="stats-grid">
+                  {statCards.map((card) => {
+                    const Icon = card.icon;
+                    return (
+                      <div key={card.label} className="stat-widget-card">
+                        <div className="stat-accent-bar" style={{ background: card.gradient }} />
+                        <div className="flex justify-between items-center mb-3">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ background: card.gradient }}>
+                            <Icon size={18} />
+                          </div>
+                          <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-mono">LIVE</span>
+                        </div>
+                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{card.label}</p>
+                        <h3 className="text-3xl font-black text-slate-900 mt-1">{card.value}</h3>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Grid for Actions Queue & Quick Links */}
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                  {/* Actions Queue */}
+                  <div className="glass-card p-6 xl:col-span-2 flex flex-col gap-4">
+                    <h3 className="text-lg font-black text-slate-900 border-b border-slate-200/50 pb-3 flex items-center gap-2">
+                      <ShieldCheck size={18} className="text-indigo-600" />
+                      Awaiting Action
+                    </h3>
+
+                    <div className="flex flex-col gap-3">
+                      {/* Access Requests */}
+                      {pendingRequests.length > 0 && (
+                        <div className="flex items-center justify-between p-4 rounded-xl border border-rose-100 bg-rose-50/50">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600">
+                              <UserPlus size={16} />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-slate-800">{pendingRequests.length} access request(s) pending</p>
+                              <p className="text-[10px] text-slate-500">New signup requests waiting for review or invites.</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setActiveSection('directory'); setActiveTab('requests'); }}
+                            className="btn-premium-secondary"
+                            style={{ padding: '6px 12px', fontSize: '11px' }}
+                          >
+                            Review
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Leaves awaiting review */}
+                      {leaves.filter(l => l.status === 'pending').length > 0 && (
+                        <div className="flex items-center justify-between p-4 rounded-xl border border-amber-100 bg-amber-50/50">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
+                              <CalendarX size={16} />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-slate-800">{leaves.filter(l => l.status === 'pending').length} leave request(s) pending</p>
+                              <p className="text-[10px] text-slate-500">Leave applications requiring review and feedback.</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setActiveSection('time-leave'); setActiveTab('leaves'); }}
+                            className="btn-premium-secondary"
+                            style={{ padding: '6px 12px', fontSize: '11px' }}
+                          >
+                            Review
+                          </button>
+                        </div>
+                      )}
+
+                      {pendingRequests.length === 0 && leaves.filter(l => l.status === 'pending').length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-10 text-slate-400">
+                          <CheckCircle2 size={32} className="text-emerald-500 mb-3" />
+                          <p className="text-sm font-bold text-slate-800">Workspace is in perfect order!</p>
+                          <p className="text-[11px] text-slate-400 mt-1">All leave applications and access requests are resolved.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Quick Shortcuts */}
+                  <div className="glass-card p-6 flex flex-col gap-4">
+                    <h3 className="text-lg font-black text-slate-900 border-b border-slate-200/50 pb-3 flex items-center gap-2">
+                      <Sparkles size={18} className="text-indigo-600" />
+                      Quick Shortcuts
+                    </h3>
+
+                    <div className="flex flex-col gap-3">
+                      <div className="deck-action-widget" onClick={() => setShowAddModal(true)}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                            <UserPlus size={14} />
+                          </div>
+                          <span className="text-xs font-bold text-slate-800">Add User Directly</span>
+                        </div>
+                      </div>
+
+                      <div className="deck-action-widget" onClick={() => { setActiveSection('operations'); setActiveTab('invites'); }}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-teal-50 flex items-center justify-center text-teal-600">
+                            <Sparkles size={14} />
+                          </div>
+                          <span className="text-xs font-bold text-slate-800">Send Secure Invite</span>
+                        </div>
+                      </div>
+
+                      <div className="deck-action-widget" onClick={() => { setActiveSection('operations'); setActiveTab('broadcast'); }}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600">
+                            <Send size={14} />
+                          </div>
+                          <span className="text-xs font-bold text-slate-800">Broadcast Email</span>
+                        </div>
+                      </div>
+
+                      <div className="deck-action-widget" onClick={() => { setActiveSection('productivity'); setActiveTab('desktop'); }}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600">
+                            <Monitor size={14} />
+                          </div>
+                          <span className="text-xs font-bold text-slate-800">Live Team Tracking</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Online members preview deck */}
+                <div className="glass-card p-6 flex flex-col gap-4">
+                  <h3 className="text-lg font-black text-slate-900 border-b border-slate-200/50 pb-3 flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Activity size={18} className="text-emerald-500" />
+                      Active Agents
                     </span>
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-0.5 flex items-center gap-1.5">
+                      <span className="live-glow-dot" />
+                      {onlineMembers} ACTIVE NOW
+                    </span>
+                  </h3>
+
+                  {members.filter(m => m.status === 'online').length === 0 ? (
+                    <div className="text-center py-10 text-slate-400 text-xs">
+                      No users are currently active in the workspace.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {members.filter(m => m.status === 'online').map((member) => (
+                        <div key={member.id} className="p-3.5 rounded-xl border border-slate-200/80 bg-white/70 flex items-center gap-3">
+                          <div className="user-avatar-badge" style={{ backgroundColor: member.color, width: 32, height: 32, fontSize: '11px' }}>
+                            {member.initials}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-slate-800 truncate">{member.name}</p>
+                            <p className="text-[10px] text-slate-500 truncate">{member.role} &middot; {member.email}</p>
+                          </div>
+                          <span className="live-glow-dot" />
+                        </div>
+                      ))}
+                    </div>
                   )}
-                </button>
-              );
-            })}
-          </div>
+                </div>
+              </div>
+            )}
 
           {/* ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
               TAB: PEOPLE
@@ -1295,8 +1460,8 @@ export default function AdminPage() {
                 );
               })()}
 
-              <div className="overflow-x-auto scrollbar-thin">
-                <table className="w-full min-w-[700px] text-left">
+              <div className="premium-table-wrapper overflow-x-auto scrollbar-thin">
+                <table className="premium-table w-full min-w-[700px] text-left">
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(26,27,58,0.10)', background: 'rgba(91,79,219,0.02)' }}>
                       {['Member', 'Role', 'Status', 'Channels', ''].map((h) => (
@@ -1344,7 +1509,8 @@ export default function AdminPage() {
                                 <select
                                   value={member.role}
                                   onChange={(e) => handleRoleChange(member.id, member.name, e.target.value)}
-                                  style={{ height: 32, borderRadius: 8, border: `1.5px solid ${rc.border}`, background: rc.bg, padding: '0 8px', fontSize: 12, fontWeight: 600, color: rc.color, outline: 'none', cursor: 'pointer' }}
+                                  className="premium-select"
+                                  style={{ border: `1.5px solid ${rc.border}`, background: rc.bg, color: rc.color }}
                                 >
                                   <option value="Developer">Developer</option>
                                   <option value="Designer">Designer</option>
@@ -2872,6 +3038,7 @@ export default function AdminPage() {
             </div>
           )}
         </main>
+      </div>
 
         {/*  Add user modal  */}
         {showAddModal && (

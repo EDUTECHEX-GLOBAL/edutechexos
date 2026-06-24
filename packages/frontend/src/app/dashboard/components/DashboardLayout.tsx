@@ -3,13 +3,15 @@
 import React from 'react';
 import {
   MessageSquare, CheckSquare, BookOpen, CalendarDays,
-  BarChart2, FileText, Sun, Moon, Layout,
+  BarChart2, FileText, Sun, Moon,
   Bookmark, NotebookPen, Plug, CalendarOff, MessageSquareDot,
+  Hash, ChevronDown, ChevronRight,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import AppLogo from '@/components/ui/AppLogo';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export type LayoutTab = 'chats' | 'tasks' | 'docs' | 'calendar' | 'analytics' | 'reports' | 'bookmarks' | 'notepad' | 'integrations' | 'leave' | 'dms';
+
+interface Channel { id: string; name: string; description?: string; type?: string; }
 
 interface DashboardLayoutProps {
   activeTab: LayoutTab;
@@ -22,6 +24,9 @@ interface DashboardLayoutProps {
   darkMode?: boolean;
   onToggleTheme?: () => void;
   onSettingsOpen?: () => void;
+  channels?: Channel[];
+  activeChannel?: string;
+  onChannelChange?: (id: string) => void;
 }
 
 const tabs: { id: LayoutTab; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
@@ -34,8 +39,8 @@ const tabs: { id: LayoutTab; label: string; icon: React.ElementType; adminOnly?:
   { id: 'bookmarks',    label: 'Saved',        icon: Bookmark },
   { id: 'notepad',      label: 'Notes',        icon: NotebookPen },
   { id: 'integrations', label: 'Integrations', icon: Plug },
-  { id: 'analytics',    label: 'Analytics',    icon: BarChart2,   adminOnly: true },
-  { id: 'reports',      label: 'Reports',      icon: FileText,    adminOnly: true },
+  { id: 'analytics',    label: 'Analytics',    icon: BarChart2, adminOnly: true },
+  { id: 'reports',      label: 'Reports',      icon: FileText,  adminOnly: true },
 ];
 
 export default function DashboardLayout({
@@ -49,90 +54,149 @@ export default function DashboardLayout({
   darkMode,
   onToggleTheme,
   onSettingsOpen,
+  channels = [],
+  activeChannel,
+  onChannelChange,
 }: DashboardLayoutProps) {
+  const workspaceChannels = channels.filter(c => c.type !== 'dm');
+
   return (
-    <div className="relative flex h-screen w-full overflow-hidden bg-[#06080F]">
-      <div className="pointer-events-none fixed inset-0 z-0 bg-noise" />
-      <div className="ambient-cyan pointer-events-none fixed inset-0 z-0" />
-      <div className="ambient-coral pointer-events-none fixed inset-0 z-0" />
-      <div className="ambient-violet pointer-events-none fixed inset-0 z-0" />
+    <div className="flex h-screen w-full overflow-hidden" style={{ background: '#F1F5F9' }}>
 
-      <nav className="relative z-10 hidden md:flex w-[68px] shrink-0 flex-col items-center py-5 gap-3 border-r border-[rgba(148,163,184,0.06)] bg-[rgba(13,16,37,0.60)] backdrop-blur-2xl">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0AE8D0] to-[#06B8A5] shadow-lg shadow-[#0AE8D0]/20 mb-4"
-        >
-          <Layout size={16} className="text-[#06080F]" strokeWidth={2.5} />
-        </motion.div>
+      {/* ── Left Sidebar ─────────────────────────────────────── */}
+      <nav
+        className="hidden md:flex flex-col shrink-0 border-r overflow-y-auto"
+        style={{ width: 240, background: '#FFFFFF', borderColor: '#E2E8F0' }}
+      >
+        {/* Workspace header */}
+        <div className="flex items-center gap-3 px-4 py-4 border-b shrink-0" style={{ borderColor: '#E2E8F0' }}>
+          <div
+            className="flex h-9 w-9 items-center justify-center rounded-xl shrink-0 shadow-sm"
+            style={{ background: 'linear-gradient(135deg, #0D9488, #0891B2)' }}
+          >
+            <span className="text-white font-black text-sm">E</span>
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm font-black truncate" style={{ color: '#0F172A' }}>EduTechExOS</div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="inline-flex h-1.5 w-1.5 rounded-full" style={{ background: '#10B981' }} />
+              <span className="text-[10px]" style={{ color: '#94A3B8' }}>Workspace</span>
+            </div>
+          </div>
+        </div>
 
-        <div className="flex flex-col items-center gap-1.5 flex-1 w-full px-2.5">
-          {tabs.map((tab, i) => {
+        {/* Nav items */}
+        <div className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+          {tabs.map((tab) => {
             if (tab.adminOnly && !isAdmin) return null;
             const isActive = activeTab === tab.id;
             const Icon = tab.icon;
+            const isChatsWithChannels = tab.id === 'chats' && workspaceChannels.length > 0;
+            const showChannelList = isActive && isChatsWithChannels;
+
             return (
-              <motion.button
-                key={tab.id}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 + i * 0.04, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                onClick={() => onTabChange(tab.id)}
-                className={`group relative flex flex-col items-center gap-1 w-full py-2 text-[9px] font-bold uppercase tracking-[0.18em] transition-all duration-300
-                  ${isActive ? 'text-[#0AE8D0]' : 'text-[#4B5678] hover:text-[#8896B0]'}`}
-              >
-                <span className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-300
-                  ${isActive
-                    ? 'bg-[rgba(10,232,208,0.10)] shadow-sm shadow-[#0AE8D0]/5'
-                    : 'hover:bg-[rgba(148,163,184,0.04)]'
-                  }`}
+              <React.Fragment key={tab.id}>
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => onTabChange(tab.id)}
+                  className="flex items-center gap-3 w-full px-3 py-2 rounded-xl transition-all text-left"
+                  style={{
+                    background: isActive ? '#F0FDFA' : 'transparent',
+                    color: isActive ? '#0D9488' : '#64748B',
+                  }}
                 >
                   <Icon size={16} strokeWidth={isActive ? 2.5 : 1.8} />
-                </span>
-                {tab.label}
-                {isActive && (
-                  <motion.span
-                    layoutId="nav-pill"
-                    className="absolute -left-2.5 top-1/2 -translate-y-1/2 h-6 w-[2px] rounded-full bg-[#0AE8D0] shadow-sm shadow-[#0AE8D0]/30"
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                )}
-              </motion.button>
+                  <span className="text-[13px] font-semibold flex-1">{tab.label}</span>
+                  {isChatsWithChannels && (
+                    <span style={{ color: isActive ? '#0D9488' : '#CBD5E1' }}>
+                      {showChannelList ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    </span>
+                  )}
+                </motion.button>
+
+                {/* Channel list nested under Chats */}
+                <AnimatePresence initial={false}>
+                  {showChannelList && (
+                    <motion.div
+                      key="channels"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.18, ease: 'easeInOut' }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      <div className="ml-7 pl-3 pb-1 border-l space-y-0.5" style={{ borderColor: '#E2E8F0' }}>
+                        {workspaceChannels.map(ch => {
+                          const isCh = ch.id === activeChannel;
+                          return (
+                            <button
+                              key={ch.id}
+                              onClick={() => onChannelChange?.(ch.id)}
+                              className="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg transition-all text-left"
+                              style={{
+                                background: isCh ? '#E0F2FE' : 'transparent',
+                                color: isCh ? '#0369A1' : '#64748B',
+                              }}
+                            >
+                              <Hash size={11} className="shrink-0" />
+                              <span className="text-xs font-medium truncate">{ch.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </React.Fragment>
             );
           })}
         </div>
 
-        <div className="flex flex-col items-center gap-2.5 mt-auto pt-4 border-t border-[rgba(148,163,184,0.06)] w-full px-3">
+        {/* Bottom: theme + user */}
+        <div className="px-2 pb-3 pt-2 border-t space-y-0.5 shrink-0" style={{ borderColor: '#E2E8F0' }}>
           {onToggleTheme && (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={onToggleTheme}
-              className="flex items-center justify-center h-8 w-8 rounded-xl text-[#4B5678] hover:text-[#8896B0] hover:bg-[rgba(148,163,184,0.04)] transition-all"
+              className="flex items-center gap-3 w-full px-3 py-2 rounded-xl transition-all hover:bg-slate-50"
+              style={{ color: '#64748B' }}
             >
-              {darkMode ? <Sun size={14} /> : <Moon size={14} />}
-            </motion.button>
+              {darkMode ? <Sun size={15} /> : <Moon size={15} />}
+              <span className="text-[13px] font-semibold">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+            </button>
           )}
           {currentUser && (
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ backgroundColor: '#F8FAFC' }}
+              whileTap={{ scale: 0.99 }}
               onClick={onSettingsOpen}
-              className="relative flex h-9 w-9 items-center justify-center rounded-xl text-[11px] font-black text-white shadow-lg shadow-black/20"
-              style={{ background: 'linear-gradient(135deg, #FF6B7F, #FF4770)' }}
-              title={currentUser.name}
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all"
+              style={{ color: '#475569' }}
             >
-              {currentUser.initials}
-              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#38D9A9] border-2 border-[#06080F]" />
+              <div className="relative shrink-0">
+                <div
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-black text-white shadow-sm"
+                  style={{ background: 'linear-gradient(135deg, #FF6B7F, #FF4770)' }}
+                >
+                  {currentUser.initials}
+                </div>
+                <span
+                  className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white"
+                  style={{ background: '#10B981' }}
+                />
+              </div>
+              <div className="min-w-0 text-left">
+                <div className="text-[13px] font-bold truncate" style={{ color: '#0F172A' }}>{currentUser.name}</div>
+                <div className="text-[10px] truncate" style={{ color: '#94A3B8' }}>{currentUser.role}</div>
+              </div>
             </motion.button>
           )}
         </div>
       </nav>
 
-      <div className="relative z-10 flex flex-1 flex-col min-w-0 pb-[56px] md:pb-0">
+      {/* ── Main content ─────────────────────────────────────── */}
+      <div className="relative flex flex-1 flex-col min-w-0 pb-[56px] md:pb-0">
         {topBar && (
-          <div className="shrink-0 border-b border-[rgba(148,163,184,0.06)] bg-[rgba(13,16,37,0.50)] backdrop-blur-2xl">
+          <div className="shrink-0 border-b" style={{ background: '#FFFFFF', borderColor: '#E2E8F0' }}>
             {topBar}
           </div>
         )}
@@ -141,14 +205,21 @@ export default function DashboardLayout({
         </div>
       </div>
 
+      {/* ── Right panel ──────────────────────────────────────── */}
       {rightPanel && (
-        <aside className="relative z-10 hidden lg:flex w-[300px] shrink-0 flex-col border-l border-[rgba(148,163,184,0.06)] bg-[rgba(13,16,37,0.40)] backdrop-blur-2xl overflow-y-auto scrollbar-dark">
+        <aside
+          className="hidden lg:flex flex-col shrink-0 border-l overflow-y-auto"
+          style={{ width: 280, background: '#FFFFFF', borderColor: '#E2E8F0' }}
+        >
           {rightPanel}
         </aside>
       )}
 
-      {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-20 flex items-center justify-around px-1 py-1 border-t border-[rgba(148,163,184,0.08)] bg-[rgba(6,8,15,0.95)] backdrop-blur-2xl">
+      {/* ── Mobile bottom nav ────────────────────────────────── */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-20 flex items-center justify-around px-1 py-1 border-t shadow-sm"
+        style={{ background: '#FFFFFF', borderColor: '#E2E8F0' }}
+      >
         {tabs.filter(t => !t.adminOnly || isAdmin).slice(0, 5).map(tab => {
           const isActive = activeTab === tab.id;
           const Icon = tab.icon;
@@ -156,11 +227,13 @@ export default function DashboardLayout({
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`flex flex-col items-center gap-0.5 flex-1 py-2 text-[8px] font-bold uppercase tracking-wider transition-all
-                ${isActive ? 'text-[#0AE8D0]' : 'text-[#4B5678]'}`}
+              className="flex flex-col items-center gap-0.5 flex-1 py-2 text-[8px] font-bold uppercase tracking-wider transition-all"
+              style={{ color: isActive ? '#0D9488' : '#94A3B8' }}
             >
-              <span className={`flex h-7 w-7 items-center justify-center rounded-xl transition-all
-                ${isActive ? 'bg-[rgba(10,232,208,0.12)]' : ''}`}>
+              <span
+                className="flex h-7 w-7 items-center justify-center rounded-xl transition-all"
+                style={{ background: isActive ? '#F0FDFA' : 'transparent' }}
+              >
                 <Icon size={15} strokeWidth={isActive ? 2.5 : 1.8} />
               </span>
               {tab.label}
@@ -170,10 +243,13 @@ export default function DashboardLayout({
         {currentUser && (
           <button
             onClick={onSettingsOpen}
-            className="flex flex-col items-center gap-0.5 flex-1 py-2 text-[8px] font-bold uppercase tracking-wider text-[#4B5678]"
+            className="flex flex-col items-center gap-0.5 flex-1 py-2 text-[8px] font-bold uppercase tracking-wider"
+            style={{ color: '#94A3B8' }}
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-xl text-[9px] font-black text-white"
-              style={{ background: 'linear-gradient(135deg,#FF6B7F,#FF4770)' }}>
+            <span
+              className="flex h-7 w-7 items-center justify-center rounded-full text-[9px] font-black text-white"
+              style={{ background: 'linear-gradient(135deg,#FF6B7F,#FF4770)' }}
+            >
               {currentUser.initials}
             </span>
             Me

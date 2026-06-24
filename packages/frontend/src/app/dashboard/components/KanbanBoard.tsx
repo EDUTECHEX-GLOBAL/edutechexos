@@ -70,60 +70,60 @@ function TaskDetailModal({ task, colAccent, onClose, onMoveForward, onMoveBack, 
 }) {
   const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' }[task.status];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 backdrop-blur-sm p-4" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97 }}
         transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-        className="w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden"
-        style={{ background: '#0D1025', border: `1px solid ${colAccent}30` }}
+        className="w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden bg-white border"
+        style={{ borderColor: `${colAccent}30` }}
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: `${colAccent}20` }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full" style={{ background: colAccent }} />
             <span className="text-xs font-bold uppercase tracking-widest" style={{ color: colAccent }}>{statusLabel}</span>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={onDelete} className="flex h-7 w-7 items-center justify-center rounded-lg text-[#FF6B7F] hover:bg-[rgba(255,107,127,0.12)] transition-all"><Trash2 size={13} /></button>
-            <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-[#4B5678] hover:text-[#EEF2F6] hover:bg-[rgba(148,163,184,0.07)] transition-all"><X size={14} /></button>
+            <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"><X size={14} /></button>
           </div>
         </div>
 
         <div className="p-5 space-y-4">
-          <p className="text-base font-bold text-[#EEF2F6] leading-relaxed">{task.text}</p>
+          <p className="text-base font-bold text-slate-800 leading-relaxed">{task.text}</p>
 
           <div className="flex items-center gap-3 flex-wrap">
             {task.assignee && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(148,163,184,0.06)] border border-[rgba(148,163,184,0.10)]">
-                <span className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black text-[#06080F]"
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black text-white"
                   style={{ background: colAccent }}>{task.assigneeInitials}</span>
-                <span className="text-xs font-semibold text-[#8896B0]">{task.assignee}</span>
+                <span className="text-xs font-semibold text-slate-600">{task.assignee}</span>
               </div>
             )}
             {task.sourceChannel && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(148,163,184,0.06)] border border-[rgba(148,163,184,0.10)]">
-                <Hash size={11} className="text-[#4B5678]" />
-                <span className="text-xs font-semibold text-[#8896B0]">{task.sourceChannel}</span>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100">
+                <Hash size={11} className="text-slate-400" />
+                <span className="text-xs font-semibold text-slate-600">{task.sourceChannel}</span>
               </div>
             )}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(148,163,184,0.06)] border border-[rgba(148,163,184,0.10)]">
-              <Clock size={11} className="text-[#4B5678]" />
-              <span className="text-xs font-semibold text-[#8896B0]">{new Date(task.createdAt).toLocaleDateString()}</span>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100">
+              <Clock size={11} className="text-slate-400" />
+              <span className="text-xs font-semibold text-slate-600">{new Date(task.createdAt).toLocaleDateString()}</span>
             </div>
           </div>
 
           <div className="flex gap-2 pt-2">
             {canMoveBack && (
               <button onClick={() => { onMoveBack(); onClose(); }}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border transition-all text-[#8896B0] border-[rgba(148,163,184,0.15)] hover:border-[rgba(148,163,184,0.3)]">
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border transition-all text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50">
                 <ArrowLeft size={12} />{PREV_LABEL[task.status]}
               </button>
             )}
             {canMoveForward && (
               <button onClick={() => { onMoveForward(); onClose(); }}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all text-[#06080F]"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all text-white"
                 style={{ background: colAccent }}>
                 {NEXT_LABEL[task.status]}<ArrowRight size={12} />
               </button>
@@ -159,28 +159,28 @@ function TaskCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: hovered ? 'rgba(22,27,61,0.95)' : 'rgba(22,27,61,0.70)',
+        background: hovered ? '#FFFFFF' : 'rgba(255, 255, 255, 0.85)',
         borderLeft: `3px solid ${colAccent}`,
-        borderTop: `1px solid ${hovered ? `${colAccent}30` : 'rgba(148,163,184,0.08)'}`,
-        borderRight: `1px solid ${hovered ? `${colAccent}30` : 'rgba(148,163,184,0.08)'}`,
-        borderBottom: `1px solid ${hovered ? `${colAccent}30` : 'rgba(148,163,184,0.08)'}`,
+        borderTop: `1px solid ${hovered ? `${colAccent}40` : 'rgba(99, 102, 241, 0.08)'}`,
+        borderRight: `1px solid ${hovered ? `${colAccent}40` : 'rgba(99, 102, 241, 0.08)'}`,
+        borderBottom: `1px solid ${hovered ? `${colAccent}40` : 'rgba(99, 102, 241, 0.08)'}`,
         borderRadius: 12,
         padding: '12px 12px 10px',
         position: 'relative',
         transition: 'all 0.2s',
-        boxShadow: hovered ? `0 4px 20px rgba(0,0,0,0.25), 0 0 30px ${colAccent}08` : '0 1px 4px rgba(0,0,0,0.15)',
+        boxShadow: hovered ? `0 6px 20px rgba(99, 102, 241, 0.05), 0 0 30px ${colAccent}08` : '0 1px 4px rgba(99, 102, 241, 0.02)',
       }}
     >
       {hovered && (
         <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4 }}>
           <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
             type="button" onClick={() => setExpanded(true)} title="Expand task"
-            style={{ width: 24, height: 24, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,232,208,0.12)', color: '#0AE8D0', border: '1px solid rgba(10,232,208,0.20)', cursor: 'pointer' }}>
+            style={{ width: 24, height: 24, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(99, 102, 241, 0.08)', color: '#6366f1', border: '1px solid rgba(99, 102, 241, 0.15)', cursor: 'pointer' }}>
             <Maximize2 size={10} strokeWidth={2.5} />
           </motion.button>
           <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
             type="button" onClick={onDelete} title="Delete task"
-            style={{ width: 24, height: 24, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,71,112,0.12)', color: '#FF6B7F', border: '1px solid rgba(255,71,112,0.20)', cursor: 'pointer' }}>
+            style={{ width: 24, height: 24, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(244, 63, 94, 0.08)', color: '#e11d48', border: '1px solid rgba(244, 63, 94, 0.15)', cursor: 'pointer' }}>
             <Trash2 size={11} strokeWidth={2.5} />
           </motion.button>
         </div>
@@ -198,7 +198,7 @@ function TaskCard({
 
       <p style={{
         fontSize: 13, fontWeight: 600,
-        color: isDone ? '#4B5678' : '#EEF2F6',
+        color: isDone ? 'var(--text-muted)' : 'var(--text-primary)',
         lineHeight: 1.5, paddingRight: hovered ? 28 : 0,
         textDecoration: isDone ? 'line-through' : 'none',
         transition: 'color 0.15s',
@@ -213,7 +213,7 @@ function TaskCard({
             style={{
               width: 22, height: 22, borderRadius: '50%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 8, fontWeight: 800, color: '#06080F',
+              fontSize: 8, fontWeight: 800, color: '#fff',
               backgroundColor: avatarColor, flexShrink: 0,
             }}
           >
@@ -223,8 +223,8 @@ function TaskCard({
         {task.sourceChannel && (
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 3,
-            fontSize: 10, fontWeight: 600, color: '#4B5678',
-            background: 'rgba(148,163,184,0.06)', borderRadius: 6, padding: '2px 7px',
+            fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)',
+            background: 'rgba(99, 102, 241, 0.05)', borderRadius: 6, padding: '2px 7px',
           }}>
             <Hash size={8} strokeWidth={2.5} />
             {task.sourceChannel}
@@ -241,8 +241,8 @@ function TaskCard({
               title={PREV_LABEL[task.status]}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 3,
-                fontSize: 9, fontWeight: 700, color: '#4B5678',
-                background: 'rgba(148,163,184,0.08)', border: '1px solid rgba(148,163,184,0.12)',
+                fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)',
+                background: 'rgba(99, 102, 241, 0.04)', border: '1px solid rgba(99, 102, 241, 0.08)',
                 borderRadius: 6, padding: '3px 7px', cursor: 'pointer',
               }}
             >
@@ -259,7 +259,7 @@ function TaskCard({
               title={NEXT_LABEL[task.status]}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 3,
-                fontSize: 9, fontWeight: 700, color: '#06080F',
+                fontSize: 9, fontWeight: 700, color: '#fff',
                 background: colAccent, border: `1px solid ${colAccent}`,
                 borderRadius: 6, padding: '3px 7px', cursor: 'pointer',
                 boxShadow: `0 2px 8px ${colAccent}30`,
@@ -315,7 +315,7 @@ function AddTaskForm({ onAdd, accent }: { onAdd: (text: string, assignee: string
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       style={{
-        background: 'rgba(22,27,61,0.85)', border: '1px solid rgba(148,163,184,0.10)',
+        background: '#FFFFFF', border: '1px solid rgba(99, 102, 241, 0.08)',
         borderRadius: 12, padding: 10, display: 'flex', flexDirection: 'column', gap: 6,
       }}
     >
@@ -328,7 +328,7 @@ function AddTaskForm({ onAdd, accent }: { onAdd: (text: string, assignee: string
         rows={2}
         style={{
           width: '100%', resize: 'none', outline: 'none', border: 'none',
-          fontSize: 13, fontWeight: 500, color: '#EEF2F6', lineHeight: 1.5,
+          fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.5,
           background: 'transparent', fontFamily: 'inherit',
         }}
       />
@@ -338,9 +338,9 @@ function AddTaskForm({ onAdd, accent }: { onAdd: (text: string, assignee: string
         onChange={e => setAssignee(e.target.value)}
         placeholder="Assignee (optional)"
         style={{
-          outline: 'none', border: '1px solid rgba(148,163,184,0.10)', borderRadius: 8,
-          padding: '5px 8px', fontSize: 11, color: '#8896B0',
-          background: 'rgba(13,16,37,0.50)', fontFamily: 'inherit',
+          outline: 'none', border: '1px solid rgba(99, 102, 241, 0.08)', borderRadius: 8,
+          padding: '5px 8px', fontSize: 11, color: 'var(--text-secondary)',
+          background: 'rgba(99, 102, 241, 0.02)', fontFamily: 'inherit',
         }}
       />
       <div style={{ display: 'flex', gap: 6 }}>
@@ -350,8 +350,8 @@ function AddTaskForm({ onAdd, accent }: { onAdd: (text: string, assignee: string
           disabled={!text.trim()}
           style={{
             flex: 1, padding: '6px 0', borderRadius: 8, border: 'none',
-            background: text.trim() ? accent : 'rgba(148,163,184,0.08)',
-            color: text.trim() ? '#06080F' : '#4B5678',
+            background: text.trim() ? accent : 'rgba(99, 102, 241, 0.08)',
+            color: text.trim() ? '#FFFFFF' : 'var(--text-muted)',
             fontSize: 11, fontWeight: 700, cursor: text.trim() ? 'pointer' : 'not-allowed',
             transition: 'all 0.15s',
           }}
@@ -362,8 +362,8 @@ function AddTaskForm({ onAdd, accent }: { onAdd: (text: string, assignee: string
           type="button"
           onClick={() => setOpen(false)}
           style={{
-            padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.10)',
-            background: 'transparent', color: '#4B5678', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+            padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(99, 102, 241, 0.08)',
+            background: 'transparent', color: 'var(--text-muted)', fontSize: 11, fontWeight: 600, cursor: 'pointer',
           }}
         >
           Cancel
@@ -426,32 +426,32 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
         style={{
           flexShrink: 0,
           padding: '16px 18px 14px',
-          borderBottom: '1px solid rgba(148,163,184,0.06)',
+          borderBottom: '1px solid rgba(99, 102, 241, 0.08)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 34, height: 34, borderRadius: 10,
-              background: 'rgba(10,232,208,0.10)',
+              background: 'rgba(99, 102, 241, 0.08)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <LayoutGrid size={15} color="#0AE8D0" strokeWidth={2.5} />
+              <LayoutGrid size={15} color="#6366f1" strokeWidth={2.5} />
             </div>
             <div>
-              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#4B5678', marginBottom: 1 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 1 }}>
                 Task Board
               </p>
-              <p style={{ fontSize: 14, fontWeight: 800, color: '#EEF2F6', lineHeight: 1 }}>
+              <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
                 My Tasks
               </p>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{
-              fontSize: 10, fontWeight: 700, color: '#4B5678',
-              background: 'rgba(148,163,184,0.06)', borderRadius: 20,
-              padding: '3px 10px', border: '1px solid rgba(148,163,184,0.08)',
+              fontSize: 10, fontWeight: 700, color: 'var(--text-muted)',
+              background: 'rgba(99, 102, 241, 0.05)', borderRadius: 20,
+              padding: '3px 10px', border: '1px solid rgba(99, 102, 241, 0.08)',
             }}>
               {doneTasks}/{totalTasks} done
             </span>
@@ -460,12 +460,12 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
 
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-            <span style={{ fontSize: 10, color: '#4B5678', fontWeight: 600 }}>Overall progress</span>
-            <span style={{ fontSize: 10, fontWeight: 800, color: progressPct === 100 ? '#38D9A9' : '#4B5678' }}>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>Overall progress</span>
+            <span style={{ fontSize: 10, fontWeight: 800, color: progressPct === 100 ? '#38D9A9' : 'var(--text-muted)' }}>
               {progressPct}%
             </span>
           </div>
-          <div style={{ height: 4, background: 'rgba(148,163,184,0.06)', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ height: 4, background: 'rgba(99, 102, 241, 0.06)', borderRadius: 10, overflow: 'hidden' }}>
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${progressPct}%` }}
@@ -473,9 +473,9 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
               style={{
                 height: '100%', borderRadius: 10,
                 background: progressPct === 100
-                  ? 'linear-gradient(90deg, #38D9A9, #0AE8D0)'
-                  : 'linear-gradient(90deg, #0AE8D0, #7C5CFC)',
-                boxShadow: '0 0 12px rgba(10,232,208,0.15)',
+                  ? 'linear-gradient(90deg, #38D9A9, #6366f1)'
+                  : 'linear-gradient(90deg, #6366f1, #7C5CFC)',
+                boxShadow: '0 0 12px rgba(99,102,241,0.15)',
               }}
             />
           </div>
@@ -494,7 +494,7 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
                 transition={{ duration: 0.4, delay: colIdx * 0.08, ease: [0.22, 1, 0.36, 1] }}
                 style={{
                   width: 272, flexShrink: 0, display: 'flex', flexDirection: 'column',
-                  background: 'rgba(13,16,37,0.50)',
+                  background: 'rgba(255, 255, 255, 0.40)',
                   backdropFilter: 'blur(12px)',
                   borderRadius: 14,
                   border: `1px solid ${col.accentBorder}`,
@@ -510,12 +510,12 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
                   <span style={{ color: col.accent, display: 'flex', alignItems: 'center' }}>
                     {col.icon}
                   </span>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: '#EEF2F6', flex: 1 }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', flex: 1 }}>
                     {col.label}
                   </span>
                   <span style={{
                     fontSize: 10, fontWeight: 800,
-                    background: col.accent, color: '#06080F',
+                    background: col.accent, color: '#fff',
                     minWidth: 20, height: 20, borderRadius: 10,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     padding: '0 6px',

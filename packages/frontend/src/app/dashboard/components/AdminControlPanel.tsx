@@ -2,15 +2,15 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  ArrowLeft, Users, CalendarOff, Hash, BarChart2,
-  Settings, Bell, Shield, Trash2, RefreshCw,
-  TrendingUp, Activity, Clock, UserCheck,
-  Search, ChevronRight, Plus, X, Check,
-  AlertTriangle, Circle, CheckCircle2, XCircle,
-  Loader2, Mail, Zap, Lock, Globe, Edit3,
+  Users, CalendarOff, Hash, Settings, Bell, Shield, Trash2,
+  RefreshCw, Activity, Clock, UserCheck, Search, Plus, X, Check,
+  ChevronRight, Mail, AlertTriangle, Globe, Lock, Edit3, Zap,
+  UserPlus, FileText, Monitor, Calendar, BarChart2, LogOut,
+  MoreHorizontal, Eye, Send, ArrowLeft, Loader2, Download,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { getSocket } from '@/lib/socket';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 
@@ -19,90 +19,85 @@ function getToken() {
   catch { return null; }
 }
 
-type AdminTab = 'overview' | 'users' | 'attendance' | 'leave' | 'channels' | 'analytics' | 'notifications' | 'settings';
+type SideTab =
+  | 'people' | 'requests' | 'invite' | 'channels' | 'broadcast'
+  | 'activity' | 'attendance' | 'availability'
+  | 'leaves' | 'leave-calendar' | 'audit';
 
-interface UserRecord { id: string; name: string; email: string; role: string; status?: string; source?: string; createdAt?: string; }
-interface LeaveRequest {
-  id: string; email: string; name?: string;
-  startDate: string; endDate?: string; reason: string; type: string; leaveCategory?: string;
-  status: 'pending' | 'approved' | 'rejected'; requestedAt?: string;
-}
-interface AttendanceRecord {
-  email: string; name: string; date: string;
-  attendance: 'full' | 'half' | 'absent' | 'pending'; hoursWorked: number;
-  loginAt?: string;
-}
-interface Channel { _id?: string; id: string; name: string; description?: string; isPrivate?: boolean; }
+interface UserRecord { id: string; name: string; email: string; role: string; status?: string; source?: string; createdAt?: string; userChannels?: string[]; }
+interface AccessRequest { id: string; name: string; email: string; message?: string; status: string; createdAt: string; }
+interface LeaveRequest { id: string; email: string; name?: string; startDate: string; endDate?: string; reason: string; type: string; leaveCategory?: string; status: 'pending' | 'approved' | 'rejected'; requestedAt?: string; }
+interface AttendanceRecord { email: string; name: string; date: string; attendance: 'full' | 'half' | 'absent' | 'pending'; hoursWorked: number; loginAt?: string; }
+interface Channel { _id?: string; id: string; name: string; description?: string; isPrivate?: boolean; type?: string; }
+interface AuditEntry { id?: string; action: string; by: string; target?: string; at: string; }
 
-const NAV: { id: AdminTab; label: string; icon: React.ElementType; accent: string }[] = [
-  { id: 'overview',      label: 'Overview',        icon: BarChart2,   accent: '#0AE8D0' },
-  { id: 'users',         label: 'Users',           icon: Users,       accent: '#7C5CFC' },
-  { id: 'attendance',    label: 'Attendance',      icon: UserCheck,   accent: '#0EA5E9' },
-  { id: 'leave',         label: 'Leave',           icon: CalendarOff, accent: '#F59E0B' },
-  { id: 'channels',      label: 'Channels',        icon: Hash,        accent: '#10B981' },
-  { id: 'analytics',     label: 'Analytics',       icon: TrendingUp,  accent: '#EF4444' },
-  { id: 'notifications', label: 'Broadcast',       icon: Bell,        accent: '#8B5CF6' },
-  { id: 'settings',      label: 'Settings',        icon: Settings,    accent: '#64748B' },
-];
+const COLORS = ['#7C5CFC','#0D9488','#EF4444','#F59E0B','#10B981','#0EA5E9','#8B5CF6','#EC4899'];
+function avatarColor(name: string) { return COLORS[(name?.charCodeAt(0) ?? 0) % COLORS.length]; }
+function initials(name: string) { return (name ?? '?').split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2); }
+function fmt(date?: string) { return date ? new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }) : '—'; }
 
-function initials(name: string) {
-  return (name ?? '?').split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2);
-}
-
-function Avatar({ name, size = 32, color }: { name: string; size?: number; color?: string }) {
-  const colors = ['#7C5CFC','#0AE8D0','#FF6B7F','#F59E0B','#10B981','#0EA5E9'];
-  const bg = color ?? colors[name.charCodeAt(0) % colors.length];
+function Avatar({ name, size = 34 }: { name: string; size?: number }) {
   return (
-    <div style={{ width: size, height: size, borderRadius: '50%', background: bg, flexShrink: 0,
+    <div style={{
+      width: size, height: size, borderRadius: '50%', background: avatarColor(name), flexShrink: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.32, fontWeight: 700, color: '#06080F', letterSpacing: '-0.02em' }}>
-      {initials(name)}
-    </div>
+      fontSize: size * 0.3, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em',
+    }}>{initials(name)}</div>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { color: string; bg: string; label: string }> = {
-    pending:  { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)',  label: 'Pending' },
-    approved: { color: '#10B981', bg: 'rgba(16,185,129,0.12)',  label: 'Approved' },
-    rejected: { color: '#EF4444', bg: 'rgba(239,68,68,0.12)',   label: 'Rejected' },
-    full:     { color: '#10B981', bg: 'rgba(16,185,129,0.12)',  label: 'Full Day' },
-    half:     { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)',  label: 'Half Day' },
-    absent:   { color: '#EF4444', bg: 'rgba(239,68,68,0.12)',   label: 'Absent' },
-    Admin:    { color: '#7C5CFC', bg: 'rgba(124,92,252,0.12)',  label: 'Admin' },
-    Member:   { color: '#0AE8D0', bg: 'rgba(10,232,208,0.10)',  label: 'Member' },
-  };
-  const s = map[status] ?? { color: '#8896B0', bg: 'rgba(136,150,176,0.10)', label: status };
+function LiveBadge() {
   return (
-    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.04em',
-      color: s.color, background: s.bg, padding: '3px 9px', borderRadius: 20, whiteSpace: 'nowrap' }}>
-      {s.label}
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9.5, fontWeight: 700, color: '#059669',
+      background: '#ECFDF5', padding: '2px 7px', borderRadius: 20, letterSpacing: '.04em' }}>
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10B981', display: 'inline-block',
+        boxShadow: '0 0 0 2px rgba(16,185,129,.25)' }} />
+      LIVE
     </span>
   );
 }
 
-function Card({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function RolePill({ role }: { role: string }) {
+  const map: Record<string, string> = { Admin: '#7C3AED', Developer: '#0284C7', Designer: '#DB2777', Member: '#0D9488', HR: '#D97706' };
+  const color = map[role] ?? '#64748B';
   return (
-    <div style={{
-      background: 'rgba(13,16,37,0.80)', backdropFilter: 'blur(12px)',
-      border: '1px solid rgba(148,163,184,0.08)', borderRadius: 16, overflow: 'hidden', ...style,
-    }}>
-      {children}
-    </div>
+    <span style={{ fontSize: 10.5, fontWeight: 700, color, background: `${color}14`,
+      padding: '3px 9px', borderRadius: 20, letterSpacing: '.02em', whiteSpace: 'nowrap' }}>
+      {role}
+    </span>
   );
 }
 
-function SectionHeader({ title, sub, action }: { title: string; sub?: string; action?: React.ReactNode }) {
+function StatusDot({ online = false }: { online?: boolean }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
-      <div>
-        <h2 style={{ fontSize: 19, fontWeight: 800, color: '#EEF2F6', margin: 0, letterSpacing: '-0.02em' }}>{title}</h2>
-        {sub && <p style={{ fontSize: 12, color: '#4B5678', marginTop: 3 }}>{sub}</p>}
-      </div>
-      {action}
-    </div>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600,
+      color: online ? '#059669' : '#94A3B8' }}>
+      <span style={{ width: 7, height: 7, borderRadius: '50%', background: online ? '#10B981' : '#CBD5E1',
+        boxShadow: online ? '0 0 0 2px rgba(16,185,129,.2)' : 'none', display: 'inline-block' }} />
+      {online ? 'online' : 'offline'}
+    </span>
   );
 }
+
+const SIDENAV: { group: string; items: { id: SideTab; label: string; icon: React.ElementType }[] }[] = [
+  { group: 'People', items: [
+    { id: 'people',       label: 'People',        icon: Users },
+    { id: 'requests',     label: 'Requests',      icon: UserPlus },
+    { id: 'invite',       label: 'Invite',        icon: Mail },
+    { id: 'channels',     label: 'Channels',      icon: Hash },
+    { id: 'broadcast',    label: 'Broadcast',     icon: Send },
+  ]},
+  { group: 'Monitoring', items: [
+    { id: 'activity',     label: 'Activity',      icon: Activity },
+    { id: 'attendance',   label: 'Attendance',    icon: UserCheck },
+    { id: 'availability', label: 'Availability',  icon: Calendar },
+  ]},
+  { group: 'Leaves', items: [
+    { id: 'leaves',          label: 'Leaves',          icon: CalendarOff },
+    { id: 'leave-calendar',  label: 'Leave Calendar',  icon: Calendar },
+    { id: 'audit',           label: 'Audit Log',       icon: FileText },
+  ]},
+];
 
 export default function AdminControlPanel({
   onDashboard,
@@ -111,684 +106,755 @@ export default function AdminControlPanel({
   onDashboard?: () => void;
   currentUser?: { name: string; email: string; role: string; initials: string } | null;
 }) {
-  const [tab, setTab] = useState<AdminTab>('overview');
+  const [tab, setTab] = useState<SideTab>('people');
   const [users, setUsers] = useState<UserRecord[]>([]);
+  const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
+  const [liveCount, setLiveCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelDesc, setNewChannelDesc] = useState('');
-  const [userSearch, setUserSearch] = useState('');
-  const [notifTitle, setNotifTitle] = useState('');
-  const [notifBody, setNotifBody] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('Member');
+  const [bcSubject, setBcSubject] = useState('');
+  const [bcBody, setBcBody] = useState('');
+  const [manageUser, setManageUser] = useState<UserRecord | null>(null);
+  const [inviteSending, setInviteSending] = useState(false);
+  const [bcSending, setBcSending] = useState(false);
 
   const token = typeof window !== 'undefined' ? getToken() : null;
-  const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  const h = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
-  const fetchUsers = useCallback(async () => {
-    const res = await fetch(`${API}/api/admin/users`, { headers }).catch(() => null);
-    if (res?.ok) { const d = await res.json(); setUsers(Array.isArray(d) ? d : d.users ?? []); }
-  }, []);
-  const fetchLeaves = useCallback(async () => {
-    const res = await fetch(`${API}/api/leaves`, { headers }).catch(() => null);
-    if (res?.ok) { const d = await res.json(); setLeaves(Array.isArray(d) ? d : d.leaves ?? []); }
-  }, []);
-  const fetchAttendance = useCallback(async () => {
-    const today = new Date().toISOString().slice(0, 10);
-    const res = await fetch(`${API}/api/activity/attendance?date=${today}`, { headers }).catch(() => null);
-    if (res?.ok) { const d = await res.json(); setAttendance(Array.isArray(d) ? d : d.records ?? []); }
-  }, []);
-  const fetchChannels = useCallback(async () => {
-    const res = await fetch(`${API}/api/channels`, { headers }).catch(() => null);
-    if (res?.ok) { const d = await res.json(); setChannels(Array.isArray(d) ? d : d.channels ?? []); }
-  }, []);
+  const fetchUsers     = useCallback(async () => { const r = await fetch(`${API}/api/admin/users`, { headers: h }).catch(() => null); if (r?.ok) { const d = await r.json(); setUsers(Array.isArray(d) ? d : d.users ?? []); } }, []);
+  const fetchRequests  = useCallback(async () => { const r = await fetch(`${API}/api/access-requests`, { headers: h }).catch(() => null); if (r?.ok) { const d = await r.json(); setRequests(Array.isArray(d) ? d : d.requests ?? []); } }, []);
+  const fetchLeaves    = useCallback(async () => { const r = await fetch(`${API}/api/leaves`, { headers: h }).catch(() => null); if (r?.ok) { const d = await r.json(); setLeaves(Array.isArray(d) ? d : d.leaves ?? []); } }, []);
+  const fetchAttendance= useCallback(async () => { const today = new Date().toISOString().slice(0,10); const r = await fetch(`${API}/api/activity/attendance?date=${today}`, { headers: h }).catch(() => null); if (r?.ok) { const d = await r.json(); setAttendance(Array.isArray(d) ? d : d.records ?? []); } }, []);
+  const fetchChannels  = useCallback(async () => { const r = await fetch(`${API}/api/channels`, { headers: h }).catch(() => null); if (r?.ok) { const d = await r.json(); setChannels(Array.isArray(d) ? d : d.channels ?? []); } }, []);
+  const fetchAudit     = useCallback(async () => { const r = await fetch(`${API}/api/admin/audit-log`, { headers: h }).catch(() => null); if (r?.ok) { const d = await r.json(); setAuditLog(Array.isArray(d) ? d : d.logs ?? []); } }, []);
+  const fetchLive      = useCallback(async () => { const r = await fetch(`${API}/api/activity/live`, { headers: h }).catch(() => null); if (r?.ok) { const d = await r.json(); setLiveCount(d.count ?? d.online ?? 0); } }, []);
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchUsers(), fetchLeaves(), fetchAttendance(), fetchChannels()]).finally(() => setLoading(false));
+    Promise.all([fetchUsers(), fetchRequests(), fetchLeaves(), fetchAttendance(), fetchChannels(), fetchAudit(), fetchLive()])
+      .finally(() => setLoading(false));
+    // Live heartbeat
+    const interval = setInterval(fetchLive, 15000);
+    // Socket live count
+    const socket = getSocket();
+    const onActivity = (d: any) => { if (d?.online !== undefined) setLiveCount(d.online); };
+    socket.on('user_activity_update', onActivity);
+    return () => { clearInterval(interval); socket.off('user_activity_update', onActivity); };
   }, []);
 
-  const handleLeaveAction = async (id: string, action: 'approved' | 'rejected') => {
-    const res = await fetch(`${API}/api/leaves/${id}`, { method: 'PATCH', headers, body: JSON.stringify({ status: action }) }).catch(() => null);
-    if (res?.ok) { toast.success(`Leave ${action}`); setLeaves(p => p.map(l => l.id === id ? { ...l, status: action } : l)); }
-    else toast.error('Action failed');
-  };
-
   const handleRoleChange = async (userId: string, newRole: string) => {
-    const res = await fetch(`${API}/api/admin/users/${userId}/role`, { method: 'PATCH', headers, body: JSON.stringify({ role: newRole }) }).catch(() => null);
-    if (res?.ok) { toast.success('Role updated'); setUsers(p => p.map(u => u.id === userId ? { ...u, role: newRole } : u)); }
-    else toast.error('Failed');
+    const r = await fetch(`${API}/api/admin/users/${userId}/role`, { method: 'PATCH', headers: h, body: JSON.stringify({ role: newRole }) }).catch(() => null);
+    if (r?.ok) { toast.success('Role updated'); setUsers(p => p.map(u => u.id === userId ? { ...u, role: newRole } : u)); }
+    else toast.error('Failed to update role');
   };
 
   const handleDeleteUser = async (userId: string, name: string) => {
-    if (!confirm(`Remove ${name}? This cannot be undone.`)) return;
-    const res = await fetch(`${API}/api/admin/users/${userId}`, { method: 'DELETE', headers }).catch(() => null);
-    if (res?.ok) { toast.success('User removed'); setUsers(p => p.filter(u => u.id !== userId)); }
+    if (!confirm(`Remove ${name}?`)) return;
+    const r = await fetch(`${API}/api/admin/users/${userId}`, { method: 'DELETE', headers: h }).catch(() => null);
+    if (r?.ok) { toast.success('User removed'); setUsers(p => p.filter(u => u.id !== userId)); setManageUser(null); }
+    else toast.error('Failed');
+  };
+
+  const handleLeaveAction = async (id: string, action: 'approved' | 'rejected') => {
+    const r = await fetch(`${API}/api/leaves/${id}`, { method: 'PATCH', headers: h, body: JSON.stringify({ status: action }) }).catch(() => null);
+    if (r?.ok) { toast.success(`Leave ${action}`); setLeaves(p => p.map(l => l.id === id ? { ...l, status: action } : l)); }
+    else toast.error('Action failed');
+  };
+
+  const handleReviewRequest = async (id: string, action: 'approved' | 'rejected') => {
+    const r = await fetch(`${API}/api/access-requests/${id}`, { method: 'PATCH', headers: h, body: JSON.stringify({ status: action }) }).catch(() => null);
+    if (r?.ok) { toast.success(action === 'approved' ? 'Access granted' : 'Request declined'); setRequests(p => p.map(req => req.id === id ? { ...req, status: action } : req)); fetchUsers(); }
     else toast.error('Failed');
   };
 
   const handleCreateChannel = async () => {
     if (!newChannelName.trim()) { toast.error('Channel name required'); return; }
-    const res = await fetch(`${API}/api/channels`, { method: 'POST', headers, body: JSON.stringify({ name: newChannelName.trim(), description: newChannelDesc.trim() }) }).catch(() => null);
-    if (res?.ok) { toast.success('Channel created'); setNewChannelName(''); setNewChannelDesc(''); fetchChannels(); }
+    const r = await fetch(`${API}/api/channels`, { method: 'POST', headers: h, body: JSON.stringify({ name: newChannelName.trim(), description: newChannelDesc.trim() }) }).catch(() => null);
+    if (r?.ok) { toast.success('Channel created'); setNewChannelName(''); setNewChannelDesc(''); fetchChannels(); }
     else toast.error('Failed');
   };
 
   const handleDeleteChannel = async (id: string, name: string) => {
     if (!confirm(`Delete #${name}?`)) return;
-    const res = await fetch(`${API}/api/channels/${id}`, { method: 'DELETE', headers }).catch(() => null);
-    if (res?.ok) { toast.success('Channel deleted'); setChannels(p => p.filter(c => (c._id ?? c.id) !== id)); }
+    const r = await fetch(`${API}/api/channels/${id}`, { method: 'DELETE', headers: h }).catch(() => null);
+    if (r?.ok) { toast.success('Deleted'); setChannels(p => p.filter(c => (c._id ?? c.id) !== id)); }
   };
 
-  const presentCount = attendance.filter(a => a.attendance === 'full' || a.attendance === 'half').length;
+  const handleSendInvite = async () => {
+    if (!inviteEmail.trim()) { toast.error('Email required'); return; }
+    setInviteSending(true);
+    const r = await fetch(`${API}/api/admin/invite`, { method: 'POST', headers: h, body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }) }).catch(() => null);
+    if (r?.ok) { toast.success(`Invite sent to ${inviteEmail}`); setInviteEmail(''); }
+    else toast.error('Failed to send invite');
+    setInviteSending(false);
+  };
+
+  const handleBroadcast = async () => {
+    if (!bcSubject.trim() || !bcBody.trim()) { toast.error('Subject and message required'); return; }
+    setBcSending(true);
+    const r = await fetch(`${API}/api/admin/broadcast-email`, { method: 'POST', headers: h, body: JSON.stringify({ subject: bcSubject, message: bcBody }) }).catch(() => null);
+    if (r?.ok) { toast.success('Broadcast sent to all members!'); setBcSubject(''); setBcBody(''); }
+    else toast.error('Failed');
+    setBcSending(false);
+  };
+
+  const workspaceChannels = channels.filter(c => c.type !== 'dm');
   const pendingLeaves = leaves.filter(l => l.status === 'pending').length;
-  const totalAdmins = users.filter(u => u.role === 'Admin').length;
-  const filteredUsers = users.filter(u =>
-    userSearch === '' ||
-    u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-    u.email.toLowerCase().includes(userSearch.toLowerCase())
-  );
+  const pendingRequests = requests.filter(r => r.status === 'pending').length;
+  const presentCount = attendance.filter(a => a.attendance === 'full' || a.attendance === 'half').length;
+  const filteredUsers = users.filter(u => userSearch === '' || u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.email.toLowerCase().includes(userSearch.toLowerCase()));
+
+  // ─── style helpers ───────────────────────────────────────────────────────
+  const S = {
+    page: { display: 'flex', height: '100%', background: '#F8FAFC', fontFamily: "'Inter', system-ui, sans-serif", overflow: 'hidden' } as React.CSSProperties,
+    sidebar: { width: 210, flexShrink: 0, background: '#fff', borderRight: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
+    main: { flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
+    content: { flex: 1, overflowY: 'auto' as const, padding: '28px 32px' },
+    card: { background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12 } as React.CSSProperties,
+    input: { width: '100%', padding: '8px 12px', borderRadius: 9, border: '1.5px solid #E2E8F0', fontSize: 13, color: '#0F172A', background: '#F8FAFC', outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit' },
+    btn: { padding: '8px 18px', borderRadius: 9, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: 'none' } as React.CSSProperties,
+    btnPrimary: { background: '#0D9488', color: '#fff' } as React.CSSProperties,
+    btnOutline: { background: '#fff', color: '#0D9488', border: '1.5px solid #0D9488' } as React.CSSProperties,
+    label: { fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase' as const, color: '#94A3B8', marginBottom: 6, display: 'block' },
+    sectionTitle: { fontSize: 20, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', marginBottom: 4 } as React.CSSProperties,
+    sectionSub: { fontSize: 12.5, color: '#64748B', marginBottom: 24 } as React.CSSProperties,
+  };
 
   return (
-    <div style={{ display: 'flex', height: '100%', background: '#06080F', fontFamily: "'Inter', system-ui, sans-serif", overflow: 'hidden' }}>
+    <div style={S.page}>
 
-      {/* ── Sidebar ── */}
-      <aside style={{
-        width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column',
-        background: 'rgba(13,16,37,0.95)', borderRight: '1px solid rgba(148,163,184,0.07)',
-      }}>
+      {/* ── SIDEBAR ── */}
+      <aside style={S.sidebar}>
         {/* Brand */}
-        <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid rgba(148,163,184,0.06)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg,#0AE8D0,#06B8A5)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            }}>
-              <Shield size={15} color="#06080F" strokeWidth={2.5} />
+        <div style={{ padding: '16px 14px 12px', borderBottom: '1px solid #F1F5F9' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg,#0D9488,#0891B2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Shield size={15} color="#fff" strokeWidth={2.5} />
             </div>
             <div>
-              <div style={{ fontSize: 12.5, fontWeight: 800, color: '#EEF2F6', lineHeight: 1 }}>Admin Panel</div>
-              <div style={{ fontSize: 10, color: '#4B5678', marginTop: 2 }}>EduTechExOS</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>EduTechExOS</div>
+              <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 1 }}>Admin control</div>
             </div>
           </div>
         </div>
 
-        {/* Nav items */}
-        <nav style={{ flex: 1, padding: '10px 8px', overflowY: 'auto' }}>
-          {NAV.map(({ id, label, icon: Icon, accent }) => {
-            const active = tab === id;
-            return (
-              <button key={id} onClick={() => setTab(id)} style={{
-                display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px',
-                borderRadius: 10, border: 'none', cursor: 'pointer', textAlign: 'left', marginBottom: 2,
-                background: active ? `${accent}18` : 'transparent',
-                transition: 'background .15s',
-              }}
-                onMouseEnter={e => !active && ((e.currentTarget as HTMLElement).style.background = 'rgba(148,163,184,0.05)')}
-                onMouseLeave={e => !active && ((e.currentTarget as HTMLElement).style.background = 'transparent')}
-              >
-                <div style={{
-                  width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                  background: active ? `${accent}22` : 'rgba(148,163,184,0.06)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Icon size={13} color={active ? accent : '#4B5678'} />
-                </div>
-                <span style={{ fontSize: 12.5, fontWeight: active ? 700 : 500, color: active ? '#EEF2F6' : '#8896B0', flex: 1 }}>
-                  {label}
-                </span>
-                {id === 'leave' && pendingLeaves > 0 && (
-                  <span style={{ fontSize: 9, fontWeight: 800, color: '#06080F', background: '#F59E0B', padding: '1px 6px', borderRadius: 20 }}>
-                    {pendingLeaves}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        {/* Breadcrumb */}
+        <div style={{ padding: '8px 14px', borderBottom: '1px solid #F1F5F9' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#94A3B8' }}>
+            <span>Admin control</span>
+            <ChevronRight size={10} />
+            <span style={{ color: '#0D9488', fontWeight: 600 }}>Workspace</span>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px' }}>
+          {SIDENAV.map(({ group, items }) => (
+            <div key={group} style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: '#CBD5E1', padding: '0 8px', marginBottom: 4 }}>
+                {group}
+              </div>
+              {items.map(({ id, label, icon: Icon }) => {
+                const active = tab === id;
+                const badge = id === 'requests' ? pendingRequests : id === 'leaves' ? pendingLeaves : 0;
+                return (
+                  <button key={id} onClick={() => setTab(id)} style={{
+                    display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 10px',
+                    borderRadius: 8, border: 'none', cursor: 'pointer', textAlign: 'left', marginBottom: 1,
+                    background: active ? '#F0FDFA' : 'transparent',
+                    transition: 'background .12s',
+                  }}
+                    onMouseEnter={e => !active && ((e.currentTarget as HTMLElement).style.background = '#F8FAFC')}
+                    onMouseLeave={e => !active && ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+                  >
+                    <Icon size={13} color={active ? '#0D9488' : '#94A3B8'} strokeWidth={active ? 2.5 : 2} />
+                    <span style={{ fontSize: 12.5, fontWeight: active ? 700 : 500, color: active ? '#0D9488' : '#64748B', flex: 1 }}>{label}</span>
+                    {badge > 0 && (
+                      <span style={{ fontSize: 9, fontWeight: 800, color: '#fff', background: '#F59E0B', padding: '1px 5px', borderRadius: 20 }}>{badge}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
-        {/* User footer */}
-        <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(148,163,184,0.06)' }}>
+        {/* Back */}
+        <div style={{ padding: '10px 10px', borderTop: '1px solid #F1F5F9' }}>
           <button onClick={onDashboard} style={{
-            display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px',
-            borderRadius: 10, border: 'none', cursor: 'pointer',
-            background: 'rgba(148,163,184,0.05)',
+            display: 'flex', alignItems: 'center', gap: 7, width: '100%', padding: '7px 10px',
+            borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: '#94A3B8', fontSize: 12.5, fontWeight: 500,
           }}
-            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(148,163,184,0.09)')}
-            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(148,163,184,0.05)')}
+            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = '#F8FAFC')}
+            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
           >
-            <ArrowLeft size={13} color="#4B5678" />
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#4B5678' }}>Back to Dashboard</span>
+            <ArrowLeft size={13} /> Back to Dashboard
           </button>
         </div>
       </aside>
 
-      {/* ── Main content ── */}
-      <main style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
+      {/* ── MAIN ── */}
+      <div style={S.main}>
 
-        {/* ════ OVERVIEW ════ */}
-        {tab === 'overview' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-            <SectionHeader
-              title="Overview"
-              sub={`Platform snapshot · ${new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}`}
-            />
-
-            {/* Stats row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 24 }}>
-              {[
-                { label: 'Total Users',    value: users.length,    icon: Users,      accent: '#7C5CFC', sub: `${totalAdmins} admins` },
-                { label: 'Present Today',  value: presentCount,    icon: UserCheck,  accent: '#0AE8D0', sub: `${users.length ? Math.round(presentCount/users.length*100) : 0}% rate` },
-                { label: 'Leave Pending',  value: pendingLeaves,   icon: CalendarOff,accent: '#F59E0B', sub: 'Action needed' },
-                { label: 'Channels',       value: channels.filter(c => (c as any).type !== 'dm').length, icon: Hash, accent: '#10B981', sub: 'Active' },
-              ].map(({ label, value, icon: Icon, accent, sub }, i) => (
-                <motion.div key={label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}>
-                  <Card style={{ padding: '16px 18px', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', right: -10, top: -10, width: 70, height: 70, borderRadius: '50%', background: `${accent}0d` }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: '#4B5678' }}>{label}</span>
-                      <div style={{ width: 30, height: 30, borderRadius: 9, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Icon size={13} color={accent} />
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 30, fontWeight: 800, color: '#EEF2F6', lineHeight: 1, marginBottom: 5 }}>
-                      {loading ? <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} color="#4B5678" /> : value}
-                    </div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: accent }}>{sub}</div>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Two column lower */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-
-              {/* Recent members */}
-              <Card>
-                <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(148,163,184,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#EEF2F6' }}>Recent Members</span>
-                  <button onClick={() => setTab('users')} style={{ fontSize: 11, color: '#0AE8D0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
-                    View all →
-                  </button>
+        {/* Top bar */}
+        <div style={{ background: '#fff', borderBottom: '1px solid #E2E8F0', padding: '0 28px' }}>
+          {/* Live stats row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '10px 0', borderBottom: '1px solid #F1F5F9' }}>
+            {[
+              { label: 'People in app', value: users.length },
+              { label: 'Online now',    value: liveCount },
+              { label: 'Access requests', value: pendingRequests },
+              { label: 'Project channels', value: workspaceChannels.length },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <LiveBadge />
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                  <span style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>{loading ? '…' : value}</span>
+                  <span style={{ fontSize: 11, color: '#94A3B8', fontWeight: 500 }}>{label}</span>
                 </div>
-                <div style={{ padding: '8px 10px' }}>
-                  {users.slice(0, 5).map((u, i) => (
-                    <motion.div key={u.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 8px', borderRadius: 10, marginBottom: 2,
-                        transition: 'background .12s' }}
-                      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(148,163,184,0.04)')}
-                      onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
-                    >
-                      <Avatar name={u.name} size={30} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12.5, fontWeight: 600, color: '#EEF2F6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</div>
-                        <div style={{ fontSize: 10.5, color: '#4B5678', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.email}</div>
-                      </div>
-                      <StatusBadge status={u.role} />
-                    </motion.div>
+              </div>
+            ))}
+          </div>
+
+          {/* Page header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
+            <div>
+              <h1 style={{ fontSize: 17, fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1 }}>Workspace Control Center</h1>
+              <p style={{ fontSize: 11.5, color: '#94A3B8', margin: '3px 0 0', fontWeight: 400 }}>
+                Manage people, channel access, broadcast emails, and monitor team activity — all in one place.
+              </p>
+            </div>
+            <button onClick={() => setTab('invite')} style={{ ...S.btn, ...S.btnPrimary, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Plus size={13} /> Add user
+            </button>
+          </div>
+        </div>
+
+        {/* ── CONTENT ── */}
+        <div style={S.content}>
+
+          {/* ═══ PEOPLE ═══ */}
+          {tab === 'people' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              <div style={S.card}>
+                {/* Table header */}
+                <div style={{ padding: '14px 20px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A' }}>Users</div>
+                    <div style={{ fontSize: 11.5, color: '#94A3B8', marginTop: 1 }}>Manage team members, roles, and channel access.</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+                      <Search size={12} color="#94A3B8" />
+                      <input value={userSearch} onChange={e => setUserSearch(e.target.value)} placeholder="Search people"
+                        style={{ background: 'none', border: 'none', outline: 'none', fontSize: 12, color: '#0F172A', width: 140 }} />
+                    </div>
+                    <button onClick={fetchUsers} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#fff', color: '#64748B', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <RefreshCw size={11} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Column headers */}
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 100px 1fr 90px', gap: 0,
+                  padding: '8px 20px', background: '#F8FAFC', borderBottom: '1px solid #F1F5F9' }}>
+                  {['Member', 'Role', 'Status', 'Channels', ''].map(h => (
+                    <span key={h} style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: '#94A3B8' }}>{h}</span>
                   ))}
                 </div>
-              </Card>
 
-              {/* Pending leaves */}
-              <Card>
-                <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(148,163,184,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#EEF2F6' }}>Pending Approvals</span>
-                  {pendingLeaves > 0 && (
-                    <span style={{ fontSize: 10, fontWeight: 700, color: '#F59E0B', background: 'rgba(245,158,11,0.12)', padding: '2px 10px', borderRadius: 20 }}>
-                      {pendingLeaves} waiting
+                {/* Rows */}
+                {filteredUsers.map((u, i) => {
+                  const userChannels = workspaceChannels.slice(0, 1).map(c => c.name);
+                  const isAdmin = u.role === 'Admin';
+                  return (
+                    <div key={u.id} style={{
+                      display: 'grid', gridTemplateColumns: '2fr 1.4fr 100px 1fr 90px',
+                      padding: '11px 20px', borderBottom: '1px solid #F8FAFC', alignItems: 'center',
+                      transition: 'background .1s',
+                    }}
+                      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = '#FAFAFA')}
+                      onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+                    >
+                      {/* Member */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Avatar name={u.name} size={32} />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</div>
+                          <div style={{ fontSize: 11, color: '#94A3B8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.email}</div>
+                        </div>
+                      </div>
+
+                      {/* Role */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <RolePill role={u.role} />
+                        {!isAdmin && (
+                          <button onClick={() => handleRoleChange(u.id, 'Admin')} style={{
+                            fontSize: 10.5, fontWeight: 600, color: '#7C3AED', background: 'none', border: 'none',
+                            cursor: 'pointer', padding: 0, textAlign: 'left',
+                          }}>Make Admin</button>
+                        )}
+                      </div>
+
+                      {/* Status */}
+                      <StatusDot online />
+
+                      {/* Channels */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {isAdmin ? (
+                          <span style={{ fontSize: 11, fontWeight: 500, color: '#64748B' }}>All channels</span>
+                        ) : (
+                          workspaceChannels.slice(0, 2).map(c => (
+                            <span key={c.id} style={{ fontSize: 10.5, fontWeight: 600, color: '#0D9488', background: '#F0FDFA', padding: '2px 7px', borderRadius: 5 }}>
+                              {c.name}
+                            </span>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <button onClick={() => setManageUser(u)} style={{
+                        fontSize: 11.5, fontWeight: 600, color: '#0D9488', background: '#F0FDFA',
+                        border: '1px solid #99F6E4', borderRadius: 7, padding: '4px 10px', cursor: 'pointer',
+                      }}>
+                        Manage
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ═══ REQUESTS ═══ */}
+          {tab === 'requests' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              <div style={S.sectionTitle}>Access Requests</div>
+              <div style={S.sectionSub}>{pendingRequests} pending approval</div>
+              {requests.length === 0 ? (
+                <div style={{ ...S.card, padding: '48px 0', textAlign: 'center', color: '#94A3B8' }}>
+                  <UserPlus size={32} style={{ margin: '0 auto 10px', opacity: .4 }} />
+                  <div style={{ fontSize: 13 }}>No access requests</div>
+                </div>
+              ) : requests.map(req => (
+                <div key={req.id} style={{ ...S.card, padding: '14px 18px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <Avatar name={req.name ?? req.email} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{req.name ?? req.email}</div>
+                    <div style={{ fontSize: 11.5, color: '#64748B' }}>{req.email}</div>
+                    {req.message && <div style={{ fontSize: 11.5, color: '#64748B', marginTop: 3, fontStyle: 'italic' }}>"{req.message}"</div>}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#94A3B8' }}>{fmt(req.createdAt)}</div>
+                  {req.status === 'pending' ? (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => handleReviewRequest(req.id, 'approved')} style={{ ...S.btn, ...S.btnPrimary, padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <Check size={11} /> Approve
+                      </button>
+                      <button onClick={() => handleReviewRequest(req.id, 'rejected')} style={{ ...S.btn, background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', padding: '6px 14px' }}>
+                        Decline
+                      </button>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: req.status === 'approved' ? '#059669' : '#DC2626',
+                      background: req.status === 'approved' ? '#ECFDF5' : '#FEF2F2', padding: '3px 10px', borderRadius: 20 }}>
+                      {req.status}
                     </span>
                   )}
                 </div>
-                <div style={{ padding: '10px 12px' }}>
-                  {leaves.filter(l => l.status === 'pending').slice(0, 3).length === 0 ? (
-                    <div style={{ padding: '20px 0', textAlign: 'center', color: '#4B5678', fontSize: 12 }}>
-                      <CheckCircle2 size={24} style={{ margin: '0 auto 8px', color: '#10B981' }} />
-                      All caught up!
-                    </div>
-                  ) : leaves.filter(l => l.status === 'pending').slice(0, 3).map(l => (
-                    <div key={l.id} style={{
-                      background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)',
-                      borderRadius: 12, padding: '10px 12px', marginBottom: 8,
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                        <span style={{ fontSize: 12.5, fontWeight: 700, color: '#EEF2F6' }}>{l.name ?? l.email}</span>
-                        <span style={{ fontSize: 10, color: '#4B5678' }}>{l.requestedAt?.slice(0, 10) ?? ''}</span>
-                      </div>
-                      <div style={{ fontSize: 11, color: '#8896B0', marginBottom: 8 }}>
-                        {l.startDate?.slice(0, 10)} → {l.endDate?.slice(0, 10)} · {l.leaveCategory ?? l.type}
-                      </div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => handleLeaveAction(l.id, 'approved')} style={{
-                          flex: 1, padding: '5px 0', background: 'rgba(16,185,129,0.15)', color: '#10B981',
-                          border: '1px solid rgba(16,185,129,0.25)', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                        }}>
-                          Approve
-                        </button>
-                        <button onClick={() => handleLeaveAction(l.id, 'rejected')} style={{
-                          flex: 1, padding: '5px 0', background: 'rgba(239,68,68,0.10)', color: '#EF4444',
-                          border: '1px solid rgba(239,68,68,0.20)', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                        }}>
-                          Decline
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+              ))}
+            </motion.div>
+          )}
+
+          {/* ═══ INVITE ═══ */}
+          {tab === 'invite' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              <div style={S.sectionTitle}>Invite Member</div>
+              <div style={S.sectionSub}>Send a secure invite link to a new team member.</div>
+              <div style={{ ...S.card, padding: 24, maxWidth: 500 }}>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={S.label}>Email address</label>
+                  <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+                    placeholder="colleague@company.com" style={S.input} type="email" />
                 </div>
-              </Card>
-            </div>
-          </motion.div>
-        )}
-
-        {/* ════ USERS ════ */}
-        {tab === 'users' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-            <SectionHeader
-              title="User Management"
-              sub={`${users.length} members · ${totalAdmins} admins`}
-              action={
-                <button onClick={fetchUsers} style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
-                  background: 'rgba(10,232,208,0.10)', color: '#0AE8D0', border: '1px solid rgba(10,232,208,0.20)',
-                  borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                }}>
-                  <RefreshCw size={12} /> Refresh
-                </button>
-              }
-            />
-
-            {/* Search */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 12,
-              background: 'rgba(148,163,184,0.05)', border: '1px solid rgba(148,163,184,0.08)', marginBottom: 16 }}>
-              <Search size={13} color="#4B5678" />
-              <input value={userSearch} onChange={e => setUserSearch(e.target.value)}
-                placeholder="Search by name or email…"
-                style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 12.5, color: '#EEF2F6', caretColor: '#0AE8D0' }} />
-            </div>
-
-            {/* Table header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 100px 80px 40px', gap: 0,
-              padding: '6px 14px', marginBottom: 4 }}>
-              {['Name', 'Email', 'Role', 'Joined', 'Source', ''].map(h => (
-                <span key={h} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#4B5678' }}>{h}</span>
-              ))}
-            </div>
-
-            {filteredUsers.map((u, i) => (
-              <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-                <Card style={{ marginBottom: 6, borderRadius: 12 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 100px 80px 40px', gap: 0,
-                    padding: '10px 14px', alignItems: 'center' }}>
-                    {/* Name */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <Avatar name={u.name} size={30} />
-                      <span style={{ fontSize: 12.5, fontWeight: 600, color: '#EEF2F6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</span>
-                    </div>
-                    {/* Email */}
-                    <span style={{ fontSize: 11.5, color: '#4B5678', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.email}</span>
-                    {/* Role */}
-                    <select value={u.role} onChange={e => handleRoleChange(u.id, e.target.value)} style={{
-                      padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.12)',
-                      fontSize: 11.5, color: '#EEF2F6', background: 'rgba(148,163,184,0.06)', cursor: 'pointer', fontWeight: 600, outline: 'none',
-                    }}>
-                      <option value="Member" style={{ background: '#0D1025' }}>Member</option>
-                      <option value="Admin" style={{ background: '#0D1025' }}>Admin</option>
-                    </select>
-                    {/* Joined */}
-                    <span style={{ fontSize: 11, color: '#4B5678' }}>
-                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}
-                    </span>
-                    {/* Source */}
-                    <span style={{ fontSize: 10, fontWeight: 600, color: u.source === 'system' ? '#7C5CFC' : '#0AE8D0',
-                      background: u.source === 'system' ? 'rgba(124,92,252,0.10)' : 'rgba(10,232,208,0.08)',
-                      padding: '2px 8px', borderRadius: 20 }}>
-                      {u.source ?? 'db'}
-                    </span>
-                    {/* Delete */}
-                    <button onClick={() => handleDeleteUser(u.id, u.name)} title="Remove"
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28,
-                        background: 'rgba(239,68,68,0.08)', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
-                      <Trash2 size={12} color="#EF4444" />
-                    </button>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
-          </motion.div>
-        )}
-
-        {/* ════ ATTENDANCE ════ */}
-        {tab === 'attendance' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-            <SectionHeader
-              title="Today's Attendance"
-              sub={`${presentCount} present · ${attendance.filter(a => a.attendance === 'absent').length} absent · ${new Date().toLocaleDateString()}`}
-              action={
-                <button onClick={fetchAttendance} style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
-                  background: 'rgba(10,232,208,0.10)', color: '#0AE8D0', border: '1px solid rgba(10,232,208,0.20)',
-                  borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                }}>
-                  <RefreshCw size={12} /> Refresh
-                </button>
-              }
-            />
-
-            {/* Summary cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
-              {[
-                { label: 'Full Day',  count: attendance.filter(a => a.attendance === 'full').length,   accent: '#10B981' },
-                { label: 'Half Day',  count: attendance.filter(a => a.attendance === 'half').length,   accent: '#F59E0B' },
-                { label: 'Absent',    count: attendance.filter(a => a.attendance === 'absent').length, accent: '#EF4444' },
-              ].map(({ label, count, accent }) => (
-                <Card key={label} style={{ padding: '14px 18px', borderTop: `2px solid ${accent}` }}>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: accent, lineHeight: 1 }}>{count}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#8896B0', marginTop: 4 }}>{label}</div>
-                </Card>
-              ))}
-            </div>
-
-            {attendance.map((a, i) => (
-              <motion.div key={`${a.email}-${a.loginAt ?? i}`} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}>
-                <Card style={{ marginBottom: 6, borderRadius: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px' }}>
-                    <Avatar name={a.name ?? a.email} size={30} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12.5, fontWeight: 600, color: '#EEF2F6' }}>{a.name ?? a.email}</div>
-                      <div style={{ fontSize: 10.5, color: '#4B5678' }}>{a.email}</div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#4B5678', fontSize: 11.5 }}>
-                      <Clock size={11} />
-                      <span>{a.hoursWorked ? `${a.hoursWorked.toFixed(1)}h` : '—'}</span>
-                    </div>
-                    <StatusBadge status={a.attendance} />
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
-
-            {attendance.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '48px 0', color: '#4B5678' }}>
-                <Activity size={36} style={{ margin: '0 auto 10px', opacity: .4 }} />
-                <div style={{ fontSize: 13 }}>No attendance records for today</div>
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* ════ LEAVE ════ */}
-        {tab === 'leave' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-            <SectionHeader title="Leave Approvals" sub={`${pendingLeaves} requests awaiting your action`} />
-
-            {(['pending', 'approved', 'rejected'] as const).map(status => {
-              const filtered = leaves.filter(l => l.status === status);
-              if (filtered.length === 0) return null;
-              const cfg = {
-                pending:  { accent: '#F59E0B', label: 'Awaiting Approval' },
-                approved: { accent: '#10B981', label: 'Approved' },
-                rejected: { accent: '#EF4444', label: 'Declined' },
-              }[status];
-              return (
-                <div key={status} style={{ marginBottom: 28 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <div style={{ width: 3, height: 14, borderRadius: 2, background: cfg.accent }} />
-                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: cfg.accent }}>
-                      {cfg.label}
-                    </span>
-                    <span style={{ fontSize: 10, color: '#4B5678', fontWeight: 600 }}>({filtered.length})</span>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px,1fr))', gap: 10 }}>
-                    {filtered.map((l, i) => (
-                      <motion.div key={l.id} initial={{ opacity: 0, scale: .97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }}>
-                        <Card style={{ padding: '14px 16px', borderTop: `2px solid ${cfg.accent}` }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <Avatar name={l.name ?? l.email} size={28} />
-                              <div>
-                                <div style={{ fontSize: 12.5, fontWeight: 700, color: '#EEF2F6' }}>{l.name ?? l.email}</div>
-                                <div style={{ fontSize: 10, color: '#4B5678' }}>{l.email}</div>
-                              </div>
-                            </div>
-                            <span style={{ fontSize: 9.5, color: '#4B5678' }}>{l.requestedAt?.slice(0, 10) ?? ''}</span>
-                          </div>
-                          <div style={{ background: 'rgba(148,163,184,0.05)', borderRadius: 8, padding: '8px 10px', marginBottom: 10 }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: '#8896B0', marginBottom: 3 }}>
-                              {l.leaveCategory ?? l.type} · {l.startDate?.slice(0, 10)} → {l.endDate?.slice(0, 10)}
-                            </div>
-                            <div style={{ fontSize: 11.5, color: '#EEF2F6' }}>{l.reason}</div>
-                          </div>
-                          {status === 'pending' && (
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <button onClick={() => handleLeaveAction(l.id, 'approved')} style={{
-                                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                                padding: '6px 0', background: 'rgba(16,185,129,0.12)', color: '#10B981',
-                                border: '1px solid rgba(16,185,129,0.25)', borderRadius: 9, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                              }}>
-                                <Check size={11} /> Approve
-                              </button>
-                              <button onClick={() => handleLeaveAction(l.id, 'rejected')} style={{
-                                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                                padding: '6px 0', background: 'rgba(239,68,68,0.08)', color: '#EF4444',
-                                border: '1px solid rgba(239,68,68,0.18)', borderRadius: 9, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                              }}>
-                                <X size={11} /> Decline
-                              </button>
-                            </div>
-                          )}
-                        </Card>
-                      </motion.div>
+                <div style={{ marginBottom: 20 }}>
+                  <label style={S.label}>Role</label>
+                  <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} style={{ ...S.input }}>
+                    {['Member', 'Developer', 'Designer', 'HR', 'Admin'].map(r => (
+                      <option key={r} value={r}>{r}</option>
                     ))}
-                  </div>
+                  </select>
                 </div>
-              );
-            })}
-          </motion.div>
-        )}
-
-        {/* ════ CHANNELS ════ */}
-        {tab === 'channels' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-            <SectionHeader title="Channel Management" sub={`${channels.filter(c => (c as any).type !== 'dm').length} workspace channels`} />
-
-            {/* Create */}
-            <Card style={{ padding: 16, marginBottom: 20 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#EEF2F6', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Plus size={13} color="#0AE8D0" /> Create New Channel
-              </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <input value={newChannelName} onChange={e => setNewChannelName(e.target.value)}
-                  placeholder="channel-name"
-                  style={{ flex: 1, padding: '8px 12px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.12)',
-                    background: 'rgba(148,163,184,0.05)', color: '#EEF2F6', fontSize: 12.5, outline: 'none' }} />
-                <input value={newChannelDesc} onChange={e => setNewChannelDesc(e.target.value)}
-                  placeholder="Short description (optional)"
-                  style={{ flex: 2, padding: '8px 12px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.12)',
-                    background: 'rgba(148,163,184,0.05)', color: '#EEF2F6', fontSize: 12.5, outline: 'none' }} />
-                <button onClick={handleCreateChannel} style={{
-                  padding: '8px 18px', background: 'linear-gradient(135deg,#0AE8D0,#06B8A5)',
-                  color: '#06080F', border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+                <button onClick={handleSendInvite} disabled={inviteSending} style={{
+                  ...S.btn, ...S.btnPrimary, display: 'flex', alignItems: 'center', gap: 7, opacity: inviteSending ? .7 : 1,
                 }}>
-                  Create
+                  {inviteSending ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Mail size={13} />}
+                  Send Invite
                 </button>
               </div>
-            </Card>
+            </motion.div>
+          )}
 
-            {channels.filter(c => (c as any).type !== 'dm').map((ch, i) => (
-              <motion.div key={ch._id ?? ch.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                <Card style={{ marginBottom: 6, borderRadius: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px' }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(16,185,129,0.10)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Hash size={14} color="#10B981" />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12.5, fontWeight: 700, color: '#EEF2F6' }}>{ch.name}</div>
-                      <div style={{ fontSize: 11, color: '#4B5678' }}>{ch.description ?? 'No description'}</div>
-                    </div>
-                    {ch.isPrivate !== undefined && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        {ch.isPrivate ? <Lock size={11} color="#F59E0B" /> : <Globe size={11} color="#10B981" />}
-                        <span style={{ fontSize: 10.5, fontWeight: 600, color: ch.isPrivate ? '#F59E0B' : '#10B981' }}>
-                          {ch.isPrivate ? 'Private' : 'Public'}
-                        </span>
-                      </div>
-                    )}
-                    <button onClick={() => handleDeleteChannel(ch._id ?? ch.id, ch.name)} style={{
-                      width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'rgba(239,68,68,0.08)', border: 'none', borderRadius: 8, cursor: 'pointer',
-                    }}>
-                      <Trash2 size={12} color="#EF4444" />
-                    </button>
+          {/* ═══ CHANNELS ═══ */}
+          {tab === 'channels' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              <div style={S.sectionTitle}>Channels</div>
+              <div style={S.sectionSub}>{workspaceChannels.length} workspace channels</div>
+
+              <div style={{ ...S.card, padding: 18, marginBottom: 20, maxWidth: 600 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', marginBottom: 12 }}>Create Channel</div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                  <input value={newChannelName} onChange={e => setNewChannelName(e.target.value)} placeholder="channel-name" style={{ ...S.input, flex: 1 }} />
+                  <input value={newChannelDesc} onChange={e => setNewChannelDesc(e.target.value)} placeholder="Description (optional)" style={{ ...S.input, flex: 2 }} />
+                  <button onClick={handleCreateChannel} style={{ ...S.btn, ...S.btnPrimary, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Plus size={12} /> Create
+                  </button>
+                </div>
+              </div>
+
+              {workspaceChannels.map(ch => (
+                <div key={ch._id ?? ch.id} style={{ ...S.card, marginBottom: 6, padding: '11px 16px', display: 'flex', alignItems: 'center', gap: 12, borderRadius: 10 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#F0FDFA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Hash size={13} color="#0D9488" />
                   </div>
-                </Card>
-              </motion.div>
-            ))}
-          </motion.div>
-        )}
-
-        {/* ════ ANALYTICS ════ */}
-        {tab === 'analytics' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-            <SectionHeader title="Platform Analytics" sub="Usage metrics and workspace health" />
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 24 }}>
-              {[
-                { label: 'Total Members', value: users.length, icon: Users, accent: '#7C5CFC' },
-                { label: 'Active Channels', value: channels.filter(c => (c as any).type !== 'dm').length, icon: Hash, accent: '#10B981' },
-                { label: 'Attendance Rate', value: users.length ? `${Math.round(presentCount/users.length*100)}%` : '—', icon: Activity, accent: '#0AE8D0' },
-                { label: 'Leave Pending', value: pendingLeaves, icon: CalendarOff, accent: '#F59E0B' },
-                { label: 'Admins', value: totalAdmins, icon: Shield, accent: '#EF4444' },
-                { label: 'Half Day', value: attendance.filter(a => a.attendance === 'half').length, icon: Clock, accent: '#8B5CF6' },
-              ].map(({ label, value, icon: Icon, accent }, i) => (
-                <motion.div key={label} initial={{ opacity: 0, scale: .97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.06 }}>
-                  <Card style={{ padding: '20px', textAlign: 'center' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 12, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                      <Icon size={18} color={accent} />
-                    </div>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: '#EEF2F6', lineHeight: 1, marginBottom: 4 }}>{value}</div>
-                    <div style={{ fontSize: 11.5, color: '#4B5678', fontWeight: 500 }}>{label}</div>
-                  </Card>
-                </motion.div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{ch.name}</div>
+                    <div style={{ fontSize: 11.5, color: '#94A3B8' }}>{ch.description ?? 'No description'}</div>
+                  </div>
+                  {ch.isPrivate !== undefined && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: ch.isPrivate ? '#D97706' : '#0D9488' }}>
+                      {ch.isPrivate ? <Lock size={11} /> : <Globe size={11} />}
+                      {ch.isPrivate ? 'Private' : 'Public'}
+                    </span>
+                  )}
+                  <button onClick={() => handleDeleteChannel(ch._id ?? ch.id, ch.name)} style={{
+                    width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: '#FEF2F2', border: 'none', borderRadius: 7, cursor: 'pointer',
+                  }}>
+                    <Trash2 size={12} color="#EF4444" />
+                  </button>
+                </div>
               ))}
-            </div>
+            </motion.div>
+          )}
 
-            {/* Role distribution */}
-            <Card style={{ padding: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#EEF2F6', marginBottom: 14 }}>Role Distribution</div>
-              {[
-                { role: 'Admin', accent: '#7C5CFC' },
-                { role: 'Member', accent: '#0AE8D0' },
-              ].map(({ role, accent }) => {
-                const count = users.filter(u => u.role === role).length;
-                const pct = users.length ? (count / users.length) * 100 : 0;
+          {/* ═══ BROADCAST ═══ */}
+          {tab === 'broadcast' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              <div style={S.sectionTitle}>Broadcast Email</div>
+              <div style={S.sectionSub}>Send an announcement email to all {users.length} team members.</div>
+              <div style={{ ...S.card, padding: 24, maxWidth: 560 }}>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={S.label}>Subject</label>
+                  <input value={bcSubject} onChange={e => setBcSubject(e.target.value)} placeholder="e.g. Team standup at 10 AM today" style={S.input} />
+                </div>
+                <div style={{ marginBottom: 20 }}>
+                  <label style={S.label}>Message</label>
+                  <textarea value={bcBody} onChange={e => setBcBody(e.target.value)} rows={5} placeholder="Write your announcement…"
+                    style={{ ...S.input, resize: 'vertical' }} />
+                </div>
+                <button onClick={handleBroadcast} disabled={bcSending} style={{
+                  ...S.btn, ...S.btnPrimary, display: 'flex', alignItems: 'center', gap: 7, opacity: bcSending ? .7 : 1,
+                }}>
+                  {bcSending ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={13} />}
+                  Send to All Members
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ═══ ACTIVITY ═══ */}
+          {tab === 'activity' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              <div style={S.sectionTitle}>Team Activity</div>
+              <div style={S.sectionSub}>Real-time online status and recent logins.</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 24 }}>
+                {[
+                  { label: 'Online Now', value: liveCount, color: '#10B981', bg: '#ECFDF5' },
+                  { label: 'Present Today', value: presentCount, color: '#0D9488', bg: '#F0FDFA' },
+                  { label: 'Total Members', value: users.length, color: '#7C3AED', bg: '#F5F3FF' },
+                ].map(({ label, value, color, bg }) => (
+                  <div key={label} style={{ ...S.card, padding: '18px 20px' }}>
+                    <div style={{ fontSize: 28, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
+                    <div style={{ fontSize: 11.5, color: '#64748B', marginTop: 5 }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+              {users.map((u, i) => (
+                <div key={u.id} style={{ ...S.card, marginBottom: 6, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, borderRadius: 10 }}>
+                  <Avatar name={u.name} size={30} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{u.name}</div>
+                    <div style={{ fontSize: 11, color: '#94A3B8' }}>{u.email}</div>
+                  </div>
+                  <StatusDot online />
+                  <RolePill role={u.role} />
+                </div>
+              ))}
+            </motion.div>
+          )}
+
+          {/* ═══ ATTENDANCE ═══ */}
+          {tab === 'attendance' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                <div>
+                  <div style={S.sectionTitle}>Attendance</div>
+                  <div style={S.sectionSub}>{presentCount} present · {attendance.filter(a => a.attendance === 'absent').length} absent today</div>
+                </div>
+                <button onClick={fetchAttendance} style={{ ...S.btn, background: '#F8FAFC', color: '#64748B', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <RefreshCw size={11} /> Refresh
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 18 }}>
+                {[
+                  { label: 'Full Day', count: attendance.filter(a => a.attendance === 'full').length, color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0' },
+                  { label: 'Half Day', count: attendance.filter(a => a.attendance === 'half').length, color: '#D97706', bg: '#FFFBEB', border: '#FDE68A' },
+                  { label: 'Absent',   count: attendance.filter(a => a.attendance === 'absent').length, color: '#DC2626', bg: '#FEF2F2', border: '#FECACA' },
+                ].map(({ label, count, color, bg, border }) => (
+                  <div key={label} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: '14px 18px' }}>
+                    <div style={{ fontSize: 26, fontWeight: 800, color, lineHeight: 1 }}>{count}</div>
+                    <div style={{ fontSize: 11.5, color, opacity: .8, marginTop: 4, fontWeight: 600 }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {attendance.map((a, i) => {
+                const statusCfg = { full: { color: '#059669', label: 'Full Day' }, half: { color: '#D97706', label: 'Half Day' }, absent: { color: '#DC2626', label: 'Absent' }, pending: { color: '#94A3B8', label: 'Pending' } };
+                const sc = statusCfg[a.attendance] ?? statusCfg.pending;
                 return (
-                  <div key={role} style={{ marginBottom: 12 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: '#8896B0' }}>{role}</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: accent }}>{count}</span>
+                  <div key={`${a.email}-${i}`} style={{ ...S.card, marginBottom: 6, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, borderRadius: 10 }}>
+                    <Avatar name={a.name ?? a.email} size={30} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{a.name ?? a.email}</div>
+                      <div style={{ fontSize: 11, color: '#94A3B8' }}>{a.email}</div>
                     </div>
-                    <div style={{ height: 6, borderRadius: 3, background: 'rgba(148,163,184,0.08)' }}>
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, ease: 'easeOut' }}
-                        style={{ height: '100%', borderRadius: 3, background: accent }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#64748B', fontSize: 11.5 }}>
+                      <Clock size={11} /> {a.hoursWorked ? `${a.hoursWorked.toFixed(1)}h` : '—'}
                     </div>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: sc.color }}>{sc.label}</span>
                   </div>
                 );
               })}
-            </Card>
-          </motion.div>
-        )}
+              {attendance.length === 0 && <div style={{ ...S.card, padding: '40px', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>No records for today</div>}
+            </motion.div>
+          )}
 
-        {/* ════ NOTIFICATIONS ════ */}
-        {tab === 'notifications' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-            <SectionHeader title="Broadcast Message" sub="Send an announcement to all workspace members" />
-
-            <Card style={{ padding: 20, maxWidth: 560 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div>
-                  <label style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#4B5678', display: 'block', marginBottom: 7 }}>Title</label>
-                  <input value={notifTitle} onChange={e => setNotifTitle(e.target.value)}
-                    placeholder="e.g. Team meeting at 3 PM today"
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.12)',
-                      background: 'rgba(148,163,184,0.05)', color: '#EEF2F6', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#4B5678', display: 'block', marginBottom: 7 }}>Message</label>
-                  <textarea value={notifBody} onChange={e => setNotifBody(e.target.value)} rows={4}
-                    placeholder="Write your announcement…"
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.12)',
-                      background: 'rgba(148,163,184,0.05)', color: '#EEF2F6', fontSize: 13, outline: 'none',
-                      resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
-                </div>
-                <button onClick={() => { toast.success('Broadcast sent!'); setNotifTitle(''); setNotifBody(''); }} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                  padding: '10px 20px', background: 'linear-gradient(135deg,#0AE8D0,#06B8A5)',
-                  color: '#06080F', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', width: 'fit-content',
-                }}>
-                  <Zap size={13} /> Send to All Members
-                </button>
+          {/* ═══ AVAILABILITY ═══ */}
+          {tab === 'availability' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              <div style={S.sectionTitle}>Availability</div>
+              <div style={S.sectionSub}>Team member availability schedules.</div>
+              <div style={{ ...S.card, padding: '40px', textAlign: 'center', color: '#94A3B8' }}>
+                <Calendar size={32} style={{ margin: '0 auto 10px', opacity: .4 }} />
+                <div style={{ fontSize: 13, marginBottom: 4 }}>Availability calendar coming soon</div>
+                <div style={{ fontSize: 11.5 }}>Members set their availability from their profile.</div>
               </div>
-            </Card>
-          </motion.div>
-        )}
+            </motion.div>
+          )}
 
-        {/* ════ SETTINGS ════ */}
-        {tab === 'settings' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-            <SectionHeader title="Workspace Settings" sub="Configure your EduTechExOS workspace" />
+          {/* ═══ LEAVES ═══ */}
+          {tab === 'leaves' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              <div style={S.sectionTitle}>Leave Approvals</div>
+              <div style={S.sectionSub}>{pendingLeaves} requests awaiting action</div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 560 }}>
-              {[
-                { label: 'Workspace Name', desc: 'Displayed to all members', val: 'EduTechExOS', icon: Edit3 },
-                { label: 'Admin Email', desc: 'Primary contact address', val: currentUser?.email ?? '', icon: Mail },
-              ].map(({ label, desc, val, icon: Icon }) => (
-                <Card key={label} style={{ padding: '16px 18px' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(10,232,208,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Icon size={14} color="#0AE8D0" />
+              {(['pending', 'approved', 'rejected'] as const).map(status => {
+                const filtered = leaves.filter(l => l.status === status);
+                if (!filtered.length) return null;
+                const cfg = { pending: { color: '#D97706', bg: '#FFFBEB', border: '#FDE68A', label: 'Awaiting Approval' }, approved: { color: '#059669', bg: '#ECFDF5', border: '#A7F3D0', label: 'Approved' }, rejected: { color: '#DC2626', bg: '#FEF2F2', border: '#FECACA', label: 'Declined' } }[status];
+                return (
+                  <div key={status} style={{ marginBottom: 24 }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: cfg.color, marginBottom: 10 }}>
+                      {cfg.label} ({filtered.length})
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#EEF2F6', marginBottom: 2 }}>{label}</div>
-                      <div style={{ fontSize: 11, color: '#4B5678', marginBottom: 10 }}>{desc}</div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <input defaultValue={val} style={{ flex: 1, padding: '8px 12px', borderRadius: 9,
-                          border: '1px solid rgba(148,163,184,0.12)', background: 'rgba(148,163,184,0.05)',
-                          color: '#EEF2F6', fontSize: 12.5, outline: 'none' }} />
-                        <button onClick={() => toast.success('Saved!')} style={{
-                          padding: '7px 16px', background: 'rgba(10,232,208,0.12)', color: '#0AE8D0',
-                          border: '1px solid rgba(10,232,208,0.20)', borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                        }}>
-                          Save
-                        </button>
+                    {filtered.map(l => (
+                      <div key={l.id} style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, borderRadius: 10, padding: '14px 16px', marginBottom: 8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <Avatar name={l.name ?? l.email} size={28} />
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{l.name ?? l.email}</div>
+                              <div style={{ fontSize: 11, color: '#64748B' }}>{l.email}</div>
+                            </div>
+                          </div>
+                          <span style={{ fontSize: 10.5, color: '#94A3B8' }}>{fmt(l.requestedAt)}</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>
+                          <strong>{l.leaveCategory ?? l.type}</strong> · {l.startDate?.slice(0, 10)} → {l.endDate?.slice(0, 10)}
+                        </div>
+                        <div style={{ fontSize: 12, color: '#64748B', marginBottom: status === 'pending' ? 10 : 0 }}>{l.reason}</div>
+                        {status === 'pending' && (
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button onClick={() => handleLeaveAction(l.id, 'approved')} style={{ ...S.btn, ...S.btnPrimary, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                              <Check size={11} /> Approve
+                            </button>
+                            <button onClick={() => handleLeaveAction(l.id, 'rejected')} style={{ ...S.btn, background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                              <X size={11} /> Decline
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+              {leaves.length === 0 && <div style={{ ...S.card, padding: '40px', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>No leave requests</div>}
+            </motion.div>
+          )}
+
+          {/* ═══ LEAVE CALENDAR ═══ */}
+          {tab === 'leave-calendar' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              <div style={S.sectionTitle}>Leave Calendar</div>
+              <div style={S.sectionSub}>Visual overview of team leave schedule.</div>
+              <div style={{ ...S.card, padding: 24 }}>
+                {/* Simple month grid */}
+                {(() => {
+                  const now = new Date();
+                  const y = now.getFullYear(), m = now.getMonth();
+                  const daysInMonth = new Date(y, m + 1, 0).getDate();
+                  const startDay = new Date(y, m, 1).getDay();
+                  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+                  const leaveDates = leaves.flatMap(l => {
+                    if (!l.startDate) return [];
+                    const start = new Date(l.startDate), end = l.endDate ? new Date(l.endDate) : start;
+                    const ds = [];
+                    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                      if (d.getFullYear() === y && d.getMonth() === m) ds.push(d.getDate());
+                    }
+                    return ds;
+                  });
+                  return (
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', marginBottom: 16, textAlign: 'center' }}>
+                        {now.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 4 }}>
+                        {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
+                          <div key={d} style={{ fontSize: 10.5, fontWeight: 700, color: '#94A3B8', textAlign: 'center', paddingBottom: 4 }}>{d}</div>
+                        ))}
+                        {Array.from({ length: startDay }, (_, i) => <div key={`e${i}`} />)}
+                        {days.map(d => {
+                          const hasLeave = leaveDates.includes(d);
+                          const isToday = d === now.getDate();
+                          return (
+                            <div key={d} style={{
+                              height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              borderRadius: 8, fontSize: 12, fontWeight: isToday ? 800 : 400,
+                              background: isToday ? '#0D9488' : hasLeave ? '#FEF3C7' : 'transparent',
+                              color: isToday ? '#fff' : hasLeave ? '#D97706' : '#0F172A',
+                              border: hasLeave && !isToday ? '1px solid #FDE68A' : 'none',
+                            }}>{d}</div>
+                          );
+                        })}
+                      </div>
+                      <div style={{ display: 'flex', gap: 16, marginTop: 16, justifyContent: 'center' }}>
+                        {[{ color: '#0D9488', bg: '#0D9488', label: 'Today' }, { color: '#D97706', bg: '#FEF3C7', label: 'Leave' }].map(({ color, bg, label }) => (
+                          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <div style={{ width: 12, height: 12, borderRadius: 3, background: bg }} />
+                            <span style={{ fontSize: 11.5, color: '#64748B' }}>{label}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  );
+                })()}
+              </div>
+            </motion.div>
+          )}
 
-              {/* Danger zone */}
-              <Card style={{ padding: '16px 18px', borderColor: 'rgba(239,68,68,0.15)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <AlertTriangle size={14} color="#EF4444" />
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#EF4444' }}>Danger Zone</span>
+          {/* ═══ AUDIT LOG ═══ */}
+          {tab === 'audit' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                <div>
+                  <div style={S.sectionTitle}>Audit Log</div>
+                  <div style={S.sectionSub}>All admin actions recorded chronologically.</div>
                 </div>
-                <p style={{ fontSize: 11.5, color: '#4B5678', margin: '0 0 12px' }}>
-                  These actions are destructive and cannot be undone.
-                </p>
-                <button onClick={() => toast.error('Contact platform support to reset workspace.')} style={{
-                  padding: '7px 16px', background: 'rgba(239,68,68,0.08)', color: '#EF4444',
-                  border: '1px solid rgba(239,68,68,0.18)', borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                }}>
-                  Reset Workspace Data
+                <button onClick={fetchAudit} style={{ ...S.btn, background: '#F8FAFC', color: '#64748B', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <RefreshCw size={11} /> Refresh
                 </button>
-              </Card>
-            </div>
+              </div>
+              <div style={S.card}>
+                {auditLog.length === 0 ? (
+                  <div style={{ padding: '40px', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>No audit entries yet</div>
+                ) : auditLog.map((entry, i) => (
+                  <div key={entry.id ?? i} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '12px 18px', borderBottom: '1px solid #F8FAFC' }}>
+                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#0D9488', marginTop: 6, flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 13, color: '#0F172A', fontWeight: 500 }}>
+                        <strong style={{ color: '#0D9488' }}>{entry.by}</strong> {entry.action}
+                        {entry.target && <> — <em style={{ color: '#64748B' }}>{entry.target}</em></>}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 11, color: '#94A3B8', whiteSpace: 'nowrap' }}>{fmt(entry.at)}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+        </div>
+      </div>
+
+      {/* ═══ MANAGE USER MODAL ═══ */}
+      <AnimatePresence>
+        {manageUser && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+            onClick={() => setManageUser(null)}
+          >
+            <motion.div initial={{ scale: .95, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: .97, y: 8 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,.18)', overflow: 'hidden' }}
+            >
+              <div style={{ padding: '18px 20px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 14, fontWeight: 800, color: '#0F172A' }}>Manage Member</span>
+                <button onClick={() => setManageUser(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8' }}><X size={16} /></button>
+              </div>
+              <div style={{ padding: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20, padding: '14px 16px', background: '#F8FAFC', borderRadius: 12 }}>
+                  <Avatar name={manageUser.name} size={44} />
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#0F172A' }}>{manageUser.name}</div>
+                    <div style={{ fontSize: 12, color: '#64748B' }}>{manageUser.email}</div>
+                    <div style={{ marginTop: 5 }}><RolePill role={manageUser.role} /></div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {manageUser.role !== 'Admin' && (
+                    <button onClick={() => { handleRoleChange(manageUser.id, 'Admin'); setManageUser(p => p ? { ...p, role: 'Admin' } : p); }}
+                      style={{ ...S.btn, background: '#F5F3FF', color: '#7C3AED', border: '1px solid #DDD6FE', display: 'flex', alignItems: 'center', gap: 7, width: '100%', justifyContent: 'flex-start' }}>
+                      <Shield size={13} /> Make Admin
+                    </button>
+                  )}
+                  {manageUser.role === 'Admin' && (
+                    <button onClick={() => { handleRoleChange(manageUser.id, 'Member'); setManageUser(p => p ? { ...p, role: 'Member' } : p); }}
+                      style={{ ...S.btn, background: '#F8FAFC', color: '#64748B', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: 7, width: '100%', justifyContent: 'flex-start' }}>
+                      <UserCheck size={13} /> Demote to Member
+                    </button>
+                  )}
+                  <button onClick={() => handleDeleteUser(manageUser.id, manageUser.name)}
+                    style={{ ...S.btn, background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', display: 'flex', alignItems: 'center', gap: 7, width: '100%', justifyContent: 'flex-start' }}>
+                    <Trash2 size={13} /> Remove from workspace
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
 
-      </main>
     </div>
   );
 }

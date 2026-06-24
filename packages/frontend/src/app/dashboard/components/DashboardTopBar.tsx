@@ -26,16 +26,16 @@ export default function DashboardTopBar({
       <div className="flex items-center gap-2 min-w-0">
         {onMobileMenuOpen && (
           <button onClick={onMobileMenuOpen}
-            className="md:hidden flex h-8 w-8 items-center justify-center rounded-lg text-[#4B5678] hover:text-[#EEF2F6] hover:bg-[rgba(148,163,184,0.08)] transition-all shrink-0">
+            className="md:hidden flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all shrink-0">
             <Menu size={16} />
           </button>
         )}
         <div className="min-w-0">
-          <h1 className="text-lg font-black text-[#EEF2F6] tracking-tight">
+          <h1 className="text-lg font-black text-slate-800 tracking-tight">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-xs font-medium text-[#4B5678] truncate">
+            <p className="text-xs font-medium text-slate-500 truncate">
               {subtitle}
             </p>
           )}
@@ -48,7 +48,7 @@ export default function DashboardTopBar({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onSearchOpen}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-[#4B5678] hover:text-[#8896B0] hover:bg-[rgba(148,163,184,0.06)] transition-all"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all"
           >
             <Search size={17} />
           </motion.button>
@@ -59,7 +59,7 @@ export default function DashboardTopBar({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onNotificationsOpen}
-            className="relative flex h-9 w-9 items-center justify-center rounded-xl text-[#4B5678] hover:text-[#8896B0] hover:bg-[rgba(148,163,184,0.06)] transition-all"
+            className="relative flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all"
           >
             <Bell size={17} />
             {unreadNotifications > 0 && (

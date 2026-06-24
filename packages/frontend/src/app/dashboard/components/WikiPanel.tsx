@@ -43,12 +43,12 @@ function ToolbarBtn({
       style={{
         width: 28, height: 28, borderRadius: 6, border: 'none', cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: active ? 'rgba(10,232,208,0.15)' : 'transparent',
-        color: active ? '#0AE8D0' : '#4B5678',
+        background: active ? 'rgba(99,102,241,0.1)' : 'transparent',
+        color: active ? '#4F46E5' : '#475569',
         transition: 'all 0.15s',
       }}
-      onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(10,232,208,0.08)'; (e.currentTarget as HTMLButtonElement).style.color = '#EEF2F6'; } }}
-      onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#4B5678'; } }}
+      onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(99,102,241,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = '#4F46E5'; } }}
+      onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#475569'; } }}
     >
       {children}
     </button>
@@ -182,10 +182,10 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
     <div className="flex h-full min-h-0 flex-col overflow-hidden" style={{ background: 'transparent' }}>
       {/* ── Header ── */}
       <div style={{
-        background: 'linear-gradient(135deg,#191E2F 0%,#1E2538 100%)',
+        background: 'linear-gradient(135deg,#F8FAFC 0%,#EEF2F6 100%)',
         padding: '0 18px', height: 60, display: 'flex',
         alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
-        borderBottom: '1px solid rgba(99,102,241,0.18)',
+        borderBottom: '1px solid rgba(99,102,241,0.08)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
           <div style={{
@@ -201,10 +201,10 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
               : <BookOpen size={17} style={{ color: '#60a5fa' }} strokeWidth={2} />}
           </div>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.38)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: '#64748B', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
               {isPersonal ? 'Private · only you' : 'Knowledge Base'}
             </div>
-            <div style={{ fontSize: 15, fontWeight: 900, color: 'white', lineHeight: 1.15 }}>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#1E293B', lineHeight: 1.15 }}>
               {isPersonal ? 'My Notes' : 'Wiki'}
             </div>
           </div>
@@ -224,9 +224,9 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
           <button
             type="button"
             onClick={onClose}
-            style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.07)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(15,23,42,0.05)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            <X size={15} style={{ color: 'rgba(255,255,255,0.5)' }} />
+            <X size={15} style={{ color: 'rgba(15,23,42,0.4)' }} />
           </button>
         </div>
       </div>
@@ -234,7 +234,7 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
       {/* ── Body: sidebar + editor ── */}
       <div className="grid min-h-0 flex-1" style={{ gridTemplateColumns: '200px 1fr' }}>
         {/* Sidebar */}
-        <aside style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#111827', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+        <aside style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#F8FAFC', borderRight: '1px solid rgba(99,102,241,0.08)' }}>
           {/* New page button */}
           <div style={{ padding: '12px 10px 8px' }}>
             <button
@@ -253,17 +253,17 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
               New Page
             </button>
           </div>
-          <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '0 10px' }} />
+          <div style={{ height: 1, background: 'rgba(99,102,241,0.08)', margin: '0 10px' }} />
 
           {/* Page list */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '8px 8px' }}>
             {pages.length === 0 ? (
               <div style={{
                 margin: '8px 0', padding: '16px 12px', textAlign: 'center',
-                borderRadius: 10, border: '1px dashed rgba(255,255,255,0.1)',
+                borderRadius: 10, border: '1px dashed rgba(99,102,241,0.2)',
               }}>
-                <FileText size={18} style={{ color: '#4A5578', marginBottom: 6 }} />
-                <p style={{ fontSize: 11, fontWeight: 600, color: '#4A5578' }}>No pages yet</p>
+                <FileText size={18} style={{ color: '#94A3B8', marginBottom: 6 }} />
+                <p style={{ fontSize: 11, fontWeight: 600, color: '#64748B' }}>No pages yet</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -278,29 +278,29 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
                         width: '100%', textAlign: 'left', borderRadius: 9, padding: '9px 10px',
                         border: 'none', cursor: 'pointer', transition: 'all 0.15s',
                         background: isSelected
-                          ? 'linear-gradient(135deg,rgba(59,130,246,0.25),rgba(99,102,241,0.25))'
+                          ? 'rgba(99,102,241,0.08)'
                           : 'transparent',
                         borderLeft: isSelected ? '2px solid #6366f1' : '2px solid transparent',
                       }}
-                      onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; }}
+                      onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(99,102,241,0.04)'; }}
                       onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
                         {page.isPrivate !== false && (
-                          <Lock size={9} style={{ color: isSelected ? '#c4b5fd' : '#6b7280', flexShrink: 0 }} />
+                          <Lock size={9} style={{ color: isSelected ? '#4F46E5' : '#64748B', flexShrink: 0 }} />
                         )}
                         <p style={{
                           fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          color: isSelected ? 'white' : 'rgba(255,255,255,0.65)', margin: 0,
+                          color: isSelected ? '#4F46E5' : '#475569', margin: 0,
                         }}>
                           {page.title || 'Untitled'}
                         </p>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: isSelected ? 'rgba(255,255,255,0.45)' : '#4A5578' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: isSelected ? '#64748B' : '#94A3B8' }}>
                         <Clock size={9} />
                         <span>{formatRelativeTime(page.updatedAt)}</span>
                         {page.isPrivate === false && (
-                          <span style={{ marginLeft: 2, color: isSelected ? '#60a5fa' : '#3b82f6', fontWeight: 700 }}>· shared</span>
+                          <span style={{ marginLeft: 2, color: '#3B82F6', fontWeight: 700 }}>· shared</span>
                         )}
                       </div>
                     </button>
@@ -312,7 +312,7 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
         </aside>
 
         {/* ── Editor ── */}
-        <section style={{ display: 'flex', flexDirection: 'column', minHeight: 0, background: '#0D1025' }}>
+        <section style={{ display: 'flex', flexDirection: 'column', minHeight: 0, background: '#FFFFFF' }}>
           {!selectedPage ? (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, padding: '32px 28px', textAlign: 'center' }}>
               <div style={{
@@ -326,10 +326,10 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
                   : <BookOpen size={30} style={{ color: '#60a5fa' }} strokeWidth={1.5} />}
               </div>
               <div>
-                <p style={{ fontSize: 14, fontWeight: 800, color: '#EEF2F6', marginBottom: 8 }}>
+                <p style={{ fontSize: 14, fontWeight: 800, color: '#1E293B', marginBottom: 8 }}>
                   {isPersonal ? 'Your notepad is empty' : 'No pages yet'}
                 </p>
-                <p style={{ fontSize: 13, color: '#4B5678', lineHeight: 1.65, maxWidth: 240 }}>
+                <p style={{ fontSize: 13, color: '#64748B', lineHeight: 1.65, maxWidth: 240 }}>
                   {isPersonal
                     ? 'Jot down ideas or personal tasks. Only you can see these notes.'
                     : 'Create your first wiki page to capture knowledge for this channel.'}
@@ -353,7 +353,7 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
           ) : (
             <>
               {/* Editor sub-header: title + toolbar */}
-              <div style={{ flexShrink: 0, borderBottom: '1px solid rgba(148,163,184,0.06)', padding: '14px 18px 10px' }}>
+              <div style={{ flexShrink: 0, borderBottom: '1px solid rgba(99,102,241,0.08)', padding: '14px 18px 10px' }}>
                 <input
                   type="text"
                   value={title}
@@ -361,7 +361,7 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
                   placeholder="Page title…"
                   style={{
                     width: '100%', border: 'none', background: 'transparent',
-                    fontSize: 18, fontWeight: 900, color: '#EEF2F6',
+                    fontSize: 18, fontWeight: 900, color: '#1E293B',
                     outline: 'none', marginBottom: 10,
                   }}
                 />
@@ -369,8 +369,8 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
                 {/* Toolbar */}
                 <div style={{
                   display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1,
-                  background: 'rgba(22,27,61,0.50)', borderRadius: 8, padding: '4px 6px',
-                  border: '1px solid rgba(148,163,184,0.08)',
+                  background: 'rgba(248,250,252,0.80)', borderRadius: 8, padding: '4px 6px',
+                  border: '1px solid rgba(99,102,241,0.08)',
                 }}>
                   {/* Format */}
                   <ToolbarBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')} title="Bold (Ctrl+B)">
@@ -414,7 +414,7 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
 
                   {/* Stats + autosave */}
                   <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: '#4B5678' }}>{wordCount}w · {charCount}c</span>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#64748B' }}>{wordCount}w · {charCount}c</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 6, padding: '3px 7px' }}>
                       <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981' }} />
                       <span style={{ fontSize: 9, fontWeight: 800, color: '#10b981', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Auto-save</span>
@@ -427,24 +427,24 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
               <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                 <EditorContent
                   editor={editor}
-                  className="h-full [&_.ProseMirror]:h-full [&_.ProseMirror]:outline-none [&_.ProseMirror]:text-[#EEF2F6] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-[#4B5678] [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none"
+                  className="h-full [&_.ProseMirror]:h-full [&_.ProseMirror]:outline-none [&_.ProseMirror]:text-[#1E293B] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-[#94A3B8] [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none"
                 />
               </div>
 
               {/* Footer */}
-              <div style={{ flexShrink: 0, borderTop: '1px solid rgba(148,163,184,0.06)', padding: '10px 14px' }}>
+              <div style={{ flexShrink: 0, borderTop: '1px solid rgba(99,102,241,0.08)', padding: '10px 14px' }}>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     type="button"
                     onClick={handleDeletePage}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 5,
-                      border: '1px solid rgba(148,163,184,0.10)', borderRadius: 9,
+                      border: '1px solid rgba(148,163,184,0.15)', borderRadius: 9,
                       background: 'transparent', padding: '8px 14px', cursor: 'pointer',
-                      fontSize: 11, fontWeight: 800, color: '#4B5678', letterSpacing: '0.04em',
+                      fontSize: 11, fontWeight: 800, color: '#64748B', letterSpacing: '0.04em',
                     }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,71,112,0.35)'; (e.currentTarget as HTMLButtonElement).style.color = '#FF6B7F'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,71,112,0.06)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(148,163,184,0.10)'; (e.currentTarget as HTMLButtonElement).style.color = '#4B5678'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(239,68,68,0.2)'; (e.currentTarget as HTMLButtonElement).style.color = '#EF4444'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.05)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(148,163,184,0.15)'; (e.currentTarget as HTMLButtonElement).style.color = '#64748B'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
                   >
                     <Trash2 size={12} strokeWidth={2.5} /> Delete
                   </button>
@@ -491,7 +491,7 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
                     <div style={{
                       flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                       borderRadius: 9, border: '1px dashed rgba(148,163,184,0.12)', padding: '8px 0',
-                      fontSize: 12, fontWeight: 600, color: '#4B5678',
+                      fontSize: 12, fontWeight: 600, color: '#64748B',
                     }}>
                       <Lock size={11} strokeWidth={2.5} /> Private — only visible to you
                     </div>

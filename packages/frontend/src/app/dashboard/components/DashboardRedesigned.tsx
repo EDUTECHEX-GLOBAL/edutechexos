@@ -150,8 +150,11 @@ export default function DashboardRedesigned() {
       if (data.mentionedEmail?.toLowerCase() === currentUser.email?.toLowerCase()) {
         addNotification?.({
           type: 'mention',
-          title: `${data.senderName} mentioned you`,
-          body: data.preview,
+          actor: data.senderName,
+          actorInitials: data.senderName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
+          actorColor: '#5B4FDB',
+          message: data.preview,
+          channel: data.channelId,
         });
       }
     };
@@ -178,14 +181,14 @@ export default function DashboardRedesigned() {
 
   if (!authChecked) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#06080F]">
-        <div className="glass-dark rounded-2xl px-6 py-5 flex items-center gap-4 shadow-2xl">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(10,232,208,0.10)]">
-            <Loader2 size={18} className="animate-spin text-[#0AE8D0]" />
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-50/50">
+        <div className="bg-white/70 backdrop-blur-md border border-indigo-100 rounded-2xl px-6 py-5 flex items-center gap-4 shadow-2xl">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">
+            <Loader2 size={18} className="animate-spin text-indigo-600" />
           </span>
           <div>
-            <p className="text-sm font-bold text-[#EEF2F6]">Loading workspace</p>
-            <p className="text-xs text-[#4B5678] mt-0.5">Preparing your dashboard...</p>
+            <p className="text-sm font-bold text-slate-800">Loading workspace</p>
+            <p className="text-xs text-slate-500 mt-0.5">Preparing your dashboard...</p>
           </div>
         </div>
       </div>
@@ -222,6 +225,9 @@ export default function DashboardRedesigned() {
       darkMode={darkMode}
       onToggleTheme={() => { toggleTheme(); toggleDarkMode(); }}
       onSettingsOpen={() => isAdmin ? setAdminPanelOpen(true) : setProfileOpen(true)}
+      channels={channels.filter((c: any) => c.type !== 'dm')}
+      activeChannel={channel?.id ?? ''}
+      onChannelChange={(id: string) => { setActiveChannel(id); setActiveTab('chats'); }}
       topBar={
         <DashboardTopBar
           title={tabLabel}
@@ -323,7 +329,7 @@ export default function DashboardRedesigned() {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 backdrop-blur-sm p-4"
             onClick={() => setAiPanelOpen(false)}
           >
             <motion.div
@@ -331,20 +337,20 @@ export default function DashboardRedesigned() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.97 }}
               transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-              className="w-full max-w-md overflow-hidden rounded-2xl shadow-2xl border border-[rgba(148,163,184,0.10)]"
-              style={{ height: '80vh', background: '#0D1025' }}
+              className="w-full max-w-md overflow-hidden rounded-2xl shadow-2xl border border-indigo-100 bg-white/95 backdrop-blur-xl"
+              style={{ height: '80vh' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between px-5 py-3 border-b border-[rgba(148,163,184,0.06)]">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-indigo-50">
                 <div className="flex items-center gap-2.5">
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[rgba(124,92,252,0.15)]">
                     <Bot size={14} className="text-[#7C5CFC]" />
                   </span>
-                  <span className="text-sm font-black text-[#EEF2F6]">AI Copilot</span>
+                  <span className="text-sm font-black text-slate-800">AI Copilot</span>
                 </div>
                 <button
                   onClick={() => setAiPanelOpen(false)}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-[#4B5678] hover:text-[#EEF2F6] hover:bg-[rgba(148,163,184,0.06)] transition-all"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
                 >
                   <X size={14} />
                 </button>
@@ -377,20 +383,19 @@ export default function DashboardRedesigned() {
         {mobileSidebarOpen && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 md:hidden bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 md:hidden bg-slate-900/20 backdrop-blur-sm"
             onClick={() => setMobileSidebarOpen(false)}
           >
             <motion.div
               initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }}
               transition={{ type: 'spring', damping: 28, stiffness: 340 }}
-              className="absolute left-0 top-0 bottom-0 w-64 flex flex-col overflow-y-auto"
-              style={{ background: '#0D1025', borderRight: '1px solid rgba(148,163,184,0.08)' }}
+              className="absolute left-0 top-0 bottom-0 w-64 flex flex-col overflow-y-auto bg-white/95 backdrop-blur-xl border-r border-slate-200 shadow-xl"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between px-4 py-4 border-b border-[rgba(148,163,184,0.06)]">
-                <span className="text-sm font-black text-[#EEF2F6]">Channels</span>
+              <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100">
+                <span className="text-sm font-black text-slate-800">Channels</span>
                 <button onClick={() => setMobileSidebarOpen(false)}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-[#4B5678] hover:text-[#EEF2F6] hover:bg-[rgba(148,163,184,0.07)] transition-all">
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
                   <X size={14} />
                 </button>
               </div>
@@ -399,7 +404,7 @@ export default function DashboardRedesigned() {
                   <button key={ch.id}
                     onClick={() => { setActiveChannel(ch.id); setActiveTab('chats'); setMobileSidebarOpen(false); }}
                     className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl transition-all text-left mb-0.5 ${
-                      channel?.id === ch.id ? 'bg-[rgba(10,232,208,0.10)] text-[#0AE8D0]' : 'text-[#4B5678] hover:bg-[rgba(148,163,184,0.06)] hover:text-[#EEF2F6]'
+                      channel?.id === ch.id ? 'bg-teal-50 text-teal-700 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                     }`}>
                     <Hash size={13} className="shrink-0" />
                     <span className="text-xs font-bold truncate">{ch.name}</span>
@@ -416,7 +421,7 @@ export default function DashboardRedesigned() {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm pt-20 px-4"
+            className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/20 backdrop-blur-sm pt-20 px-4"
             onClick={() => setGlobalSearchOpen(false)}
           >
             <motion.div
@@ -424,8 +429,7 @@ export default function DashboardRedesigned() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.98 }}
               transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-              className="w-full max-w-xl overflow-hidden rounded-2xl shadow-2xl border border-[rgba(148,163,184,0.10)]"
-              style={{ background: '#0D1025' }}
+              className="w-full max-w-xl overflow-hidden rounded-2xl shadow-2xl border border-slate-200 bg-white/95 backdrop-blur-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <SearchPanel onClose={() => setGlobalSearchOpen(false)} />
@@ -521,23 +525,23 @@ function ChatView({
 
   return (
     <>
-      <div className="flex items-center justify-between shrink-0 px-5 py-3 border-b border-[rgba(148,163,184,0.06)] bg-[rgba(13,16,37,0.30)]">
+      <div className="flex items-center justify-between shrink-0 px-5 py-3 border-b border-slate-200/60 bg-white/60 backdrop-blur-md">
         <div className="flex items-center gap-3 min-w-0">
           <motion.span
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
-            className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#0AE8D0] to-[#06B8A5] shadow-lg shadow-[#0AE8D0]/20"
+            className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-md shadow-teal-500/10"
           >
-            <Hash size={15} className="text-[#06080F]" />
+            <Hash size={15} className="text-white" />
           </motion.span>
           <div className="min-w-0">
-            <h2 className="text-base font-black text-[#EEF2F6] truncate flex items-center gap-2">
+            <h2 className="text-base font-black text-slate-800 truncate flex items-center gap-2">
               {channel?.name ?? 'general'}
-              {channel?.isPrivate && <Lock size={11} className="text-[#4B5678]" />}
-              {!channel?.isPrivate && <Globe size={11} className="text-[#4B5678]" />}
+              {channel?.isPrivate && <Lock size={11} className="text-slate-400" />}
+              {!channel?.isPrivate && <Globe size={11} className="text-slate-400" />}
             </h2>
             {channel?.description && (
-              <p className="text-xs text-[#4B5678] truncate">{channel.description}</p>
+              <p className="text-xs text-slate-500 truncate">{channel.description}</p>
             )}
           </div>
         </div>
@@ -547,7 +551,7 @@ function ChatView({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onAiOpen}
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-[#4B5678] hover:text-[#7C5CFC] hover:bg-[rgba(124,92,252,0.08)] transition-all"
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-500 hover:text-teal-600 hover:bg-teal-50/60 transition-all"
             title="AI Copilot"
           >
             <Bot size={16} />
@@ -555,7 +559,7 @@ function ChatView({
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-bold text-[#4B5678] bg-[rgba(148,163,184,0.06)] hover:bg-[rgba(148,163,184,0.10)] hover:text-[#8896B0] transition-all"
+            className="flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-800 transition-all"
           >
             <Users size={13} />
             {members.length}
@@ -563,17 +567,17 @@ function ChatView({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1 scrollbar-dark">
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1 scrollbar-light">
         <div className="flex items-center gap-3 my-6">
-          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[rgba(148,163,184,0.08)] to-transparent" />
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200/80 to-transparent" />
           <motion.span
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-[10px] font-bold text-[#4B5678] uppercase tracking-[0.2em]"
+            className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]"
           >
             {firstMessageDate}
           </motion.span>
-          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[rgba(148,163,184,0.08)] to-transparent" />
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200/80 to-transparent" />
         </div>
 
         {messages.map((msg, idx) => {
@@ -618,7 +622,7 @@ function ChatView({
 
               <div className={`flex flex-col max-w-[75%] ${isOwn ? 'items-end' : 'items-start'}`}>
                 {isFirst && !isOwn && (
-                  <span className="mb-1 ml-1 text-xs font-bold text-[#8896B0]">
+                  <span className="mb-1 ml-1 text-xs font-bold text-slate-600">
                     {msg.sender}
                   </span>
                 )}
@@ -626,10 +630,10 @@ function ChatView({
                 <div
                   className={`relative rounded-2xl px-4 py-2.5 shadow-lg transition-all group-hover:shadow-xl
                     ${isOwn
-                      ? 'bg-gradient-to-br from-[#0AE8D0] to-[#06B8A5] text-[#06080F] rounded-br-sm'
-                      : 'bg-[rgba(22,27,61,0.80)] border border-[rgba(148,163,184,0.08)] text-[#EEF2F6] rounded-bl-sm'
+                      ? 'bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-br-sm'
+                      : 'bg-white border border-slate-100 text-slate-800 rounded-bl-sm shadow-sm'
                     }
-                    ${isPinned ? 'ring-1 ring-[#F59E0B] ring-offset-1 ring-offset-[#06080F]' : ''}
+                    ${isPinned ? 'ring-1 ring-amber-500 ring-offset-1 ring-offset-slate-100' : ''}
                     ${isBookmarked ? 'shadow-[0_0_16px_rgba(245,158,11,0.08)]' : ''}
                   `}
                 >
@@ -650,14 +654,16 @@ function ChatView({
                           const isBlock = String(className ?? '').includes('language-');
                           if (isBlock) {
                             return (
-                              <pre className="my-1.5 overflow-x-auto rounded-xl bg-black/40 p-3 text-xs text-[#0AE8D0] border border-[rgba(10,232,208,0.10)]">
+                              <pre className={`my-1.5 overflow-x-auto rounded-xl p-3 text-xs border ${
+                                isOwn ? 'bg-teal-950/40 text-teal-200 border-teal-400/20' : 'bg-slate-50 text-teal-700 border-slate-100'
+                              }`}>
                                 <code>{children}</code>
                               </pre>
                             );
                           }
                           return (
                             <code className={`rounded-lg px-1.5 py-0.5 font-mono text-xs ${
-                              isOwn ? 'bg-black/15 text-[#06080F]' : 'bg-[rgba(10,232,208,0.08)] text-[#0AE8D0]'
+                              isOwn ? 'bg-black/15 text-white' : 'bg-teal-50 text-teal-700'
                             }`}>
                               {children}
                             </code>
@@ -666,7 +672,7 @@ function ChatView({
                         a: ({ href, children }) => (
                           <a href={href} target="_blank" rel="noreferrer"
                             className={`underline decoration-1 underline-offset-2 ${
-                              isOwn ? 'text-[#06080F]/80 hover:text-[#06080F]' : 'text-[#0AE8D0] hover:text-[#0AE8D0]/80'
+                              isOwn ? 'text-white hover:text-teal-100' : 'text-teal-600 hover:text-teal-800'
                             }`}
                           >
                             {children}
@@ -681,16 +687,18 @@ function ChatView({
                   {/* Link Preview */}
                   {msg.linkPreview && (
                     <a href={msg.linkPreview.url} target="_blank" rel="noreferrer"
-                      className="mt-2 flex gap-2.5 rounded-xl border border-[rgba(148,163,184,0.10)] bg-black/20 p-2.5 hover:bg-black/30 transition-colors no-underline">
+                      className={`mt-2 flex gap-2.5 rounded-xl p-2.5 transition-colors no-underline border ${
+                        isOwn ? 'border-white/20 bg-white/10 hover:bg-white/20' : 'border-slate-100 bg-slate-50 hover:bg-slate-100/80'
+                      }`}>
                       {msg.linkPreview.image && (
                         <img src={msg.linkPreview.image} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
                       )}
                       <div className="min-w-0">
-                        <div className="text-xs font-bold text-[#EEF2F6] truncate">{msg.linkPreview.title}</div>
+                        <div className={`text-xs font-bold truncate ${isOwn ? 'text-white' : 'text-slate-800'}`}>{msg.linkPreview.title}</div>
                         {msg.linkPreview.description && (
-                          <div className="text-[10px] text-[#4B5678] line-clamp-2 mt-0.5">{msg.linkPreview.description}</div>
+                          <div className={`text-[10px] line-clamp-2 mt-0.5 ${isOwn ? 'text-white/80' : 'text-slate-500'}`}>{msg.linkPreview.description}</div>
                         )}
-                        <div className="flex items-center gap-1 mt-1 text-[#0AE8D0]">
+                        <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'text-indigo-200' : 'text-indigo-600'}`}>
                           <ExternalLink size={9} />
                           <span className="text-[9px] truncate">{msg.linkPreview.siteName ?? msg.linkPreview.url}</span>
                         </div>
@@ -700,20 +708,26 @@ function ChatView({
 
                   {/* Task Card */}
                   {msg.taskCard && (
-                    <div className="mt-2 flex items-start gap-2.5 rounded-xl border border-[rgba(10,232,208,0.15)] bg-[rgba(10,232,208,0.05)] p-2.5">
-                      <CheckSquare size={13} className="text-[#0AE8D0] mt-0.5 shrink-0" />
+                    <div className={`mt-2 flex items-start gap-2.5 rounded-xl border p-2.5 ${
+                      isOwn ? 'border-white/20 bg-white/10' : 'border-teal-100 bg-teal-50/50'
+                    }`}>
+                      <CheckSquare size={13} className={`mt-0.5 shrink-0 ${isOwn ? 'text-white' : 'text-teal-600'}`} />
                       <div className="min-w-0 flex-1">
-                        <div className="text-xs font-bold text-[#EEF2F6]">{msg.taskCard.taskText}</div>
+                        <div className={`text-xs font-bold ${isOwn ? 'text-white' : 'text-slate-800'}`}>{msg.taskCard.taskText}</div>
                         <div className="flex items-center gap-1.5 mt-1">
                           <div className="flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white shrink-0"
                             style={{ background: msg.taskCard.assigneeColor }}>
                             {msg.taskCard.assigneeInitials}
                           </div>
-                          <span className="text-[10px] text-[#4B5678]">{msg.taskCard.assignee}</span>
+                          <span className={`text-[10px] ${isOwn ? 'text-white/80' : 'text-slate-500'}`}>{msg.taskCard.assignee}</span>
                           <span className={`ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
-                            msg.taskCard.status === 'done' ? 'bg-[rgba(16,185,129,0.15)] text-[#10B981]'
-                            : msg.taskCard.status === 'inprogress' ? 'bg-[rgba(245,158,11,0.15)] text-[#F59E0B]'
-                            : 'bg-[rgba(148,163,184,0.10)] text-[#4B5678]'
+                            isOwn 
+                              ? 'bg-white/20 text-white'
+                              : msg.taskCard.status === 'done' 
+                                ? 'bg-[rgba(16,185,129,0.15)] text-[#10B981]'
+                                : msg.taskCard.status === 'inprogress' 
+                                  ? 'bg-[rgba(245,158,11,0.15)] text-[#F59E0B]'
+                                  : 'bg-slate-200/60 text-slate-600'
                           }`}>
                             {msg.taskCard.status === 'inprogress' ? 'In Progress' : msg.taskCard.status === 'done' ? 'Done' : 'To Do'}
                           </span>
@@ -722,7 +736,7 @@ function ChatView({
                     </div>
                   )}
 
-                  <div className={`mt-1.5 flex items-center justify-end gap-1 text-[10px] ${isOwn ? 'text-[#06080F]/60' : 'text-[#4B5678]'}`}>
+                  <div className={`mt-1.5 flex items-center justify-end gap-1 text-[10px] ${isOwn ? 'text-white/70' : 'text-slate-400'}`}>
                     <span>{formatTime(msg.timestamp)}</span>
                   </div>
 
@@ -733,29 +747,29 @@ function ChatView({
                       exit={{ opacity: 0, y: 4 }}
                       className={`absolute -bottom-4 ${isOwn ? 'left-0' : 'right-0'} hidden group-hover:flex`}
                     >
-                      <div className="flex items-center gap-0.5 rounded-xl border border-[rgba(148,163,184,0.10)] bg-[#161B3D] p-1 shadow-xl shadow-black/30">
+                      <div className="flex items-center gap-0.5 rounded-xl border border-slate-200/80 bg-white/95 p-1 shadow-xl shadow-slate-200/50 backdrop-blur-md">
                         <button
                           onClick={() => toggleReaction(channelId, msg.id, '👍', currentUser?.email ?? '')}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg text-[#4B5678] hover:text-[#EEF2F6] hover:bg-[rgba(148,163,184,0.08)] transition-all text-sm"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all text-sm"
                           title="React"
                         >👍</button>
                         <button
                           onClick={() => toggleReaction(channelId, msg.id, '❤️', currentUser?.email ?? '')}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg text-[#4B5678] hover:text-[#EEF2F6] hover:bg-[rgba(148,163,184,0.08)] transition-all text-sm"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all text-sm"
                           title="Love"
                         >❤️</button>
                         <button
                           onClick={() => toggleReaction(channelId, msg.id, '🔥', currentUser?.email ?? '')}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg text-[#4B5678] hover:text-[#EEF2F6] hover:bg-[rgba(148,163,184,0.08)] transition-all text-sm"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all text-sm"
                           title="Fire"
                         >🔥</button>
-                        <div className="h-5 w-px bg-[rgba(148,163,184,0.08)] mx-0.5" />
+                        <div className="h-5 w-px bg-slate-200/80 mx-0.5" />
                         <button
                           onClick={() => toggleBookmark(msg.id)}
                           className={`flex h-7 w-7 items-center justify-center rounded-lg transition-all ${
                             isBookmarked
-                              ? 'text-[#F59E0B] bg-[rgba(245,158,11,0.10)]'
-                              : 'text-[#4B5678] hover:text-[#F59E0B] hover:bg-[rgba(245,158,11,0.08)]'
+                              ? 'text-amber-500 bg-amber-50'
+                              : 'text-slate-500 hover:text-amber-500 hover:bg-amber-50/50'
                           }`}
                           title={isBookmarked ? 'Remove bookmark' : 'Bookmark'}
                         >
@@ -765,8 +779,8 @@ function ChatView({
                           onClick={() => { if (isPinned) unpinMessage(channelId, msg.id); else pinMessage(channelId, msg.id); }}
                           className={`flex h-7 w-7 items-center justify-center rounded-lg transition-all ${
                             isPinned
-                              ? 'text-[#F59E0B] bg-[rgba(245,158,11,0.10)]'
-                              : 'text-[#4B5678] hover:text-[#F59E0B] hover:bg-[rgba(245,158,11,0.08)]'
+                              ? 'text-amber-500 bg-amber-50'
+                              : 'text-slate-500 hover:text-amber-500 hover:bg-amber-50/50'
                           }`}
                           title={isPinned ? 'Unpin' : 'Pin'}
                         >
@@ -775,7 +789,7 @@ function ChatView({
                         {(msg.sender === currentUser?.name || false) && (
                           <button
                             onClick={() => deleteMessage(channelId, msg.id)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg text-[#4B5678] hover:text-[#FF6B7F] hover:bg-[rgba(255,107,127,0.08)] transition-all"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:text-rose-500 hover:bg-rose-50 transition-all"
                             title="Delete"
                           >
                             <Trash2 size={13} />
@@ -792,7 +806,7 @@ function ChatView({
         <div ref={chatBottomRef} />
       </div>
 
-      <div className="shrink-0 px-4 pb-4 pt-2 bg-gradient-to-t from-[#06080F] via-[#06080F] to-transparent">
+      <div className="shrink-0 px-4 pb-4 pt-2 bg-gradient-to-t from-slate-100/90 via-slate-50/30 to-transparent">
         <div className="relative group">
           {/* @mention autocomplete */}
           <AnimatePresence>
@@ -800,32 +814,32 @@ function ChatView({
               <motion.div
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
                 transition={{ duration: 0.12 }}
-                className="absolute bottom-full left-4 mb-2 z-30 rounded-xl overflow-hidden shadow-xl border border-[rgba(148,163,184,0.12)]"
-                style={{ background: '#0D1025', minWidth: 200 }}
+                className="absolute bottom-full left-4 mb-2 z-30 rounded-xl overflow-hidden shadow-xl border border-slate-200 bg-white/95 backdrop-blur-xl"
+                style={{ minWidth: 200 }}
               >
                 {mentionFiltered.map(m => (
                   <button key={m.id} type="button" onMouseDown={() => insertMention(m.name)}
-                    className="flex items-center gap-2.5 w-full px-3 py-2 text-left hover:bg-[rgba(10,232,208,0.08)] transition-colors">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-[#06080F] shrink-0"
-                      style={{ background: m.color ?? '#0AE8D0' }}>{m.initials}</span>
+                    className="flex items-center gap-2.5 w-full px-3 py-2 text-left hover:bg-teal-50/60 transition-colors">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white shrink-0"
+                      style={{ background: m.color ?? '#6366f1' }}>{m.initials}</span>
                     <div>
-                      <div className="text-xs font-bold text-[#EEF2F6]">{m.name}</div>
-                      <div className="text-[10px] text-[#4B5678]">{m.role}</div>
+                      <div className="text-xs font-bold text-slate-800">{m.name}</div>
+                      <div className="text-[10px] text-slate-400">{m.role}</div>
                     </div>
                   </button>
                 ))}
               </motion.div>
             )}
           </AnimatePresence>
-          <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-[#0AE8D0] to-[#7C5CFC] opacity-0 group-focus-within:opacity-20 blur-sm transition-all duration-500" />
-          <div className="relative rounded-2xl border border-[rgba(148,163,184,0.08)] bg-[rgba(22,27,61,0.60)] backdrop-blur-xl shadow-lg shadow-black/20 transition-all duration-300 group-focus-within:border-[rgba(10,232,208,0.25)]">
+          <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-teal-400 to-teal-500 opacity-0 group-focus-within:opacity-15 blur-sm transition-all duration-500" />
+          <div className="relative rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 group-focus-within:border-teal-400/60 group-focus-within:shadow-teal-50">
             <textarea
               ref={composerRef}
               value={composerMessage}
               onChange={handleComposerChange}
               onKeyDown={handleKeyDown}
               placeholder={`Message #${channel?.name ?? 'general'}... (type @ to mention)`}
-              className="w-full resize-none bg-transparent px-4 py-3.5 text-sm text-[#EEF2F6] placeholder-[#4B5678] focus:outline-none"
+              className="w-full resize-none bg-transparent px-4 py-3.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none"
               rows={1}
               style={{ maxHeight: '120px', overflowY: 'auto' }}
             />
@@ -834,7 +848,7 @@ function ChatView({
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4B5678] hover:text-[#8896B0] hover:bg-[rgba(148,163,184,0.06)] transition-all"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
                   title="Emoji"
                 >
                   <Smile size={16} />
@@ -842,7 +856,7 @@ function ChatView({
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4B5678] hover:text-[#8896B0] hover:bg-[rgba(148,163,184,0.06)] transition-all"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
                   title="Attach"
                 >
                   <Paperclip size={16} />
@@ -855,7 +869,7 @@ function ChatView({
                 transition={sendBounce ? { duration: 0.4 } : {}}
                 onClick={onSend}
                 disabled={!composerMessage.trim()}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#0AE8D0] to-[#06B8A5] text-[#06080F] shadow-lg shadow-[#0AE8D0]/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-md shadow-teal-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               >
                 <Send size={14} />
               </motion.button>

@@ -505,7 +505,7 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
       onClick={onClose}
     >
       <motion.div
-         className="flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-[rgba(148,163,184,0.10)] bg-[#0D1025] shadow-2xl"
+         className="flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-indigo-50 bg-white/95 backdrop-blur-md shadow-2xl"
         style={{ height: '88vh' }}
         initial={{ opacity: 0, y: 40, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -514,25 +514,25 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header ── */}
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-[rgba(62,74,137,0.10)] bg-gradient-to-r from-[#191E2F] to-[#252D45] px-5">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-[rgba(99,102,241,0.08)] bg-gradient-to-r from-slate-50 to-indigo-50/50 px-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10">
-              <CalendarDays size={16} className="text-white" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600/10">
+              <CalendarDays size={16} className="text-indigo-600" />
             </div>
             <div>
-              <h2 className="text-sm font-black text-white">Team Calendar</h2>
-              <p className="text-[10px] text-white/50">Meetings · Deadlines · Your calendar</p>
+              <h2 className="text-sm font-black text-slate-800">Team Calendar</h2>
+              <p className="text-[10px] text-slate-500">Meetings · Deadlines · Your calendar</p>
             </div>
           </div>
           {/* GCal status pill in header */}
           {gcalActive && (
-            <span className="mr-2 flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold text-white/70">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Calendar connected
+            <span className="mr-2 flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1 text-[10px] font-bold text-emerald-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Calendar connected
             </span>
           )}
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-white/50 hover:bg-white/10 hover:text-white transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
           >
             <X size={17} />
           </button>
@@ -544,13 +544,13 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-bold transition-all ${tab === t.id ? 'border-b-2 border-[#0AE8D0] text-[#0AE8D0]' : 'text-[#4B5678] hover:text-[#8896B0]'}`}
+              className={`flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-bold transition-all ${tab === t.id ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
             >
               {t.icon}
               {t.label}
               {t.badge !== undefined && (
                 <span
-                  className={`rounded-full px-1.5 py-0.5 text-[9px] font-black ${tab === t.id ? 'bg-[#0AE8D0] text-[#06080F]' : 'bg-[rgba(148,163,184,0.08)] text-[#4B5678]'}`}
+                  className={`rounded-full px-1.5 py-0.5 text-[9px] font-black ${tab === t.id ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}
                 >
                   {t.badge}
                 </span>
@@ -561,8 +561,8 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
 
         {/* ── Recurring Meet chips (meetings tabs only) ── */}
         {(tab === 'upcoming' || tab === 'past') && (
-          <div className="shrink-0 border-b border-[rgba(148,163,184,0.06)] bg-[rgba(22,27,61,0.30)] px-4 py-2.5">
-            <p className="mb-1.5 text-[9px] font-black uppercase tracking-widest text-[#4B5678]">
+          <div className="shrink-0 border-b border-[rgba(148,163,184,0.06)] bg-indigo-50/30 px-4 py-2.5">
+            <p className="mb-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500">
               Quick join — Recurring meets
             </p>
             <div className="flex flex-wrap gap-2">
@@ -572,17 +572,17 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                   href={m.link}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1.5 rounded-xl border border-[rgba(62,74,137,0.10)] bg-white px-3 py-1.5 text-xs font-bold text-[#4A5578] shadow-sm hover:border-[#3E4A89] hover:text-[#3E4A89] transition-all group"
+                  className="flex items-center gap-1.5 rounded-xl border border-slate-100 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm hover:border-indigo-600 hover:text-indigo-600 transition-all group"
                 >
                   <Video
                     size={11}
-                    className="text-[#9BA6D3] group-hover:text-[#3E4A89] transition-colors"
+                    className="text-slate-400 group-hover:text-indigo-600 transition-colors"
                   />
                   {m.label}
-                  <span className="rounded-full bg-[#F0F1F7] px-1.5 py-0.5 text-[9px] text-[#9BA6D3]">
+                  <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] text-slate-500">
                     {m.days}
                   </span>
-                  <ExternalLink size={9} className="text-[#C4CAE0]" />
+                  <ExternalLink size={9} className="text-slate-300" />
                 </a>
               ))}
             </div>
@@ -626,7 +626,7 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                         className={`flex gap-4 rounded-2xl border p-4 ${ok ? 'border-emerald-100 bg-white shadow-sm' : 'border-amber-100 bg-amber-50/40'}`}
                       >
                         <div
-                          className={`flex w-12 shrink-0 flex-col items-center justify-center rounded-xl py-2 ${ok ? 'bg-[#3E4A89]' : 'bg-amber-400'}`}
+                          className={`flex w-12 shrink-0 flex-col items-center justify-center rounded-xl py-2 ${ok ? 'bg-indigo-600' : 'bg-amber-400'}`}
                         >
                           <span className="text-[8px] font-black uppercase tracking-widest text-white/70">
                             {mo}
@@ -635,35 +635,35 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
-                            <p className="text-sm font-black text-[#1E2636]">{m.title}</p>
+                            <p className="text-sm font-black text-slate-800">{m.title}</p>
                             <span
                               className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black ${ok ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}
                             >
                               {parseDT(m.timeStr) ? rel(parseDT(m.timeStr)!.getTime()) : '—'}
                             </span>
                           </div>
-                          <p className="mt-1 flex items-center gap-2 text-[11px] text-[#7C859E]">
+                          <p className="mt-1 flex items-center gap-2 text-[11px] text-slate-500">
                             <Clock size={10} />
                             {fmtDate(m.timeStr)}
-                            <span className="font-bold text-[#4A5578]">{fmtTime(m.timeStr)}</span>
+                            <span className="font-bold text-slate-600">{fmtTime(m.timeStr)}</span>
                           </p>
-                          <p className="mt-0.5 flex items-center gap-1 text-[11px] text-[#7C859E]">
+                          <p className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-500">
                             <Users size={10} />
                             <span className="font-semibold">Host:</span>
-                            <span className="font-bold text-[#4A5578]">{m.sender}</span>
+                            <span className="font-bold text-slate-600">{m.sender}</span>
                           </p>
                           {cs.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1">
                               {cs.slice(0, 6).map((n, i) => (
                                 <span
                                   key={i}
-                                  className="rounded-full bg-[#F0F1F7] px-2 py-0.5 text-[10px] font-bold text-[#4A5578]"
+                                  className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600"
                                 >
                                   {n}
                                 </span>
                               ))}
                               {cs.length > 6 && (
-                                <span className="rounded-full bg-[#F0F1F7] px-2 py-0.5 text-[10px] font-bold text-[#9BA6D3]">
+                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-400">
                                   +{cs.length - 6}
                                 </span>
                               )}
@@ -675,7 +675,7 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                                 href={m.link}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="flex items-center gap-1.5 rounded-xl bg-[#3E4A89] px-4 py-1.5 text-xs font-black text-white hover:bg-[#2F3970] transition-colors"
+                                className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-1.5 text-xs font-black text-white hover:bg-indigo-700 transition-colors"
                               >
                                 <Video size={12} /> Join <ArrowRight size={11} />
                               </a>
@@ -693,7 +693,7 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                                     value={grantEmail}
                                     onChange={(e) => setGrantEmail(e.target.value)}
                                     placeholder="colleague@email.com"
-                                    className="flex-1 rounded-xl border border-indigo-200 bg-white px-3 py-1.5 text-[11px] outline-none focus:border-[#3E4A89]"
+                                    className="flex-1 rounded-xl border border-indigo-200 bg-white px-3 py-1.5 text-[11px] outline-none focus:border-indigo-500"
                                   />
                                   <button
                                     disabled={granting}
@@ -721,13 +721,13 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                                         setGranting(false);
                                       }
                                     }}
-                                    className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#3E4A89] text-white hover:bg-[#2F3970] disabled:opacity-50"
+                                    className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
                                   >
                                     <Check size={12} />
                                   </button>
                                   <button
                                     onClick={() => setGrantFor(null)}
-                                    className="flex h-7 w-7 items-center justify-center rounded-xl text-[#9BA6D3] hover:bg-red-50 hover:text-red-500"
+                                    className="flex h-7 w-7 items-center justify-center rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-500"
                                   >
                                     <X size={12} />
                                   </button>
@@ -735,7 +735,7 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                               ) : (
                                 <button
                                   onClick={() => setGrantFor(m.id)}
-                                  className="flex items-center gap-1 rounded-xl border border-[rgba(62,74,137,0.15)] px-3 py-1.5 text-[11px] font-bold text-[#3E4A89] hover:bg-indigo-50 transition-colors"
+                                  className="flex items-center gap-1 rounded-xl border border-indigo-100 px-3 py-1.5 text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 transition-colors"
                                 >
                                   <ShieldCheck size={12} /> Grant Access
                                 </button>
@@ -760,14 +760,14 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                 className="flex flex-col"
               >
                 {/* Scan status bar */}
-                <div className="flex shrink-0 items-center justify-between border-b border-[rgba(62,74,137,0.07)] bg-white px-4 py-2.5">
+                <div className="flex shrink-0 items-center justify-between border-b border-indigo-50 bg-white px-4 py-2.5">
                   <div className="flex items-center gap-2">
                     {scanning ? (
-                      <RefreshCw size={12} className="animate-spin text-[#3E4A89]" />
+                      <RefreshCw size={12} className="animate-spin text-indigo-600" />
                     ) : (
-                      <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
                     )}
-                    <span className="text-[11px] font-semibold text-[#7C859E]">
+                    <span className="text-[11px] font-semibold text-slate-500">
                       {scanning
                         ? 'Scanning all channels…'
                         : scanAge !== null
@@ -778,7 +778,7 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                   <button
                     onClick={() => runScan(messages as Record<string, Message[]>)}
                     disabled={scanning}
-                    className="flex items-center gap-1 rounded-lg border border-[rgba(62,74,137,0.12)] px-2.5 py-1 text-[11px] font-bold text-[#3E4A89] hover:bg-indigo-50 disabled:opacity-40 transition-colors"
+                    className="flex items-center gap-1 rounded-lg border border-indigo-100 px-2.5 py-1 text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 disabled:opacity-40 transition-colors"
                   >
                     <RefreshCw size={10} className={scanning ? 'animate-spin' : ''} /> Rescan
                   </button>
@@ -1032,18 +1032,18 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                           },
                         ].map((s) => (
                           <div key={s.n} className="flex items-start gap-3">
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#3E4A89] text-[9px] font-black text-white">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[9px] font-black text-white">
                               {s.n}
                             </span>
-                            <p className="text-[11px] leading-relaxed text-[#4A5578]">{s.text}</p>
+                            <p className="text-[11px] leading-relaxed text-slate-600">{s.text}</p>
                           </div>
                         ))}
                       </div>
                     </div>
 
                     <div className="flex w-full max-w-sm flex-col gap-2">
-                      <div className="flex items-center gap-2 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white px-3 py-2.5 focus-within:border-[#3E4A89] transition-colors">
-                        <Link2 size={14} className="shrink-0 text-[#9BA6D3]" />
+                      <div className="flex items-center gap-2 rounded-xl border border-indigo-100 bg-white px-3 py-2.5 focus-within:border-indigo-500 transition-colors">
+                        <Link2 size={14} className="shrink-0 text-slate-400" />
                         <input
                           type="email"
                           value={gcalEmail}
@@ -1053,7 +1053,7 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                           }}
                           onKeyDown={(e) => e.key === 'Enter' && connectGcal()}
                           placeholder="yourname@gmail.com"
-                          className="flex-1 bg-transparent text-sm font-semibold text-[#1E2636] placeholder-slate-300 outline-none"
+                          className="flex-1 bg-transparent text-sm font-semibold text-slate-800 placeholder-slate-300 outline-none"
                         />
                       </div>
                       {gcalError && (
@@ -1064,7 +1064,7 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                       )}
                       <button
                         onClick={connectGcal}
-                        className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#3E4A89] text-sm font-black text-white hover:bg-[#2F3970] transition-colors"
+                        className="flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 text-sm font-black text-white hover:bg-indigo-700 transition-colors"
                       >
                         <CalendarDays size={15} /> Connect &amp; Remember
                       </button>

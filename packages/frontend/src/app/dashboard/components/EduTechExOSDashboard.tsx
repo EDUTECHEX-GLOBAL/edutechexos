@@ -2441,14 +2441,14 @@ export default function EduTechExOSDashboard() {
                                       ? 'bg-red-400'
                                       : 'bg-[#7C859E]'
                               }`}
-                              style={{ boxShadow: '0 0 0 2px #0E1120' }}
+                              style={{ boxShadow: '0 0 0 2px var(--sidebar-bg, #0E1120)' }}
                             />
                           );
                         })()}
                       </div>
                       <span
                         className="min-w-0 flex-1 truncate text-[13px]"
-                        style={{ color: 'rgba(255,255,255,0.78)' }}
+                        style={{ color: 'var(--sidebar-text)' }}
                       >
                         {member.name}
                       </span>
@@ -2460,8 +2460,8 @@ export default function EduTechExOSDashboard() {
                       title={`View ${member.name}'s profile`}
                       className="hidden h-6 w-6 shrink-0 items-center justify-center rounded-md group-hover:flex"
                       style={{
-                        color: 'rgba(255,255,255,0.35)',
-                        background: 'rgba(255,255,255,0.07)',
+                        color: 'var(--sidebar-muted)',
+                        background: 'var(--sidebar-hover)',
                       }}
                     >
                       <UserCheck size={12} />

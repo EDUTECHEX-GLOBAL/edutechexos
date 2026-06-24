@@ -9,9 +9,9 @@ async function submitRequest(req, res) {
     const { name, email, role } = req.body;
     const emailClean = String(email).trim().toLowerCase();
 
-    const ALLOWED_DOMAIN = 'edutechex.in';
-    if (!emailClean.endsWith('@' + ALLOWED_DOMAIN)) {
-      return res.status(400).json({ success: false, error: `Only @${ALLOWED_DOMAIN} email addresses are allowed to request access.` });
+    const ALLOWED_DOMAINS = ['edutechex.in', 'edutechex.com'];
+    if (!ALLOWED_DOMAINS.some((d) => emailClean.endsWith('@' + d))) {
+      return res.status(400).json({ success: false, error: `Only @edutechex.in or @edutechex.com email addresses are allowed to request access.` });
     }
 
     if (VALID_ACCOUNTS.some((a) => a.email === emailClean)) {

@@ -143,16 +143,16 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 bg-[#191E2F] flex-shrink-0">
+      <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-slate-50 to-indigo-50/50 border-b border-[rgba(99,102,241,0.08)] flex-shrink-0">
         <div className="flex items-center gap-2">
-          <Search size={18} className="text-indigo-400" strokeWidth={2.5} />
-          <h2 className="text-sm font-black uppercase tracking-widest text-white">
+          <Search size={18} className="text-indigo-600" strokeWidth={2.5} />
+          <h2 className="text-sm font-black uppercase tracking-widest text-slate-800">
             Search Workspace
           </h2>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg text-[#7C859E] hover:text-white hover:bg-slate-700 transition-colors"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
         >
           <X size={18} strokeWidth={2.5} />
         </button>
@@ -160,11 +160,11 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
 
       {/* Input */}
       <div className="px-4 py-3 border-b border-[rgba(62,74,137,0.08)] flex-shrink-0">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#FAF8F5] border border-[rgba(62,74,137,0.12)] focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white border border-indigo-100 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all shadow-sm">
           {isLoading ? (
-            <Loader2 size={15} className="text-[#3E4A89] flex-shrink-0 animate-spin" />
+            <Loader2 size={15} className="text-indigo-600 flex-shrink-0 animate-spin" />
           ) : (
-            <Search size={15} className="text-[#7C859E] flex-shrink-0" />
+            <Search size={15} className="text-slate-400 flex-shrink-0" />
           )}
           <input
             ref={inputRef}
@@ -172,7 +172,7 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Search messages, wiki pages, tasks…"
-            className="flex-1 bg-transparent text-sm text-[#1E2636] placeholder-slate-400 outline-none"
+            className="flex-1 bg-transparent text-sm text-slate-800 placeholder-slate-400 outline-none font-semibold"
           />
           {inputValue && (
             <button
@@ -180,7 +180,7 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
                 setInputValue('');
                 setDebounced('');
               }}
-              className="text-[#7C859E] hover:text-[#4A5578] transition-colors"
+              className="text-slate-400 hover:text-slate-600 transition-colors"
             >
               <X size={14} />
             </button>
@@ -226,7 +226,7 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
                 <button
                   key={hint}
                   onClick={() => setInputValue(hint)}
-                  className="rounded-full border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] px-3 py-1 text-[11px] font-semibold text-[#4A5578] hover:border-[#3E4A89] hover:text-[#3E4A89] transition-all"
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 hover:border-indigo-500 hover:text-indigo-600 transition-all shadow-sm"
                 >
                   {hint}
                 </button>
@@ -259,7 +259,7 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
               const meta = TYPE_META[type];
               return (
                 <div key={type} className="mb-1">
-                  <div className="flex items-center gap-2 px-5 py-1.5 bg-[#FAF8F5] border-y border-[rgba(62,74,137,0.08)]">
+                  <div className="flex items-center gap-2 px-5 py-1.5 bg-indigo-50/20 border-y border-indigo-50/50">
                     <meta.icon size={11} style={{ color: meta.color }} strokeWidth={2.5} />
                     <span
                       className="text-[11px] font-black uppercase tracking-widest"
@@ -267,7 +267,7 @@ export default function SearchPanel({ onClose }: SearchPanelProps) {
                     >
                       {meta.label}s
                     </span>
-                    <span className="ml-auto text-[10px] text-[#7C859E]">{items.length}</span>
+                    <span className="ml-auto text-[10px] text-slate-500">{items.length}</span>
                   </div>
 
                   {items.map((result) => (

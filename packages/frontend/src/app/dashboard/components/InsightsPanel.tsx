@@ -38,8 +38,8 @@ export default function InsightsPanel({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       >
-        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#4B5678]">Overview</p>
-        <h2 className="text-xl font-black text-[#EEF2F6] tracking-tight mt-0.5">Workspace</h2>
+        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Overview</p>
+        <h2 className="text-xl font-black text-slate-800 tracking-tight mt-0.5">Workspace</h2>
       </motion.div>
 
       <motion.section
@@ -47,8 +47,8 @@ export default function InsightsPanel({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
       >
-        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#4B5678] mb-3 flex items-center gap-2">
-          <Zap size={11} className="text-[#0AE8D0]" />
+        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 mb-3 flex items-center gap-2">
+          <Zap size={11} className="text-indigo-600" />
           Activity
         </p>
         <div className="space-y-2.5">
@@ -58,7 +58,7 @@ export default function InsightsPanel({
             trend="up"
             trendLabel="+12%"
             bars={[0.3, 0.6, 0.4, 0.8, 0.5, 1.0, 0.7]}
-            accent="#0AE8D0"
+            accent="#4F46E5"
           />
           <MetricCard
             label="Completed"
@@ -66,7 +66,7 @@ export default function InsightsPanel({
             trend="up"
             trendLabel="+18%"
             progress={completionRate}
-            accent="#38D9A9"
+            accent="#10B981"
           />
           <MetricCard
             label="Pending"
@@ -74,7 +74,7 @@ export default function InsightsPanel({
             trend="down"
             trendLabel="-5%"
             dots={todoTasks}
-            accent="#FF6B7F"
+            accent="#EF4444"
           />
         </div>
       </motion.section>
@@ -85,8 +85,8 @@ export default function InsightsPanel({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.16, ease: [0.22, 1, 0.36, 1] }}
         >
-          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#4B5678] mb-3 flex items-center gap-2">
-            <Users size={11} className="text-[#38D9A9]" />
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 mb-3 flex items-center gap-2">
+            <Users size={11} className="text-emerald-500" />
             Online
           </p>
           <div className="flex flex-wrap gap-2">
@@ -100,12 +100,12 @@ export default function InsightsPanel({
                 title={member.name}
               >
                 {member.initials}
-                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#38D9A9] border-2 border-[#06080F]" />
+                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white" />
                 <span className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/10" />
               </motion.div>
             ))}
             {onlineMembers.length > 8 && (
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[rgba(148,163,184,0.08)] text-[10px] font-bold text-[#4B5678] border border-[rgba(148,163,184,0.06)]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-[10px] font-bold text-slate-600 border border-slate-200">
                 +{onlineMembers.length - 8}
               </div>
             )}
@@ -118,22 +118,22 @@ export default function InsightsPanel({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.24, ease: [0.22, 1, 0.36, 1] }}
       >
-        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#4B5678] mb-3 flex items-center gap-2">
-          <Zap size={11} className="text-[#F59E0B]" />
+        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 mb-3 flex items-center gap-2">
+          <Zap size={11} className="text-amber-500" />
           Quick Actions
         </p>
         <div className="space-y-1.5">
           {[
-            { icon: CalendarDays, label: 'Schedule', desc: 'Plan a meeting', accent: '#0AE8D0' },
+            { icon: CalendarDays, label: 'Schedule', desc: 'Plan a meeting', accent: '#4F46E5' },
             { icon: Users, label: 'Members', desc: 'View directory', accent: '#7C5CFC' },
-            { icon: BarChart2, label: 'Reports', desc: 'View analytics', accent: '#38D9A9' },
+            { icon: BarChart2, label: 'Reports', desc: 'View analytics', accent: '#10B981' },
             { icon: MessageCircle, label: 'Broadcast', desc: 'Send announcement', accent: '#F59E0B' },
           ].map(({ icon: Icon, label, desc, accent }) => (
             <motion.button
               key={label}
               whileHover={{ x: 4 }}
               whileTap={{ scale: 0.98 }}
-              className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 hover:bg-[rgba(148,163,184,0.04)]"
+              className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-200 hover:bg-slate-100/60"
             >
               <span
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-sm shadow-sm"
@@ -142,8 +142,8 @@ export default function InsightsPanel({
                 <Icon size={14} />
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-[#EEF2F6] group-hover:text-white transition-colors">{label}</p>
-                <p className="text-[10px] text-[#4B5678]">{desc}</p>
+                <p className="text-xs font-bold text-slate-800 group-hover:text-slate-900 transition-colors">{label}</p>
+                <p className="text-[10px] text-slate-500">{desc}</p>
               </div>
             </motion.button>
           ))}
@@ -161,7 +161,7 @@ function MetricCard({
   bars,
   progress,
   dots,
-  accent = '#0AE8D0',
+  accent = '#4F46E5',
 }: {
   label: string;
   value: string;
@@ -173,22 +173,22 @@ function MetricCard({
   accent?: string;
 }) {
   return (
-    <div className="glass-dark-card rounded-xl px-4 py-3">
+    <div className="bg-white/80 border border-indigo-50 shadow-sm rounded-xl px-4 py-3">
       <div className="flex items-center justify-between mb-1">
-        <p className="text-[11px] font-semibold text-[#4B5678]">{label}</p>
+        <p className="text-[11px] font-semibold text-slate-500">{label}</p>
         <span
           className={`text-[9px] font-black uppercase tracking-wider rounded-full px-2 py-0.5 ${
             trend === 'up'
-              ? 'text-[#38D9A9] bg-[rgba(56,217,169,0.10)]'
-              : 'text-[#FF6B7F] bg-[rgba(255,107,127,0.10)]'
+              ? 'text-emerald-600 bg-emerald-50'
+              : 'text-rose-600 bg-rose-50'
           }`}
-          style={{ border: `1px solid ${trend === 'up' ? 'rgba(56,217,169,0.15)' : 'rgba(255,107,127,0.15)'}` }}
+          style={{ border: `1px solid ${trend === 'up' ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)'}` }}
         >
           <TrendingUp size={10} className="inline mr-0.5" />
           {trendLabel}
         </span>
       </div>
-      <p className="text-[22px] font-black text-[#EEF2F6]">{value}</p>
+      <p className="text-[22px] font-black text-slate-800">{value}</p>
       {bars && (
         <div className="mt-2 flex items-end gap-[3px] h-6">
           {bars.map((h, i) => (
@@ -208,7 +208,7 @@ function MetricCard({
       )}
       {progress !== undefined && (
         <div className="mt-2">
-          <div className="h-1 rounded-full overflow-hidden bg-[rgba(148,163,184,0.08)]">
+          <div className="h-1 rounded-full overflow-hidden bg-slate-100">
             <div
               className="h-full rounded-full transition-all duration-1000"
               style={{
@@ -218,7 +218,7 @@ function MetricCard({
               }}
             />
           </div>
-          <p className="text-[10px] font-medium text-[#4B5678] mt-1">{progress}% target</p>
+          <p className="text-[10px] font-medium text-slate-500 mt-1">{progress}% target</p>
         </div>
       )}
       {dots !== undefined && (
