@@ -2,30 +2,32 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-const AW_BASE      = '/aw-proxy'; // proxied through Next.js to avoid browser CORS on localhost:5600
-const API_BASE     = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
-const SYNC_MS      = 5 * 60 * 1000;  // sync every 5 min
-const CHECK_MS     = 30 * 1000;      // re-check AW availability every 30 s when offline
+// On localhost the Next.js dev-server proxies /aw-proxy/* → localhost:5600/*
+// so the browser avoids the CORS port-mismatch. On deployed (Vercel) we skip
+// the direct AW check entirely and rely on the backend status poll instead.
+const AW_PROXY    = '/aw-proxy';
+const API_BASE    = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+const SYNC_MS     = 5 * 60 * 1000;   // push AW data every 5 min
+const CHECK_MS    = 30 * 1000;        // re-check AW locally every 30 s
+const BE_CHECK_MS = 2 * 60 * 1000;   // poll backend status every 2 min
 
 export type AWStatus = 'checking' | 'connected' | 'offline';
+
+const IS_LOCALHOST =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
 function getToken(): string | null {
   try { return JSON.parse(localStorage.getItem('edutechex_token') ?? '').token ?? null; }
   catch { return null; }
 }
 
-// ActivityWatch runs on the user's local machine (localhost:5600).
-// Calling it from a deployed origin (Vercel) is always blocked by the browser's
-// CORS policy — only attempt it when the app itself is running on localhost.
-const IS_LOCALHOST = typeof window !== 'undefined' &&
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-
 async function awFetch(path: string, timeout = 4000): Promise<Response | null> {
-  if (!IS_LOCALHOST) return null; // skip silently on deployed app — aw-sync.js handles it
+  if (!IS_LOCALHOST) return null;
   try {
     const ctrl = new AbortController();
     const id   = setTimeout(() => ctrl.abort(), timeout);
-    const res  = await fetch(`${AW_BASE}${path}`, { signal: ctrl.signal });
+    const res  = await fetch(`${AW_PROXY}${path}`, { signal: ctrl.signal });
     clearTimeout(id);
     return res;
   } catch {
@@ -55,11 +57,11 @@ async function getLatestEvent(bucketId: string): Promise<Record<string, unknown>
 }
 
 async function getTodayEvents(bucketId: string): Promise<Record<string, unknown>[]> {
-  const now   = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  const end   = now.toISOString();
+  const now    = new Date();
+  const start  = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const end    = now.toISOString();
   const params = new URLSearchParams({ start, end, limit: '2000' });
-  const res   = await awFetch(`/api/0/buckets/${encodeURIComponent(bucketId)}/events?${params}`);
+  const res    = await awFetch(`/api/0/buckets/${encodeURIComponent(bucketId)}/events?${params}`);
   if (!res?.ok) return [];
   try {
     const data = await res.json();
@@ -77,28 +79,25 @@ async function buildSummary() {
   const keys    = Object.keys(buckets);
 
   const windowBucket = keys.find(
-    (k) => (buckets[k] as { type: string }).type === 'currentwindow' || k.includes('aw-watcher-window')
+    (k) => (buckets[k] as { type: string }).type === 'currentwindow' || k.includes('aw-watcher-window'),
   );
   const afkBucket = keys.find(
-    (k) => (buckets[k] as { type: string }).type === 'afkstatus' || k.includes('aw-watcher-afk')
+    (k) => (buckets[k] as { type: string }).type === 'afkstatus' || k.includes('aw-watcher-afk'),
   );
-  // aw-watcher-web creates buckets like: aw-watcher-web-chrome, aw-watcher-web-firefox, aw-watcher-web-edge
   const webBuckets = keys.filter(
-    (k) => k.includes('aw-watcher-web') || (buckets[k] as { type: string }).type === 'web.tab.current'
+    (k) => k.includes('aw-watcher-web') || (buckets[k] as { type: string }).type === 'web.tab.current',
   );
 
   if (!windowBucket) return null;
 
-  // Current active app + title (from window watcher)
   const cur          = await getLatestEvent(windowBucket);
   const curData      = cur?.data as Record<string, string> | undefined;
   const currentApp   = curData?.app   || curData?.title || '';
   const currentTitle = curData?.title || '';
 
-  // Today's window events → app breakdown + total active time
-  const windowEvents = await getTodayEvents(windowBucket);
+  const windowEvents  = await getTodayEvents(windowBucket);
   const appSecs: Record<string, number> = {};
-  let totalActiveSec = 0;
+  let totalActiveSec  = 0;
 
   for (const ev of windowEvents) {
     const dur = (ev.duration as number) || 0;
@@ -113,13 +112,12 @@ async function buildSummary() {
     .sort((a, b) => b.minutes - a.minutes)
     .slice(0, 15);
 
-  // AFK
   let isAfk       = false;
   let totalAfkSec = 0;
 
   if (afkBucket) {
-    const afkEvents = await getTodayEvents(afkBucket);
-    const latestAfk = afkEvents[0] as { data?: { status?: string } } | undefined;
+    const afkEvents  = await getTodayEvents(afkBucket);
+    const latestAfk  = afkEvents[0] as { data?: { status?: string } } | undefined;
     isAfk = latestAfk?.data?.status === 'afk';
     for (const ev of afkEvents) {
       const e = ev as { duration?: number; data?: { status?: string } };
@@ -127,13 +125,11 @@ async function buildSummary() {
     }
   }
 
-  // ── Web watcher (aw-watcher-web-chrome / firefox / edge) ──────────────────
   let currentUrl       = '';
   let currentPageTitle = '';
   const domainSecs: Record<string, { minutes: number; title: string }> = {};
 
   for (const wb of webBuckets) {
-    // Current tab in this browser
     const latestWeb = await getLatestEvent(wb);
     if (latestWeb) {
       const wd = latestWeb.data as { url?: string; title?: string; incognito?: boolean } | undefined;
@@ -143,12 +139,11 @@ async function buildSummary() {
       }
     }
 
-    // All today's web events for domain breakdown
     const webEvents = await getTodayEvents(wb);
     for (const ev of webEvents) {
       const dur = (ev.duration as number) || 0;
       const d   = ev.data as { url?: string; title?: string; incognito?: boolean } | undefined;
-      if (!d?.url || d.incognito) continue; // skip incognito tabs
+      if (!d?.url || d.incognito) continue;
 
       const domain = extractDomain(d.url);
       if (!domainSecs[domain]) domainSecs[domain] = { minutes: 0, title: d.title || domain };
@@ -162,27 +157,41 @@ async function buildSummary() {
     .slice(0, 20);
 
   return {
-    currentApp,
-    currentTitle,
-    currentUrl,
-    currentPageTitle,
+    currentApp, currentTitle, currentUrl, currentPageTitle,
     isAfk,
     totalActiveMinutes: Math.round(totalActiveSec / 60),
     totalAfkMinutes:    Math.round(totalAfkSec / 60),
-    appBreakdown,
-    webBreakdown,
+    appBreakdown, webBreakdown,
   };
 }
 
+// Poll backend to see if aw-sync.js has recently pushed data (works for all users)
+async function checkBackendAWStatus(): Promise<boolean> {
+  const token = getToken();
+  if (!token) return false;
+  try {
+    const res = await fetch(`${API_BASE}/api/activity/aw-status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return !!data.connected;
+  } catch {
+    return false;
+  }
+}
+
 export function useActivityWatchSync(active: boolean) {
-  const [status, setStatus] = useState<AWStatus>('checking');
-  const syncTimer  = useRef<ReturnType<typeof setInterval> | null>(null);
-  const checkTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isMounted  = useRef(true);
+  const [status, setStatus]   = useState<AWStatus>('checking');
+  const syncTimer   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const checkTimer  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const beTimer     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isMounted   = useRef(true);
 
   const stopTimers = () => {
     if (syncTimer.current)  { clearInterval(syncTimer.current);  syncTimer.current  = null; }
     if (checkTimer.current) { clearInterval(checkTimer.current); checkTimer.current = null; }
+    if (beTimer.current)    { clearInterval(beTimer.current);    beTimer.current    = null; }
   };
 
   const sync = useCallback(async () => {
@@ -199,25 +208,22 @@ export function useActivityWatchSync(active: boolean) {
     } catch { /* non-fatal */ }
   }, []);
 
-  const startSyncing = useCallback(() => {
-    if (syncTimer.current) return; // already running
+  const startBrowserSync = useCallback(() => {
+    if (syncTimer.current) return;
     setStatus('connected');
-    sync(); // immediate first sync
+    sync();
     syncTimer.current = setInterval(sync, SYNC_MS);
   }, [sync]);
 
-  // Periodically re-check AW when it's offline so we auto-connect once it starts
-  const startChecking = useCallback(() => {
-    if (checkTimer.current) return;
-    checkTimer.current = setInterval(async () => {
+  // Periodically re-check backend status (covers aw-sync.js users on deployed app)
+  const startBackendPolling = useCallback(() => {
+    if (beTimer.current) return;
+    beTimer.current = setInterval(async () => {
       if (!isMounted.current) return;
-      const running = await isAWRunning();
-      if (running) {
-        if (checkTimer.current) { clearInterval(checkTimer.current); checkTimer.current = null; }
-        startSyncing();
-      }
-    }, CHECK_MS);
-  }, [startSyncing]);
+      const connected = await checkBackendAWStatus();
+      if (connected && isMounted.current) setStatus('connected');
+    }, BE_CHECK_MS);
+  }, []);
 
   useEffect(() => {
     isMounted.current = true;
@@ -228,21 +234,41 @@ export function useActivityWatchSync(active: boolean) {
     }
 
     (async () => {
-      const running = await isAWRunning();
+      // 1. Try browser → ActivityWatch (only works on localhost via /aw-proxy)
+      const awRunning = await isAWRunning();
       if (!isMounted.current) return;
-      if (running) {
-        startSyncing();
+
+      if (awRunning) {
+        startBrowserSync();
       } else {
-        setStatus('offline');
-        startChecking();
+        // 2. Fallback: check if aw-sync.js has already pushed data to backend
+        const beConnected = await checkBackendAWStatus();
+        if (!isMounted.current) return;
+        if (beConnected) {
+          setStatus('connected');
+        } else {
+          setStatus('offline');
+          // Keep re-checking locally every 30s so it auto-connects if AW starts
+          checkTimer.current = setInterval(async () => {
+            if (!isMounted.current) return;
+            const running = await isAWRunning();
+            if (running) {
+              if (checkTimer.current) { clearInterval(checkTimer.current); checkTimer.current = null; }
+              startBrowserSync();
+            }
+          }, CHECK_MS);
+        }
       }
+
+      // Always poll backend so aw-sync.js users show connected throughout the session
+      startBackendPolling();
     })();
 
     return () => {
       isMounted.current = false;
       stopTimers();
     };
-  }, [active, startSyncing, startChecking]);
+  }, [active, startBrowserSync, startBackendPolling]);
 
   return status;
 }

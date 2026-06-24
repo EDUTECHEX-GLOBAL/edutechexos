@@ -310,4 +310,21 @@ async function getLoginStatus(req, res) {
   }
 }
 
-module.exports = { heartbeat, getLive, getHistory, getStats, awSync, getAw, logMessage, getAttendance, getLoginHistory, getMyAttendance, getLoginStatus };
+async function getAWStatus(req, res) {
+  try {
+    if (!req.user) return res.status(401).json({ success: false });
+    const email = req.user.email.toLowerCase();
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const dateStr = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+    const recent = await AWActivity.findOne(
+      { email, dateStr, lastSync: { $gte: tenMinutesAgo } },
+      { lastSync: 1 }
+    ).lean();
+    res.json({ success: true, connected: !!recent, lastSync: recent?.lastSync ?? null });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+module.exports = { heartbeat, getLive, getHistory, getStats, awSync, getAw, getAWStatus, logMessage, getAttendance, getLoginHistory, getMyAttendance, getLoginStatus };
