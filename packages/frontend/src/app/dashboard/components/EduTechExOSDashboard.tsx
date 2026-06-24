@@ -2507,71 +2507,101 @@ export default function EduTechExOSDashboard() {
           )}
 
           {/* ── Desktop Tracking Setup Banner ─────────────── */}
-          {/* Shows until ActivityWatch is actually detected as running */}
           {awStatus !== 'connected' && (
-            <div style={{ margin: '16px 8px 8px', borderRadius: 12, background: 'rgba(99,102,241,0.13)', border: '1px solid rgba(99,102,241,0.28)', padding: '12px 12px 10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#EF476F', flexShrink: 0, boxShadow: '0 0 6px rgba(239,71,111,0.6)' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#A5B4FC', letterSpacing: '-0.01em', flex: 1 }}>
-                  💻 Desktop Tracking Not Active
-                </span>
-              </div>
-              <p style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.48)', lineHeight: 1.5, marginBottom: 10 }}>
-                Complete 3 steps below so admin can see your VS Code, Chrome &amp; Figma activity.
-              </p>
+            <div style={{ margin: '14px 8px 8px', borderRadius: 14, background: '#1A1F35', border: '1.5px solid rgba(99,102,241,0.35)', overflow: 'hidden' }}>
 
-              {/* Step 1 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <a
-                  href="https://activitywatch.net/downloads/"
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', gap: 7, borderRadius: 8, background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.28)', padding: '8px 10px', fontSize: 10.5, fontWeight: 600, color: '#A5B4FC', textDecoration: 'none' }}
-                >
-                  <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(99,102,241,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#A5B4FC', flexShrink: 0 }}>1</span>
-                  Download &amp; Install ActivityWatch →
-                </a>
-
-                {/* Step 2 */}
-                <a
-                  href="/aw-sync.js"
-                  download="aw-sync.js"
-                  style={{ display: 'flex', alignItems: 'center', gap: 7, borderRadius: 8, background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.28)', padding: '8px 10px', fontSize: 10.5, fontWeight: 600, color: '#A5B4FC', textDecoration: 'none' }}
-                >
-                  <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(99,102,241,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#A5B4FC', flexShrink: 0 }}>2</span>
-                  Download aw-sync.js Agent ↓
-                </a>
-              </div>
-
-              {/* Step 3 — terminal command */}
-              <div style={{ marginTop: 8, borderRadius: 8, background: 'rgba(0,0,0,0.40)', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 10px 8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>
-                  <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(99,102,241,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#A5B4FC', flexShrink: 0 }}>3</span>
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.40)', fontWeight: 600 }}>Open terminal in the folder where you saved aw-sync.js and run:</span>
+              {/* Header */}
+              <div style={{ padding: '12px 14px 10px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF476F', flexShrink: 0, animation: 'ping 1.5s infinite' }} />
+                  <span style={{ fontSize: 12, fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em' }}>
+                    Desktop Tracking Not Active
+                  </span>
                 </div>
-                <div style={{ background: 'rgba(0,0,0,0.35)', borderRadius: 6, padding: '8px 10px', position: 'relative' }}>
-                  <code style={{ fontSize: 9.5, color: '#10B981', display: 'block', lineHeight: 1.9, whiteSpace: 'pre', fontFamily: 'monospace' }}>{`node aw-sync.js ^\n  --email ${currentUserEmail} ^\n  --password YOUR_PASSWORD ^\n  --startup`}</code>
-                  <button
-                    onClick={() => {
-                      const cmd = `node aw-sync.js --email ${currentUserEmail} --password YOUR_PASSWORD --startup`;
-                      navigator.clipboard?.writeText(cmd).then(() => {
-                        const el = document.getElementById('aw-copy-btn');
-                        if (el) { el.textContent = 'Copied!'; setTimeout(() => { if (el) el.textContent = 'Copy'; }, 2000); }
-                      });
-                    }}
-                    id="aw-copy-btn"
-                    style={{ position: 'absolute', top: 6, right: 6, fontSize: 9, fontWeight: 700, color: '#A5B4FC', background: 'rgba(99,102,241,0.20)', border: '1px solid rgba(99,102,241,0.30)', borderRadius: 4, padding: '2px 7px', cursor: 'pointer' }}
-                  >Copy</button>
-                </div>
-                <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 6, lineHeight: 1.5 }}>
-                  Replace <span style={{ color: '#F59E0B' }}>YOUR_PASSWORD</span> with your EduTechExOS login password. The <span style={{ color: '#A5B4FC' }}>--startup</span> flag makes it run automatically every time Windows starts.
+                <p style={{ fontSize: 11, color: 'rgba(165,180,252,0.85)', lineHeight: 1.55, margin: 0 }}>
+                  Follow the 3 steps below so admin can see your <strong style={{ color: '#A5B4FC' }}>VS Code</strong>, <strong style={{ color: '#A5B4FC' }}>Chrome</strong> and <strong style={{ color: '#A5B4FC' }}>Figma</strong> activity in real time.
                 </p>
               </div>
 
-              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 5, padding: '6px 8px', borderRadius: 7, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.15)' }}>
-                <span style={{ fontSize: 11 }}>⚠️</span>
-                <span style={{ fontSize: 9.5, color: 'rgba(245,158,11,0.70)', lineHeight: 1.4 }}>
-                  Make sure <strong style={{ color: 'rgba(245,158,11,0.85)' }}>ActivityWatch is open</strong> before running the command. This banner disappears automatically once connected.
+              {/* Steps */}
+              <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+                {/* Step 1 */}
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(99,102,241,0.25)', border: '1.5px solid rgba(99,102,241,0.50)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#A5B4FC', flexShrink: 0, marginTop: 1 }}>1</div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#ffffff', margin: '0 0 3px' }}>Download &amp; Install ActivityWatch</p>
+                    <p style={{ fontSize: 10.5, color: 'rgba(165,180,252,0.65)', margin: '0 0 6px', lineHeight: 1.5 }}>
+                      Free &amp; open-source. Runs silently in the background and tracks which apps you use.
+                    </p>
+                    <a
+                      href="https://activitywatch.net/downloads/"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 7, background: 'rgba(99,102,241,0.22)', border: '1px solid rgba(99,102,241,0.40)', padding: '5px 10px', fontSize: 11, fontWeight: 700, color: '#A5B4FC', textDecoration: 'none' }}
+                    >
+                      Download ActivityWatch →
+                    </a>
+                  </div>
+                </div>
+
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.05)' }} />
+
+                {/* Step 2 */}
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(99,102,241,0.25)', border: '1.5px solid rgba(99,102,241,0.50)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#A5B4FC', flexShrink: 0, marginTop: 1 }}>2</div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#ffffff', margin: '0 0 3px' }}>Download the aw-sync.js Agent</p>
+                    <p style={{ fontSize: 10.5, color: 'rgba(165,180,252,0.65)', margin: '0 0 6px', lineHeight: 1.5 }}>
+                      This small script reads your ActivityWatch data and sends it to EduTechExOS every 5 minutes.
+                    </p>
+                    <a
+                      href="/aw-sync.js"
+                      download="aw-sync.js"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 7, background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.35)', padding: '5px 10px', fontSize: 11, fontWeight: 700, color: '#10B981', textDecoration: 'none' }}
+                    >
+                      Download aw-sync.js ↓
+                    </a>
+                  </div>
+                </div>
+
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.05)' }} />
+
+                {/* Step 3 */}
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(99,102,241,0.25)', border: '1.5px solid rgba(99,102,241,0.50)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#A5B4FC', flexShrink: 0, marginTop: 1 }}>3</div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#ffffff', margin: '0 0 3px' }}>Run the command in your terminal</p>
+                    <p style={{ fontSize: 10.5, color: 'rgba(165,180,252,0.65)', margin: '0 0 6px', lineHeight: 1.5 }}>
+                      Open a terminal in the folder where you saved <code style={{ fontSize: 10, color: '#A5B4FC', background: 'rgba(99,102,241,0.15)', borderRadius: 3, padding: '0 4px' }}>aw-sync.js</code> and run:
+                    </p>
+                    <div style={{ background: '#0D1020', borderRadius: 8, padding: '10px 12px', position: 'relative', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <code style={{ fontSize: 10.5, color: '#10B981', display: 'block', lineHeight: 2, whiteSpace: 'pre', fontFamily: 'monospace' }}>{`node aw-sync.js ^\n  --email ${currentUserEmail} ^\n  --password YOUR_PASSWORD ^\n  --startup`}</code>
+                      <button
+                        onClick={() => {
+                          const cmd = `node aw-sync.js --email ${currentUserEmail} --password YOUR_PASSWORD --startup`;
+                          navigator.clipboard?.writeText(cmd).then(() => {
+                            const el = document.getElementById('aw-copy-btn');
+                            if (el) { el.textContent = 'Copied!'; setTimeout(() => { if (el) el.textContent = 'Copy'; }, 2000); }
+                          });
+                        }}
+                        id="aw-copy-btn"
+                        style={{ position: 'absolute', top: 8, right: 8, fontSize: 10, fontWeight: 700, color: '#A5B4FC', background: 'rgba(99,102,241,0.20)', border: '1px solid rgba(99,102,241,0.35)', borderRadius: 5, padding: '3px 9px', cursor: 'pointer' }}
+                      >Copy</button>
+                    </div>
+                    <p style={{ fontSize: 10.5, color: 'rgba(165,180,252,0.60)', marginTop: 7, lineHeight: 1.6 }}>
+                      Replace <code style={{ color: '#F59E0B', fontSize: 10, background: 'rgba(245,158,11,0.10)', borderRadius: 3, padding: '0 4px' }}>YOUR_PASSWORD</code> with your EduTechExOS login password.<br />
+                      The <code style={{ color: '#A5B4FC', fontSize: 10, background: 'rgba(99,102,241,0.15)', borderRadius: 3, padding: '0 4px' }}>--startup</code> flag makes it auto-run every time Windows starts.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Warning footer */}
+              <div style={{ margin: '0 10px 10px', display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 12px', borderRadius: 9, background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                <span style={{ fontSize: 14, flexShrink: 0, lineHeight: 1 }}>⚠️</span>
+                <span style={{ fontSize: 11, color: 'rgba(253,186,116,0.90)', lineHeight: 1.55 }}>
+                  <strong style={{ color: '#FCD34D' }}>Important:</strong> Make sure ActivityWatch is open and running before you run the command above. This banner disappears automatically as soon as your activity is detected.
                 </span>
               </div>
             </div>
