@@ -15,6 +15,7 @@ import {
   ChevronUp,
   Clock,
   Hash,
+  Video,
 } from 'lucide-react';
 
 function formatRelativeTime(iso: string): string {
@@ -392,17 +393,34 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
                             >
                               <X size={11} /> Dismiss
                             </button>
-                            <div
-                              className="flex items-center gap-1.5 rounded-full px-2.5 py-1"
-                              style={{
-                                background: cfg.gradient,
-                                boxShadow: `0 2px 8px ${cfg.color}44`,
-                              }}
-                            >
-                              <Icon size={11} className="text-white" strokeWidth={2.5} />
-                              <span className="text-[11px] font-black text-white uppercase tracking-wider">
-                                {cfg.label}
-                              </span>
+                            <div className="flex items-center gap-2">
+                              {notif.joinLink && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(notif.joinLink, '_blank', 'noreferrer');
+                                  }}
+                                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-black text-white transition-opacity hover:opacity-90"
+                                  style={{
+                                    background: 'linear-gradient(135deg,#10b981,#34d399)',
+                                    boxShadow: '0 2px 8px rgba(16,185,129,0.40)',
+                                  }}
+                                >
+                                  <Video size={11} strokeWidth={2.5} /> Join Meeting
+                                </button>
+                              )}
+                              <div
+                                className="flex items-center gap-1.5 rounded-full px-2.5 py-1"
+                                style={{
+                                  background: cfg.gradient,
+                                  boxShadow: `0 2px 8px ${cfg.color}44`,
+                                }}
+                              >
+                                <Icon size={11} className="text-white" strokeWidth={2.5} />
+                                <span className="text-[11px] font-black text-white uppercase tracking-wider">
+                                  {cfg.label}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>

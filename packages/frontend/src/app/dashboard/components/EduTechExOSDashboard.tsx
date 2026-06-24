@@ -449,6 +449,29 @@ export default function EduTechExOSDashboard() {
     fontSize: 'normal',
     enterToSend: true,
   });
+  // Presence map: email (lowercase) → ISO timestamp of last heartbeat
+  const [presenceMap, setPresenceMap] = useState<Record<string, string>>({});
+
+  // Derive online/offline status from presenceMap — a user is "online" if
+  // they sent a heartbeat within the last 3 minutes (heartbeat fires every 30 s).
+  const getPresenceStatus = (email: string): 'online' | 'offline' =>
+    presenceMap[email.toLowerCase()]
+      ? (Date.now() - new Date(presenceMap[email.toLowerCase()]).getTime()) < 3 * 60 * 1000
+        ? 'online'
+        : 'offline'
+      : 'offline';
+
+  const getLastSeenLabel = (email: string): string | null => {
+    const iso = presenceMap[email.toLowerCase()];
+    if (!iso) return null;
+    const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (min < 1) return 'Active now';
+    if (min < 60) return `${min}m ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr}h ago`;
+    return `${Math.floor(hr / 24)}d ago`;
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const settingsRef = useRef(settings);
@@ -930,6 +953,19 @@ export default function EduTechExOSDashboard() {
       });
     };
 
+    const handleMeetingStarted = ({
+      link, channelName, starter, starterInitials, starterColor,
+    }: { link: string; channelName: string; starter: string; starterInitials: string; starterColor: string }) => {
+      // Don't show toast to the person who started the meeting
+      if (starter === currentUserRef.current?.name) return;
+      import('sonner').then(({ toast: t }) => {
+        t(`📹 ${starter} started a meeting in #${channelName}`, {
+          duration: 30000,
+          action: { label: 'Join', onClick: () => window.open(link, '_blank') },
+        });
+      }).catch(() => {});
+    };
+
     socket.on('connect', handleReconnect);
     socket.on('new_message', handleNewMessage);
     socket.on('message_updated', handleUpdatedMessage);
@@ -943,6 +979,13 @@ export default function EduTechExOSDashboard() {
     socket.on('kanban_changed', handleKanbanChanged);
     socket.on('wiki_changed', handleWikiChanged);
     socket.on('mention_notification', handleMentionNotification);
+    const handlePresenceUpdate = ({ email, lastSeen }: { email: string; lastSeen: string }) => {
+      if (!email) return;
+      setPresenceMap((prev) => ({ ...prev, [email.toLowerCase()]: lastSeen }));
+    };
+
+    socket.on('meeting_started', handleMeetingStarted);
+    socket.on('user_activity_update', handlePresenceUpdate);
 
     return () => {
       socket.off('connect', handleReconnect);
@@ -958,6 +1001,8 @@ export default function EduTechExOSDashboard() {
       socket.off('kanban_changed', handleKanbanChanged);
       socket.off('wiki_changed', handleWikiChanged);
       socket.off('mention_notification', handleMentionNotification);
+      socket.off('meeting_started', handleMeetingStarted);
+      socket.off('user_activity_update', handlePresenceUpdate);
       socket.emit('leave_channel', activeChannelId);
     };
   }, [activeChannelId, addMessageFromSocket, updateMessageFromSocket, deleteMessageFromSocket, currentUserEmail, addNotification]);
@@ -1006,6 +1051,13 @@ export default function EduTechExOSDashboard() {
     const intervalId = setInterval(ping, 30_000);
     return () => clearInterval(intervalId);
   }, [currentUserEmail, wikiOpen, kanbanOpen, calendarOpen, leaveOpen, activeChannel, channels]);
+
+  // Tick every 60 s so "Xm ago" presence labels re-render automatically
+  const [, setPresenceTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setPresenceTick((n) => n + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   // ── E2E DM encryption — register public key with server once per login ────────
   useEffect(() => {
@@ -1362,8 +1414,15 @@ export default function EduTechExOSDashboard() {
     const file = event.target.files?.[0];
     if (!file || !channel) return;
 
+    const isRaw = !file.type.startsWith('image/') && !file.type.startsWith('video/') && !file.type.startsWith('audio/');
+    const maxBytes = isRaw ? 5 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      toast.error(`${file.name} is too large (max ${isRaw ? '5' : '10'} MB).`);
+      event.target.value = '';
+      return;
+    }
+
     try {
-      // Upload directly to Cloudinary (free 25 GB); base64 fallback if not configured
       const folder = file.type.startsWith('audio/')
         ? 'audio'
         : file.type.startsWith('video/')
@@ -1480,8 +1539,24 @@ export default function EduTechExOSDashboard() {
   async function startRecording(kind: 'audio' | 'video') {
     if (!channel) return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      toast.error('Recording is not supported in this browser.');
+      toast.error('Recording is not supported in this browser. Use Chrome or Firefox.');
       return;
+    }
+
+    // Pre-flight microphone permission check for audio recordings
+    if (kind === 'audio' && navigator.permissions) {
+      try {
+        const perm = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        if (perm.state === 'denied') {
+          toast.error(
+            'Microphone is blocked. Open site settings (lock icon in address bar) → Microphone → Allow, then refresh.',
+            { duration: 8000 }
+          );
+          return;
+        }
+      } catch {
+        // permissions API not supported — proceed and let getUserMedia prompt
+      }
     }
 
     try {
@@ -1490,7 +1565,7 @@ export default function EduTechExOSDashboard() {
       const stream =
         kind === 'video'
           ? await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
-          : await navigator.mediaDevices.getUserMedia({ audio: true });
+          : await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       mediaStreamRef.current = stream;
 
       const mimeType =
@@ -1551,11 +1626,16 @@ export default function EduTechExOSDashboard() {
       const isDenied =
         err instanceof DOMException &&
         (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError');
-      toast.error(
-        isDenied
-          ? `Browser blocked ${kind} access. Click the camera/mic icon in the address bar to allow.`
-          : `Could not start ${kind} recording. Try refreshing and allowing microphone access.`
-      );
+      if (isDenied) {
+        toast.error(
+          kind === 'audio'
+            ? 'Microphone blocked. Click the lock icon in the browser address bar → Microphone → Allow, then try again.'
+            : 'Screen share was cancelled or blocked. Click "Share" in the browser dialog to proceed.',
+          { duration: 8000 }
+        );
+      } else {
+        toast.error(`Could not start ${kind} recording. Try refreshing the page.`);
+      }
     }
   }
 
@@ -1788,8 +1868,10 @@ export default function EduTechExOSDashboard() {
 
   function startNewMeeting() {
     if (!channel) return;
-    // Open a brand-new Google Meet room instantly; post the link to chat
-    const meetLink = 'https://meet.google.com/new';
+    // Build a deterministic Jitsi room so every user who opens the link joins the SAME call.
+    // Format: edutechexos-<channel>-<timestamp> — unique per meeting session.
+    const roomSlug = `edutechexos-${channel.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}`;
+    const meetLink = `https://meet.jit.si/${roomSlug}`;
 
     addMessage(activeChannelId, {
       id: `meeting-started-${Date.now()}`,
@@ -1797,26 +1879,37 @@ export default function EduTechExOSDashboard() {
       initials: currentUser?.initials ?? 'Y',
       color: currentUserColor,
       timestamp: new Date().toISOString(),
-      text: `�¢ **Meeting Started**\n\nJoin on Google Meet:\n${meetLink}`,
+      text: `📹 **Meeting Started**\n\nClick the link below to join — everyone will enter the same room:\n${meetLink}`,
     });
 
-    const notifyMembers = activeChannelMembers.filter(
+    // Notify ALL workspace members via notifications + real-time socket
+    const allOtherMembers = members.filter(
       (member) => member.email.toLowerCase() !== currentUserEmail
     );
-    if (notifyMembers.length > 0) {
+    if (allOtherMembers.length > 0) {
       addNotification({
         type: 'mention',
         actor: currentUser?.name ?? 'EduTechExOS',
         actorInitials: currentUser?.initials ?? 'OS',
         actorColor: currentUserColor,
         channel: channel.name,
-        message: `started a Google Meet. Join: ${meetLink}`,
-        recipientEmails: notifyMembers.map((member) => member.email),
-      });
+        message: `started a meeting in #${channel.name}. Join: ${meetLink}`,
+        joinLink: meetLink,
+        recipientEmails: allOtherMembers.map((member) => member.email),
+      } as Parameters<typeof addNotification>[0]);
     }
 
+    // Real-time popup toast for all currently online users
+    getSocket().emit('meeting_started', {
+      link: meetLink,
+      channelName: channel.name,
+      starter: currentUser?.name ?? 'Someone',
+      starterInitials: currentUser?.initials ?? 'OS',
+      starterColor: currentUserColor,
+    });
+
     window.open(meetLink, '_blank');
-    toast.success('Google Meet started! Link posted to chat.');
+    toast.success('Meeting started! All workspace members can join the same link.');
   }
 
   if (!authChecked) {
@@ -2451,7 +2544,10 @@ export default function EduTechExOSDashboard() {
                       >
                         {member.initials}
                         {(() => {
-                          const s = member.id === currentMemberId ? settings.status : member.status;
+                          const isSelf = member.id === currentMemberId;
+                          const s = isSelf
+                            ? settings.status
+                            : getPresenceStatus(member.email);
                           return (
                             <span
                               className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ${
@@ -2459,21 +2555,34 @@ export default function EduTechExOSDashboard() {
                                   ? 'bg-emerald-400'
                                   : s === 'away'
                                     ? 'bg-amber-400'
-                                    : s === 'busy'
-                                      ? 'bg-red-400'
-                                      : 'bg-[#7C859E]'
+                                    : 'bg-[#7C859E]'
                               }`}
                               style={{ boxShadow: '0 0 0 2px var(--sidebar-bg, #0E1120)' }}
                             />
                           );
                         })()}
                       </div>
-                      <span
-                        className="min-w-0 flex-1 truncate text-[13px]"
-                        style={{ color: 'var(--sidebar-text)' }}
-                      >
-                        {member.name}
-                      </span>
+                      <div className="min-w-0 flex-1 flex flex-col">
+                        <span
+                          className="truncate text-[13px] leading-tight"
+                          style={{ color: 'var(--sidebar-text)' }}
+                        >
+                          {member.name}
+                        </span>
+                        {member.id !== currentMemberId && (() => {
+                          const label = getLastSeenLabel(member.email);
+                          const isOnline = getPresenceStatus(member.email) === 'online';
+                          if (!label) return null;
+                          return (
+                            <span
+                              className="truncate text-[10px] leading-tight"
+                              style={{ color: isOnline ? '#10C98A' : 'rgba(124,133,158,0.7)' }}
+                            >
+                              {label}
+                            </span>
+                          );
+                        })()}
+                      </div>
                     </motion.button>
 
                     <motion.button
@@ -3370,8 +3479,9 @@ export default function EduTechExOSDashboard() {
                                 <a
                                   key={fi}
                                   href={file.url}
-                                  target="_blank"
-                                  rel="noreferrer"
+                                  {...(file.url?.startsWith('data:')
+                                    ? { download: file.name }
+                                    : { target: '_blank', rel: 'noreferrer' })}
                                   className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-bold transition-colors
                                   ${isOwn ? 'border-white/30 bg-white/10 text-white hover:bg-white/20' : 'border-[rgba(62,74,137,0.12)] bg-white text-[#4A5578] hover:border-[rgba(62,74,137,0.15)]'}`}
                                 >
@@ -3778,7 +3888,7 @@ export default function EduTechExOSDashboard() {
                         </span>
                         <div>
                           <p className="text-sm font-bold text-[#1E2636]">Start Meet</p>
-                          <p className="text-[11px] text-[#7C859E]">Instant Jitsi room</p>
+                          <p className="text-[11px] text-[#7C859E]">Instant Google Meet</p>
                         </div>
                       </button>
                       <button
@@ -4168,8 +4278,9 @@ export default function EduTechExOSDashboard() {
                                     <a
                                       key={fi}
                                       href={f.url}
-                                      target="_blank"
-                                      rel="noreferrer"
+                                      {...(f.url?.startsWith('data:')
+                                        ? { download: f.name }
+                                        : { target: '_blank', rel: 'noreferrer' })}
                                       className="inline-flex items-center gap-1 rounded-lg border border-[rgba(62,74,137,0.15)] dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1 text-[10px] font-semibold text-[#4A5578] dark:text-slate-300 hover:border-[#3E4A89]/30 transition-colors"
                                     >
                                       <Paperclip size={9} />

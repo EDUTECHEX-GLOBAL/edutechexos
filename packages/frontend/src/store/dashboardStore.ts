@@ -163,6 +163,7 @@ type Notification = {
   timestamp: string;
   read: boolean;
   recipientEmails?: string[];
+  joinLink?: string;
 };
 
 type Member = {
@@ -342,23 +343,24 @@ export const useDashboardStore = create<DashboardState>()(
       },
 
       // Called by the Socket.IO listener — updates state WITHOUT hitting the API.
-      // Deduplicates using both `id` and `clientId` to avoid double-rendering
-      // the message that the sender already added optimistically.
+      // Deduplicates using both `id` and `clientId`. When the server echo arrives for
+      // an optimistic message, REPLACE the local copy with the server-confirmed version
+      // so the message carries the real MongoDB _id (bookmarks, edits, etc. need it).
       addMessageFromSocket: (channelId, message) => {
         set((s) => {
           const existing = s.messages[channelId] ?? [];
           const incomingClientId = (message as Message & { clientId?: string }).clientId;
 
-          const alreadyPresent = existing.some((m) => {
-            // Server already gave this exact MongoDB id to us
-            if (m.id === message.id) return true;
-            // This is the server echo of a message we added optimistically
-            // (our local copy has id = clientId, server copy has id = ObjectId)
-            if (incomingClientId && m.id === incomingClientId) return true;
-            return false;
+          let replaced = false;
+          const updated = existing.map((m) => {
+            if (m.id === message.id) { replaced = true; return message; }
+            if (incomingClientId && m.id === incomingClientId) { replaced = true; return message; }
+            return m;
           });
 
-          if (alreadyPresent) return s;
+          if (replaced) {
+            return { messages: { ...s.messages, [channelId]: updated } };
+          }
 
           return {
             messages: {
@@ -1319,14 +1321,14 @@ export const useDashboardStore = create<DashboardState>()(
       partialize: (s) => ({
         channels: s.channels,
         members: s.members,
-        notifications: s.notifications,
         darkMode: s.darkMode,
-        bookmarkedMessageIds: s.bookmarkedMessageIds,
-        pinnedMessageIds: s.pinnedMessageIds,
         // kanbanTasks intentionally excluded — now fetched from backend on load
         wikiPages: s.wikiPages,
         // messages persisted so they survive refresh when backend is sleeping (Render free tier)
         messages: s.messages,
+        // NOTE: pinnedMessageIds, bookmarkedMessageIds, notifications are NOT persisted —
+        // they are user-specific and loaded from backend on login. Persisting them would
+        // leak one user's data to the next user who logs in on the same device.
       }),
     }
   )

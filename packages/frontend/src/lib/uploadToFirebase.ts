@@ -1,6 +1,7 @@
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage, firebaseConfigured } from '@/lib/firebase';
-import { blobToDataUrl } from '@/lib/uploadToR2';
+import { uploadToR2, blobToDataUrl } from '@/lib/uploadToR2';
+import { uploadToB2 } from '@/lib/uploadToB2';
 import { uploadToCloudinary } from '@/lib/uploadToCloudinary';
 
 /**
@@ -62,13 +63,19 @@ export async function uploadToFirebase(
   }
 }
 
+/** Returns true for file types Cloudinary cannot handle with an unsigned preset */
+function isRawFile(file: File | Blob): boolean {
+  const mime = file.type || '';
+  return !mime.startsWith('image/') && !mime.startsWith('video/') && !mime.startsWith('audio/');
+}
+
 /**
- * Smart upload — tries storage providers in priority order:
- *   1. Cloudinary  (free 25 GB, no card required)
- *   2. Firebase    (if configured as a secondary option)
- *   3. Base64 URL  (offline / no storage configured — always works)
+ * Smart upload — picks the right storage path per file type:
  *
- * Use this everywhere in the app so nothing ever breaks.
+ * Images / Video / Audio  → Cloudinary (free 25 GB, unsigned preset works)
+ * Raw files (PDF/DOC/ZIP) → Base64 stored directly in MongoDB (no external service needed)
+ *
+ * If B2 or R2 are configured they are tried first for all types.
  */
 export async function smartUpload(
   file: File | Blob,
@@ -77,15 +84,28 @@ export async function smartUpload(
     onProgress?: (percent: number) => void;
   }
 ): Promise<string> {
-  // 1. Try Cloudinary first (free, no card)
+  // 1. Try Backblaze B2 — all file types (if configured)
+  const b2Url = await uploadToB2(file, options);
+  if (b2Url) return b2Url;
+
+  // 2. Try Cloudflare R2 — all file types (if configured)
+  const r2Url = await uploadToR2(file, options);
+  if (r2Url) return r2Url;
+
+  // 3. For raw files (PDF, DOC, ZIP, etc.) skip Cloudinary — it blocks unsigned raw uploads.
+  //    Store directly as base64 in MongoDB instead.
+  if (isRawFile(file)) {
+    return blobToDataUrl(file);
+  }
+
+  // 4. Images / video / audio → Cloudinary works fine with unsigned preset
   const cloudUrl = await uploadToCloudinary(file, options);
   if (cloudUrl) return cloudUrl;
 
-  // 2. Try Firebase (if the user has configured it)
+  // 5. Try Firebase (if configured)
   const firebaseUrl = await uploadToFirebase(file, options);
   if (firebaseUrl) return firebaseUrl;
 
-  // 3. Last resort: base64 data URL — always works, stored in MongoDB
-  console.warn('[upload] No cloud storage configured — using base64 fallback');
+  // 6. Final fallback: base64 in MongoDB
   return blobToDataUrl(file);
 }

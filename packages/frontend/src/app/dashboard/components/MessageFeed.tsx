@@ -687,8 +687,9 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
                               <a
                                 key={fi}
                                 href={file.url}
-                                target="_blank"
-                                rel="noreferrer"
+                                {...(file.url?.startsWith('data:')
+                                  ? { download: file.name }
+                                  : { target: '_blank', rel: 'noreferrer' })}
                                 className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-sm font-bold transition-colors
                                   ${isOwn ? 'border-white/30 bg-white/10 text-white hover:bg-white/20' : 'border-[rgba(62,74,137,0.12)] dark:border-slate-600 bg-white dark:bg-slate-700 text-[#4A5578] dark:text-[#9BA6D3] hover:border-[rgba(62,74,137,0.15)]'}`}
                               >

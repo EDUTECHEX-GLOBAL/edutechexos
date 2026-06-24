@@ -436,22 +436,33 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
 
   async function startRecording(kind: 'audio' | 'video') {
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      toast.error('Recording not supported in this browser.');
+      toast.error('Recording not supported in this browser. Use Chrome or Firefox.');
       return;
     }
-    if (!cloudinaryConfigured) {
-      toast.warning(
-        'Cloud storage not configured — recording will only be visible to you. Ask admin to add NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET in Vercel settings.',
-        { duration: 6000 }
-      );
+
+    // Pre-flight microphone permission check
+    if (kind === 'audio' && navigator.permissions) {
+      try {
+        const perm = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        if (perm.state === 'denied') {
+          toast.error(
+            'Microphone is blocked. Click the lock icon in the address bar → Microphone → Allow, then refresh.',
+            { duration: 8000 }
+          );
+          return;
+        }
+      } catch {
+        // permissions API not supported — proceed
+      }
     }
+
     try {
       setRecordingBusy(true);
       discardRecordingRef.current = false;
       const stream =
         kind === 'video'
           ? await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
-          : await navigator.mediaDevices.getUserMedia({ audio: true });
+          : await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       mediaStreamRef.current = stream;
       if (kind === 'video') {
         try {
@@ -517,11 +528,16 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
       const isDenied =
         err instanceof DOMException &&
         (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError');
-      toast.error(
-        isDenied
-          ? `Browser blocked ${kind} access. Click the lock icon in the address bar to allow.`
-          : `Could not start ${kind} recording. Try refreshing and allowing microphone access.`
-      );
+      if (isDenied) {
+        toast.error(
+          kind === 'audio'
+            ? 'Microphone blocked. Click the lock icon in the address bar → Microphone → Allow, then try again.'
+            : 'Screen share was cancelled or blocked. Click "Share" in the browser dialog to proceed.',
+          { duration: 8000 }
+        );
+      } else {
+        toast.error(`Could not start ${kind} recording. Try refreshing the page.`);
+      }
     }
   }
 
@@ -607,21 +623,17 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
   const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
-    const MAX_BYTES = 10 * 1024 * 1024; // 10 MB per file
+    const IMAGE_VIDEO_MAX = 10 * 1024 * 1024; // 10 MB for images/video (Cloudinary)
+    const RAW_MAX = 5 * 1024 * 1024;           // 5 MB for docs/PDFs (stored in MongoDB)
     for (const file of files) {
-      if (file.size > MAX_BYTES) {
-        toast.error(`${file.name} is too large (max 10 MB).`);
+      const isRaw = !file.type.startsWith('image/') && !file.type.startsWith('video/') && !file.type.startsWith('audio/');
+      const maxBytes = isRaw ? RAW_MAX : IMAGE_VIDEO_MAX;
+      if (file.size > maxBytes) {
+        toast.error(`${file.name} is too large (max ${isRaw ? '5' : '10'} MB).`);
         continue;
       }
       try {
         const fileUrl = await smartUpload(file, { folder: 'files' });
-
-        if (fileUrl.startsWith('data:')) {
-          toast.warning(
-            `${file.name} sent as inline data — cloud storage not reachable. Ask admin to enable raw files in the Cloudinary upload preset.`,
-            { duration: 7000 }
-          );
-        }
 
         addMessage(channelId, {
           id: `msg-file-${Date.now()}`,
@@ -634,7 +646,7 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
           ...(replyToId ? { parentId: replyToId } : {}),
         });
 
-        if (!fileUrl.startsWith('data:')) toast.success(`${file.name} shared`);
+        toast.success(`${file.name} shared`);
       } catch {
         toast.error(`Failed to upload ${file.name}`);
       }

@@ -61,6 +61,11 @@ function createSocketServer(httpServer) {
       socket.leave(String(channelId));
     });
 
+    socket.on('meeting_started', ({ link, channelName, starter, starterInitials, starterColor }) => {
+      if (!link || !starter) return;
+      io.emit('meeting_started', { link, channelName, starter, starterInitials, starterColor });
+    });
+
     socket.on('typing_start', ({ channelId, userName }) => {
       if (!channelId || !userName) return;
       socket.to(channelId).emit('user_typing', { channelId, userName });

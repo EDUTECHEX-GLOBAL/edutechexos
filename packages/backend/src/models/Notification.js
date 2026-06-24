@@ -9,6 +9,7 @@ const NotificationSchema = new mongoose.Schema({
   channel:         { type: String, required: true },
   timestamp:       { type: Date, default: Date.now },
   recipientEmails: [{ type: String }],
+  joinLink:        { type: String, default: '' },
 });
 
 const Notification = mongoose.model('Notification', NotificationSchema);

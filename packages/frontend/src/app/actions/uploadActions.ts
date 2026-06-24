@@ -3,6 +3,7 @@
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { r2, R2_BUCKET, R2_PUBLIC_URL, r2Configured } from '@/lib/r2';
+import { b2, B2_BUCKET, B2_PUBLIC_URL, b2Configured } from '@/lib/b2';
 
 /**
  * Generates a presigned PUT URL so the browser can upload directly to R2.
@@ -90,6 +91,41 @@ export async function uploadFileToR2(
     return { success: true, url: `${R2_PUBLIC_URL}/${key}`, key };
   } catch (err) {
     console.error('[r2] uploadFile failed:', err);
+    return { success: false, error: String(err) };
+  }
+}
+
+/**
+ * Generates a presigned PUT URL for Backblaze B2 (S3-compatible).
+ * The browser uploads directly to B2 — never passes through Vercel.
+ */
+export async function getB2PresignedUploadUrl(
+  originalName: string,
+  mimeType: string,
+  folder: 'audio' | 'video' | 'files' = 'files'
+): Promise<
+  | { success: true; signedUrl: string; publicUrl: string; key: string }
+  | { success: false; error: string }
+> {
+  if (!b2Configured) {
+    return { success: false, error: 'B2 not configured — set B2_* env vars.' };
+  }
+  try {
+    const safe = originalName.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+    const key = `${folder}/${Date.now()}-${safe}`;
+
+    const command = new PutObjectCommand({
+      Bucket: B2_BUCKET,
+      Key: key,
+      ContentType: mimeType,
+    });
+
+    const signedUrl = await getSignedUrl(b2, command, { expiresIn: 300 });
+    const publicUrl = `${B2_PUBLIC_URL}/${key}`;
+
+    return { success: true, signedUrl, publicUrl, key };
+  } catch (err) {
+    console.error('[b2] getPresignedUrl failed:', err);
     return { success: false, error: String(err) };
   }
 }
