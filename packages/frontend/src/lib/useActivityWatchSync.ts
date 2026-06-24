@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 // so the browser avoids the CORS port-mismatch. On deployed (Vercel) we skip
 // the direct AW check entirely and rely on the backend status poll instead.
 const AW_PROXY    = '/aw-proxy';
-const API_BASE    = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+const API_BASE    = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 const SYNC_MS     = 5 * 60 * 1000;   // push AW data every 5 min
 const CHECK_MS    = 30 * 1000;        // re-check AW locally every 30 s
 const BE_CHECK_MS = 2 * 60 * 1000;   // poll backend status every 2 min

@@ -20,7 +20,7 @@ const API_BASE =
   process.env.NEXT_PUBLIC_SOCKET_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
   (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
-    ? 'https://edutechexos-ueoq.onrender.com'
+    ? 'https://edutechexos-backend.onrender.com'
     : 'http://localhost:10002');
 
 let socket: Socket | null = null;

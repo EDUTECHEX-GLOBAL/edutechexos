@@ -4,7 +4,7 @@ import { MessageSquareDot, Send, ArrowLeft, Search, Loader2 } from 'lucide-react
 import { motion } from 'framer-motion';
 import { useDashboardStore } from '@/store/dashboardStore';
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
 function getAuth() {
   try { const d = JSON.parse(localStorage.getItem('edutechex_token') ?? ''); return { token: d.token, user: d.user }; }

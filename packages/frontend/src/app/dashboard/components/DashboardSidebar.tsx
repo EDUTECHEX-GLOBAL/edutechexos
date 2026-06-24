@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 import MyActivityCalendar from './MyActivityCalendar';
 import { getSocket } from '@/lib/socket';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
 interface DashboardSidebarProps {
   onOpenNotifications?: () => void;

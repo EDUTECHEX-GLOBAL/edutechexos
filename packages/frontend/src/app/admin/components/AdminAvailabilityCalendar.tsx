@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Check, X, Clock, Download, Bell, Sun, AlarmClock } from 'lucide-react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
 type SlotStatus = 'available' | 'busy' | 'ooo';
 type Slot = { time: string; status: SlotStatus; label: string };

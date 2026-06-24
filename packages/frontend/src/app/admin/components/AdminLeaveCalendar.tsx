@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, CalendarX, Clock, CheckCircle2, XCircle, RefreshCw } from 'lucide-react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
 type LeaveStatus   = 'pending' | 'approved' | 'rejected';
 type LeaveCategory = 'sick' | 'vacation' | 'personal' | 'emergency' | 'other';

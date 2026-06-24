@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',

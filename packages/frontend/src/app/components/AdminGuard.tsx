@@ -7,7 +7,7 @@ interface AdminGuardProps {
   children: React.ReactNode;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
 export default function AdminGuard({ children }: AdminGuardProps) {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);

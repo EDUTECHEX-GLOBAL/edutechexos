@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
 function getToken() {
   try { return JSON.parse(localStorage.getItem('edutechex_token') ?? '').token ?? null; }
