@@ -2072,8 +2072,8 @@ export default function EduTechExOSDashboard() {
               />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-semibold text-white">{currentUser?.name}</p>
-              <p className="truncate text-[10px]" style={{ color: 'rgba(124,133,158,0.75)' }}>
+              <p className="truncate text-[12px] font-semibold" style={{ color: '#000000' }}>{currentUser?.name}</p>
+              <p className="truncate text-[10px]" style={{ color: '#333333' }}>
                 {currentUser?.role}
               </p>
             </div>
@@ -2085,7 +2085,7 @@ export default function EduTechExOSDashboard() {
                 router.push('/sign-up-login-screen');
               }}
               className="flex h-7 w-7 items-center justify-center rounded"
-              style={{ color: 'rgba(255,255,255,0.42)' }}
+              style={{ color: '#000000' }}
             >
               <LogOut size={14} />
             </button>
