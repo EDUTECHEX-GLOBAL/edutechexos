@@ -795,13 +795,43 @@ export default function AdminPage() {
       if (selectedChannels.length > 0) setMemberWorkspaceChannels(fallbackId, selectedChannels);
     }
 
-    //  Update local UI state + localStorage fallback 
-    const nextRequests = accessRequests.map((item) =>
-      item.id === request.id ? { ...item, status: 'approved' as const } : item
-    );
-    setAccessRequests(nextRequests);
-    localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify(nextRequests));
-    toast.success(`${request.name} approved. They can sign in now.`);
+    // Auto-send invite link so the user gets the email immediately after approval
+    const authToken2 = getAdminToken();
+    try {
+      const inviteRes = await fetch(`${API_BASE}/api/admin/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(authToken2 ? { Authorization: `Bearer ${authToken2}` } : {}) },
+        body: JSON.stringify({ email: request.email, name: request.name, role: request.role, requestId: request.id }),
+      });
+      const inviteData = await inviteRes.json();
+      if (!inviteRes.ok || inviteData.emailSent === false) {
+        // Email failed — update as invited but warn admin
+        const nextReqs = accessRequests.map((item) =>
+          item.id === request.id ? { ...item, status: 'invited' as const } : item
+        );
+        setAccessRequests(nextReqs);
+        localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify(nextReqs));
+        if (inviteData.inviteUrl) {
+          setInviteLog((prev) => [{ name: request.name, email: request.email, role: request.role, status: 'warn' as const, message: 'Email failed — share link manually', inviteUrl: inviteData.inviteUrl, at: new Date().toISOString() }, ...prev]);
+        }
+        toast.warning(`${request.name} approved — but invite email failed. Copy the link from the Invite tab and share it.`);
+      } else {
+        const nextReqs = accessRequests.map((item) =>
+          item.id === request.id ? { ...item, status: 'invited' as const } : item
+        );
+        setAccessRequests(nextReqs);
+        localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify(nextReqs));
+        toast.success(`${request.name} approved — invite link sent to ${request.email} (expires in 4.5h).`);
+      }
+    } catch {
+      //  Update local UI state + localStorage fallback
+      const nextRequests = accessRequests.map((item) =>
+        item.id === request.id ? { ...item, status: 'approved' as const } : item
+      );
+      setAccessRequests(nextRequests);
+      localStorage.setItem(ACCESS_REQUESTS_KEY, JSON.stringify(nextRequests));
+      toast.success(`${request.name} approved. Send them an invite from the Invites tab.`);
+    }
   }
 
   async function sendInvite(request: AccessRequest) {
