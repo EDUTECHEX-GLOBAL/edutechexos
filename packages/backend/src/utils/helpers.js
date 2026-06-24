@@ -12,9 +12,16 @@ const DEFAULT_WORKSPACE_CHANNELS = [
   { _id: 'edutechex',        name: 'edutechex',        description: 'Core platform — Cambridge, IB, teacher training', isDefault: true, order: 3 },
 ];
 
+// Allow any edutechexos*.vercel.app URL (covers renamed/org-moved deployments)
+// plus any extra origins listed in EXTRA_ALLOWED_ORIGINS env var (comma-separated)
 const ALLOWED_ORIGINS = [
   'https://edutechexos.vercel.app',
+  /^https:\/\/edutechexos[a-z0-9-]*\.vercel\.app$/,
+  /^https:\/\/edutechex[a-z0-9-]*\.vercel\.app$/,
   /^http:\/\/localhost(:\d+)?$/,
+  ...(process.env.EXTRA_ALLOWED_ORIGINS
+    ? process.env.EXTRA_ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+    : []),
 ];
 
 const revokedEmails = new Set();

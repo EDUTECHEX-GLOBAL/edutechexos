@@ -18,7 +18,7 @@ async function heartbeat(req, res) {
     let minutesToAdd = 1;
     if (session.lastHeartbeat) {
       const gapMin = (now - new Date(session.lastHeartbeat)) / 60000;
-      minutesToAdd = Math.min(Math.round(gapMin), 1);
+      minutesToAdd = Math.min(Math.round(gapMin), 5);
     }
     await ActivitySession.updateOne(
       { email, dateStr },

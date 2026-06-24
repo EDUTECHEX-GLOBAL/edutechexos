@@ -230,7 +230,7 @@ async function migrateEncrypt(req, res) {
       return res.status(500).json({ success: false, error: 'ENCRYPTION_KEY is not set or invalid on this server.' });
     }
     const plainMessages = await Message.find(
-      { text: { $exists: true, $not: /^enc:/ } },
+      { text: { $exists: true, $not: { $regex: '^enc:' } } },
       { _id: 1, text: 1 }
     ).lean();
     if (plainMessages.length === 0) {

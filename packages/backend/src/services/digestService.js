@@ -21,7 +21,13 @@ async function buildDigestHtml(since) {
     .map((t) => `<tr><td style="padding:6px 12px;border-bottom:1px solid #f1f5f9;">${t.text.slice(0, 80)}</td><td style="padding:6px 12px;border-bottom:1px solid #f1f5f9;">${t.assignee}</td><td style="padding:6px 12px;border-bottom:1px solid #f1f5f9;"><span style="background:${t.status==='inprogress'?'#dbeafe':'#fef9c3'};color:${t.status==='inprogress'?'#1d4ed8':'#854d0e'};padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">${t.status}</span></td></tr>`)
     .join('');
 
-  const upcomingMeetings = await Message.find({ text: /^Meeting Scheduled:/, timestamp: { $gte: sinceDate } }).lean();
+  // Query by meetingMeta field (set when scheduling meetings) — text is encrypted so regex won't match
+  const upcomingMeetings = await Message.find({
+    $or: [
+      { meetingMeta: { $exists: true }, timestamp: { $gte: sinceDate } },
+      { messageType: 'meeting', timestamp: { $gte: sinceDate } },
+    ]
+  }).lean();
   const meetingRows = upcomingMeetings
     .map((m) => {
       const title = (m.text.match(/Meeting Scheduled:\s*(.+)/) || [])[1] || 'Meeting';

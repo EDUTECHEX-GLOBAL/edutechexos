@@ -9,6 +9,9 @@ const AccessRequestSchema = new mongoose.Schema({
   requestedAt: { type: Date, default: Date.now },
   channelId:   { type: String },
   channelIds:  [{ type: String }],
+  bio:         { type: String, default: '' },
+  timezone:    { type: String, default: '' },
+  avatarUrl:   { type: String, default: '' },
 });
 
 const AccessRequest = mongoose.model('AccessRequest', AccessRequestSchema);

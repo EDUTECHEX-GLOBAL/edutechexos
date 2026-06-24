@@ -64,7 +64,7 @@ async function createChannel(req, res) {
     const saved = await channel.save();
     const { _id, __v, ...rest } = saved.toObject();
     const io = req.app.get('io');
-    io.emit('channel_created', { ...rest, id: _id });
+    if (io) io.emit('channel_created', { ...rest, id: _id });
     await logAudit(req, 'channel.created', '', '', { channelId: _id, name: id });
     res.json({ success: true, channel: { ...rest, id: _id } });
   } catch (err) {
@@ -107,7 +107,7 @@ async function deleteChannel(req, res) {
     if (channel.isDefault) return res.status(400).json({ success: false, error: 'Default channels cannot be deleted.' });
     await WorkspaceChannel.findByIdAndDelete(req.params.id);
     const io = req.app.get('io');
-    io.emit('channel_deleted', { channelId: req.params.id });
+    if (io) io.emit('channel_deleted', { channelId: req.params.id });
     await logAudit(req, 'channel.deleted', '', '', { channelId: req.params.id, name: channel.name });
     res.json({ success: true });
   } catch (err) {

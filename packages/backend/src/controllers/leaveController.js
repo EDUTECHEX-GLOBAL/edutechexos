@@ -45,6 +45,7 @@ async function createLeave(req, res) {
     if (duration && !['full', 'half'].includes(String(duration))) {
       return res.status(400).json({ success: false, error: 'duration must be full or half.' });
     }
+    if (!req.user) return res.status(401).json({ success: false, error: 'Authentication required.' });
     const leave = new Leave({
       email: req.user.email,
       name:  req.user.name,

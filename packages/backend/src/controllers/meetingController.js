@@ -130,10 +130,13 @@ async function sendMeetingInvite(req, res) {
       </div>`;
 
     const subject = `Meeting Invite: ${title}${time ? ' · ' + time : ''}`;
+    if (!to.length) {
+      return res.json({ success: true, sent: 0, ok: true });
+    }
     const [primaryRecipient, ...otherRecipients] = to;
     const bccRecipients = otherRecipients.map(r => ({ email: r.email, name: r.name }));
     const { ok } = await sendBrevoEmail({
-      to: [{ email: primaryRecipient.email, name: primaryRecipient.name }],
+      to: [{ email: primaryRecipient.email, name: primaryRecipient.name || primaryRecipient.email }],
       bcc: bccRecipients.length > 0 ? bccRecipients : undefined,
       subject,
       html,
