@@ -281,7 +281,6 @@ async function validateInvite(req, res) {
     if (!invite)       return res.status(404).json({ success: false, error: 'Invalid invite link.' });
     if (invite.used)   return res.status(410).json({ success: false, error: 'This invite has already been used.' });
     if (invite.expiresAt < new Date()) return res.status(410).json({ success: false, error: 'This invite link has expired. Ask the admin to resend.' });
-    if (revokedEmails.has(invite.email.toLowerCase())) return res.status(403).json({ success: false, error: 'This account has been revoked.' });
     res.json({ success: true, email: invite.email, name: invite.name, role: invite.role, expiresAt: invite.expiresAt.toISOString() });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
@@ -300,13 +299,15 @@ async function acceptInvite(req, res) {
     if (!invite)       return res.status(404).json({ success: false, error: 'Invalid invite link.' });
     if (invite.used)   return res.status(410).json({ success: false, error: 'This invite has already been used.' });
     if (invite.expiresAt < new Date()) return res.status(410).json({ success: false, error: 'This invite link has expired. Ask the admin to resend.' });
-    if (revokedEmails.has(invite.email.toLowerCase())) return res.status(403).json({ success: false, error: 'This account has been revoked.' });
     const hashed = await bcrypt.hash(String(password), 12);
     await AccessRequest.findOneAndUpdate(
       { email: invite.email },
       { $set: { status: 'approved', password: hashed, name: invite.name, role: invite.role } },
       { upsert: true, new: true }
     );
+    // Clear removed/revoked status so re-invited users can log in
+    await RemovedMember.deleteOne({ email: invite.email.toLowerCase() }).catch(() => {});
+    revokedEmails.delete(invite.email.toLowerCase());
     await InviteToken.findOneAndUpdate({ token: String(token) }, { $set: { used: true, usedAt: new Date() } });
     const io = req.app.get('io');
     if (io) {

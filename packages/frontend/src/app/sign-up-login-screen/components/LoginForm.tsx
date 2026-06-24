@@ -34,6 +34,7 @@ export default function LoginForm({
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // ── Forgot-password modal state ────────────────────────────────────────────
   const lastForgotRef = useRef<number>(0);
@@ -161,7 +162,7 @@ export default function LoginForm({
     await new Promise((r) => setTimeout(r, 700));
 
     const emailClean = data.email.trim().toLowerCase();
-    const delays = [3000, 6000, 12000];
+    const delays = [5000, 10000, 15000, 15000, 10000];
 
     for (let attempt = 0; attempt <= delays.length; attempt++) {
       try {
@@ -171,6 +172,7 @@ export default function LoginForm({
           body: JSON.stringify({ email: emailClean, password: data.password }),
         });
 
+        setIsRetrying(false);
         const result = await res.json();
 
         if (!result.success) {
@@ -189,10 +191,12 @@ export default function LoginForm({
         return;
       } catch {
         if (attempt < delays.length) {
+          setIsRetrying(true);
           await new Promise((r) => setTimeout(r, delays[attempt]));
         } else {
+          setIsRetrying(false);
           setIsLoading(false);
-          setError('password', { message: 'Server is waking up — please try again in a moment.' });
+          setError('password', { message: 'Server unavailable — please try again in a minute.' });
         }
       }
     }
@@ -300,11 +304,16 @@ export default function LoginForm({
         <div className="pt-4">
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || isRetrying}
             className="group relative w-full bg-[#0A1128] text-[#D4AF37] py-5 font-black uppercase tracking-[0.3em] text-[11px] overflow-hidden transition-all hover:shadow-[0_0_32px_rgba(212,175,55,0.25)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#0A1128]/30 border border-[#0A1128]"
           >
             <span className="relative z-10 flex items-center justify-center gap-2">
-              {isLoading ? (
+              {isRetrying ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  Server waking up, please wait...
+                </>
+              ) : isLoading ? (
                 <>
                   <Loader2 size={15} className="animate-spin" />
                   Authenticating...

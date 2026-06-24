@@ -113,7 +113,7 @@ export default function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () =>
         toast.info(
           existing.status === 'approved'
             ? 'Your access is approved. You can sign in now.'
-            : 'Your account is pending admin approval. Check your email for your temporary password.'
+            : 'Your request is pending admin approval. You will receive an invite link by email once approved.'
         );
         if (existing.status === 'approved') onSwitchToLogin();
         return;

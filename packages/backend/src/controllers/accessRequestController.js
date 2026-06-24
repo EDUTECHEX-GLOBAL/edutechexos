@@ -1,4 +1,4 @@
-const { VALID_ACCOUNTS } = require('../utils/helpers');
+const { VALID_ACCOUNTS, revokedEmails } = require('../utils/helpers');
 const { sendBrevoEmail } = require('../services/emailService');
 const { logAudit } = require('../services/auditService');
 const AccessRequest = require('../models/AccessRequest');
@@ -18,9 +18,11 @@ async function submitRequest(req, res) {
       return res.status(409).json({ success: false, error: 'This email is already registered as a system account.' });
     }
 
+    // If previously removed, clear that status so they can re-apply for admin approval
     const isRemoved = await RemovedMember.exists({ email: emailClean });
     if (isRemoved) {
-      return res.status(403).json({ success: false, error: 'This account has been removed from the workspace. Contact admin for assistance.' });
+      await RemovedMember.deleteOne({ email: emailClean });
+      revokedEmails.delete(emailClean);
     }
 
     const existing = await AccessRequest.findOne({ email: emailClean }).lean();
@@ -45,7 +47,7 @@ async function submitRequest(req, res) {
         message:
           existing.status === 'approved'
             ? 'Your access is approved. You can sign in now.'
-            : 'Your account is pending admin approval. Check your email for your temporary password.',
+            : 'Your request is pending admin approval. You will receive an invite link by email once approved.',
       });
     }
 
