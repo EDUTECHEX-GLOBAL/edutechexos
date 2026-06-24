@@ -3955,27 +3955,27 @@ export default function EduTechExOSDashboard() {
       <nav className="workspace-right-rail">
         {/* Calendar / workspace tools — teal accent */}
         <motion.button whileTap={{ scale: 0.88 }} onClick={() => setAvailabilityOpen(true)} className="rail-btn"
-          style={{ color: 'rgba(34,211,238,0.60)' }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#67E8F9'; e.currentTarget.style.background = 'rgba(20,184,166,0.14)'; }}
-          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(34,211,238,0.60)'; e.currentTarget.style.background = 'transparent'; }}
+          style={{ color: '#000000' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#000000'; e.currentTarget.style.background = 'rgba(20,184,166,0.14)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#000000'; e.currentTarget.style.background = 'transparent'; }}
         >
           <CalendarCheck size={18} strokeWidth={1.8} />
           <span className="rail-label">Avail.</span>
         </motion.button>
 
         <motion.button whileTap={{ scale: 0.88 }} onClick={() => setLeaveOpen(true)} className="rail-btn"
-          style={{ color: 'rgba(251,191,36,0.55)' }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#FCD34D'; e.currentTarget.style.background = 'rgba(245,158,11,0.12)'; }}
-          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(251,191,36,0.55)'; e.currentTarget.style.background = 'transparent'; }}
+          style={{ color: '#000000' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#000000'; e.currentTarget.style.background = 'rgba(245,158,11,0.12)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#000000'; e.currentTarget.style.background = 'transparent'; }}
         >
           <CalendarX size={18} strokeWidth={1.8} />
           <span className="rail-label">Leave</span>
         </motion.button>
 
         <motion.button whileTap={{ scale: 0.88 }} onClick={() => setIntegrationsOpen(true)} className="rail-btn"
-          style={{ color: 'rgba(167,139,250,0.55)' }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#C4B5FD'; e.currentTarget.style.background = 'rgba(139,92,246,0.14)'; }}
-          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(167,139,250,0.55)'; e.currentTarget.style.background = 'transparent'; }}
+          style={{ color: '#000000' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#000000'; e.currentTarget.style.background = 'rgba(139,92,246,0.14)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#000000'; e.currentTarget.style.background = 'transparent'; }}
         >
           <Zap size={18} strokeWidth={1.8} />
           <span className="rail-label">Integr.</span>
@@ -3983,9 +3983,9 @@ export default function EduTechExOSDashboard() {
 
         {isAdmin && (
           <motion.button whileTap={{ scale: 0.88 }} onClick={() => setAnalyticsOpen(true)} className="rail-btn"
-            style={{ color: 'rgba(52,211,153,0.55)' }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#6EE7B7'; e.currentTarget.style.background = 'rgba(16,185,129,0.12)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(52,211,153,0.55)'; e.currentTarget.style.background = 'transparent'; }}
+            style={{ color: '#000000' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#000000'; e.currentTarget.style.background = 'rgba(16,185,129,0.12)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#000000'; e.currentTarget.style.background = 'transparent'; }}
           >
             <BarChart2 size={18} strokeWidth={1.8} />
             <span className="rail-label">Analytics</span>
@@ -3994,14 +3994,14 @@ export default function EduTechExOSDashboard() {
 
         <div className="rail-divider" />
 
-        {/* Channel tools — Pinned + Saved (amber when active) */}
+        {/* Channel tools — Pinned + Saved */}
         <motion.button
           whileTap={{ scale: 0.88 }}
           onClick={() => setRightSidePanel(rightSidePanel === 'pinned' ? null : 'pinned')}
           className="rail-btn"
           style={rightSidePanel === 'pinned'
-            ? { background: 'rgba(245,158,11,0.16)', color: '#FCD34D' }
-            : { color: 'rgba(251,191,36,0.50)' }}
+            ? { background: 'rgba(245,158,11,0.16)', color: '#000000' }
+            : { color: '#000000' }}
         >
           <Pin size={18} strokeWidth={2} />
           <span className="rail-label">Pinned</span>
@@ -4012,14 +4012,14 @@ export default function EduTechExOSDashboard() {
           onClick={() => setRightSidePanel(rightSidePanel === 'bookmarked' ? null : 'bookmarked')}
           className="rail-btn"
           style={rightSidePanel === 'bookmarked'
-            ? { background: 'rgba(245,158,11,0.16)', color: '#FCD34D' }
-            : { color: 'rgba(251,191,36,0.45)' }}
+            ? { background: 'rgba(245,158,11,0.16)', color: '#000000' }
+            : { color: '#000000' }}
         >
           <Bookmark size={18} strokeWidth={2} />
           <span className="rail-label">Saved</span>
         </motion.button>
 
-        {/* Bottom: Copilot — purple accent, more prominent */}
+        {/* Bottom: Copilot */}
         <div style={{ marginTop: 'auto' }}>
           <motion.button
             whileTap={{ scale: 0.9 }}
@@ -4030,8 +4030,8 @@ export default function EduTechExOSDashboard() {
             }}
             className="rail-btn"
             style={rightPanel === 'ai'
-              ? { color: '#C4B5FD', background: 'rgba(139,92,246,0.22)', border: '1px solid rgba(139,92,246,0.30)' }
-              : { color: 'rgba(167,139,250,0.70)', background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.18)' }}
+              ? { color: '#000000', background: 'rgba(139,92,246,0.22)', border: '1px solid rgba(139,92,246,0.30)' }
+              : { color: '#000000', background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.18)' }}
           >
             <Bot size={18} strokeWidth={2} />
             <span className="rail-label">Copilot</span>
