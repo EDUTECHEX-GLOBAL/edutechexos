@@ -66,7 +66,7 @@ type InviteLogEntry = {
   at: string;
 };
 type CsvRow = { name: string; email: string; role: string };
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
 function LeaveStatusBadge({ status }: { status: string }) {
   const cfg: Record<string, { color: string; bg: string; border: string }> = {
