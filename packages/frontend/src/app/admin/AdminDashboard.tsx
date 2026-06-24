@@ -16,6 +16,7 @@ import {
   Mail,
   MessageSquare,
   Monitor,
+  Plus,
   RefreshCw,
   Search,
   Send,
@@ -136,6 +137,34 @@ export default function AdminPage() {
     const istOffset = 5.5 * 60 * 60 * 1000;
     return new Date(Date.now() + istOffset).toISOString().slice(0, 10);
   });
+
+  const [newChannelName, setNewChannelName] = useState('');
+  const [newChannelDesc, setNewChannelDesc] = useState('');
+  const [creatingChannel, setCreatingChannel] = useState(false);
+
+  async function handleCreateChannel() {
+    const name = newChannelName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    if (!name) { toast.error('Channel name is required.'); return; }
+    const token = getAdminToken();
+    if (!token) return;
+    setCreatingChannel(true);
+    const r = await fetch(`${API_BASE}/api/channels`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id: name, description: newChannelDesc.trim() }),
+    }).catch(() => null);
+    setCreatingChannel(false);
+    if (!r) { toast.error('Network error.'); return; }
+    if (r.ok) {
+      toast.success(`#${name} created`);
+      setNewChannelName('');
+      setNewChannelDesc('');
+      loadWorkspaceChannels?.();
+    } else {
+      const body = await r.json().catch(() => ({}));
+      toast.error(body?.error ?? 'Failed to create channel');
+    }
+  }
 
   // Live in-app activity "" users active in last 3 minutes
   type LiveUser = {
@@ -547,6 +576,24 @@ export default function AdminPage() {
   function getChannelMembers(channelId: string) {
     const channel = channels.find((c) => c.id === channelId);
     return members.filter((m) => channel?.memberIds?.includes(m.id));
+  }
+
+  async function handleDeleteChannel(channelId: string, channelName: string) {
+    if (!confirm(`Delete #${channelName}? This cannot be undone.`)) return;
+    const token = getAdminToken();
+    if (!token) return;
+    const r = await fetch(`${API_BASE}/api/channels/${channelId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => null);
+    if (!r) { toast.error('Network error — could not reach server.'); return; }
+    if (r.ok) {
+      toast.success(`#${channelName} deleted`);
+      loadWorkspaceChannels?.();
+    } else {
+      const body = await r.json().catch(() => ({}));
+      toast.error(body?.error ?? `Failed to delete #${channelName}`);
+    }
   }
 
   function handleChannelToggle(memberId: string, channelId: string, checked: boolean) {
@@ -2048,6 +2095,39 @@ export default function AdminPage() {
             <div className="card-premium space-y-4 p-6">
               {/* Top accent */}
               <div style={{ height: 3, background: 'linear-gradient(90deg, #0DAFCE, #3B82F6)', borderRadius: 3 }} />
+
+              {/* Create channel */}
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', padding: '14px 16px', borderRadius: 14, background: 'rgba(13,175,206,0.05)', border: '1.5px solid rgba(13,175,206,0.16)' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: 5, fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.60)' }}>Channel name</label>
+                  <input
+                    value={newChannelName}
+                    onChange={e => setNewChannelName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleCreateChannel()}
+                    placeholder="e.g. design-team"
+                    style={{ height: 38, width: '100%', borderRadius: 10, border: '1.5px solid rgba(13,175,206,0.22)', background: '#fff', padding: '0 12px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div style={{ flex: 2 }}>
+                  <label style={{ display: 'block', marginBottom: 5, fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.60)' }}>Description (optional)</label>
+                  <input
+                    value={newChannelDesc}
+                    onChange={e => setNewChannelDesc(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleCreateChannel()}
+                    placeholder="What is this channel for?"
+                    style={{ height: 38, width: '100%', borderRadius: 10, border: '1.5px solid rgba(13,175,206,0.22)', background: '#fff', padding: '0 12px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCreateChannel}
+                  disabled={creatingChannel}
+                  style={{ height: 38, padding: '0 18px', borderRadius: 10, background: creatingChannel ? 'rgba(13,175,206,0.35)' : 'linear-gradient(135deg,#0DAFCE,#3B82F6)', color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: creatingChannel ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Plus size={14} /> {creatingChannel ? 'Creating…' : 'Create Channel'}
+                </button>
+              </div>
+
               {/* General channel */}
               <div style={{ borderRadius: 16, border: '1.5px solid rgba(13,175,206,0.16)', background: '#FFFFFF', padding: 20, boxShadow: '0 2px 12px rgba(13,175,206,0.06)' }}>
                 <div className="flex items-center justify-between gap-3">
@@ -2096,9 +2176,21 @@ export default function AdminPage() {
                               </p>
                             </div>
                           </div>
-                          <span style={{ flexShrink: 0, borderRadius: 8, background: 'rgba(13,175,206,0.08)', padding: '3px 10px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', color: '#0DAFCE' }}>
-                            {channelMembers.length} users
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                            <span style={{ borderRadius: 8, background: 'rgba(13,175,206,0.08)', padding: '3px 10px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', color: '#0DAFCE' }}>
+                              {channelMembers.length} users
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteChannel(channel.id, channel.name)}
+                              title={`Delete #${channel.name}`}
+                              style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(239,71,111,0.08)', border: '1.5px solid rgba(239,71,111,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all .15s' }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.16)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.40)'; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.08)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.20)'; }}
+                            >
+                              <Trash2 size={13} style={{ color: '#EF476F' }} />
+                            </button>
+                          </div>
                         </div>
 
                         {/* Member chips */}
