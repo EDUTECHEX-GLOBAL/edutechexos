@@ -255,9 +255,55 @@ async function buildSummary() {
   };
 }
 
+// ── Session check — only sync while user is logged into EduTechExOS ───────────
+async function isLoggedIn() {
+  try {
+    const res = await request(
+      API_BASE,
+      '/api/activity/session-active',
+      'GET',
+      null,
+      { Authorization: `Bearer ${authToken}` }
+    );
+    if (res.status === 401) {
+      // Token expired — refresh it
+      const ok = await login();
+      if (!ok) return false;
+      const retry = await request(
+        API_BASE,
+        '/api/activity/session-active',
+        'GET',
+        null,
+        { Authorization: `Bearer ${authToken}` }
+      );
+      return retry.body?.active === true;
+    }
+    return res.body?.active === true;
+  } catch {
+    return false;
+  }
+}
+
 // ── Sync ──────────────────────────────────────────────────────────────────────
+let _wasActive = false;
+
 async function sync() {
   try {
+    const active = await isLoggedIn();
+
+    if (!active) {
+      if (_wasActive) {
+        console.log(`[${new Date().toLocaleTimeString()}] User logged out — pausing sync. Will resume automatically on next login.`);
+        _wasActive = false;
+      }
+      return; // skip — user is not logged in
+    }
+
+    if (!_wasActive) {
+      console.log(`[${new Date().toLocaleTimeString()}] User is logged in — starting activity sync.`);
+      _wasActive = true;
+    }
+
     const summary = await buildSummary();
     if (!summary) return;
 
@@ -293,7 +339,8 @@ async function sync() {
   const ok = await login();
   if (!ok) process.exit(1);
 
-  console.log(`[agent] Started. Syncing every ${INTERVAL} minute(s). Admin can see your activity in EduTechExOS.`);
+  console.log(`[agent] Running. Waiting for EduTechExOS login to start syncing…`);
+  console.log(`[agent] Sync runs every ${INTERVAL} minute(s) while you are logged in.`);
   console.log(`[agent] Press Ctrl+C to stop.`);
 
   await sync();
