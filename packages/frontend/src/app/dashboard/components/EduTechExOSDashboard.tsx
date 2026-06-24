@@ -912,6 +912,23 @@ export default function EduTechExOSDashboard() {
     const handleKanbanChanged = () => useDashboardStore.getState().loadLocalKanbanTasks?.();
     const handleWikiChanged = () => useDashboardStore.getState().loadLocalWikiPages?.();
 
+    // In-app @mention notification — fires when someone @mentions the current user
+    const handleMentionNotification = (data: {
+      recipientEmail: string; senderName: string; channelId: string; messageId: string; preview: string;
+    }) => {
+      if (!currentUserEmail) return;
+      if (data.recipientEmail?.toLowerCase() !== currentUserEmail.toLowerCase()) return;
+      addNotification({
+        type: 'mention',
+        actor: data.senderName,
+        actorInitials: data.senderName?.slice(0, 2).toUpperCase() ?? '??',
+        actorColor: '#6366F1',
+        channel: data.channelId,
+        message: data.preview,
+        recipientEmails: [data.recipientEmail],
+      });
+    };
+
     socket.on('connect', handleReconnect);
     socket.on('new_message', handleNewMessage);
     socket.on('message_updated', handleUpdatedMessage);
@@ -924,6 +941,7 @@ export default function EduTechExOSDashboard() {
     socket.on('access_rejected', handleAccessRejected);
     socket.on('kanban_changed', handleKanbanChanged);
     socket.on('wiki_changed', handleWikiChanged);
+    socket.on('mention_notification', handleMentionNotification);
 
     return () => {
       socket.off('connect', handleReconnect);
@@ -938,9 +956,10 @@ export default function EduTechExOSDashboard() {
       socket.off('access_rejected', handleAccessRejected);
       socket.off('kanban_changed', handleKanbanChanged);
       socket.off('wiki_changed', handleWikiChanged);
+      socket.off('mention_notification', handleMentionNotification);
       socket.emit('leave_channel', activeChannelId);
     };
-  }, [activeChannelId, addMessageFromSocket, updateMessageFromSocket, deleteMessageFromSocket]);
+  }, [activeChannelId, addMessageFromSocket, updateMessageFromSocket, deleteMessageFromSocket, currentUserEmail, addNotification]);
 
   // Poll backend notifications for the signed-in user every 5 seconds
   useEffect(() => {
@@ -2507,16 +2526,21 @@ export default function EduTechExOSDashboard() {
           )}
 
           {/* ── Desktop Tracking Setup Banner ─────────────── */}
-          {awStatus !== 'connected' && (
+          {awStatus !== 'connected' && !awBannerDismissed && (
             <div style={{ margin: '14px 8px 8px', borderRadius: 14, background: '#1A1F35', border: '1.5px solid rgba(99,102,241,0.35)', overflow: 'hidden' }}>
 
               {/* Header */}
               <div style={{ padding: '12px 14px 10px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF476F', flexShrink: 0, animation: 'ping 1.5s infinite' }} />
-                  <span style={{ fontSize: 12, fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em' }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em', flex: 1 }}>
                     Desktop Tracking Not Active
                   </span>
+                  <button
+                    onClick={() => { setAwBannerDismissed(true); localStorage.setItem('aw_banner_dismissed', '1'); }}
+                    title="Dismiss setup banner"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(165,180,252,0.5)', fontSize: 16, lineHeight: 1, padding: '0 2px', flexShrink: 0 }}
+                  >×</button>
                 </div>
                 <p style={{ fontSize: 11, color: 'rgba(165,180,252,0.85)', lineHeight: 1.55, margin: 0 }}>
                   Follow the 3 steps below so admin can see your <strong style={{ color: '#A5B4FC' }}>VS Code</strong>, <strong style={{ color: '#A5B4FC' }}>Chrome</strong> and <strong style={{ color: '#A5B4FC' }}>Figma</strong> activity in real time.
@@ -2607,6 +2631,18 @@ export default function EduTechExOSDashboard() {
             </div>
           )}
         </div>
+
+          {/* ── Restore banner link (shown when banner is dismissed) ── */}
+          {awStatus !== 'connected' && awBannerDismissed && (
+            <div style={{ margin: '8px 8px 4px', textAlign: 'center' }}>
+              <button
+                onClick={() => { setAwBannerDismissed(false); localStorage.removeItem('aw_banner_dismissed'); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10.5, color: 'rgba(165,180,252,0.55)', textDecoration: 'underline', padding: '4px 8px' }}
+              >
+                💻 Set up desktop tracking
+              </button>
+            </div>
+          )}
 
         {/* ── Footer / User panel ─────────────────────────── */}
         <div className="sidebar-footer">

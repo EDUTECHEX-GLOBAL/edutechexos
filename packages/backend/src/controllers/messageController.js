@@ -131,6 +131,7 @@ async function postMessage(req, res) {
 
     res.json({ success: true, message: base });
   } catch (err) {
+    console.error('[POST /api/messages] Error:', err);
     res.status(500).json({ success: false, error: String(err) });
   }
 }

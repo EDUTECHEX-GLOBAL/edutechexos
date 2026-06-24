@@ -146,8 +146,8 @@ export default function DashboardRedesigned() {
   useEffect(() => {
     if (!currentUser) return;
     const socket = getSocket();
-    const handler = (data: { mentionedEmail: string; senderName: string; channelId: string; preview: string }) => {
-      if (data.mentionedEmail?.toLowerCase() === currentUser.email?.toLowerCase()) {
+    const handler = (data: { recipientEmail: string; senderName: string; channelId: string; messageId: string; preview: string }) => {
+      if (data.recipientEmail?.toLowerCase() === currentUser.email?.toLowerCase()) {
         addNotification?.({
           type: 'mention',
           actor: data.senderName,

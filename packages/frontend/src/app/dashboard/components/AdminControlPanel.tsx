@@ -183,9 +183,16 @@ export default function AdminControlPanel({
   };
 
   const handleDeleteChannel = async (id: string, name: string) => {
-    if (!confirm(`Delete #${name}?`)) return;
+    if (!confirm(`Delete #${name}? This cannot be undone.`)) return;
     const r = await fetch(`${API}/api/channels/${id}`, { method: 'DELETE', headers: h }).catch(() => null);
-    if (r?.ok) { toast.success('Deleted'); setChannels(p => p.filter(c => (c._id ?? c.id) !== id)); }
+    if (!r) { toast.error('Network error — could not reach server.'); return; }
+    if (r.ok) {
+      toast.success(`#${name} deleted`);
+      setChannels(p => p.filter(c => (c._id ?? c.id) !== id));
+    } else {
+      const body = await r.json().catch(() => ({}));
+      toast.error(body?.error ?? `Failed to delete #${name}`);
+    }
   };
 
   const handleSendInvite = async () => {

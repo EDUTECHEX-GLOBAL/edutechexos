@@ -545,12 +545,16 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
 
   // Helper to send media (used for auto-sending video recordings)
   async function sendMedia(kind: 'audio' | 'video', blob: Blob, mimeType: string) {
+    // Block large recordings that would exceed cloud/server limits
+    const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+    if (blob.size > MAX_BYTES) {
+      toast.error(`${kind === 'video' ? 'Recording' : 'Voice note'} is too large (max 10 MB). Try a shorter recording.`);
+      return;
+    }
+
     setRecordingSending(true);
-    const toastId = toast.loading(
-      `Uploading ${kind === 'video' ? 'recording' : 'voice note'} to Cloudinary…`
-    );
+    const toastId = toast.loading(`Uploading ${kind === 'video' ? 'recording' : 'voice note'}…`);
     try {
-      // Upload to Cloudinary (free 25 GB); falls back to base64 if not configured
       const file = new File([blob], `${kind}-${Date.now()}.webm`, { type: mimeType });
       const folder = kind === 'video' ? 'video' : 'audio';
       const mediaUrl = await smartUpload(file, {
@@ -559,7 +563,16 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
           toast.loading(`Uploading… ${pct}%`, { id: toastId });
         },
       });
-      // Always send to the current channel — never redirect to #general
+
+      // If Cloudinary/Firebase both failed, mediaUrl is a base64 data URL.
+      // Warn the user — large base64 payloads may not reach others.
+      if (mediaUrl.startsWith('data:')) {
+        toast.warning(
+          'Cloud storage not reachable — voice note sent as inline data. Others may not see it. Ask admin to enable video/audio in the Cloudinary upload preset.',
+          { id: toastId, duration: 8000 }
+        );
+      }
+
       addMessage(channelId, {
         id: `msg-${kind}-${Date.now()}`,
         sender: currentUser?.name ?? 'You',
@@ -570,9 +583,10 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
         ...(kind === 'video' ? { videoUrl: mediaUrl } : { audioUrl: mediaUrl }),
         ...(replyToId ? { parentId: replyToId } : {}),
       });
-      toast.success(`${kind === 'video' ? 'Screen recording' : 'Voice note'} sent!`, {
-        id: toastId,
-      });
+
+      if (!mediaUrl.startsWith('data:')) {
+        toast.success(`${kind === 'video' ? 'Screen recording' : 'Voice note'} sent!`, { id: toastId });
+      }
     } catch {
       toast.error(`Could not upload the ${kind} recording.`, { id: toastId });
     } finally {
@@ -593,10 +607,21 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
   const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
+    const MAX_BYTES = 10 * 1024 * 1024; // 10 MB per file
     for (const file of files) {
+      if (file.size > MAX_BYTES) {
+        toast.error(`${file.name} is too large (max 10 MB).`);
+        continue;
+      }
       try {
-        // Upload to Firebase Storage; falls back to base64 if not configured
         const fileUrl = await smartUpload(file, { folder: 'files' });
+
+        if (fileUrl.startsWith('data:')) {
+          toast.warning(
+            `${file.name} sent as inline data — cloud storage not reachable. Ask admin to enable raw files in the Cloudinary upload preset.`,
+            { duration: 7000 }
+          );
+        }
 
         addMessage(channelId, {
           id: `msg-file-${Date.now()}`,
@@ -608,7 +633,8 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
           files: [{ name: file.name, url: fileUrl, type: file.type }],
           ...(replyToId ? { parentId: replyToId } : {}),
         });
-        toast.success(`${file.name} shared`);
+
+        if (!fileUrl.startsWith('data:')) toast.success(`${file.name} shared`);
       } catch {
         toast.error(`Failed to upload ${file.name}`);
       }

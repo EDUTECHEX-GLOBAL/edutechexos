@@ -164,15 +164,37 @@ function request(baseUrl, urlPath, method = 'GET', body = null, headers = {}) {
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function login() {
-  console.log(`[auth] Logging in as ${EMAIL}…`);
-  const res = await request(API_BASE, '/api/auth/login', 'POST', { email: EMAIL, password: PASSWORD });
-  if (res.status === 200 && res.body?.token) {
-    authToken = res.body.token;
-    console.log('[auth] Login successful.');
-    return true;
+  // Retry up to 8 times — Render free tier takes ~30-60 s to wake from sleep.
+  const delays = [3, 5, 8, 12, 18, 25, 35, 50]; // seconds between attempts
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    if (attempt > 0) {
+      const wait = delays[attempt - 1];
+      console.log(`[auth] Retrying in ${wait}s (attempt ${attempt + 1}/${delays.length + 1})… server may be waking up.`);
+      await sleep(wait * 1000);
+    }
+    try {
+      console.log(`[auth] Logging in as ${EMAIL}…`);
+      const res = await request(API_BASE, '/api/auth/login', 'POST', { email: EMAIL, password: PASSWORD });
+      if (res.status === 200 && res.body?.token) {
+        authToken = res.body.token;
+        console.log('[auth] Login successful.');
+        return true;
+      }
+      if (res.status === 503 || res.status === 502 || res.status === 504) {
+        console.log(`[auth] Server returned ${res.status} — still waking up, will retry…`);
+        continue;
+      }
+      // Hard failure (401 wrong password, 400 bad request, etc.) — don't retry
+      console.error('[auth] Login failed:', res.body?.error || res.status);
+      return false;
+    } catch (err) {
+      console.log(`[auth] Connection error: ${err.message} — will retry…`);
+    }
   }
-  console.error('[auth] Login failed:', res.body?.error || res.status);
+  console.error('[auth] Could not reach the server after multiple attempts. Check your internet or try again later.');
   return false;
 }
 

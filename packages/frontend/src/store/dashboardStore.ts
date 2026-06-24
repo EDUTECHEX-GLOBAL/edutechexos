@@ -317,19 +317,18 @@ export const useDashboardStore = create<DashboardState>()(
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...message, channelId }),
         })
-          .then((res) => {
-            // A failed POST (e.g. 413 payload too large for a big base64 file/video) means
-            // the message was never persisted and other users will never receive it.
-            // Warn the sender instead of silently showing it only to themselves.
+          .then(async (res) => {
             if (!res.ok) {
               const m = message as { files?: unknown[]; videoUrl?: string; audioUrl?: string };
               const hasMedia = m.files?.length || m.videoUrl || m.audioUrl;
               if (hasMedia) {
-                const why =
-                  res.status === 413
-                    ? 'media is too large — please set up Cloudinary upload preset'
-                    : 'could not send media to server (others won\'t see it)';
-                import('sonner').then(({ toast }) => toast.error(`Media failed: ${why}.`)).catch(() => {});
+                let why = `server error ${res.status}`;
+                try {
+                  const body = await res.clone().json();
+                  if (body?.error) why = body.error;
+                } catch { /* non-JSON body */ }
+                if (res.status === 413) why = 'file too large — set up Cloudinary in Vercel settings';
+                import('sonner').then(({ toast }) => toast.error(`Media failed: ${why}`)).catch(() => {});
               }
             }
           })
