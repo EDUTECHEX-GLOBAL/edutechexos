@@ -161,32 +161,40 @@ export default function LoginForm({
     await new Promise((r) => setTimeout(r, 700));
 
     const emailClean = data.email.trim().toLowerCase();
+    const delays = [3000, 6000, 12000];
 
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailClean, password: data.password }),
-      });
+    for (let attempt = 0; attempt <= delays.length; attempt++) {
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailClean, password: data.password }),
+        });
 
-      const result = await res.json();
+        const result = await res.json();
 
-      if (!result.success) {
-        setIsLoading(false);
-        if (result.error === 'pending') {
-          setError('password', { message: 'Your request is waiting for admin approval.' });
-        } else if (result.error === 'rejected') {
-          setError('password', { message: 'Your access request was declined. Contact admin.' });
-        } else {
-          setError('password', { message: result.message ?? 'Invalid credentials.' });
+        if (!result.success) {
+          setIsLoading(false);
+          if (result.error === 'pending') {
+            setError('password', { message: 'Your request is waiting for admin approval.' });
+          } else if (result.error === 'rejected') {
+            setError('password', { message: 'Your access request was declined. Contact admin.' });
+          } else {
+            setError('password', { message: result.message ?? 'Invalid credentials.' });
+          }
+          return;
         }
-        return;
-      }
 
-      await finishLogin(result.user, result.token);
-    } catch {
-      setIsLoading(false);
-      setError('password', { message: 'Service temporarily unavailable, please try again later.' });
+        await finishLogin(result.user, result.token);
+        return;
+      } catch {
+        if (attempt < delays.length) {
+          await new Promise((r) => setTimeout(r, delays[attempt]));
+        } else {
+          setIsLoading(false);
+          setError('password', { message: 'Server is waking up — please try again in a moment.' });
+        }
+      }
     }
   };
 
