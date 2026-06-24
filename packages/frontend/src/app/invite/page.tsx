@@ -104,18 +104,26 @@ function InviteContent() {
 
   const validate = useCallback(async () => {
     if (!token) { setPhase('invalid'); return; }
-    try {
-      const res  = await fetch(`${API_BASE}/api/invite/validate?token=${encodeURIComponent(token)}`);
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.error?.includes('already been used')) { setPhase('used'); return; }
-        if (data.error?.includes('expired'))           { setPhase('expired'); return; }
-        setErrMsg(data.error ?? 'Invalid invite link.'); setPhase('invalid'); return;
+    const delays = [3000, 6000, 10000, 15000];
+    for (let attempt = 0; attempt <= delays.length; attempt++) {
+      try {
+        const res  = await fetch(`${API_BASE}/api/invite/validate?token=${encodeURIComponent(token)}`);
+        const data = await res.json();
+        if (!res.ok) {
+          if (data.error?.includes('already been used')) { setPhase('used'); return; }
+          if (data.error?.includes('expired'))           { setPhase('expired'); return; }
+          setErrMsg(data.error ?? 'Invalid invite link.'); setPhase('invalid'); return;
+        }
+        setInvite(data);
+        setPhase('valid');
+        return;
+      } catch {
+        if (attempt < delays.length) {
+          await new Promise(r => setTimeout(r, delays[attempt]));
+        } else {
+          setErrMsg('Could not reach server. Check your connection and try refreshing.'); setPhase('invalid');
+        }
       }
-      setInvite(data);
-      setPhase('valid');
-    } catch {
-      setErrMsg('Could not reach server. Check your connection.'); setPhase('invalid');
     }
   }, [token]);
 
