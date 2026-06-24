@@ -24,7 +24,7 @@ router.use('/api/keys', globalLimiter, require('./keysRoutes'));
 router.use('/api/leaves', globalLimiter, require('./leaveRoutes'));
 router.use('/api/access-requests', globalLimiter, require('./accessRequestRoutes'));
 router.use('/api/admin', globalLimiter, require('./adminRoutes'));
-router.use('/api/invite', globalLimiter, require('./adminRoutes'));
+router.use('/api/invite', globalLimiter, require('./inviteRoutes'));
 router.use('/api/digest', globalLimiter, require('./digestRoutes'));
 
 router.use('/api', globalLimiter, require('./meetingRoutes'));

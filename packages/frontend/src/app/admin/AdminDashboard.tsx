@@ -656,18 +656,7 @@ export default function AdminPage() {
           setMemberWorkspaceChannels(data.member.id, newExtraChannels);
         const pwd = data.generatedPassword ?? '';
         toast.success(`${cleanName} added! Password: ${pwd} "" sent to their email.`, { duration: 8000 });
-        // Send welcome email with credentials
-        if (pwd) {
-          fetch(`${API_BASE}/api/email`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: [{ email: emailClean, name: cleanName }],
-              subject: `Welcome to ${process.env.NEXT_PUBLIC_APP_NAME || 'SkillNaav'}!`,
-              htmlContent: `<p>Hello ${cleanName},</p><p>Welcome to SkillNaav! Here are your login credentials:</p><p>Email: ${emailClean}<br/>Password: ${pwd}</p><p>You can log in at <a href="https://www.skillnaav.com/user/login">https://www.skillnaav.com/user/login</a>.</p><p>For more information, visit SkillNaav.</p><p>If you have any questions, contact skillnaav@gmail.com.</p>`
-            })
-          });
-        }
+        // Backend already sends the credentials email via /api/admin/generate-password
       } else {
         toast.error(data.error ?? 'Failed to add member on server.');
         return;

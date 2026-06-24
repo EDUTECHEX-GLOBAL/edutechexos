@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  X, LayoutGrid, Plus, Trash2, Hash,
+  X, Plus, Trash2, Hash,
   ArrowRight, ArrowLeft, CheckCircle2,
-  Circle, Clock, Sparkles, Maximize2,
+  Circle, Clock, CheckSquare, ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDashboardStore, KanbanTask } from '@/store/dashboardStore';
@@ -17,32 +17,17 @@ type Status = 'todo' | 'inprogress' | 'done';
 
 const COLUMNS: {
   id: Status; label: string;
-  accent: string; accentBg: string; accentBorder: string;
-  icon: React.ReactNode; emptyText: string; emptyHint: string;
+  accent: string; bg: string; border: string; icon: React.ReactNode;
+  emptyText: string;
 }[] = [
-  {
-    id: 'todo', label: 'To Do',
-    accent: '#4B5678', accentBg: 'rgba(75,86,120,0.10)', accentBorder: 'rgba(75,86,120,0.15)',
-    icon: <Circle size={13} strokeWidth={2.5} />,
-    emptyText: 'No tasks yet', emptyHint: 'Add your first task below',
-  },
-  {
-    id: 'inprogress', label: 'In Progress',
-    accent: '#F59E0B', accentBg: 'rgba(245,158,11,0.10)', accentBorder: 'rgba(245,158,11,0.15)',
-    icon: <Clock size={13} strokeWidth={2.5} />,
-    emptyText: 'Nothing in progress', emptyHint: 'Move a task here when you start',
-  },
-  {
-    id: 'done', label: 'Done',
-    accent: '#38D9A9', accentBg: 'rgba(56,217,169,0.10)', accentBorder: 'rgba(56,217,169,0.15)',
-    icon: <CheckCircle2 size={13} strokeWidth={2.5} />,
-    emptyText: 'Nothing completed yet', emptyHint: 'Finish a task to see it here',
-  },
+  { id: 'todo',       label: 'To Do',       accent: '#6366f1', bg: '#f5f3ff', border: '#e0e7ff', icon: <Circle size={14} strokeWidth={2} />,        emptyText: 'No tasks yet' },
+  { id: 'inprogress', label: 'In Progress',  accent: '#f59e0b', bg: '#fffbeb', border: '#fef3c7', icon: <Clock size={14} strokeWidth={2} />,          emptyText: 'Nothing in progress' },
+  { id: 'done',       label: 'Done',         accent: '#10b981', bg: '#ecfdf5', border: '#d1fae5', icon: <CheckCircle2 size={14} strokeWidth={2} />,   emptyText: 'Nothing completed yet' },
 ];
 
 const STATUS_ORDER: Status[] = ['todo', 'inprogress', 'done'];
-const NEXT_LABEL: Record<Status, string> = { todo: 'Start', inprogress: 'Mark done', done: '' };
-const PREV_LABEL: Record<Status, string> = { todo: '', inprogress: 'Back', done: 'Reopen' };
+const NEXT_LABEL: Record<Status, string> = { todo: 'Start',  inprogress: 'Complete', done: '' };
+const PREV_LABEL: Record<Status, string> = { todo: '',       inprogress: 'Back',     done: 'Reopen' };
 
 function getNextStatus(s: Status): Status | null {
   const i = STATUS_ORDER.indexOf(s);
@@ -55,224 +40,11 @@ function getPrevStatus(s: Status): Status | null {
 function getInitials(name: string): string {
   return name.trim().split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2);
 }
-
-const AVATAR_COLORS = ['#0AE8D0', '#7C5CFC', '#38D9A9', '#FF6B7F', '#F59E0B', '#A78BFA', '#FF4770'];
+const AVATAR_COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
 function stringToColor(s: string): string {
   let hash = 0;
   for (let i = 0; i < s.length; i++) hash = s.charCodeAt(i) + ((hash << 5) - hash);
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-function TaskDetailModal({ task, colAccent, onClose, onMoveForward, onMoveBack, onDelete, canMoveForward, canMoveBack }: {
-  task: KanbanTask; colAccent: string; onClose: () => void;
-  onMoveForward: () => void; onMoveBack: () => void; onDelete: () => void;
-  canMoveForward: boolean; canMoveBack: boolean;
-}) {
-  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' }[task.status];
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 backdrop-blur-sm p-4" onClick={onClose}>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.97 }}
-        transition={{ type: 'spring', damping: 28, stiffness: 380 }}
-        className="w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden bg-white border"
-        style={{ borderColor: `${colAccent}30` }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full" style={{ background: colAccent }} />
-            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: colAccent }}>{statusLabel}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={onDelete} className="flex h-7 w-7 items-center justify-center rounded-lg text-[#FF6B7F] hover:bg-[rgba(255,107,127,0.12)] transition-all"><Trash2 size={13} /></button>
-            <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"><X size={14} /></button>
-          </div>
-        </div>
-
-        <div className="p-5 space-y-4">
-          <p className="text-base font-bold text-slate-800 leading-relaxed">{task.text}</p>
-
-          <div className="flex items-center gap-3 flex-wrap">
-            {task.assignee && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100">
-                <span className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black text-white"
-                  style={{ background: colAccent }}>{task.assigneeInitials}</span>
-                <span className="text-xs font-semibold text-slate-600">{task.assignee}</span>
-              </div>
-            )}
-            {task.sourceChannel && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100">
-                <Hash size={11} className="text-slate-400" />
-                <span className="text-xs font-semibold text-slate-600">{task.sourceChannel}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-100">
-              <Clock size={11} className="text-slate-400" />
-              <span className="text-xs font-semibold text-slate-600">{new Date(task.createdAt).toLocaleDateString()}</span>
-            </div>
-          </div>
-
-          <div className="flex gap-2 pt-2">
-            {canMoveBack && (
-              <button onClick={() => { onMoveBack(); onClose(); }}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border transition-all text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50">
-                <ArrowLeft size={12} />{PREV_LABEL[task.status]}
-              </button>
-            )}
-            {canMoveForward && (
-              <button onClick={() => { onMoveForward(); onClose(); }}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all text-white"
-                style={{ background: colAccent }}>
-                {NEXT_LABEL[task.status]}<ArrowRight size={12} />
-              </button>
-            )}
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
-function TaskCard({
-  task, colAccent, colAccentBg,
-  onMoveForward, onMoveBack, onDelete,
-  canMoveForward, canMoveBack,
-}: {
-  task: KanbanTask; colAccent: string; colAccentBg: string;
-  onMoveForward: () => void; onMoveBack: () => void; onDelete: () => void;
-  canMoveForward: boolean; canMoveBack: boolean;
-}) {
-  const [hovered, setHovered] = useState(false);
-  const [expanded, setExpanded] = useState(false);
-  const avatarColor = stringToColor(task.assignee || task.assigneeInitials);
-  const isDone = task.status === 'done';
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 8, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95, y: -8 }}
-      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        background: hovered ? '#FFFFFF' : 'rgba(255, 255, 255, 0.85)',
-        borderLeft: `3px solid ${colAccent}`,
-        borderTop: `1px solid ${hovered ? `${colAccent}40` : 'rgba(99, 102, 241, 0.08)'}`,
-        borderRight: `1px solid ${hovered ? `${colAccent}40` : 'rgba(99, 102, 241, 0.08)'}`,
-        borderBottom: `1px solid ${hovered ? `${colAccent}40` : 'rgba(99, 102, 241, 0.08)'}`,
-        borderRadius: 12,
-        padding: '12px 12px 10px',
-        position: 'relative',
-        transition: 'all 0.2s',
-        boxShadow: hovered ? `0 6px 20px rgba(99, 102, 241, 0.05), 0 0 30px ${colAccent}08` : '0 1px 4px rgba(99, 102, 241, 0.02)',
-      }}
-    >
-      {hovered && (
-        <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4 }}>
-          <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-            type="button" onClick={() => setExpanded(true)} title="Expand task"
-            style={{ width: 24, height: 24, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(99, 102, 241, 0.08)', color: '#6366f1', border: '1px solid rgba(99, 102, 241, 0.15)', cursor: 'pointer' }}>
-            <Maximize2 size={10} strokeWidth={2.5} />
-          </motion.button>
-          <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-            type="button" onClick={onDelete} title="Delete task"
-            style={{ width: 24, height: 24, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(244, 63, 94, 0.08)', color: '#e11d48', border: '1px solid rgba(244, 63, 94, 0.15)', cursor: 'pointer' }}>
-            <Trash2 size={11} strokeWidth={2.5} />
-          </motion.button>
-        </div>
-      )}
-      <AnimatePresence>
-        {expanded && (
-          <TaskDetailModal
-            task={task} colAccent={colAccent}
-            onClose={() => setExpanded(false)}
-            onMoveForward={onMoveForward} onMoveBack={onMoveBack} onDelete={onDelete}
-            canMoveForward={canMoveForward} canMoveBack={canMoveBack}
-          />
-        )}
-      </AnimatePresence>
-
-      <p style={{
-        fontSize: 13, fontWeight: 600,
-        color: isDone ? 'var(--text-muted)' : 'var(--text-primary)',
-        lineHeight: 1.5, paddingRight: hovered ? 28 : 0,
-        textDecoration: isDone ? 'line-through' : 'none',
-        transition: 'color 0.15s',
-      }}>
-        {task.text}
-      </p>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10 }}>
-        {task.assigneeInitials && (
-          <span
-            title={task.assignee}
-            style={{
-              width: 22, height: 22, borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 8, fontWeight: 800, color: '#fff',
-              backgroundColor: avatarColor, flexShrink: 0,
-            }}
-          >
-            {task.assigneeInitials}
-          </span>
-        )}
-        {task.sourceChannel && (
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 3,
-            fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)',
-            background: 'rgba(99, 102, 241, 0.05)', borderRadius: 6, padding: '2px 7px',
-          }}>
-            <Hash size={8} strokeWidth={2.5} />
-            {task.sourceChannel}
-          </span>
-        )}
-
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-          {canMoveBack && hovered && (
-            <motion.button
-              initial={{ opacity: 0, x: -4 }}
-              animate={{ opacity: 1, x: 0 }}
-              type="button"
-              onClick={onMoveBack}
-              title={PREV_LABEL[task.status]}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 3,
-                fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)',
-                background: 'rgba(99, 102, 241, 0.04)', border: '1px solid rgba(99, 102, 241, 0.08)',
-                borderRadius: 6, padding: '3px 7px', cursor: 'pointer',
-              }}
-            >
-              <ArrowLeft size={9} strokeWidth={2.5} />
-              {PREV_LABEL[task.status]}
-            </motion.button>
-          )}
-          {canMoveForward && hovered && (
-            <motion.button
-              initial={{ opacity: 0, x: 4 }}
-              animate={{ opacity: 1, x: 0 }}
-              type="button"
-              onClick={onMoveForward}
-              title={NEXT_LABEL[task.status]}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 3,
-                fontSize: 9, fontWeight: 700, color: '#fff',
-                background: colAccent, border: `1px solid ${colAccent}`,
-                borderRadius: 6, padding: '3px 7px', cursor: 'pointer',
-                boxShadow: `0 2px 8px ${colAccent}30`,
-              }}
-            >
-              {NEXT_LABEL[task.status]}
-              <ArrowRight size={9} strokeWidth={2.5} />
-            </motion.button>
-          )}
-        </div>
-      </div>
-    </motion.div>
-  );
 }
 
 function AddTaskForm({ onAdd, accent }: { onAdd: (text: string, assignee: string) => void; accent: string }) {
@@ -283,89 +55,51 @@ function AddTaskForm({ onAdd, accent }: { onAdd: (text: string, assignee: string
   const submit = () => {
     if (!text.trim()) return;
     onAdd(text.trim(), assignee.trim());
-    setText('');
-    setAssignee('');
-    setOpen(false);
+    setText(''); setAssignee(''); setOpen(false);
   };
 
-  if (!open) {
-    return (
-      <motion.button
-        whileHover={{ scale: 1.01 }}
-        whileTap={{ scale: 0.98 }}
-        type="button"
-        onClick={() => setOpen(true)}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 6,
-          padding: '8px 10px', borderRadius: 10,
-          border: `1.5px dashed ${accent}30`,
-          background: `${accent}06`, color: accent,
-          fontSize: 12, fontWeight: 600, cursor: 'pointer',
-          transition: 'all 0.2s',
-        }}
-      >
-        <Plus size={13} strokeWidth={2.5} />
-        Add task
-      </motion.button>
-    );
-  }
+  if (!open) return (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: 6,
+        padding: '7px 10px', borderRadius: 8,
+        border: `1.5px dashed ${accent}40`,
+        background: 'transparent', color: accent,
+        fontSize: 12, fontWeight: 600, cursor: 'pointer',
+        transition: 'all 0.15s',
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = `${accent}08`; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+    >
+      <Plus size={13} strokeWidth={2.5} /> Add task
+    </button>
+  );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -4 }}
-      animate={{ opacity: 1, y: 0 }}
-      style={{
-        background: '#FFFFFF', border: '1px solid rgba(99, 102, 241, 0.08)',
-        borderRadius: 12, padding: 10, display: 'flex', flexDirection: 'column', gap: 6,
-      }}
+    <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+      style={{ background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 10, padding: 10, display: 'flex', flexDirection: 'column', gap: 6, boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}
     >
       <textarea
-        autoFocus
-        value={text}
-        onChange={e => setText(e.target.value)}
+        autoFocus value={text} onChange={e => setText(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } if (e.key === 'Escape') setOpen(false); }}
         placeholder="What needs to be done?"
         rows={2}
-        style={{
-          width: '100%', resize: 'none', outline: 'none', border: 'none',
-          fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.5,
-          background: 'transparent', fontFamily: 'inherit',
-        }}
+        style={{ width: '100%', resize: 'none', outline: 'none', border: 'none', fontSize: 13, fontWeight: 500, color: '#111', lineHeight: 1.5, background: 'transparent', fontFamily: 'inherit' }}
       />
       <input
-        type="text"
-        value={assignee}
-        onChange={e => setAssignee(e.target.value)}
+        type="text" value={assignee} onChange={e => setAssignee(e.target.value)}
         placeholder="Assignee (optional)"
-        style={{
-          outline: 'none', border: '1px solid rgba(99, 102, 241, 0.08)', borderRadius: 8,
-          padding: '5px 8px', fontSize: 11, color: 'var(--text-secondary)',
-          background: 'rgba(99, 102, 241, 0.02)', fontFamily: 'inherit',
-        }}
+        style={{ outline: 'none', border: '1px solid #e5e7eb', borderRadius: 7, padding: '5px 8px', fontSize: 11, color: '#555', background: '#fafafa', fontFamily: 'inherit' }}
       />
       <div style={{ display: 'flex', gap: 6 }}>
-        <button
-          type="button"
-          onClick={submit}
-          disabled={!text.trim()}
-          style={{
-            flex: 1, padding: '6px 0', borderRadius: 8, border: 'none',
-            background: text.trim() ? accent : 'rgba(99, 102, 241, 0.08)',
-            color: text.trim() ? '#FFFFFF' : 'var(--text-muted)',
-            fontSize: 11, fontWeight: 700, cursor: text.trim() ? 'pointer' : 'not-allowed',
-            transition: 'all 0.15s',
-          }}
-        >
-          Add
+        <button type="button" onClick={submit} disabled={!text.trim()}
+          style={{ flex: 1, padding: '6px 0', borderRadius: 7, border: 'none', background: text.trim() ? accent : '#f3f4f6', color: text.trim() ? '#fff' : '#9ca3af', fontSize: 11, fontWeight: 700, cursor: text.trim() ? 'pointer' : 'not-allowed', transition: 'all 0.15s' }}>
+          Add Task
         </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          style={{
-            padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(99, 102, 241, 0.08)',
-            background: 'transparent', color: 'var(--text-muted)', fontSize: 11, fontWeight: 600, cursor: 'pointer',
-          }}
-        >
+        <button type="button" onClick={() => setOpen(false)}
+          style={{ padding: '6px 12px', borderRadius: 7, border: '1px solid #e5e7eb', background: 'transparent', color: '#6b7280', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
           Cancel
         </button>
       </div>
@@ -373,23 +107,161 @@ function AddTaskForm({ onAdd, accent }: { onAdd: (text: string, assignee: string
   );
 }
 
+function TaskCard({ task, colAccent, onMoveForward, onMoveBack, onDelete, canMoveForward, canMoveBack }: {
+  task: KanbanTask; colAccent: string;
+  onMoveForward: () => void; onMoveBack: () => void; onDelete: () => void;
+  canMoveForward: boolean; canMoveBack: boolean;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const avatarColor = stringToColor(task.assignee || task.assigneeInitials);
+  const isDone = task.status === 'done';
+
+  return (
+    <>
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+        onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+        onClick={() => setExpanded(true)}
+        style={{
+          background: '#fff',
+          border: `1px solid ${hovered ? `${colAccent}30` : '#f0f0f0'}`,
+          borderLeft: `3px solid ${colAccent}`,
+          borderRadius: 10, padding: '11px 12px 10px',
+          cursor: 'pointer', transition: 'all 0.15s',
+          boxShadow: hovered ? `0 4px 16px rgba(0,0,0,0.08)` : '0 1px 3px rgba(0,0,0,0.04)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: isDone ? '#9ca3af' : '#111', lineHeight: 1.5, textDecoration: isDone ? 'line-through' : 'none', flex: 1 }}>
+            {task.text}
+          </p>
+          {hovered && (
+            <button type="button" onClick={e => { e.stopPropagation(); onDelete(); }}
+              style={{ width: 22, height: 22, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fef2f2', color: '#ef4444', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
+              <Trash2 size={11} strokeWidth={2.5} />
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 8, flexWrap: 'wrap' }}>
+          {task.assigneeInitials && (
+            <span title={task.assignee} style={{ width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 800, color: '#fff', background: avatarColor, flexShrink: 0 }}>
+              {task.assigneeInitials}
+            </span>
+          )}
+          {task.sourceChannel && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 10, fontWeight: 600, color: '#6b7280', background: '#f9fafb', borderRadius: 5, padding: '2px 6px', border: '1px solid #f0f0f0' }}>
+              <Hash size={8} strokeWidth={2.5} />{task.sourceChannel}
+            </span>
+          )}
+          <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+            {canMoveBack && hovered && (
+              <button type="button" onClick={e => { e.stopPropagation(); onMoveBack(); }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 9, fontWeight: 700, color: '#6b7280', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 5, padding: '2px 6px', cursor: 'pointer' }}
+                title={PREV_LABEL[task.status]}
+              >
+                <ArrowLeft size={8} strokeWidth={2.5} />{PREV_LABEL[task.status]}
+              </button>
+            )}
+            {canMoveForward && hovered && (
+              <button type="button" onClick={e => { e.stopPropagation(); onMoveForward(); }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 9, fontWeight: 700, color: '#fff', background: colAccent, border: 'none', borderRadius: 5, padding: '2px 6px', cursor: 'pointer' }}
+                title={NEXT_LABEL[task.status]}
+              >
+                {NEXT_LABEL[task.status]}<ArrowRight size={8} strokeWidth={2.5} />
+              </button>
+            )}
+          </span>
+        </div>
+      </motion.div>
+
+      <AnimatePresence>
+        {expanded && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4" onClick={() => setExpanded(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+              onClick={e => e.stopPropagation()}
+              style={{ width: '100%', maxWidth: 440, background: '#fff', borderRadius: 16, boxShadow: '0 24px 64px rgba(0,0,0,0.12)', border: '1px solid #f0f0f0', overflow: 'hidden' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #f3f4f6', background: `${colAccent}08` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: colAccent }} />
+                  <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: colAccent }}>
+                    {{ todo: 'To Do', inprogress: 'In Progress', done: 'Done' }[task.status]}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={onDelete} style={{ width: 28, height: 28, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fef2f2', color: '#ef4444', border: 'none', cursor: 'pointer' }}>
+                    <Trash2 size={13} strokeWidth={2} />
+                  </button>
+                  <button onClick={() => setExpanded(false)} style={{ width: 28, height: 28, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb', color: '#6b7280', border: 'none', cursor: 'pointer' }}>
+                    <X size={14} strokeWidth={2} />
+                  </button>
+                </div>
+              </div>
+              <div style={{ padding: '18px 18px 16px' }}>
+                <p style={{ fontSize: 15, fontWeight: 700, color: '#111', lineHeight: 1.5, marginBottom: 14 }}>{task.text}</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                  {task.assignee && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 8, background: '#f9fafb', border: '1px solid #f0f0f0' }}>
+                      <span style={{ width: 18, height: 18, borderRadius: '50%', background: colAccent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 800, color: '#fff' }}>{task.assigneeInitials}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{task.assignee}</span>
+                    </div>
+                  )}
+                  {task.sourceChannel && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: '#f9fafb', border: '1px solid #f0f0f0' }}>
+                      <Hash size={11} color="#9ca3af" />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{task.sourceChannel}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: '#f9fafb', border: '1px solid #f0f0f0' }}>
+                    <Clock size={11} color="#9ca3af" />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{new Date(task.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {canMoveBack && (
+                    <button onClick={() => { onMoveBack(); setExpanded(false); }}
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 0', borderRadius: 9, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#374151', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                      <ArrowLeft size={13} />{PREV_LABEL[task.status]}
+                    </button>
+                  )}
+                  {canMoveForward && (
+                    <button onClick={() => { onMoveForward(); setExpanded(false); }}
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 0', borderRadius: 9, border: 'none', background: colAccent, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                      {NEXT_LABEL[task.status]}<ArrowRight size={13} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
 export default function KanbanBoard({ onClose }: KanbanBoardProps) {
-  const allKanbanTasks = useDashboardStore((s) => s.kanbanTasks);
-  const addKanbanTask = useDashboardStore((s) => s.addKanbanTask);
+  const allKanbanTasks   = useDashboardStore((s) => s.kanbanTasks);
+  const addKanbanTask    = useDashboardStore((s) => s.addKanbanTask);
   const updateKanbanTaskStatus = useDashboardStore((s) => s.updateKanbanTaskStatus);
   const deleteKanbanTask = useDashboardStore((s) => s.deleteKanbanTask);
-  const activeChannel = useDashboardStore((s) => s.activeChannel);
-  const channels = useDashboardStore((s) => s.channels);
+  const activeChannel    = useDashboardStore((s) => s.activeChannel);
+  const channels         = useDashboardStore((s) => s.channels);
 
   const [currentUserEmail, setCurrentUserEmail] = useState('');
-  const [currentUserName, setCurrentUserName] = useState('');
+  const [currentUserName,  setCurrentUserName]  = useState('');
   useEffect(() => {
     try {
       const raw = localStorage.getItem('edutechex_token');
       if (raw) {
         const { user } = JSON.parse(raw);
         setCurrentUserEmail((user?.email ?? '').toLowerCase());
-        setCurrentUserName((user?.name ?? '').toLowerCase());
+        setCurrentUserName((user?.name  ?? '').toLowerCase());
       }
     } catch { /* ignore */ }
   }, []);
@@ -401,182 +273,103 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
   });
 
   const tasksByStatus = (status: Status) => kanbanTasks.filter((t) => t.status === status);
-  const totalTasks = kanbanTasks.length;
-  const doneTasks = tasksByStatus('done').length;
-  const progressPct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+  const totalTasks    = kanbanTasks.length;
+  const doneTasks     = tasksByStatus('done').length;
+  const progressPct   = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
   const handleAddTask = (colId: Status) => (text: string, assignee: string) => {
     const name = assignee || currentUserName || 'Unassigned';
-    addKanbanTask({
-      text,
-      assignee: name,
-      assigneeInitials: getInitials(name),
-      assigneeEmail: !assignee ? currentUserEmail || undefined : undefined,
-      sourceChannel: channelName,
-      status: colId,
-    });
+    addKanbanTask({ text, assignee: name, assigneeInitials: getInitials(name), assigneeEmail: !assignee ? currentUserEmail || undefined : undefined, sourceChannel: channelName, status: colId });
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-      <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        style={{
-          flexShrink: 0,
-          padding: '16px 18px 14px',
-          borderBottom: '1px solid rgba(99, 102, 241, 0.08)',
-        }}
-      >
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: '#f8f9fb', borderRadius: 16, overflow: 'hidden' }}>
+
+      {/* ── Header ── */}
+      <div style={{ flexShrink: 0, padding: '16px 20px 14px', background: '#fff', borderBottom: '1px solid #f0f0f0' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 34, height: 34, borderRadius: 10,
-              background: 'rgba(99, 102, 241, 0.08)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <LayoutGrid size={15} color="#6366f1" strokeWidth={2.5} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(99,102,241,0.25)' }}>
+              <CheckSquare size={16} color="#fff" strokeWidth={2.2} />
             </div>
             <div>
-              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 1 }}>
-                Task Board
-              </p>
-              <p style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
-                My Tasks
-              </p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: '#111', margin: 0, lineHeight: 1.2 }}>My Tasks</p>
+              <p style={{ fontSize: 11, color: '#9ca3af', fontWeight: 500, margin: 0 }}>{totalTasks} task{totalTasks !== 1 ? 's' : ''} · {doneTasks} done</p>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{
-              fontSize: 10, fontWeight: 700, color: 'var(--text-muted)',
-              background: 'rgba(99, 102, 241, 0.05)', borderRadius: 20,
-              padding: '3px 10px', border: '1px solid rgba(99, 102, 241, 0.08)',
-            }}>
-              {doneTasks}/{totalTasks} done
-            </span>
-          </div>
+          <button onClick={onClose}
+            style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6', border: 'none', cursor: 'pointer', color: '#6b7280' }}>
+            <X size={15} strokeWidth={2.2} />
+          </button>
         </div>
 
+        {/* Progress bar */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>Overall progress</span>
-            <span style={{ fontSize: 10, fontWeight: 800, color: progressPct === 100 ? '#38D9A9' : 'var(--text-muted)' }}>
-              {progressPct}%
-            </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+            <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Overall progress</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: progressPct === 100 ? '#10b981' : '#6366f1' }}>{progressPct}%</span>
           </div>
-          <div style={{ height: 4, background: 'rgba(99, 102, 241, 0.06)', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ height: 5, background: '#f3f4f6', borderRadius: 99, overflow: 'hidden' }}>
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${progressPct}%` }}
-              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              style={{
-                height: '100%', borderRadius: 10,
-                background: progressPct === 100
-                  ? 'linear-gradient(90deg, #38D9A9, #6366f1)'
-                  : 'linear-gradient(90deg, #6366f1, #7C5CFC)',
-                boxShadow: '0 0 12px rgba(99,102,241,0.15)',
-              }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              style={{ height: '100%', borderRadius: 99, background: progressPct === 100 ? 'linear-gradient(90deg,#10b981,#6366f1)' : 'linear-gradient(90deg,#6366f1,#8b5cf6)', boxShadow: '0 0 8px rgba(99,102,241,0.2)' }}
             />
           </div>
         </div>
-      </motion.div>
+      </div>
 
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: 12, padding: 16, overflowX: 'auto' }}>
+      {/* ── Columns ── */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: 12, padding: '14px 14px 14px', overflowX: 'auto' }}>
         <AnimatePresence>
           {COLUMNS.map((col, colIdx) => {
             const tasks = tasksByStatus(col.id);
             return (
               <motion.div
                 key={col.id}
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: colIdx * 0.08, ease: [0.22, 1, 0.36, 1] }}
-                style={{
-                  width: 272, flexShrink: 0, display: 'flex', flexDirection: 'column',
-                  background: 'rgba(255, 255, 255, 0.40)',
-                  backdropFilter: 'blur(12px)',
-                  borderRadius: 14,
-                  border: `1px solid ${col.accentBorder}`,
-                  overflow: 'hidden',
-                }}
+                transition={{ duration: 0.3, delay: colIdx * 0.07 }}
+                style={{ width: 265, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRadius: 12, background: '#fff', border: '1px solid #f0f0f0', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
               >
-                <div style={{
-                  padding: '11px 14px 10px',
-                  borderBottom: `1px solid ${col.accentBorder}`,
-                  background: col.accentBg,
-                  display: 'flex', alignItems: 'center', gap: 8,
-                }}>
-                  <span style={{ color: col.accent, display: 'flex', alignItems: 'center' }}>
-                    {col.icon}
-                  </span>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', flex: 1 }}>
-                    {col.label}
-                  </span>
-                  <span style={{
-                    fontSize: 10, fontWeight: 800,
-                    background: col.accent, color: '#fff',
-                    minWidth: 20, height: 20, borderRadius: 10,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: '0 6px',
-                  }}>
+                {/* Column header */}
+                <div style={{ padding: '10px 12px 9px', background: col.bg, borderBottom: `1px solid ${col.border}`, display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+                  <span style={{ color: col.accent }}>{col.icon}</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: '#111', flex: 1 }}>{col.label}</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, background: col.accent, color: '#fff', minWidth: 20, height: 20, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' }}>
                     {tasks.length}
                   </span>
                 </div>
 
-                <div style={{
-                  flex: 1, overflowY: 'auto', padding: '10px 10px 6px',
-                  display: 'flex', flexDirection: 'column', gap: 8,
-                }}>
-                  {tasks.length === 0 ? (
-                    <div style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      padding: '28px 12px', borderRadius: 10,
-                      border: `1.5px dashed ${col.accent}20`,
-                      background: `${col.accent}04`,
-                      textAlign: 'center', gap: 4,
-                    }}>
-                      <span style={{ fontSize: 20, opacity: 0.3 }}>
-                        {col.id === 'todo' ? '📋' : col.id === 'inprogress' ? '⏳' : '✅'}
-                      </span>
-                      <p style={{ fontSize: 11, fontWeight: 700, color: '#4B5678', marginTop: 4 }}>
-                        {col.emptyText}
-                      </p>
-                      <p style={{ fontSize: 10, color: '#4B5678' }}>
-                        {col.emptyHint}
-                      </p>
-                    </div>
-                  ) : (
-                    <AnimatePresence>
-                      {tasks.map((task) => (
-                        <TaskCard
-                          key={task.id}
-                          task={task}
-                          colAccent={col.accent}
-                          colAccentBg={col.accentBg}
-                          canMoveForward={!!getNextStatus(task.status)}
-                          canMoveBack={!!getPrevStatus(task.status)}
-                          onMoveForward={() => {
-                            const next = getNextStatus(task.status);
-                            if (next) updateKanbanTaskStatus(task.id, next);
-                          }}
-                          onMoveBack={() => {
-                            const prev = getPrevStatus(task.status);
-                            if (prev) updateKanbanTaskStatus(task.id, prev);
-                          }}
-                          onDelete={() => deleteKanbanTask(task.id)}
-                        />
-                      ))}
-                    </AnimatePresence>
-                  )}
+                {/* Task list */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '8px 8px 4px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <AnimatePresence mode="popLayout">
+                    {tasks.length === 0 && (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 12px', textAlign: 'center' }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 10, background: col.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10, color: col.accent }}>
+                          {col.icon}
+                        </div>
+                        <p style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', margin: 0 }}>{col.emptyText}</p>
+                      </motion.div>
+                    )}
+                    {tasks.map((task) => (
+                      <TaskCard
+                        key={task.id} task={task} colAccent={col.accent}
+                        canMoveForward={!!getNextStatus(task.status)}
+                        canMoveBack={!!getPrevStatus(task.status)}
+                        onMoveForward={() => { const n = getNextStatus(task.status); if (n) updateKanbanTaskStatus(task.id, n); }}
+                        onMoveBack={() => { const p = getPrevStatus(task.status); if (p) updateKanbanTaskStatus(task.id, p); }}
+                        onDelete={() => deleteKanbanTask(task.id)}
+                      />
+                    ))}
+                  </AnimatePresence>
                 </div>
 
-                <div style={{
-                  padding: '6px 10px 10px',
-                  borderTop: `1px solid ${col.accentBorder}`,
-                  background: col.accentBg,
-                }}>
-                  <AddTaskForm accent={col.accent} onAdd={handleAddTask(col.id)} />
+                {/* Add task */}
+                <div style={{ padding: '6px 8px 8px', flexShrink: 0 }}>
+                  <AddTaskForm onAdd={handleAddTask(col.id)} accent={col.accent} />
                 </div>
               </motion.div>
             );

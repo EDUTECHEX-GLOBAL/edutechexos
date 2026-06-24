@@ -415,6 +415,7 @@ export default function EduTechExOSDashboard() {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('aw_banner_dismissed') === '1';
   });
+  const [showSetupBanner, setShowSetupBanner] = useState(false);
   const [meetMenuOpen, setMeetMenuOpen] = useState(false);
   const [meetInputMenuOpen, setMeetInputMenuOpen] = useState(false);
   const meetInputMenuRef = useRef<HTMLDivElement>(null);
@@ -1341,7 +1342,9 @@ export default function EduTechExOSDashboard() {
     }
     setPwLoading(true);
     try {
-      const result = await changePassword(currentUser.email, pwCurrent, pwNew);
+      const rawToken = localStorage.getItem('edutechex_token');
+      const jwtToken = rawToken ? JSON.parse(rawToken).token : undefined;
+      const result = await changePassword(currentUser.email, pwCurrent, pwNew, jwtToken);
       if (result.success) {
         toast.success('Password changed successfully!');
         setPwCurrent('');
@@ -2526,7 +2529,7 @@ export default function EduTechExOSDashboard() {
           )}
 
           {/* ── Desktop Tracking Setup Banner ─────────────── */}
-          {awStatus !== 'connected' && !awBannerDismissed && (
+          {(showSetupBanner || (awStatus !== 'connected' && !awBannerDismissed)) && (
             <div style={{ margin: '14px 8px 8px', borderRadius: 14, background: '#1A1F35', border: '1.5px solid rgba(99,102,241,0.35)', overflow: 'hidden' }}>
 
               {/* Header */}
@@ -2537,7 +2540,7 @@ export default function EduTechExOSDashboard() {
                     Desktop Tracking Not Active
                   </span>
                   <button
-                    onClick={() => { setAwBannerDismissed(true); localStorage.setItem('aw_banner_dismissed', '1'); }}
+                    onClick={() => { setAwBannerDismissed(true); localStorage.setItem('aw_banner_dismissed', '1'); setShowSetupBanner(false); }}
                     title="Dismiss setup banner"
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(165,180,252,0.5)', fontSize: 16, lineHeight: 1, padding: '0 2px', flexShrink: 0 }}
                   >×</button>
@@ -2633,16 +2636,6 @@ export default function EduTechExOSDashboard() {
         </div>
 
           {/* ── Restore banner link (shown when banner is dismissed) ── */}
-          {awStatus !== 'connected' && awBannerDismissed && (
-            <div style={{ margin: '8px 8px 4px', textAlign: 'center' }}>
-              <button
-                onClick={() => { setAwBannerDismissed(false); localStorage.removeItem('aw_banner_dismissed'); }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10.5, color: 'rgba(165,180,252,0.55)', textDecoration: 'underline', padding: '4px 8px' }}
-              >
-                💻 Set up desktop tracking
-              </button>
-            </div>
-          )}
 
         {/* ── Footer / User panel ─────────────────────────── */}
         <div className="sidebar-footer">
@@ -2661,21 +2654,32 @@ export default function EduTechExOSDashboard() {
               />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12.5px] font-semibold leading-tight text-white">
+              <p className="truncate text-[12.5px] font-semibold leading-tight" style={{ color: '#000000' }}>
                 {currentUser?.name ?? 'Guest'}
               </p>
-              <p className="text-[10.5px]" style={{ color: 'rgba(255,255,255,0.42)' }}>
+              <p className="text-[10.5px]" style={{ color: '#555555' }}>
                 {currentUser?.role ?? 'Viewer'}
               </p>
             </div>
             <div className="flex items-center gap-0.5 shrink-0">
               <motion.button
                 whileTap={{ scale: 0.88 }}
+                title="Set up desktop tracking"
+                onClick={() => setShowSetupBanner((v) => !v)}
+                className="flex h-7 w-7 items-center justify-center rounded"
+                style={{ color: showSetupBanner ? '#6366f1' : '#000000' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.07)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+              >
+                <Monitor size={14} />
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.88 }}
                 title="Activity"
                 onClick={() => setActivityCalendarOpen(true)}
                 className="flex h-7 w-7 items-center justify-center rounded"
-                style={{ color: 'rgba(255,255,255,0.42)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+                style={{ color: '#000000' }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0,0,0,0.07)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
                 <CalendarDays size={14} />
@@ -2690,14 +2694,14 @@ export default function EduTechExOSDashboard() {
                   router.push('/sign-up-login-screen');
                 }}
                 className="flex h-7 w-7 items-center justify-center rounded"
-                style={{ color: 'rgba(255,255,255,0.42)' }}
+                style={{ color: '#000000' }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = 'rgba(239,68,68,0.14)';
-                  e.currentTarget.style.color = '#f87171';
+                  e.currentTarget.style.color = '#ef4444';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = 'rgba(255,255,255,0.42)';
+                  e.currentTarget.style.color = '#000000';
                 }}
               >
                 <LogOut size={14} />

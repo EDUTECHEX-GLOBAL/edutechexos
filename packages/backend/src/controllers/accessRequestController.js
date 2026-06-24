@@ -25,6 +25,19 @@ async function submitRequest(req, res) {
 
     const existing = await AccessRequest.findOne({ email: emailClean }).lean();
     if (existing) {
+      // Allow re-application if previously rejected
+      if (existing.status === 'rejected') {
+        await AccessRequest.updateOne(
+          { email: emailClean },
+          { $set: { name, role, status: 'pending', password: '' } }
+        );
+        return res.json({
+          success: true,
+          exists: false,
+          status: 'pending',
+          message: 'Your new request has been submitted for admin review.',
+        });
+      }
       return res.json({
         success: true,
         exists: true,
@@ -32,8 +45,6 @@ async function submitRequest(req, res) {
         message:
           existing.status === 'approved'
             ? 'Your access is approved. You can sign in now.'
-            : existing.status === 'rejected'
-            ? 'Your previous request was declined. Please contact admin.'
             : 'Your account is pending admin approval. Check your email for your temporary password.',
       });
     }

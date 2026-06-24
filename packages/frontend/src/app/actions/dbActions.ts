@@ -369,7 +369,8 @@ export async function getAllNotesAction() {
 export async function changePassword(
   email: string,
   currentPassword: string,
-  newPassword: string
+  newPassword: string,
+  token?: string
 ): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
     const API_URL =
@@ -378,7 +379,10 @@ export async function changePassword(
       'https://edutechexos-backend.onrender.com';
     const res = await fetch(`${API_URL}/api/auth/change-password`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({ email, currentPassword, newPassword }),
       cache: 'no-store',
     });
