@@ -165,14 +165,40 @@ function request(baseUrl, urlPath, method = 'GET', body = null, headers = {}) {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 async function login() {
-  console.log(`[auth] Logging in as ${EMAIL}…`);
-  const res = await request(API_BASE, '/api/auth/login', 'POST', { email: EMAIL, password: PASSWORD });
-  if (res.status === 200 && res.body?.token) {
-    authToken = res.body.token;
-    console.log('[auth] Login successful.');
-    return true;
+  const MAX_ATTEMPTS = 20;
+  const DELAYS = [5, 10, 15, 20, 25, 30]; // seconds; last value repeats
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    if (attempt === 1) console.log(`[auth] Logging in as ${EMAIL}…`);
+
+    let res;
+    try {
+      res = await request(API_BASE, '/api/auth/login', 'POST', { email: EMAIL, password: PASSWORD });
+    } catch (err) {
+      const delaySec = DELAYS[Math.min(attempt - 1, DELAYS.length - 1)];
+      console.warn(`[auth] Request error (attempt ${attempt}/${MAX_ATTEMPTS}): ${err.message} — retrying in ${delaySec}s…`);
+      await new Promise((r) => setTimeout(r, delaySec * 1000));
+      continue;
+    }
+
+    if (res.status === 200 && res.body?.token) {
+      authToken = res.body.token;
+      console.log('[auth] Login successful.');
+      return true;
+    }
+
+    if (res.status === 503 || res.status === 502) {
+      const delaySec = DELAYS[Math.min(attempt - 1, DELAYS.length - 1)];
+      console.warn(`[auth] Server returned ${res.status} — still waking up, will retry in ${delaySec}s (attempt ${attempt}/${MAX_ATTEMPTS})…`);
+      await new Promise((r) => setTimeout(r, delaySec * 1000));
+      continue;
+    }
+
+    console.error('[auth] Login failed:', res.body?.error || res.status);
+    return false;
   }
-  console.error('[auth] Login failed:', res.body?.error || res.status);
+
+  console.error(`[auth] Could not reach server after ${MAX_ATTEMPTS} attempts. Giving up.`);
   return false;
 }
 

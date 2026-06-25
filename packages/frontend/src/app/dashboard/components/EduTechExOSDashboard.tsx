@@ -1879,7 +1879,7 @@ export default function EduTechExOSDashboard() {
       initials: currentUser?.initials ?? 'Y',
       color: currentUserColor,
       timestamp: new Date().toISOString(),
-      text: `📹 **Meeting Started**\n\nClick the link below to join — everyone will enter the same room:\n${meetLink}`,
+      text: `📹 **Instant Meet Started**\n\n[Click here to join the meeting](${meetLink})\n\nEveryone who clicks this link will enter the same room.`,
     });
 
     // Notify ALL workspace members via notifications + real-time socket
@@ -2903,25 +2903,39 @@ export default function EduTechExOSDashboard() {
                 <ChevronDown size={14} />
               </button>
               {meetMenuOpen && (
-                <div className="absolute right-0 top-11 z-[300] w-56 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-2 shadow-xl">
-                  <p className="px-3 py-2 text-xs font-bold text-[#7C859E]">
-                    {meetingButtonState.message}
-                  </p>
+                <div className="absolute right-0 top-11 z-[300] w-60 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-2 shadow-xl">
                   <button
                     onClick={() => {
                       setMeetMenuOpen(false);
-                      if (meetingButtonState.link) {
-                        window.open(meetingButtonState.link, '_blank');
-                      } else {
-                        toast.info(meetingButtonState.message);
-                      }
+                      startNewMeeting();
                     }}
-                    disabled={!meetingButtonState.link}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-[rgba(62,74,137,0.08)] transition-colors group"
                   >
-                    <Video size={16} className="text-[#C4CAE0]" />
-                    Join meet
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-green-100 text-green-700 group-hover:bg-green-200 transition-colors">
+                      <Video size={15} />
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-[#1E2636]">Instant Meet</p>
+                      <p className="text-[11px] text-[#7C859E]">Generate link &amp; share in chat</p>
+                    </div>
                   </button>
+                  {meetingButtonState.link && (
+                    <button
+                      onClick={() => {
+                        setMeetMenuOpen(false);
+                        window.open(meetingButtonState.link!, '_blank');
+                      }}
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-[rgba(62,74,137,0.06)] transition-colors group mt-0.5"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 group-hover:bg-blue-200 transition-colors">
+                        <Video size={15} />
+                      </span>
+                      <div>
+                        <p className="text-sm font-bold text-[#4A5578]">Join Scheduled Meet</p>
+                        <p className="text-[11px] text-[#7C859E]">{meetingButtonState.message}</p>
+                      </div>
+                    </button>
+                  )}
                 </div>
               )}
             </div>

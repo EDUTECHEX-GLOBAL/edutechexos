@@ -8,6 +8,7 @@ const { githubReceiver, genericReceiver } = require('../controllers/webhookContr
 
 router.use('/api/auth', authLimiter, require('./authRoutes'));
 router.use('/api/messages', apiLimiter, require('./messageRoutes'));
+router.use('/api/files', globalLimiter, require('./fileRoutes'));
 router.use('/api/kanban', apiLimiter, require('./kanbanRoutes'));
 
 router.use('/api/members', globalLimiter, require('./memberRoutes'));

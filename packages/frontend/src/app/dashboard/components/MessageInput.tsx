@@ -15,8 +15,6 @@ import {
 } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { smartUpload } from '@/lib/uploadToFirebase';
-import { cloudinaryConfigured } from '@/lib/uploadToCloudinary';
-import { blobToDataUrl } from '@/lib/uploadToR2';
 import { getSocket } from '@/lib/socket';
 import { toast } from 'sonner';
 
@@ -580,11 +578,11 @@ export default function MessageInput({ channelId, channelName, replyToId }: Mess
         },
       });
 
-      // If Cloudinary/Firebase both failed, mediaUrl is a base64 data URL.
+      // If MongoDB upload failed, mediaUrl is a base64 data URL.
       // Warn the user — large base64 payloads may not reach others.
       if (mediaUrl.startsWith('data:')) {
         toast.warning(
-          'Cloud storage not reachable — voice note sent as inline data. Others may not see it. Ask admin to enable video/audio in the Cloudinary upload preset.',
+          'File server unreachable — media sent as inline data. Other users may not be able to view it.',
           { id: toastId, duration: 8000 }
         );
       }

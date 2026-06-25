@@ -1,6 +1,13 @@
 const mongoose = require('mongoose');
 const { encryptField, decryptField } = require('../services/encryptionService');
 
+// Defined as a separate Schema so Mongoose doesn't misread `type: String`
+// as a SchemaType declaration (the "type key" ambiguity).
+const FileAttachmentSchema = new mongoose.Schema(
+  { name: String, url: String, type: String },
+  { _id: false }
+);
+
 const MessageSchema = new mongoose.Schema(
   {
     clientId:    { type: String },
@@ -13,7 +20,7 @@ const MessageSchema = new mongoose.Schema(
     timestamp:   { type: Date, default: Date.now },
     audioUrl:    { type: String },
     videoUrl:    { type: String },
-    files:       [{ name: String, url: String, type: String }],
+    files:       { type: [FileAttachmentSchema], default: undefined },
     editedAt:    { type: Date },
     parentId:    { type: String },
     reactions:   { type: mongoose.Schema.Types.Mixed, default: {} },
