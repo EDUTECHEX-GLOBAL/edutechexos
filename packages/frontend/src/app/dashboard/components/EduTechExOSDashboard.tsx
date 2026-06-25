@@ -418,6 +418,8 @@ export default function EduTechExOSDashboard() {
   const [showSetupBanner, setShowSetupBanner] = useState(false);
   const [meetMenuOpen, setMeetMenuOpen] = useState(false);
   const [meetInputMenuOpen, setMeetInputMenuOpen] = useState(false);
+  const [shareMeetLinkOpen, setShareMeetLinkOpen] = useState(false);
+  const [shareMeetLinkValue, setShareMeetLinkValue] = useState('');
   const meetInputMenuRef = useRef<HTMLDivElement>(null);
   const [scheduleMeetOpen, setScheduleMeetOpen] = useState(false);
   const [meetTitle, setMeetTitle] = useState('');
@@ -1868,10 +1870,16 @@ export default function EduTechExOSDashboard() {
 
   function startNewMeeting() {
     if (!channel) return;
-    // Build a deterministic Jitsi room so every user who opens the link joins the SAME call.
-    // Format: edutechexos-<channel>-<timestamp> — unique per meeting session.
-    const roomSlug = `edutechexos-${channel.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}`;
-    const meetLink = `https://meet.jit.si/${roomSlug}`;
+    // Open Google Meet new meeting page — user gets a unique meeting URL there
+    window.open('https://meet.google.com/new', '_blank');
+    // Show the share-link dialog so the user can paste their Google Meet URL into chat
+    setShareMeetLinkValue('');
+    setShareMeetLinkOpen(true);
+  }
+
+  function shareInstantMeetLink() {
+    if (!channel || !shareMeetLinkValue.trim()) return;
+    const meetLink = shareMeetLinkValue.trim();
 
     addMessage(activeChannelId, {
       id: `meeting-started-${Date.now()}`,
@@ -1908,8 +1916,9 @@ export default function EduTechExOSDashboard() {
       starterColor: currentUserColor,
     });
 
-    window.open(meetLink, '_blank');
-    toast.success('Meeting started! All workspace members can join the same link.');
+    toast.success('Meeting link shared! All workspace members can join.');
+    setShareMeetLinkOpen(false);
+    setShareMeetLinkValue('');
   }
 
   if (!authChecked) {
@@ -6222,6 +6231,74 @@ export default function EduTechExOSDashboard() {
                   scrollToBottom();
                 }}
               />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Share Google Meet Link Modal ─────────────────────────────────────── */}
+      <AnimatePresence>
+        {shareMeetLinkOpen && (
+          <motion.div
+            key="share-meet-link"
+            {...BACKDROP}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(25,30,47,0.55)] p-4 backdrop-blur-sm"
+            onClick={() => setShareMeetLinkOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl bg-white dark:bg-[#1E2636] border border-[rgba(62,74,137,0.14)] shadow-2xl p-6"
+            >
+              {/* Header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                  <Video size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-[#1E2636] dark:text-white">Share Google Meet Link</p>
+                  <p className="text-xs text-[#7C859E]">Google Meet has opened in a new tab</p>
+                </div>
+              </div>
+
+              {/* Steps */}
+              <div className="mb-4 rounded-xl bg-blue-50 dark:bg-[rgba(62,74,137,0.12)] border border-blue-100 dark:border-[rgba(62,74,137,0.2)] p-3 space-y-1.5">
+                <p className="text-xs font-bold text-blue-700 dark:text-blue-400">How to share:</p>
+                <p className="text-xs text-[#4A5578] dark:text-[#9BA6D3]">1. Switch to the Google Meet tab that just opened</p>
+                <p className="text-xs text-[#4A5578] dark:text-[#9BA6D3]">2. Copy the meeting link from your browser&apos;s address bar</p>
+                <p className="text-xs text-[#4A5578] dark:text-[#9BA6D3]">3. Paste it below — it will be shared in the channel automatically</p>
+              </div>
+
+              {/* Input */}
+              <input
+                autoFocus
+                type="url"
+                value={shareMeetLinkValue}
+                onChange={(e) => setShareMeetLinkValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') shareInstantMeetLink(); }}
+                placeholder="https://meet.google.com/xxx-yyyy-zzz"
+                className="w-full rounded-xl border border-[rgba(62,74,137,0.2)] bg-[#FAF8F5] dark:bg-[#151B2B] px-4 py-2.5 text-sm text-[#1E2636] dark:text-white placeholder-[#C4CAE0] focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4"
+              />
+
+              {/* Buttons */}
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setShareMeetLinkOpen(false)}
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={shareInstantMeetLink}
+                  disabled={!shareMeetLinkValue.trim()}
+                  className="rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 px-5 py-2 text-sm font-black text-white transition-colors"
+                >
+                  Share in Channel
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
