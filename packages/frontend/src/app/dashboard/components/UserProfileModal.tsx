@@ -9,8 +9,9 @@ interface MemberProp {
   initials: string;
   email: string;
   role: string;
-  status: 'online' | 'away' | 'offline';
+  status: 'online' | 'away' | 'offline' | 'in-meeting';
   color: string;
+  onLeave?: boolean;
 }
 
 interface UserProfileModalProps {
@@ -18,9 +19,10 @@ interface UserProfileModalProps {
   onClose: () => void;
 }
 
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<string, { label: string; color: string; textColor: string }> = {
   online: { label: 'Online', color: 'bg-green-400', textColor: 'text-green-600' },
   away: { label: 'Away', color: 'bg-amber-400', textColor: 'text-amber-600' },
+  'in-meeting': { label: 'In Meeting', color: 'bg-red-400', textColor: 'text-red-600' },
   offline: { label: 'Offline', color: 'bg-slate-400', textColor: 'text-[#7C859E]' },
 };
 

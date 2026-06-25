@@ -102,8 +102,14 @@ export default function LeavePanel({ onClose }: { onClose: () => void }) {
     const handleLeaveUpdated = ({ email, status }: { email?: string; status?: LeaveStatus } = {}) => {
       if (myEmail && email && email.toLowerCase() !== myEmail) return;
       fetchLeaves();
-      if (status === 'approved') toast.success('Your leave request was approved.');
-      else if (status === 'rejected') toast.error('Your leave request was rejected.');
+      if (status === 'approved') {
+        toast.success('Your leave request was approved.');
+        // Broadcast so all other users see the leave badge immediately
+        socket.emit('leave_status_update', { email: myEmail, onLeave: true });
+      } else if (status === 'rejected') {
+        toast.error('Your leave request was rejected.');
+        socket.emit('leave_status_update', { email: myEmail, onLeave: false });
+      }
     };
     socket.on('leave_updated', handleLeaveUpdated);
     return () => { socket.off('leave_updated', handleLeaveUpdated); };
@@ -129,6 +135,13 @@ export default function LeavePanel({ onClose }: { onClose: () => void }) {
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
+
+      // For instant leave, broadcast leave indicator to all users immediately
+      if (leaveType === 'instant') {
+        let selfEmail = '';
+        try { selfEmail = (JSON.parse(localStorage.getItem('edutechex_token') ?? '').user?.email ?? '').toLowerCase(); } catch { /* */ }
+        if (selfEmail) getSocket().emit('leave_status_update', { email: selfEmail, onLeave: true });
+      }
 
       toast.success(leaveType === 'instant'
         ? 'Emergency leave submitted! Admin has been notified.'
@@ -245,7 +258,7 @@ export default function LeavePanel({ onClose }: { onClose: () => void }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 18 }}>
                   <div>
                     <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: 'rgba(90,95,128,0.55)', letterSpacing: '.14em', textTransform: 'uppercase', marginBottom: 6 }}>Date</label>
-                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                    <input type="date" value={startDate} min={today()} onChange={e => setStartDate(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', fontSize: 13, color: '#1A1B3A', background: '#FAFAFA', outline: 'none', boxSizing: 'border-box' }} />
                   </div>
                   <div>
@@ -264,12 +277,12 @@ export default function LeavePanel({ onClose }: { onClose: () => void }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 18 }}>
                   <div>
                     <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: 'rgba(90,95,128,0.55)', letterSpacing: '.14em', textTransform: 'uppercase', marginBottom: 6 }}>From</label>
-                    <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); if (endDate && endDate < e.target.value) setEndDate(e.target.value); }}
+                    <input type="date" value={startDate} min={today()} onChange={e => { setStartDate(e.target.value); if (endDate && endDate < e.target.value) setEndDate(e.target.value); }}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', fontSize: 13, color: '#1A1B3A', background: '#FAFAFA', outline: 'none', boxSizing: 'border-box' }} />
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, color: 'rgba(90,95,128,0.55)', letterSpacing: '.14em', textTransform: 'uppercase', marginBottom: 6 }}>To</label>
-                    <input type="date" value={endDate} min={startDate} onChange={e => setEndDate(e.target.value)}
+                    <input type="date" value={endDate} min={startDate || today()} onChange={e => setEndDate(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', fontSize: 13, color: '#1A1B3A', background: '#FAFAFA', outline: 'none', boxSizing: 'border-box' }} />
                   </div>
                 </div>

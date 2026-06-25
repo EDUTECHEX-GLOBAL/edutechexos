@@ -37,6 +37,7 @@ import WikiPanel from './WikiPanel';
 import KanbanBoard from './KanbanBoard';
 import AnalyticsPanel from './AnalyticsPanel';
 import BookmarksPanel from './BookmarksPanel';
+import NotepadPanel from './NotepadPanel';
 import UserAttendanceCalendar from './UserAttendanceCalendar';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -109,6 +110,7 @@ import {
   CalendarX,
   Activity,
   Lock,
+  StickyNote,
 } from 'lucide-react';
 
 type CurrentUser = {
@@ -123,6 +125,11 @@ type CurrentUser = {
 const DEFAULT_COMPANY_MEET_LINK = 'https://meet.google.com/uie-jxkt-vkx';
 const THURSDAY_AFTERNOON_MEET_LINK = 'https://meet.google.com/dss-wmvy-cuq';
 const FRIDAY_MEET_LINK = 'https://meet.google.com/eeq-maem-ztc';
+const GOOGLE_MEET_LINKS = [
+  { label: 'Main meet (Mon–Thu AM)', link: DEFAULT_COMPANY_MEET_LINK, days: 'Mon–Thu morning' },
+  { label: 'Thursday PM meet', link: THURSDAY_AFTERNOON_MEET_LINK, days: 'Thursday afternoon' },
+  { label: 'Friday meet', link: FRIDAY_MEET_LINK, days: 'Friday' },
+];
 const settingsKey = (email: string) => `edutechex_dashboard_settings_${email.toLowerCase()}`;
 const EMOJI_OPTIONS = [
   '😀',
@@ -204,7 +211,7 @@ type DashboardSettings = {
   // Profile
   displayName: string;
   avatarEmoji: string;
-  status: 'online' | 'away' | 'busy' | 'offline';
+  status: 'online' | 'away' | 'in-meeting' | 'offline';
   // Meeting
   meetLink: string;
   // Notifications
@@ -380,6 +387,13 @@ export default function EduTechExOSDashboard() {
     updateKanbanTaskStatus,
     activeThreadId,
     setActiveThread,
+    unreadCounts,
+    incrementUnread,
+    clearUnread,
+    updateMemberStatus,
+    updateMemberName,
+    updateMemberLeaveStatus,
+    resetUserState,
   } = useDashboardStore();
   const [dmToasts, setDmToasts] = useState<ToastData[]>([]);
   const [rightPanel, setRightPanel] = useState<'ai' | 'closed'>('closed');
@@ -416,6 +430,12 @@ export default function EduTechExOSDashboard() {
     return localStorage.getItem('aw_banner_dismissed') === '1';
   });
   const [showSetupBanner, setShowSetupBanner] = useState(false);
+  // ── Screen-time timer ────────────────────────────────────────────────────────
+  const [sessionSeconds, setSessionSeconds] = useState(0);
+  const screenTimeRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // ── Meeting quick-join dropdown ──────────────────────────────────────────────
+  const [quickJoinOpen, setQuickJoinOpen] = useState(false);
+  const quickJoinRef = useRef<HTMLDivElement>(null);
   const [meetMenuOpen, setMeetMenuOpen] = useState(false);
   const [meetInputMenuOpen, setMeetInputMenuOpen] = useState(false);
   const [shareMeetLinkOpen, setShareMeetLinkOpen] = useState(false);
@@ -580,6 +600,7 @@ export default function EduTechExOSDashboard() {
   const [kanbanOpen, setKanbanOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [bookmarksPanelOpen, setBookmarksPanelOpen] = useState(false);
+  const [notepadOpen, setNotepadOpen] = useState(false);
 
   const [integrationsOpen, setIntegrationsOpen] = useState(false);
   const [profileMember, setProfileMember] = useState<(typeof members)[0] | null>(null);
@@ -796,6 +817,10 @@ export default function EduTechExOSDashboard() {
       }
 
       addMessageFromSocket(channelId, displayMessage);
+      // Increment unread count for non-active channels
+      if (channelId !== useDashboardStore.getState().activeChannel && message.sender !== currentUserRef.current?.name) {
+        useDashboardStore.getState().incrementUnread(channelId);
+      }
       // Only notify for messages sent by someone else
       if (message.sender !== currentUserRef.current?.name) {
         if (settingsRef.current.soundNotifications) playNotificationSound();
@@ -878,6 +903,8 @@ export default function EduTechExOSDashboard() {
       const me = currentUserRef.current?.email?.toLowerCase();
       if (!me || me !== email.toLowerCase()) return; // not this user, ignore
       // Wipe session and redirect immediately
+      getSocket().emit('user_status_update', { email: me, status: 'offline' });
+      resetUserState();
       localStorage.removeItem('edutechex_token');
       // Show a brief toast then hard-redirect (toast lib may not render after push, so use replace)
       try {
@@ -989,6 +1016,34 @@ export default function EduTechExOSDashboard() {
     socket.on('meeting_started', handleMeetingStarted);
     socket.on('user_activity_update', handlePresenceUpdate);
 
+    // Real-time status & name updates from other users
+    const handleUserStatusUpdate = ({
+      email, status, name,
+    }: { email: string; status: string; name?: string }) => {
+      if (!email) return;
+      const validStatus = ['online', 'away', 'in-meeting', 'offline'].includes(status)
+        ? (status as import('@/store/dashboardStore').MemberStatus)
+        : 'online';
+      useDashboardStore.getState().updateMemberStatus(email, validStatus);
+      if (name) useDashboardStore.getState().updateMemberName(email, name);
+    };
+    socket.on('user_status_update', handleUserStatusUpdate);
+
+    // Increment unread count when a message arrives in a non-active channel
+    const handleUnreadIncrement = ({ channelId }: { channelId: string }) => {
+      if (channelId && channelId !== useDashboardStore.getState().activeChannel) {
+        useDashboardStore.getState().incrementUnread(channelId);
+      }
+    };
+    socket.on('unread_increment', handleUnreadIncrement);
+
+    // Real-time leave status from other users (when admin approves/rejects a leave)
+    const handleLeaveStatusUpdate = ({ email, onLeave }: { email: string; onLeave: boolean }) => {
+      if (!email) return;
+      useDashboardStore.getState().updateMemberLeaveStatus(email, onLeave);
+    };
+    socket.on('leave_status_update', handleLeaveStatusUpdate);
+
     return () => {
       socket.off('connect', handleReconnect);
       socket.off('new_message', handleNewMessage);
@@ -1005,6 +1060,9 @@ export default function EduTechExOSDashboard() {
       socket.off('mention_notification', handleMentionNotification);
       socket.off('meeting_started', handleMeetingStarted);
       socket.off('user_activity_update', handlePresenceUpdate);
+      socket.off('user_status_update', handleUserStatusUpdate);
+      socket.off('unread_increment', handleUnreadIncrement);
+      socket.off('leave_status_update', handleLeaveStatusUpdate);
       socket.emit('leave_channel', activeChannelId);
     };
   }, [activeChannelId, addMessageFromSocket, updateMessageFromSocket, deleteMessageFromSocket, currentUserEmail, addNotification]);
@@ -1016,6 +1074,59 @@ export default function EduTechExOSDashboard() {
     const interval = setInterval(() => loadLocalNotifications?.(currentUserEmail), 5000);
     return () => clearInterval(interval);
   }, [currentUserEmail, loadLocalNotifications]);
+
+  // ── Screen-time timer — pauses during lunch 12:45–13:15 IST ─────────────────
+  useEffect(() => {
+    if (!authChecked || !currentUserEmail) return;
+    const LUNCH_START_H = 12, LUNCH_START_M = 45;
+    const LUNCH_END_H   = 13, LUNCH_END_M   = 15;
+    const isLunch = () => {
+      const now = new Date();
+      const h = now.getHours(), m = now.getMinutes();
+      const inMins = h * 60 + m;
+      return inMins >= LUNCH_START_H * 60 + LUNCH_START_M &&
+             inMins <  LUNCH_END_H   * 60 + LUNCH_END_M;
+    };
+    screenTimeRef.current = setInterval(() => {
+      if (!isLunch()) setSessionSeconds((s) => s + 1);
+    }, 1000);
+    return () => {
+      if (screenTimeRef.current) clearInterval(screenTimeRef.current);
+    };
+  }, [authChecked, currentUserEmail]);
+
+  // Load approved leaves so members on leave show indicator
+  useEffect(() => {
+    if (!authChecked || !currentUserEmail) return;
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+    const today = new Date().toISOString().split('T')[0];
+    const authRaw = localStorage.getItem('edutechex_token');
+    const authToken = authRaw ? (() => { try { return JSON.parse(authRaw).token; } catch { return null; } })() : null;
+    fetch(`${API_BASE}/api/leaves?status=approved`, {
+      headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+    })
+      .then((r) => r.json())
+      .then((data: Array<{ email?: string; userEmail?: string; startDate?: string; endDate?: string; type?: string }>) => {
+        if (!Array.isArray(data)) return;
+        const onLeaveEmails = new Set<string>();
+        data.forEach((leave) => {
+          const email = (leave.email ?? leave.userEmail ?? '').toLowerCase();
+          if (!email) return;
+          if (leave.type === 'instant') {
+            const leaveDate = (leave.startDate ?? '').slice(0, 10);
+            if (leaveDate === today) onLeaveEmails.add(email);
+          } else {
+            const start = (leave.startDate ?? '').slice(0, 10);
+            const end = (leave.endDate ?? leave.startDate ?? '').slice(0, 10);
+            if (start <= today && today <= end) onLeaveEmails.add(email);
+          }
+        });
+        useDashboardStore.getState().members.forEach((m) => {
+          updateMemberLeaveStatus(m.email, onLeaveEmails.has(m.email.toLowerCase()));
+        });
+      })
+      .catch(() => {/* silently ignore */});
+  }, [authChecked, currentUserEmail, updateMemberLeaveStatus]);
 
   // Activity heartbeat — ping backend every 30 s with current activity so admin sees live status.
   useEffect(() => {
@@ -1193,11 +1304,18 @@ export default function EduTechExOSDashboard() {
     }
     trackEvent('message_sent', { channel: channel?.name, channelId: activeChannelId });
 
-    const mentionedMembers = activeChannelMembers.filter(
-      (member) =>
-        member.email.toLowerCase() !== currentUserEmail &&
-        text.toLowerCase().includes(`@${member.name}`.toLowerCase())
-    );
+    const mentionedMembers = activeChannelMembers.filter((member) => {
+      if (member.email.toLowerCase() === currentUserEmail) return false;
+      const lowerText = text.toLowerCase();
+      const lowerName = member.name.toLowerCase();
+      // Match @fullname, @firstname, or @lastname (word-level)
+      if (lowerText.includes(`@${lowerName}`)) return true;
+      const [firstName, ...rest] = lowerName.split(' ');
+      const lastName = rest.join(' ');
+      if (firstName && lowerText.includes(`@${firstName}`)) return true;
+      if (lastName && lowerText.includes(`@${lastName}`)) return true;
+      return false;
+    });
 
     const localMsg = {
       id: `msg-${Date.now()}`,
@@ -1250,6 +1368,7 @@ export default function EduTechExOSDashboard() {
           actorInitials: currentUser?.initials ?? 'OS',
           actorColor: currentUserColor,
           channel: channel.name,
+          channelId: activeChannelId,
           message: text,
           recipientEmails: broadcastTargets.map((m) => m.email),
         });
@@ -1270,6 +1389,7 @@ export default function EduTechExOSDashboard() {
         actorInitials: currentUser?.initials ?? 'OS',
         actorColor: currentUserColor,
         channel: channel.name,
+        channelId: activeChannelId,
         message: text,
         recipientEmails: mentionedMembers.map((member) => member.email),
       });
@@ -1314,6 +1434,17 @@ export default function EduTechExOSDashboard() {
             taskText: text.slice(0, 200),
             status: 'todo',
           },
+        });
+        // Notify the assigned person so they see it in Alerts
+        addNotification({
+          type: 'task',
+          actor: currentUser?.name ?? 'EduTechExOS',
+          actorInitials: currentUser?.initials ?? 'OS',
+          actorColor: currentUserColor,
+          channel: channel.name,
+          channelId: activeChannelId,
+          message: `📋 Task assigned to you: "${text.slice(0, 120)}"`,
+          recipientEmails: [firstMentioned.email],
         });
         trackEvent('task_created', {
           source: 'mention',
@@ -1365,12 +1496,24 @@ export default function EduTechExOSDashboard() {
     });
   }
 
+  function performSignOut() {
+    // Broadcast offline immediately so other users see the dot go grey right away
+    if (currentUser?.email) {
+      getSocket().emit('user_status_update', { email: currentUser.email, status: 'offline' });
+    }
+    resetUserState();
+    localStorage.removeItem('edutechex_token');
+    fetch('/api/auth/session', { method: 'DELETE' }).catch(() => {});
+    router.push('/sign-up-login-screen');
+  }
+
   function saveSettings(event: React.FormEvent) {
     event.preventDefault();
     localStorage.setItem(settingsKey(currentUser?.email ?? 'default'), JSON.stringify(settings));
     // Update display name live
+    const newName = settings.displayName.trim() || (currentUser?.name ?? '');
     setCurrentUser((user) =>
-      user ? { ...user, name: settings.displayName.trim() || user.name } : user
+      user ? { ...user, name: newName } : user
     );
     // Request desktop notification permission when first enabling
     if (
@@ -1379,6 +1522,18 @@ export default function EduTechExOSDashboard() {
       Notification.permission === 'default'
     ) {
       Notification.requestPermission();
+    }
+    // Broadcast status & name to all connected users via socket
+    if (currentUser?.email) {
+      const socket = getSocket();
+      socket.emit('user_status_update', {
+        email: currentUser.email,
+        status: settings.status,
+        name: newName,
+      });
+      // Update own member entry in the store so the People list reflects immediately
+      updateMemberStatus(currentUser.email, settings.status as import('@/store/dashboardStore').MemberStatus);
+      updateMemberName(currentUser.email, newName);
     }
     setSettingsOpen(false);
     toast.success('Settings saved');
@@ -1807,12 +1962,14 @@ export default function EduTechExOSDashboard() {
     });
 
     addNotification({
-      type: 'mention',
+      type: 'task',
       actor: currentUser?.name ?? 'EduTechExOS',
       actorInitials: currentUser?.initials ?? 'OS',
       actorColor: currentUserColor,
       channel: channel.name,
-      message: `scheduled "${title}" for ${timeLabel}. Join: ${meetLink}`,
+      channelId: activeChannelId,
+      message: `📅 Meeting scheduled: "${title}" on ${timeLabel}`,
+      joinLink: meetLink,
       recipientEmails: inviteeEmails,
     });
 
@@ -2099,18 +2256,25 @@ export default function EduTechExOSDashboard() {
               .filter((c: { id: string }) => !c.id.startsWith('member-'))
               .map((ch: { id: string; name: string }) => {
                 const isActive = ch.id === activeChannelId;
+                const unread = unreadCounts[ch.id] ?? 0;
                 return (
                   <button
                     key={ch.id}
                     className={`sidebar-channel-btn${isActive ? ' active' : ''}`}
                     onClick={() => {
                       setActiveChannel(ch.id);
+                      clearUnread(ch.id);
                       setMobileSidebarOpen(false);
                       setMobileTab('chat');
                     }}
                   >
                     <Hash size={13} style={{ opacity: isActive ? 1 : 0.55, flexShrink: 0 }} />
                     <span className="min-w-0 flex-1 truncate">{ch.name}</span>
+                    {unread > 0 && !isActive && (
+                      <span className="ml-auto shrink-0 flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-[#EF476F] px-1 text-[9px] font-black text-white" style={{ height: 18 }}>
+                        {unread > 99 ? '99+' : unread}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -2122,7 +2286,7 @@ export default function EduTechExOSDashboard() {
               .map((ch: { id: string; name: string }) => {
                 const isActive = ch.id === activeChannelId;
                 const member = members.find(
-                  (m: { email: string }) => `member-${m.email}` === ch.id
+                  (m: { email: string; onLeave?: boolean }) => `member-${m.email}` === ch.id
                 );
                 const initials = ch.name
                   .split(' ')
@@ -2130,12 +2294,21 @@ export default function EduTechExOSDashboard() {
                   .join('')
                   .toUpperCase()
                   .slice(0, 2);
+                const statusColor = (member as { status?: string } | undefined)?.status === 'online'
+                  ? 'bg-emerald-400'
+                  : (member as { status?: string } | undefined)?.status === 'away'
+                  ? 'bg-amber-400'
+                  : (member as { status?: string } | undefined)?.status === 'in-meeting'
+                  ? 'bg-red-400'
+                  : 'bg-[#7C859E]';
+                const dmUnread = unreadCounts[ch.id] ?? 0;
                 return (
                   <button
                     key={ch.id}
                     className={`sidebar-channel-btn${isActive ? ' active' : ''}`}
                     onClick={() => {
                       setActiveChannel(ch.id);
+                      clearUnread(ch.id);
                       setMobileSidebarOpen(false);
                       setMobileTab('chat');
                     }}
@@ -2145,11 +2318,17 @@ export default function EduTechExOSDashboard() {
                       style={{ background: 'linear-gradient(135deg,#3E4A89,#2A3568)' }}
                     >
                       {initials}
-                      <span
-                        className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-[#191E2F] ${(member as { status?: string })?.status === 'online' ? 'bg-emerald-400' : 'bg-[#7C859E]'}`}
-                      />
+                      <span className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-[#191E2F] ${statusColor}`} />
                     </span>
                     <span className="min-w-0 flex-1 truncate text-[13px]">{ch.name}</span>
+                    {(member as { onLeave?: boolean } | undefined)?.onLeave && (
+                      <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[8px] font-black text-amber-700">Leave</span>
+                    )}
+                    {dmUnread > 0 && !isActive && (
+                      <span className="ml-1 shrink-0 flex min-w-[18px] items-center justify-center rounded-full bg-[#EF476F] px-1 text-[9px] font-black text-white" style={{ height: 18 }}>
+                        {dmUnread > 99 ? '99+' : dmUnread}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -2172,7 +2351,7 @@ export default function EduTechExOSDashboard() {
                   .slice(0, 2) ?? '?'}
               </div>
               <span
-                className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 ${settings.status === 'online' ? 'bg-emerald-400' : settings.status === 'away' ? 'bg-amber-400' : 'bg-[#7C859E]'}`}
+                className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 ${settings.status === 'online' ? 'bg-emerald-400' : settings.status === 'away' ? 'bg-amber-400' : settings.status === 'in-meeting' ? 'bg-red-400' : 'bg-[#7C859E]'}`}
                 style={{ borderColor: '#0E1120' }}
               />
             </div>
@@ -2183,12 +2362,7 @@ export default function EduTechExOSDashboard() {
               </p>
             </div>
             <button
-              onClick={() => {
-                localStorage.removeItem('edutechex_token');
-                fetch('/api/auth/session', { method: 'DELETE' });
-                toast.success('Signed out');
-                router.push('/sign-up-login-screen');
-              }}
+              onClick={() => { toast.success('Signed out'); performSignOut(); }}
               className="flex h-7 w-7 items-center justify-center rounded"
               style={{ color: '#000000' }}
             >
@@ -2285,6 +2459,7 @@ export default function EduTechExOSDashboard() {
           {[
             { icon: CheckSquare, label: 'Tasks',    action: () => setKanbanOpen(true)   },
             { icon: BookOpen,    label: 'Wiki',     action: () => setWikiOpen(true)     },
+            { icon: StickyNote,  label: 'Notes',    action: () => setNotepadOpen(true)  },
             { icon: CalendarDays,label: 'Calendar', action: () => setCalendarOpen(true) },
           ].map(({ icon: Icon, label, action }) => (
             <motion.button
@@ -2479,7 +2654,7 @@ export default function EduTechExOSDashboard() {
                         }}
                         whileHover={{ x: isActive ? 0 : 5 }}
                         whileTap={{ scale: 0.96 }}
-                        onClick={() => setActiveChannel(item.id)}
+                        onClick={() => { setActiveChannel(item.id); clearUnread(item.id); }}
                         className={`sidebar-channel-btn${isActive ? ' active' : ''}`}
                       >
                         {/* Animated active-channel left bar — moves smoothly between channels */}
@@ -2493,17 +2668,20 @@ export default function EduTechExOSDashboard() {
                         )}
                         <Hash size={13} style={{ opacity: isActive ? 1 : 0.55, flexShrink: 0 }} />
                         <span className="min-w-0 flex-1 truncate">{item.name}</span>
-                        {item.unread > 0 && (
-                          <motion.span
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: 'spring', stiffness: 600, damping: 20 }}
-                            className="rounded-full px-1.5 py-0.5 text-[10px] font-black"
-                            style={{ background: '#6C7BF5', color: '#ffffff' }}
-                          >
-                            {item.unread}
-                          </motion.span>
-                        )}
+                        {(() => {
+                          const count = (unreadCounts[item.id] ?? 0) + (item.unread ?? 0);
+                          return count > 0 && !isActive ? (
+                            <motion.span
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{ type: 'spring', stiffness: 600, damping: 20 }}
+                              className="rounded-full px-1.5 py-0.5 text-[10px] font-black"
+                              style={{ background: '#EF476F', color: '#ffffff' }}
+                            >
+                              {count > 99 ? '99+' : count}
+                            </motion.span>
+                          ) : null;
+                        })()}
                       </motion.button>
                     );
                   })}
@@ -2542,7 +2720,7 @@ export default function EduTechExOSDashboard() {
                     className="group flex h-9 items-center gap-2 rounded px-1.5 transition-colors duration-100 hover:bg-white/[0.06] cursor-pointer"
                   >
                     <motion.button
-                      onClick={() => setActiveChannel(member.id)}
+                      onClick={() => { setActiveChannel(member.id); clearUnread(member.id); }}
                       whileTap={{ scale: 0.95 }}
                       title={`Chat with ${member.name}`}
                       className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
@@ -2554,17 +2732,18 @@ export default function EduTechExOSDashboard() {
                         {member.initials}
                         {(() => {
                           const isSelf = member.id === currentMemberId;
+                          const memberRecord = members.find(m => m.id === member.id);
+                          const explicitStatus = memberRecord?.status;
                           const s = isSelf
                             ? settings.status
-                            : getPresenceStatus(member.email);
+                            : explicitStatus ?? getPresenceStatus(member.email);
                           return (
                             <span
                               className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ${
-                                s === 'online'
-                                  ? 'bg-emerald-400'
-                                  : s === 'away'
-                                    ? 'bg-amber-400'
-                                    : 'bg-[#7C859E]'
+                                s === 'online'     ? 'bg-emerald-400'
+                                : s === 'away'       ? 'bg-amber-400'
+                                : s === 'in-meeting' ? 'bg-red-400'
+                                : 'bg-[#7C859E]'
                               }`}
                               style={{ boxShadow: '0 0 0 2px var(--sidebar-bg, #0E1120)' }}
                             />
@@ -2579,6 +2758,14 @@ export default function EduTechExOSDashboard() {
                           {member.name}
                         </span>
                         {member.id !== currentMemberId && (() => {
+                          const memberRecord = members.find(m => m.id === member.id);
+                          if (memberRecord?.onLeave) {
+                            return (
+                              <span className="truncate text-[10px] font-bold leading-tight text-amber-400">
+                                On leave
+                              </span>
+                            );
+                          }
                           const label = getLastSeenLabel(member.email);
                           const isOnline = getPresenceStatus(member.email) === 'online';
                           if (!label) return null;
@@ -2592,6 +2779,16 @@ export default function EduTechExOSDashboard() {
                           );
                         })()}
                       </div>
+                      {/* DM unread badge */}
+                      {(() => {
+                        const dmChId = member.id;
+                        const dmUnread = unreadCounts[dmChId] ?? 0;
+                        return dmUnread > 0 ? (
+                          <span className="shrink-0 flex min-w-[18px] items-center justify-center rounded-full bg-[#EF476F] px-1 text-[9px] font-black text-white" style={{ height: 18 }}>
+                            {dmUnread > 99 ? '99+' : dmUnread}
+                          </span>
+                        ) : null;
+                      })()}
                     </motion.button>
 
                     <motion.button
@@ -2767,7 +2964,7 @@ export default function EduTechExOSDashboard() {
                 {currentUser?.initials ?? 'G'}
               </div>
               <span
-                className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 ${settings.status === 'online' ? 'bg-emerald-400' : settings.status === 'away' ? 'bg-amber-400' : settings.status === 'busy' ? 'bg-red-400' : 'bg-[#7C859E]'}`}
+                className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 ${settings.status === 'online' ? 'bg-emerald-400' : settings.status === 'away' ? 'bg-amber-400' : settings.status === 'in-meeting' ? 'bg-red-400' : 'bg-[#7C859E]'}`}
                 style={{ borderColor: '#0E1120' }}
               />
             </div>
@@ -2777,6 +2974,17 @@ export default function EduTechExOSDashboard() {
               </p>
               <p className="text-[10.5px]" style={{ color: '#555555' }}>
                 {currentUser?.role ?? 'Viewer'}
+              </p>
+              {/* Screen time */}
+              <p className="text-[9.5px] font-bold tracking-wide" style={{ color: 'rgba(62,74,137,0.65)' }}>
+                {(() => {
+                  const h = Math.floor(sessionSeconds / 3600);
+                  const m = Math.floor((sessionSeconds % 3600) / 60);
+                  const s = sessionSeconds % 60;
+                  if (h > 0) return `${h}h ${String(m).padStart(2,'0')}m screen time`;
+                  if (m > 0) return `${m}m ${String(s).padStart(2,'0')}s screen time`;
+                  return `${s}s screen time`;
+                })()}
               </p>
             </div>
             <div className="flex items-center gap-0.5 shrink-0">
@@ -2805,12 +3013,7 @@ export default function EduTechExOSDashboard() {
               <motion.button
                 whileTap={{ scale: 0.88 }}
                 title="Sign out"
-                onClick={() => {
-                  localStorage.removeItem('edutechex_token');
-                  fetch('/api/auth/session', { method: 'DELETE' });
-                  toast.success('Signed out');
-                  router.push('/sign-up-login-screen');
-                }}
+                onClick={() => { toast.success('Signed out'); performSignOut(); }}
                 className="flex h-7 w-7 items-center justify-center rounded"
                 style={{ color: '#000000' }}
                 onMouseEnter={(e) => {
@@ -2912,12 +3115,10 @@ export default function EduTechExOSDashboard() {
                 <ChevronDown size={14} />
               </button>
               {meetMenuOpen && (
-                <div className="absolute right-0 top-11 z-[300] w-60 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-2 shadow-xl">
+                <div className="absolute right-0 top-11 z-[300] w-68 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-2 shadow-xl" style={{ width: 272 }}>
+                  {/* Instant meet */}
                   <button
-                    onClick={() => {
-                      setMeetMenuOpen(false);
-                      startNewMeeting();
-                    }}
+                    onClick={() => { setMeetMenuOpen(false); startNewMeeting(); }}
                     className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-[rgba(62,74,137,0.08)] transition-colors group"
                   >
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-green-100 text-green-700 group-hover:bg-green-200 transition-colors">
@@ -2928,22 +3129,49 @@ export default function EduTechExOSDashboard() {
                       <p className="text-[11px] text-[#7C859E]">Generate link &amp; share in chat</p>
                     </div>
                   </button>
+                  <div className="my-1.5 h-px mx-1" style={{ background: 'rgba(62,74,137,0.08)' }} />
+                  {/* Day-specific links */}
+                  <p className="px-3 pb-1 text-[9px] font-black uppercase tracking-[0.15em] text-[#9BA6D3]">Team Meeting Links</p>
+                  {GOOGLE_MEET_LINKS.map(({ label, link, days }) => {
+                    const isActive = meetingButtonState.link === link;
+                    return (
+                      <button
+                        key={label}
+                        onClick={() => { setMeetMenuOpen(false); window.open(link, '_blank', 'noreferrer'); }}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-[rgba(62,74,137,0.06)] transition-colors group mt-0.5"
+                      >
+                        <span
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors"
+                          style={{ background: isActive ? 'rgba(108,123,245,0.15)' : 'rgba(62,74,137,0.07)' }}
+                        >
+                          <Video size={13} style={{ color: isActive ? '#6C7BF5' : '#7C859E' }} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[12px] font-bold text-[#1E2636]">{label}</p>
+                          <p className="text-[10px] text-[#9BA6D3]">{days}</p>
+                        </div>
+                        {isActive && (
+                          <span className="shrink-0 rounded-full bg-indigo-100 px-2 py-0.5 text-[9px] font-black text-[#6C7BF5]">Today</span>
+                        )}
+                      </button>
+                    );
+                  })}
                   {meetingButtonState.link && (
-                    <button
-                      onClick={() => {
-                        setMeetMenuOpen(false);
-                        window.open(meetingButtonState.link!, '_blank');
-                      }}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-[rgba(62,74,137,0.06)] transition-colors group mt-0.5"
-                    >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 group-hover:bg-blue-200 transition-colors">
-                        <Video size={15} />
-                      </span>
-                      <div>
-                        <p className="text-sm font-bold text-[#4A5578]">Join Scheduled Meet</p>
-                        <p className="text-[11px] text-[#7C859E]">{meetingButtonState.message}</p>
-                      </div>
-                    </button>
+                    <>
+                      <div className="my-1.5 h-px mx-1" style={{ background: 'rgba(62,74,137,0.08)' }} />
+                      <button
+                        onClick={() => { setMeetMenuOpen(false); setScheduleMeetOpen(true); }}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-[rgba(62,74,137,0.06)] transition-colors group"
+                      >
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100 transition-colors">
+                          <CalendarDays size={15} />
+                        </span>
+                        <div>
+                          <p className="text-sm font-bold text-[#4A5578]">Schedule Meeting</p>
+                          <p className="text-[11px] text-[#7C859E]">Pick date &amp; invite team</p>
+                        </div>
+                      </button>
+                    </>
                   )}
                 </div>
               )}
@@ -3004,6 +3232,15 @@ export default function EduTechExOSDashboard() {
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
                   >
                     <Bookmark size={15} /> Saved messages
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMoreOpen(false);
+                      setNotepadOpen(true);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
+                  >
+                    <StickyNote size={15} /> Notes
                   </button>
                   <button
                     onClick={() => {
@@ -4651,12 +4888,7 @@ export default function EduTechExOSDashboard() {
                 <div className="p-2 border-t border-[rgba(62,74,137,0.07)]">
                   <button
                     type="button"
-                    onClick={() => {
-                      localStorage.removeItem('edutechex_token');
-                      fetch('/api/auth/session', { method: 'DELETE' });
-                      toast.success('Signed out');
-                      router.push('/sign-up-login-screen');
-                    }}
+                    onClick={() => { toast.success('Signed out'); performSignOut(); }}
                     className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs font-bold text-red-400 hover:bg-red-50 hover:text-red-600 transition-all"
                   >
                     <LogOut size={14} /> Sign out
@@ -4766,10 +4998,10 @@ export default function EduTechExOSDashboard() {
                         <div className="mt-2.5 grid grid-cols-4 gap-2">
                           {(
                             [
-                              { id: 'online', label: 'Online', dot: 'bg-emerald-500' },
-                              { id: 'away', label: 'Away', dot: 'bg-amber-400' },
-                              { id: 'busy', label: 'Busy', dot: 'bg-red-500' },
-                              { id: 'offline', label: 'Offline', dot: 'bg-slate-300' },
+                              { id: 'online',     label: 'Online',      dot: 'bg-emerald-500' },
+                              { id: 'away',       label: 'Away',        dot: 'bg-amber-400' },
+                              { id: 'in-meeting', label: 'In Meeting',  dot: 'bg-red-500' },
+                              { id: 'offline',    label: 'Offline',     dot: 'bg-slate-300' },
                             ] as const
                           ).map(({ id, label, dot }) => (
                             <button
@@ -5571,6 +5803,7 @@ export default function EduTechExOSDashboard() {
                         <input
                           type="date"
                           value={meetDate}
+                          min={new Date().toISOString().split('T')[0]}
                           onChange={(e) => setMeetDate(e.target.value)}
                           className="w-full h-11 rounded-xl pl-9 pr-3 text-sm font-bold outline-none transition-all"
                           style={{
@@ -6230,6 +6463,32 @@ export default function EduTechExOSDashboard() {
                   setBookmarksPanelOpen(false);
                   scrollToBottom();
                 }}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Notepad Panel */}
+      <AnimatePresence>
+        {notepadOpen && (
+          <motion.div
+            key="notepad"
+            {...BACKDROP}
+            className="fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(25,30,47,0.50)] p-4 backdrop-blur-sm"
+            onClick={() => setNotepadOpen(false)}
+          >
+            <motion.div
+              {...CARD}
+              className="h-full w-full max-w-3xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <NotepadPanel
+                onClose={() => {
+                  setNotepadOpen(false);
+                  scrollToBottom();
+                }}
+                activeChannel={activeChannel}
               />
             </motion.div>
           </motion.div>

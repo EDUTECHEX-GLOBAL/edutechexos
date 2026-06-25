@@ -73,6 +73,28 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
   const [title, setTitle] = useState('');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Refs so TipTap's onUpdate closure always reads the LATEST values even after page switches
+  const selectedPageIdRef = useRef(selectedPageId);
+  const titleRef = useRef(title);
+  const activeChannelRef = useRef(activeChannel);
+  useEffect(() => { selectedPageIdRef.current = selectedPageId; }, [selectedPageId]);
+  useEffect(() => { titleRef.current = title; }, [title]);
+  useEffect(() => { activeChannelRef.current = activeChannel; }, [activeChannel]);
+
+  // Flush any pending save immediately — call before switching pages
+  const flushSave = useCallback(() => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    const pageId = selectedPageIdRef.current;
+    const ch = activeChannelRef.current;
+    if (!pageId) return;
+    updateWikiPage(ch, pageId, { title: titleRef.current, content: editorRef.current?.getHTML() ?? '' });
+  }, [updateWikiPage]);
+
+  const editorRef = useRef<ReturnType<typeof useEditor>>(null);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: { languageClassPrefix: 'language-' } }),
@@ -84,16 +106,31 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
         class: 'prose prose-sm max-w-none h-full min-h-[200px] px-5 py-4 text-[#1E2636] outline-none focus:outline-none',
       },
     },
-    onUpdate: ({ editor }) => {
-      if (!selectedPageId) return;
-      scheduleAutoSave(title, editor.getHTML());
+    onUpdate: ({ editor: ed }) => {
+      // Always use refs so this never captures stale state
+      const pageId = selectedPageIdRef.current;
+      if (!pageId) return;
+      const newContent = ed.getHTML();
+      const newTitle = titleRef.current;
+      const ch = activeChannelRef.current;
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        updateWikiPage(ch, pageId, { title: newTitle, content: newContent });
+        saveTimerRef.current = null;
+      }, 500);
     },
   });
+
+  // Keep editorRef in sync so flushSave can access it
+  useEffect(() => {
+    (editorRef as React.MutableRefObject<typeof editor>).current = editor;
+  }, [editor]);
 
   useEffect(() => {
     const page = pages.find(p => p.id === selectedPageId);
     if (page && editor) {
       setTitle(page.title);
+      titleRef.current = page.title;
       if (editor.getHTML() !== page.content) editor.commands.setContent(page.content || '', { emitUpdate: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,12 +142,17 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
 
   useEffect(() => {
     return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      // Flush unsaved content on unmount
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        const pageId = selectedPageIdRef.current;
+        const ch = activeChannelRef.current;
+        if (pageId) updateWikiPage(ch, pageId, { title: titleRef.current, content: editorRef.current?.getHTML() ?? '' });
+      }
     };
-  }, []);
+  }, [updateWikiPage]);
 
   const selectedPage = pages.find(p => p.id === selectedPageId) ?? null;
-  // Default to private; track per-page via the stored isPrivate flag
   const pageIsPrivate = selectedPage ? selectedPage.isPrivate !== false : true;
 
   const togglePrivacy = () => {
@@ -118,27 +160,41 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
     updateWikiPage(activeChannel, selectedPageId, { isPrivate: !pageIsPrivate });
   };
 
+  // scheduleAutoSave is still exposed for title changes — uses refs internally
   const scheduleAutoSave = useCallback((newTitle: string, newContent: string) => {
-    if (!selectedPageId) return;
+    const pageId = selectedPageIdRef.current;
+    const ch = activeChannelRef.current;
+    if (!pageId) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      updateWikiPage(activeChannel, selectedPageId, { title: newTitle, content: newContent });
+      updateWikiPage(ch, pageId, { title: newTitle, content: newContent });
+      saveTimerRef.current = null;
     }, 500);
-  }, [activeChannel, selectedPageId, updateWikiPage]);
+  }, [updateWikiPage]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
     scheduleAutoSave(e.target.value, editor?.getHTML() ?? '');
   };
 
+  const switchToPage = useCallback((pageId: string) => {
+    // Flush current page before switching so nothing is lost
+    flushSave();
+    setSelectedPageId(pageId);
+  }, [flushSave]);
+
   const handleNewPage = () => {
+    // Save current page immediately before creating new one
+    flushSave();
     addWikiPage(activeChannel, { title: 'Untitled Page', content: '' });
     setTimeout(() => {
       const freshPages = useDashboardStore.getState().wikiPages[activeChannel] ?? [];
       const newest = freshPages[freshPages.length - 1];
       if (newest) {
         setSelectedPageId(newest.id);
+        selectedPageIdRef.current = newest.id;
         setTitle(newest.title);
+        titleRef.current = newest.title;
         editor?.commands.setContent('', { emitUpdate: false });
       }
     }, 0);
@@ -149,8 +205,8 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
     if (!window.confirm('Delete this wiki page? This cannot be undone.')) return;
     deleteWikiPage(activeChannel, selectedPageId);
     const remaining = pages.filter(p => p.id !== selectedPageId);
-    if (remaining.length > 0) { setSelectedPageId(remaining[0].id); }
-    else { setSelectedPageId(null); setTitle(''); editor?.commands.clearContent(); }
+    if (remaining.length > 0) { switchToPage(remaining[0].id); }
+    else { setSelectedPageId(null); selectedPageIdRef.current = null; setTitle(''); titleRef.current = ''; editor?.commands.clearContent(); }
   };
 
   const handleShareToChat = () => {
@@ -273,7 +329,7 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
                     <button
                       key={page.id}
                       type="button"
-                      onClick={() => setSelectedPageId(page.id)}
+                      onClick={() => switchToPage(page.id)}
                       style={{
                         width: '100%', textAlign: 'left', borderRadius: 9, padding: '9px 10px',
                         border: 'none', cursor: 'pointer', transition: 'all 0.15s',

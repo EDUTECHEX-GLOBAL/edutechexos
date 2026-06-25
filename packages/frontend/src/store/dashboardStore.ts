@@ -160,11 +160,15 @@ type Notification = {
   actorColor: string;
   message: string;
   channel: string;
+  channelId?: string;
+  messageId?: string;
   timestamp: string;
   read: boolean;
   recipientEmails?: string[];
   joinLink?: string;
 };
+
+export type MemberStatus = 'online' | 'away' | 'in-meeting' | 'offline';
 
 type Member = {
   id: string;
@@ -172,9 +176,10 @@ type Member = {
   name: string;
   email: string;
   role: string;
-  status: 'online' | 'away' | 'offline';
+  status: MemberStatus;
   color: string;
   channelIds?: string[];
+  onLeave?: boolean;
 };
 
 type Channel = {
@@ -275,6 +280,15 @@ type DashboardState = {
   setMemberWorkspaceChannel: (memberId: string, channelId: string | null) => void;
   setMemberWorkspaceChannels: (memberId: string, channelIds: string[], onError?: (msg: string) => void) => void;
   setMemberRole: (memberId: string, role: string) => void;
+  updateMemberStatus: (email: string, status: MemberStatus) => void;
+  updateMemberName: (email: string, name: string) => void;
+  updateMemberLeaveStatus: (email: string, onLeave: boolean) => void;
+
+  unreadCounts: Record<string, number>;
+  incrementUnread: (channelId: string) => void;
+  clearUnread: (channelId: string) => void;
+  clearAllUnread: () => void;
+  resetUserState: () => void;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1313,6 +1327,59 @@ export const useDashboardStore = create<DashboardState>()(
         set((s) => ({
           members: s.members.map((m) => (m.id === memberId ? { ...m, role } : m)),
         }));
+      },
+
+      updateMemberStatus: (email, status) => {
+        set((s) => ({
+          members: s.members.map((m) =>
+            m.email.toLowerCase() === email.toLowerCase() ? { ...m, status } : m
+          ),
+        }));
+      },
+
+      updateMemberName: (email, name) => {
+        set((s) => ({
+          members: s.members.map((m) =>
+            m.email.toLowerCase() === email.toLowerCase() ? { ...m, name } : m
+          ),
+        }));
+      },
+
+      updateMemberLeaveStatus: (email, onLeave) => {
+        set((s) => ({
+          members: s.members.map((m) =>
+            m.email.toLowerCase() === email.toLowerCase() ? { ...m, onLeave } : m
+          ),
+        }));
+      },
+
+      unreadCounts: {},
+      incrementUnread: (channelId) => {
+        set((s) => ({
+          unreadCounts: {
+            ...s.unreadCounts,
+            [channelId]: (s.unreadCounts[channelId] ?? 0) + 1,
+          },
+        }));
+      },
+      clearUnread: (channelId) => {
+        set((s) => {
+          if (!s.unreadCounts[channelId]) return s;
+          const next = { ...s.unreadCounts };
+          delete next[channelId];
+          return { unreadCounts: next };
+        });
+      },
+      clearAllUnread: () => set({ unreadCounts: {} }),
+      resetUserState: () => {
+        // Clear all per-user in-memory state when a user logs out so the
+        // next user who logs in on the same device starts completely clean.
+        set({
+          unreadCounts: {},
+          notifications: [],
+          kanbanTasks: [],
+          aiSummary: {},
+        });
       },
     }),
     {

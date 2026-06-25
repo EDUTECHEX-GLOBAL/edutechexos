@@ -31,12 +31,22 @@ type SavedPad = {
   updatedAt: number;
 };
 
+function getCurrentUserEmail(): string {
+  if (typeof window === 'undefined') return 'guest';
+  try {
+    const raw = localStorage.getItem('edutechex_token');
+    return raw ? (JSON.parse(raw).user?.email?.toLowerCase() ?? 'guest') : 'guest';
+  } catch {
+    return 'guest';
+  }
+}
+
 function getNoteKey(channelId: string) {
-  return `edutechex_notes_${channelId}`;
+  return `edutechex_notes_${getCurrentUserEmail()}_${channelId}`;
 }
 
 function getTimestampKey(channelId: string) {
-  return `edutechex_notes_${channelId}_updated_at`;
+  return `edutechex_notes_${getCurrentUserEmail()}_${channelId}_updated_at`;
 }
 
 function getPreview(note: string) {
@@ -68,8 +78,8 @@ export default function NotepadPanel({ onClose, activeChannel }: NotepadPanelPro
     [channels]
   );
 
-  const recomputeSavedPads = React.useCallback(() => {
-    if (typeof window === 'undefined') return [] as SavedPad[];
+  const recomputeSavedPads = React.useCallback((): SavedPad[] => {
+    if (typeof window === 'undefined') return [];
     return channels
       .map((ch) => {
         const stored = localStorage.getItem(getNoteKey(ch.id)) || '';
@@ -86,7 +96,12 @@ export default function NotepadPanel({ onClose, activeChannel }: NotepadPanelPro
       .sort((a, b) => b.updatedAt - a.updatedAt);
   }, [channels]);
 
-  const savedPads = React.useMemo(() => recomputeSavedPads(), [channels]);
+  const [savedPads, setSavedPads] = React.useState<SavedPad[]>(() => recomputeSavedPads());
+
+  // Re-derive when channels list changes (new channel added, etc.)
+  React.useEffect(() => {
+    setSavedPads(recomputeSavedPads());
+  }, [recomputeSavedPads]);
 
   const selectedName = channelNameById.get(selectedPadId) ?? 'Direct Message';
 
@@ -123,6 +138,7 @@ export default function NotepadPanel({ onClose, activeChannel }: NotepadPanelPro
       await saveNoteAction(selectedPadId, note);
       setIsSaving(false);
       setSaveStatus('saved');
+      setSavedPads(recomputeSavedPads());
     }, 500);
     return () => clearTimeout(timer);
   }, [note, selectedPadId]);
@@ -200,6 +216,7 @@ export default function NotepadPanel({ onClose, activeChannel }: NotepadPanelPro
       localStorage.removeItem(getNoteKey(selectedPadId));
       localStorage.removeItem(getTimestampKey(selectedPadId));
       setSaveStatus('idle');
+      setSavedPads(recomputeSavedPads());
       toast.success('Notepad cleared');
     }
   };

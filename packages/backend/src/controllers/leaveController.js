@@ -116,7 +116,11 @@ async function reviewLeave(req, res) {
       leaveId: _id.toString(), type: rest.type, startDate: rest.startDate, adminNote: adminNote || '',
     });
     const io = req.app.get('io');
-    if (io) io.emit('leave_updated', { leaveId: _id.toString(), email: rest.email, status, adminNote: rest.adminNote });
+    if (io) {
+      io.emit('leave_updated', { leaveId: _id.toString(), email: rest.email, status, adminNote: rest.adminNote });
+      // Broadcast leave indicator so all users update the badge in real-time
+      io.emit('leave_status_update', { email: rest.email, onLeave: status === 'approved' });
+    }
     const appUrl = process.env.APP_URL || 'https://edutechexos.vercel.app';
     const statusLabel = status === 'approved' ? 'Approved' : 'Rejected';
     const typeLabel   = rest.type === 'instant' ? 'Emergency / Instant' : 'Planned';

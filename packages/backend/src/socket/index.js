@@ -66,6 +66,18 @@ function createSocketServer(httpServer) {
       io.emit('meeting_started', { link, channelName, starter, starterInitials, starterColor });
     });
 
+    // Relay status/name change so every connected client updates in real-time
+    socket.on('user_status_update', ({ email, status, name }) => {
+      if (!email) return;
+      socket.broadcast.emit('user_status_update', { email, status, name });
+    });
+
+    // Relay leave status so all users see the leave badge instantly
+    socket.on('leave_status_update', ({ email, onLeave }) => {
+      if (!email) return;
+      socket.broadcast.emit('leave_status_update', { email, onLeave });
+    });
+
     socket.on('typing_start', ({ channelId, userName }) => {
       if (!channelId || !userName) return;
       socket.to(channelId).emit('user_typing', { channelId, userName });
@@ -104,6 +116,10 @@ function createSocketServer(httpServer) {
     });
 
     socket.on('disconnect', () => {
+      // Broadcast offline status so all clients immediately remove the online dot
+      if (userEmail) {
+        socket.broadcast.emit('user_status_update', { email: userEmail, status: 'offline' });
+      }
     });
   });
 

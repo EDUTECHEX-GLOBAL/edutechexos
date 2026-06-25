@@ -80,12 +80,15 @@ const TYPE_CONFIG = {
 interface NotificationPanelProps {
   open: boolean;
   onClose: () => void;
+  onGoToChannel?: (channelId: string) => void;
 }
 
-export default function NotificationPanel({ open, onClose }: NotificationPanelProps) {
+export default function NotificationPanel({ open, onClose, onGoToChannel }: NotificationPanelProps) {
   const allNotifications = useDashboardStore((s) => s.notifications);
   const markRead = useDashboardStore((s) => s.markNotificationRead);
   const dismiss = useDashboardStore((s) => s.dismissNotification);
+  const setActiveChannel = useDashboardStore((s) => s.setActiveChannel);
+  const clearUnread = useDashboardStore((s) => s.clearUnread);
   const panelRef = useRef<HTMLDivElement>(null);
   const [currentEmail, setCurrentEmail] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -102,8 +105,14 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
   }, [open]);
 
   const notifications = allNotifications.filter((n) => {
-    if (!n.recipientEmails?.length) return true;
-    return n.recipientEmails.map((e) => e.toLowerCase()).includes(currentEmail);
+    // Only show notifications that are directly relevant to this user:
+    // - explicitly addressed to them via recipientEmails
+    // - OR meeting join notifications (joinLink present) when no specific recipients set
+    if (n.recipientEmails?.length) {
+      return n.recipientEmails.map((e) => e.toLowerCase()).includes(currentEmail);
+    }
+    // Untargeted notifications (no recipientEmails) are only shown if they have a join link
+    return !!n.joinLink;
   });
   const unread = notifications.filter((n) => !n.read).length;
 
@@ -251,13 +260,8 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
                         {notif.actorInitials}
                       </div>
                       <div
-                        className="absolute -bottom-1 -right-1 h-4.5 w-4.5 rounded-md flex items-center justify-center border-2"
-                        style={{
-                          background: cfg.gradient,
-                          borderColor: '#191E2F',
-                          width: 18,
-                          height: 18,
-                        }}
+                        className="absolute -bottom-1 -right-1 rounded-md flex items-center justify-center border-2"
+                        style={{ background: cfg.gradient, borderColor: '#191E2F', width: 18, height: 18 }}
                       >
                         <Icon size={9} className="text-white" strokeWidth={3} />
                       </div>
@@ -265,53 +269,72 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
 
                     {/* Text */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        {/* Highlighted sender name */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span
-                          className="text-[14px] font-black leading-tight"
-                          style={{
-                            background: cfg.gradient,
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text',
-                          }}
+                          className="text-[13px] font-black leading-tight"
+                          style={{ background: cfg.gradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
                         >
                           {notif.actor}
                         </span>
-                        {/* Type pill */}
                         <span
                           className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest"
                           style={{ background: `${cfg.color}22`, color: cfg.color }}
                         >
                           {cfg.label}
                         </span>
+                        <span className="text-[9px] font-bold" style={{ color: 'rgba(165,180,252,0.50)' }}>
+                          {formatRelativeTime(notif.timestamp)}
+                        </span>
                       </div>
-                      <p
-                        className="text-[11px] mt-0.5 truncate"
-                        style={{ color: 'rgba(255,255,255,0.55)' }}
-                      >
+                      <p className="text-[11px] mt-0.5 line-clamp-2" style={{ color: 'rgba(255,255,255,0.60)' }}>
                         {notif.message}
                       </p>
+                      {/* Inline action buttons — always visible, no expand needed */}
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        {notif.joinLink && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); window.open(notif.joinLink, '_blank', 'noreferrer'); markRead(notif.id); }}
+                            className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-black text-white"
+                            style={{ background: 'linear-gradient(135deg,#10b981,#34d399)', boxShadow: '0 2px 6px rgba(16,185,129,0.35)' }}
+                          >
+                            <Video size={9} strokeWidth={2.5} /> Join Meeting
+                          </button>
+                        )}
+                        {(notif as { channelId?: string }).channelId && !notif.joinLink && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const cId = (notif as { channelId?: string }).channelId!;
+                              setActiveChannel(cId);
+                              clearUnread(cId);
+                              markRead(notif.id);
+                              onClose();
+                            }}
+                            className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-black text-white"
+                            style={{ background: 'linear-gradient(135deg,#3E4A89,#6C7BF5)', boxShadow: '0 2px 6px rgba(62,74,137,0.35)' }}
+                          >
+                            <Hash size={9} strokeWidth={2.5} /> Go to message
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); dismiss(notif.id); }}
+                          className="flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold"
+                          style={{ color: 'rgba(248,113,113,0.8)', background: 'rgba(239,68,68,0.10)' }}
+                        >
+                          <X size={9} /> Dismiss
+                        </button>
+                      </div>
                     </div>
 
-                    {/* Time + expand chevron */}
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <span
-                        className="text-[9px] font-bold"
-                        style={{ color: 'rgba(165,180,252,0.55)' }}
-                      >
-                        {formatRelativeTime(notif.timestamp)}
-                      </span>
+                    {/* Unread dot */}
+                    <div className="flex flex-col items-end gap-1 shrink-0 self-start pt-1">
                       {!notif.read && (
-                        <div
-                          className="h-1.5 w-1.5 rounded-full animate-pulse"
-                          style={{ background: cfg.color }}
-                        />
+                        <div className="h-2 w-2 rounded-full animate-pulse" style={{ background: cfg.color }} />
                       )}
                       {isExpanded ? (
                         <ChevronUp size={12} style={{ color: cfg.color }} />
                       ) : (
-                        <ChevronDown size={12} style={{ color: 'rgba(165,180,252,0.45)' }} />
+                        <ChevronDown size={12} style={{ color: 'rgba(165,180,252,0.35)' }} />
                       )}
                     </div>
                   </div>
@@ -394,6 +417,25 @@ export default function NotificationPanel({ open, onClose }: NotificationPanelPr
                               <X size={11} /> Dismiss
                             </button>
                             <div className="flex items-center gap-2">
+                              {(notif as { channelId?: string }).channelId && !notif.joinLink && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const cId = (notif as { channelId?: string }).channelId!;
+                                    setActiveChannel(cId);
+                                    if (onGoToChannel) onGoToChannel(cId);
+                                    markRead(notif.id);
+                                    onClose();
+                                  }}
+                                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-black text-white transition-opacity hover:opacity-90"
+                                  style={{
+                                    background: 'linear-gradient(135deg,#3E4A89,#6C7BF5)',
+                                    boxShadow: '0 2px 8px rgba(62,74,137,0.40)',
+                                  }}
+                                >
+                                  <Hash size={11} strokeWidth={2.5} /> Go to message
+                                </button>
+                              )}
                               {notif.joinLink && (
                                 <button
                                   onClick={(e) => {
