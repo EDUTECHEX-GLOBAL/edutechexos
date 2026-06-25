@@ -165,8 +165,7 @@ function request(baseUrl, urlPath, method = 'GET', body = null, headers = {}) {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 async function login() {
-  const MAX_ATTEMPTS = 20;
-  const DELAYS = [5, 10, 15, 20, 25, 30]; // seconds; last value repeats
+  const MAX_ATTEMPTS = 10;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     if (attempt === 1) console.log(`[auth] Logging in as ${EMAIL}…`);
@@ -175,9 +174,7 @@ async function login() {
     try {
       res = await request(API_BASE, '/api/auth/login', 'POST', { email: EMAIL, password: PASSWORD });
     } catch (err) {
-      const delaySec = DELAYS[Math.min(attempt - 1, DELAYS.length - 1)];
-      console.warn(`[auth] Request error (attempt ${attempt}/${MAX_ATTEMPTS}): ${err.message} — retrying in ${delaySec}s…`);
-      await new Promise((r) => setTimeout(r, delaySec * 1000));
+      console.warn(`[auth] Request error (attempt ${attempt}/${MAX_ATTEMPTS}): ${err.message} — retrying…`);
       continue;
     }
 
@@ -188,9 +185,7 @@ async function login() {
     }
 
     if (res.status === 503 || res.status === 502) {
-      const delaySec = DELAYS[Math.min(attempt - 1, DELAYS.length - 1)];
-      console.warn(`[auth] Server returned ${res.status} — still waking up, will retry in ${delaySec}s (attempt ${attempt}/${MAX_ATTEMPTS})…`);
-      await new Promise((r) => setTimeout(r, delaySec * 1000));
+      console.warn(`[auth] Server returned ${res.status} — retrying… (attempt ${attempt}/${MAX_ATTEMPTS})`);
       continue;
     }
 
