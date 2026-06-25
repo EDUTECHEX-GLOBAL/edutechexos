@@ -42,7 +42,7 @@ const hasFlag = (flag) => args.includes(flag);
 
 const EMAIL    = getArg('--email')    || process.env.AW_EMAIL    || '';
 const PASSWORD = getArg('--password') || process.env.AW_PASSWORD || '';
-const API_BASE = getArg('--api')      || process.env.AW_API_BASE || 'https://edutechexos-backend.onrender.com';
+const API_BASE = getArg('--api')      || process.env.AW_API_BASE || 'https://edutechexos-ueoq.onrender.com';
 const AW_BASE  = getArg('--aw')       || process.env.AW_BASE     || 'http://localhost:5600';
 const INTERVAL = parseInt(getArg('--interval') || process.env.AW_INTERVAL || '5', 10);
 
