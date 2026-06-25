@@ -13,6 +13,8 @@ const UserSettingsSchema = new mongoose.Schema({
   fontSize:             { type: String, enum: ['normal', 'large'], default: 'normal' },
   enterToSend:          { type: Boolean, default: false },
   darkMode:             { type: Boolean, default: false },
+  awDeviceId:           { type: String, default: '' },
+  awDeviceName:         { type: String, default: '' },
 }, { timestamps: true });
 
 const UserSettings = mongoose.model('UserSettings', UserSettingsSchema);

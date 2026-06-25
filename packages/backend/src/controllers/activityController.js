@@ -1,4 +1,4 @@
-const { ActivitySession, AWActivity, LoginEvent, AccessRequest } = require('../models/index');
+const { ActivitySession, AWActivity, LoginEvent, AccessRequest, UserSettings } = require('../models/index');
 
 async function heartbeat(req, res) {
   try {
@@ -139,7 +139,27 @@ async function awSync(req, res) {
       totalActiveMinutes, totalAfkMinutes,
       appBreakdown,
       currentUrl, currentPageTitle, webBreakdown,
+      deviceId, deviceName,
     } = req.body;
+
+    // ── One-device-per-user enforcement ──────────────────────────────────────
+    if (deviceId) {
+      const settings = await UserSettings.findOneAndUpdate(
+        { email },
+        { $setOnInsert: { email } },
+        { upsert: true, new: true }
+      );
+      if (!settings.awDeviceId) {
+        // First time — register this device
+        await UserSettings.updateOne({ email }, { awDeviceId: deviceId, awDeviceName: deviceName || deviceId });
+      } else if (settings.awDeviceId !== deviceId) {
+        return res.status(403).json({
+          success: false,
+          error: `Agent already registered on another device (${settings.awDeviceName || settings.awDeviceId}). Ask your admin to reset the device lock.`,
+        });
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
     const istOffset = 5.5 * 60 * 60 * 1000;
     const dateStr = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
     await AWActivity.findOneAndUpdate(
@@ -346,4 +366,22 @@ async function isSessionActive(req, res) {
   }
 }
 
-module.exports = { heartbeat, getLive, getHistory, getStats, awSync, getAw, getAWStatus, isSessionActive, logMessage, getAttendance, getLoginHistory, getMyAttendance, getLoginStatus };
+async function resetAwDevice(req, res) {
+  try {
+    if (!req.user || req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Admin only.' });
+    }
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, error: 'email required.' });
+    await UserSettings.updateOne(
+      { email: email.toLowerCase() },
+      { awDeviceId: '', awDeviceName: '' },
+      { upsert: true }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+module.exports = { heartbeat, getLive, getHistory, getStats, awSync, getAw, getAWStatus, isSessionActive, logMessage, getAttendance, getLoginHistory, getMyAttendance, getLoginStatus, resetAwDevice };

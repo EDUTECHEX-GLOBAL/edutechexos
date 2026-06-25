@@ -45,6 +45,8 @@ const PASSWORD = getArg('--password') || process.env.AW_PASSWORD || '';
 const API_BASE = getArg('--api')      || process.env.AW_API_BASE || 'https://edutechexos-ueoq.onrender.com';
 const AW_BASE  = getArg('--aw')       || process.env.AW_BASE     || 'http://localhost:5600';
 const INTERVAL = parseInt(getArg('--interval') || process.env.AW_INTERVAL || '5', 10);
+const DEVICE_ID   = `${os.hostname()}-${os.platform()}-${os.arch()}`;
+const DEVICE_NAME = os.hostname();
 
 // ── Windows auto-startup helpers ──────────────────────────────────────────────
 function getStartupBatPath() {
@@ -286,7 +288,7 @@ async function sync() {
       API_BASE,
       '/api/activity/aw-sync',
       'POST',
-      summary,
+      { ...summary, deviceId: DEVICE_ID, deviceName: DEVICE_NAME },
       { Authorization: `Bearer ${authToken}` }
     );
 
@@ -295,6 +297,12 @@ async function sync() {
       const ok = await login();
       if (ok) await sync();
       return;
+    }
+
+    if (res.status === 403) {
+      console.error(`[sync] Device blocked: ${res.body?.error}`);
+      console.error('[sync] Ask your admin to reset the device lock, then restart this agent.');
+      process.exit(1);
     }
 
     if (res.body?.success) {
