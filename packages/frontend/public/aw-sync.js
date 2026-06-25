@@ -42,7 +42,7 @@ const hasFlag = (flag) => args.includes(flag);
 
 const EMAIL    = getArg('--email')    || process.env.AW_EMAIL    || '';
 const PASSWORD = getArg('--password') || process.env.AW_PASSWORD || '';
-const API_BASE = getArg('--api')      || process.env.AW_API_BASE || 'https://edutechexos-backend.onrender.com';
+const API_BASE = getArg('--api')      || process.env.AW_API_BASE || 'https://edutechexos-ueoq.onrender.com';
 const AW_BASE  = getArg('--aw')       || process.env.AW_BASE     || 'http://localhost:5600';
 const INTERVAL = parseInt(getArg('--interval') || process.env.AW_INTERVAL || '5', 10);
 
@@ -164,37 +164,36 @@ function request(baseUrl, urlPath, method = 'GET', body = null, headers = {}) {
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 async function login() {
-  // Retry up to 8 times — Render free tier takes ~30-60 s to wake from sleep.
-  const delays = [3, 5, 8, 12, 18, 25, 35, 50]; // seconds between attempts
-  for (let attempt = 0; attempt <= delays.length; attempt++) {
-    if (attempt > 0) {
-      const wait = delays[attempt - 1];
-      console.log(`[auth] Retrying in ${wait}s (attempt ${attempt + 1}/${delays.length + 1})… server may be waking up.`);
-      await sleep(wait * 1000);
-    }
+  const MAX_ATTEMPTS = 10;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    if (attempt === 1) console.log(`[auth] Logging in as ${EMAIL}…`);
+
+    let res;
     try {
-      console.log(`[auth] Logging in as ${EMAIL}…`);
-      const res = await request(API_BASE, '/api/auth/login', 'POST', { email: EMAIL, password: PASSWORD });
-      if (res.status === 200 && res.body?.token) {
-        authToken = res.body.token;
-        console.log('[auth] Login successful.');
-        return true;
-      }
-      if (res.status === 503 || res.status === 502 || res.status === 504) {
-        console.log(`[auth] Server returned ${res.status} — still waking up, will retry…`);
-        continue;
-      }
-      // Hard failure (401 wrong password, 400 bad request, etc.) — don't retry
-      console.error('[auth] Login failed:', res.body?.error || res.status);
-      return false;
+      res = await request(API_BASE, '/api/auth/login', 'POST', { email: EMAIL, password: PASSWORD });
     } catch (err) {
-      console.log(`[auth] Connection error: ${err.message} — will retry…`);
+      console.warn(`[auth] Request error (attempt ${attempt}/${MAX_ATTEMPTS}): ${err.message} — retrying…`);
+      continue;
     }
+
+    if (res.status === 200 && res.body?.token) {
+      authToken = res.body.token;
+      console.log('[auth] Login successful.');
+      return true;
+    }
+
+    if (res.status === 503 || res.status === 502) {
+      console.warn(`[auth] Server returned ${res.status} — retrying… (attempt ${attempt}/${MAX_ATTEMPTS})`);
+      continue;
+    }
+
+    console.error('[auth] Login failed:', res.body?.error || res.status);
+    return false;
   }
-  console.error('[auth] Could not reach the server after multiple attempts. Check your internet or try again later.');
+
+  console.error(`[auth] Could not reach server after ${MAX_ATTEMPTS} attempts. Giving up.`);
   return false;
 }
 
@@ -277,55 +276,9 @@ async function buildSummary() {
   };
 }
 
-// ── Session check — only sync while user is logged into EduTechExOS ───────────
-async function isLoggedIn() {
-  try {
-    const res = await request(
-      API_BASE,
-      '/api/activity/session-active',
-      'GET',
-      null,
-      { Authorization: `Bearer ${authToken}` }
-    );
-    if (res.status === 401) {
-      // Token expired — refresh it
-      const ok = await login();
-      if (!ok) return false;
-      const retry = await request(
-        API_BASE,
-        '/api/activity/session-active',
-        'GET',
-        null,
-        { Authorization: `Bearer ${authToken}` }
-      );
-      return retry.body?.active === true;
-    }
-    return res.body?.active === true;
-  } catch {
-    return false;
-  }
-}
-
 // ── Sync ──────────────────────────────────────────────────────────────────────
-let _wasActive = false;
-
 async function sync() {
   try {
-    const active = await isLoggedIn();
-
-    if (!active) {
-      if (_wasActive) {
-        console.log(`[${new Date().toLocaleTimeString()}] User logged out — pausing sync. Will resume automatically on next login.`);
-        _wasActive = false;
-      }
-      return; // skip — user is not logged in
-    }
-
-    if (!_wasActive) {
-      console.log(`[${new Date().toLocaleTimeString()}] User is logged in — starting activity sync.`);
-      _wasActive = true;
-    }
-
     const summary = await buildSummary();
     if (!summary) return;
 
@@ -361,8 +314,7 @@ async function sync() {
   const ok = await login();
   if (!ok) process.exit(1);
 
-  console.log(`[agent] Running. Waiting for EduTechExOS login to start syncing…`);
-  console.log(`[agent] Sync runs every ${INTERVAL} minute(s) while you are logged in.`);
+  console.log(`[agent] Started. Syncing every ${INTERVAL} minute(s). Admin can see your activity in EduTechExOS.`);
   console.log(`[agent] Press Ctrl+C to stop.`);
 
   await sync();
