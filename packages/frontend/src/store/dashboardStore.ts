@@ -889,7 +889,34 @@ export const useDashboardStore = create<DashboardState>()(
             if (!grouped[chId]) grouped[chId] = [];
             grouped[chId].push(p);
           });
-          set({ wikiPages: grouped });
+
+          // Merge with local state: prefer local version when it's newer than what
+          // the backend returned (covers the in-flight debounce window and personal/
+          // offline-only pages the backend doesn't know about).
+          set((s) => {
+            const merged: Record<string, WikiPage[]> = { ...grouped };
+            Object.entries(s.wikiPages).forEach(([chId, localPages]) => {
+              if (!merged[chId]) {
+                // Channel not in backend response — keep local pages as-is
+                merged[chId] = localPages;
+              } else {
+                merged[chId] = merged[chId].map((serverPage) => {
+                  const local = localPages.find((lp) => lp.id === serverPage.id);
+                  if (!local) return serverPage;
+                  // Keep whichever version was updated more recently
+                  return new Date(local.updatedAt) >= new Date(serverPage.updatedAt)
+                    ? local
+                    : serverPage;
+                });
+                // Preserve local-only pages not yet synced to backend
+                const serverIds = new Set(merged[chId].map((p) => p.id));
+                localPages.forEach((lp) => {
+                  if (!serverIds.has(lp.id)) merged[chId].push(lp);
+                });
+              }
+            });
+            return { wikiPages: merged };
+          });
         } catch {
           /* backend unavailable — keep current wiki state */
         }

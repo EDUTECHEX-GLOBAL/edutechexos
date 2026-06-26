@@ -33,7 +33,6 @@ const url    = require('url');
 const fs     = require('fs');
 const path   = require('path');
 const os     = require('os');
-const { execSync } = require('child_process');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const args    = process.argv.slice(2);
@@ -48,43 +47,43 @@ const INTERVAL = parseInt(getArg('--interval') || process.env.AW_INTERVAL || '5'
 const DEVICE_ID   = `${os.hostname()}-${os.platform()}-${os.arch()}`;
 const DEVICE_NAME = os.hostname();
 
+// IST offset in ms
+const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+
 // ── Windows auto-startup helpers ──────────────────────────────────────────────
-function getStartupBatPath() {
-  // Windows Startup folder: runs on every user login
+function getStartupVbsPath() {
   const startupDir = path.join(
     os.homedir(),
     'AppData', 'Roaming', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup'
   );
-  return path.join(startupDir, 'edutechexos-agent.bat');
+  return path.join(startupDir, 'edutechexos-agent.vbs');
 }
 
 function registerStartup() {
   if (os.platform() !== 'win32') {
     console.log('[startup] Auto-startup registration is only supported on Windows.');
-    console.log('[startup] On macOS/Linux, add this to your shell profile or cron:');
-    console.log(`           node "${process.argv[1]}" --email ${EMAIL} --password "${PASSWORD}"`);
+    console.log('[startup] On macOS/Linux, add a cron job:');
+    console.log(`           @reboot node "${process.argv[1]}" --email ${EMAIL} --password "${PASSWORD}"`);
     return;
   }
-  const nodePath = process.execPath; // path to node.exe
+  const nodePath   = process.execPath;
   const scriptPath = path.resolve(process.argv[1]);
-  const batPath = getStartupBatPath();
+  const vbsPath    = getStartupVbsPath();
 
-  const batContent = [
-    '@echo off',
-    'rem EduTechExOS Desktop Activity Agent',
-    'rem Tracks VS Code, Chrome, Figma etc. and syncs to EduTechExOS admin.',
-    'rem Auto-generated — do not edit manually. Re-run setup to update.',
-    `start "" /B "${nodePath}" "${scriptPath}" --email "${EMAIL}" --password "${PASSWORD}" --api "${API_BASE}" --interval ${INTERVAL}`,
+  // VBScript launches Node hidden (no console window flashing on login)
+  const vbsContent = [
+    'Set WshShell = CreateObject("WScript.Shell")',
+    `WshShell.Run """${nodePath}"" ""${scriptPath}"" --email ""${EMAIL}"" --password ""${PASSWORD}"" --api ""${API_BASE}"" --interval ${INTERVAL}", 0, False`,
   ].join('\r\n');
 
   try {
-    fs.writeFileSync(batPath, batContent, 'utf8');
-    console.log(`[startup] ✅ Registered! The agent will start automatically every time Windows boots.`);
-    console.log(`[startup]    Startup file: ${batPath}`);
+    fs.writeFileSync(vbsPath, vbsContent, 'utf8');
+    console.log(`[startup] ✅ Registered! The agent will start silently every time Windows boots.`);
+    console.log(`[startup]    Startup file: ${vbsPath}`);
     console.log(`[startup] Starting agent now…`);
   } catch (err) {
     console.error(`[startup] ❌ Failed to write startup file: ${err.message}`);
-    console.error(`[startup]    Try running as Administrator, or manually add the agent to startup.`);
+    console.error(`[startup]    Try running as Administrator.`);
   }
 }
 
@@ -93,24 +92,17 @@ function removeStartup() {
     console.log('[startup] Not on Windows — nothing to remove.');
     return;
   }
-  const batPath = getStartupBatPath();
-  try {
-    if (fs.existsSync(batPath)) {
-      fs.unlinkSync(batPath);
-      console.log('[startup] ✅ Auto-startup removed.');
-    } else {
-      console.log('[startup] No startup registration found (already removed).');
+  // Remove both .vbs and old .bat if present
+  [getStartupVbsPath(), getStartupVbsPath().replace('.vbs', '.bat')].forEach((p) => {
+    try {
+      if (fs.existsSync(p)) { fs.unlinkSync(p); console.log(`[startup] ✅ Removed: ${p}`); }
+    } catch (err) {
+      console.error(`[startup] ❌ Failed to remove ${p}: ${err.message}`);
     }
-  } catch (err) {
-    console.error(`[startup] ❌ Failed to remove: ${err.message}`);
-  }
+  });
 }
 
-// Handle --startup and --remove before checking email/password
-if (hasFlag('--remove')) {
-  removeStartup();
-  process.exit(0);
-}
+if (hasFlag('--remove')) { removeStartup(); process.exit(0); }
 
 if (!EMAIL || !PASSWORD) {
   console.error('');
@@ -119,7 +111,7 @@ if (!EMAIL || !PASSWORD) {
   console.error('  Usage:');
   console.error('    node aw-sync.js --email you@edutechex.in --password yourpassword');
   console.error('');
-  console.error('  First-time setup (auto-starts on every Windows boot):');
+  console.error('  First-time setup (auto-starts silently on every Windows boot):');
   console.error('    node aw-sync.js --email you@edutechex.in --password yourpassword --startup');
   console.error('');
   process.exit(1);
@@ -127,7 +119,7 @@ if (!EMAIL || !PASSWORD) {
 
 if (hasFlag('--startup')) {
   registerStartup();
-  // Fall through — continue running the agent now
+  // Fall through — start the agent now too
 }
 
 let authToken = null;
@@ -144,7 +136,7 @@ function request(baseUrl, urlPath, method = 'GET', body = null, headers = {}) {
       path:     parsed.pathname + parsed.search,
       method,
       headers:  { 'Content-Type': 'application/json', ...headers },
-      timeout:  15000,
+      timeout:  20000,
     };
     if (body) {
       const raw = JSON.stringify(body);
@@ -167,77 +159,88 @@ function request(baseUrl, urlPath, method = 'GET', body = null, headers = {}) {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 async function login() {
-  const MAX_ATTEMPTS = 10;
-
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= 15; attempt++) {
     if (attempt === 1) console.log(`[auth] Logging in as ${EMAIL}…`);
-
-    let res;
     try {
-      res = await request(API_BASE, '/api/auth/login', 'POST', { email: EMAIL, password: PASSWORD });
+      const res = await request(API_BASE, '/api/auth/login', 'POST', { email: EMAIL, password: PASSWORD });
+      if (res.status === 200 && res.body?.token) {
+        authToken = res.body.token;
+        console.log('[auth] Login successful.');
+        return true;
+      }
+      if (res.status === 503 || res.status === 502) {
+        const wait = Math.min(attempt * 5, 30);
+        console.warn(`[auth] Server waking up (attempt ${attempt}/15) — waiting ${wait}s…`);
+        await sleep(wait * 1000);
+        continue;
+      }
+      console.error('[auth] Login failed:', res.body?.error || res.status);
+      return false;
     } catch (err) {
-      console.warn(`[auth] Request error (attempt ${attempt}/${MAX_ATTEMPTS}): ${err.message} — retrying…`);
-      continue;
+      const wait = Math.min(attempt * 5, 30);
+      console.warn(`[auth] Network error (attempt ${attempt}/15): ${err.message} — waiting ${wait}s…`);
+      await sleep(wait * 1000);
     }
-
-    if (res.status === 200 && res.body?.token) {
-      authToken = res.body.token;
-      console.log('[auth] Login successful.');
-      return true;
-    }
-
-    if (res.status === 503 || res.status === 502) {
-      console.warn(`[auth] Server returned ${res.status} — retrying… (attempt ${attempt}/${MAX_ATTEMPTS})`);
-      continue;
-    }
-
-    console.error('[auth] Login failed:', res.body?.error || res.status);
-    return false;
   }
-
-  console.error(`[auth] Could not reach server after ${MAX_ATTEMPTS} attempts. Giving up.`);
+  console.error('[auth] Could not reach server after 15 attempts.');
   return false;
 }
 
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
 // ── ActivityWatch queries ─────────────────────────────────────────────────────
 async function getAWBuckets() {
-  const res = await request(AW_BASE, '/api/0/buckets/');
-  return res.status === 200 ? res.body : {};
+  try {
+    const res = await request(AW_BASE, '/api/0/buckets/');
+    return res.status === 200 ? res.body : {};
+  } catch { return {}; }
 }
 
 async function queryEvents(bucketId, start, end) {
-  const res = await request(
-    AW_BASE,
-    `/api/0/buckets/${encodeURIComponent(bucketId)}/events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&limit=1000`
-  );
-  return res.status === 200 && Array.isArray(res.body) ? res.body : [];
+  try {
+    const res = await request(
+      AW_BASE,
+      `/api/0/buckets/${encodeURIComponent(bucketId)}/events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&limit=2000`
+    );
+    return res.status === 200 && Array.isArray(res.body) ? res.body : [];
+  } catch { return []; }
 }
 
 async function getCurrentWindow(bucketId) {
-  const res = await request(AW_BASE, `/api/0/buckets/${encodeURIComponent(bucketId)}/events?limit=1`);
-  return res.status === 200 && Array.isArray(res.body) && res.body.length > 0 ? res.body[0] : null;
+  try {
+    const res = await request(AW_BASE, `/api/0/buckets/${encodeURIComponent(bucketId)}/events?limit=1`);
+    return res.status === 200 && Array.isArray(res.body) && res.body.length > 0 ? res.body[0] : null;
+  } catch { return null; }
 }
 
-// ── Build today's summary ─────────────────────────────────────────────────────
-async function buildSummary() {
+// ── Build summary for a specific date ────────────────────────────────────────
+async function buildSummary(forDate) {
   const buckets = await getAWBuckets();
   const keys    = Object.keys(buckets);
 
   const windowBucket = keys.find((k) => buckets[k].type === 'currentwindow' || k.includes('aw-watcher-window'));
   const afkBucket    = keys.find((k) => buckets[k].type === 'afkstatus'     || k.includes('aw-watcher-afk'));
+  const webBuckets   = keys.filter((k) => k.includes('aw-watcher-web') || buckets[k].type === 'web.tab.current');
 
   if (!windowBucket) {
     console.warn('[aw] No window-watcher bucket found. Is ActivityWatch running?');
     return null;
   }
 
-  const now        = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  const endOfDay   = now.toISOString();
+  const isToday = forDate.toDateString() === new Date().toDateString();
 
-  const currentEvent = await getCurrentWindow(windowBucket);
-  const currentApp   = currentEvent?.data?.app   || currentEvent?.data?.title || '';
-  const currentTitle = currentEvent?.data?.title  || '';
+  // Full day window for the requested date
+  const startOfDay = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate()).toISOString();
+  const endOfDay   = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate() + 1).toISOString();
+
+  // Current window only makes sense for today
+  let currentApp   = '';
+  let currentTitle = '';
+  if (isToday) {
+    const currentEvent = await getCurrentWindow(windowBucket);
+    currentApp   = currentEvent?.data?.app   || currentEvent?.data?.title || '';
+    currentTitle = currentEvent?.data?.title  || '';
+  }
 
   const windowEvents = await queryEvents(windowBucket, startOfDay, endOfDay);
   const appSeconds   = {};
@@ -258,59 +261,108 @@ async function buildSummary() {
 
   let isAfk       = false;
   let totalAfkSec = 0;
-
   if (afkBucket) {
     const afkEvents = await queryEvents(afkBucket, startOfDay, endOfDay);
-    const latestAfk = afkEvents[0];
-    isAfk = latestAfk?.data?.status === 'afk';
+    if (isToday && afkEvents[0]) isAfk = afkEvents[0]?.data?.status === 'afk';
     for (const ev of afkEvents) {
       if (ev.data?.status === 'afk') totalAfkSec += (ev.duration || 0);
     }
   }
 
+  let currentUrl       = '';
+  let currentPageTitle = '';
+  const domainSecs     = {};
+  for (const wb of webBuckets) {
+    if (isToday) {
+      const latest = await getCurrentWindow(wb);
+      if (latest?.data?.url && !latest.data.incognito) {
+        currentUrl       = latest.data.url;
+        currentPageTitle = latest.data.title || '';
+      }
+    }
+    const webEvents = await queryEvents(wb, startOfDay, endOfDay);
+    for (const ev of webEvents) {
+      const dur = ev.duration || 0;
+      const d   = ev.data;
+      if (!d?.url || d.incognito) continue;
+      try {
+        const domain = new URL(d.url).hostname.replace(/^www\./, '');
+        if (!domainSecs[domain]) domainSecs[domain] = { minutes: 0, title: d.title || domain };
+        domainSecs[domain].minutes += dur / 60;
+      } catch { /* invalid URL */ }
+    }
+  }
+
+  const webBreakdown = Object.entries(domainSecs)
+    .map(([domain, v]) => ({ domain, minutes: Math.round(v.minutes), title: v.title }))
+    .filter(({ minutes }) => minutes > 0)
+    .sort((a, b) => b.minutes - a.minutes)
+    .slice(0, 20);
+
+  // dateStr in IST so backend stores under the correct local date
+  const dateStr = new Date(forDate.getTime() + IST_OFFSET).toISOString().slice(0, 10);
+
   return {
-    currentApp,
-    currentTitle,
+    dateStr,
+    currentApp, currentTitle,
+    currentUrl, currentPageTitle,
     isAfk,
     totalActiveMinutes: Math.round(totalActiveSec / 60),
     totalAfkMinutes:    Math.round(totalAfkSec / 60),
     appBreakdown,
+    webBreakdown,
   };
 }
 
-// ── Sync ──────────────────────────────────────────────────────────────────────
+// ── Push a summary to backend ─────────────────────────────────────────────────
+async function pushSummary(summary) {
+  const res = await request(
+    API_BASE,
+    '/api/activity/aw-sync',
+    'POST',
+    { ...summary, deviceId: DEVICE_ID, deviceName: DEVICE_NAME },
+    { Authorization: `Bearer ${authToken}` }
+  );
+
+  if (res.status === 401) {
+    console.warn('[sync] Token expired — re-logging in…');
+    const ok = await login();
+    if (ok) await pushSummary(summary);
+    return;
+  }
+  if (res.status === 403) {
+    console.error(`[sync] Device blocked: ${res.body?.error}`);
+    console.error('[sync] Ask your admin to reset the device lock, then restart this agent.');
+    process.exit(1);
+  }
+  return res.body?.success === true;
+}
+
+// ── Main sync (today + yesterday backfill) ────────────────────────────────────
 async function sync() {
   try {
-    const summary = await buildSummary();
-    if (!summary) return;
+    const today     = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
 
-    const res = await request(
-      API_BASE,
-      '/api/activity/aw-sync',
-      'POST',
-      { ...summary, deviceId: DEVICE_ID, deviceName: DEVICE_NAME },
-      { Authorization: `Bearer ${authToken}` }
-    );
-
-    if (res.status === 401) {
-      console.warn('[sync] Token expired — re-logging in…');
-      const ok = await login();
-      if (ok) await sync();
-      return;
+    // Always sync today
+    const todaySummary = await buildSummary(today);
+    if (todaySummary) {
+      const ok = await pushSummary(todaySummary);
+      if (ok) {
+        const ts     = new Date().toLocaleTimeString();
+        const topApp = todaySummary.appBreakdown[0];
+        console.log(`[${ts}] synced today (${todaySummary.dateStr}) — top: ${topApp ? `${topApp.app} (${topApp.minutes}m)` : '(none)'} | active: ${todaySummary.totalActiveMinutes}m | afk: ${todaySummary.isAfk ? 'yes' : 'no'}`);
+      }
     }
 
-    if (res.status === 403) {
-      console.error(`[sync] Device blocked: ${res.body?.error}`);
-      console.error('[sync] Ask your admin to reset the device lock, then restart this agent.');
-      process.exit(1);
-    }
-
-    if (res.body?.success) {
-      const ts = new Date().toLocaleTimeString();
-      const topApp = summary.appBreakdown[0];
-      console.log(`[${ts}] synced — top: ${topApp ? `${topApp.app} (${topApp.minutes}m)` : '(none)'} | total: ${summary.totalActiveMinutes}m | afk: ${summary.isAfk ? 'yes' : 'no'}`);
-    } else {
-      console.error('[sync] Server error:', res.body?.error || res.status);
+    // Backfill yesterday so admin always sees the previous day's full data
+    const ySummary = await buildSummary(yesterday);
+    if (ySummary && ySummary.totalActiveMinutes > 0) {
+      const ok = await pushSummary(ySummary);
+      if (ok) {
+        console.log(`[sync] backfilled yesterday (${ySummary.dateStr}) — active: ${ySummary.totalActiveMinutes}m`);
+      }
     }
   } catch (err) {
     console.error('[sync] Error:', err.message);
@@ -322,9 +374,10 @@ async function sync() {
   const ok = await login();
   if (!ok) process.exit(1);
 
-  console.log(`[agent] Started. Syncing every ${INTERVAL} minute(s). Admin can see your activity in EduTechExOS.`);
+  console.log(`[agent] Started. Syncing every ${INTERVAL} minute(s).`);
+  console.log(`[agent] Admin can see your activity in EduTechExOS.`);
   console.log(`[agent] Press Ctrl+C to stop.`);
 
-  await sync();
+  await sync(); // immediate first sync + yesterday backfill
   setInterval(sync, INTERVAL * 60 * 1000);
 })();

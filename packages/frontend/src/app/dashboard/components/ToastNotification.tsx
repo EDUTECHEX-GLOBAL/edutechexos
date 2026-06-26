@@ -59,11 +59,13 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
   return (
     <div
       onClick={clickable ? handleClick : undefined}
-      className={`flex items-start gap-3.5 p-4 rounded-2xl shadow-2xl border bg-white max-w-sm w-full transition-all duration-500 ${
+      className={`flex items-start gap-3.5 p-4 rounded-2xl shadow-2xl bg-white max-w-sm w-full transition-all duration-500 ${
         visible && !leaving ? 'translate-x-0 opacity-100' : 'translate-x-12 opacity-0'
       }`}
       style={{
-        borderColor: `${cfg.color}30`,
+        borderTop: `1px solid ${cfg.color}30`,
+        borderRight: `1px solid ${cfg.color}30`,
+        borderBottom: `1px solid ${cfg.color}30`,
         borderLeft: `4px solid ${cfg.color}`,
         cursor: clickable ? 'pointer' : 'default',
       }}

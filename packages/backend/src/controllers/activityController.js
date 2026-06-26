@@ -140,6 +140,7 @@ async function awSync(req, res) {
       appBreakdown,
       currentUrl, currentPageTitle, webBreakdown,
       deviceId, deviceName,
+      dateStr: payloadDateStr,
     } = req.body;
 
     // ── One-device-per-user enforcement ──────────────────────────────────────
@@ -161,7 +162,10 @@ async function awSync(req, res) {
     }
     // ─────────────────────────────────────────────────────────────────────────
     const istOffset = 5.5 * 60 * 60 * 1000;
-    const dateStr = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+    // Use client-supplied dateStr (for historical backfill) or fall back to today in IST
+    const dateStr = /^\d{4}-\d{2}-\d{2}$/.test(payloadDateStr)
+      ? payloadDateStr
+      : new Date(Date.now() + istOffset).toISOString().slice(0, 10);
     await AWActivity.findOneAndUpdate(
       { email, dateStr },
       {

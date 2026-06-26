@@ -94,6 +94,9 @@ export default function LoginForm({
       }
       const token = jwtToken;
       localStorage.setItem('edutechex_token', JSON.stringify({ user: loginAccount, token }));
+      if (!localStorage.getItem('edutechex_session_start')) {
+        localStorage.setItem('edutechex_session_start', new Date().toISOString());
+      }
       await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,6 +130,9 @@ export default function LoginForm({
     }
     const token = jwtToken;
     localStorage.setItem('edutechex_token', JSON.stringify({ user: loginAccount, token }));
+    if (!localStorage.getItem('edutechex_session_start')) {
+      localStorage.setItem('edutechex_session_start', new Date().toISOString());
+    }
     await fetch('/api/auth/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -162,9 +168,9 @@ export default function LoginForm({
     await new Promise((r) => setTimeout(r, 700));
 
     const emailClean = data.email.trim().toLowerCase();
-    const delays = [5000, 10000, 15000, 15000, 10000];
-
-    for (let attempt = 0; attempt <= delays.length; attempt++) {
+    // Keep retrying until the server responds — Render free tier can take 60-90s to wake
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
       try {
         const res = await fetch(`${API_BASE}/api/auth/login`, {
           method: 'POST',
@@ -190,14 +196,8 @@ export default function LoginForm({
         await finishLogin(result.user, result.token);
         return;
       } catch {
-        if (attempt < delays.length) {
-          setIsRetrying(true);
-          await new Promise((r) => setTimeout(r, delays[attempt]));
-        } else {
-          setIsRetrying(false);
-          setIsLoading(false);
-          setError('password', { message: 'Server unavailable — please try again in a minute.' });
-        }
+        setIsRetrying(true);
+        await new Promise((r) => setTimeout(r, 8000));
       }
     }
   };

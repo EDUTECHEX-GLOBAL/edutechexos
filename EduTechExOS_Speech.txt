@@ -1,0 +1,630 @@
+EduTechExOS — Complete Presentation Speech
+Estimated delivery time: 45-55 minutes at a comfortable pace
+============================================================
+
+BEFORE YOU START:
+- Open the PowerPoint in presenter view so you see these notes on your screen
+- Have a glass of water ready
+- Pace yourself: each slide should take 2-4 minutes
+- Pause for audience questions after every 3-4 slides if time allows
+
+============================================================
+SLIDE 1 - TITLE (2 minutes)
+============================================================
+
+Good [morning / afternoon / evening] everyone.
+
+My name is [Your Name], and today I'm going to take you through EduTechExOS,
+the all-in-one operating system we've built specifically for EduTechEx.
+
+Before I dive in, I want to set the scene. How many of you have ever felt
+frustrated switching between Slack, Google Meet, Notion, a spreadsheet for
+attendance, email for leave requests, and maybe a separate task board — all
+in the same workday? That context-switching is exhausting, and it's expensive,
+both in time and in money.
+
+EduTechExOS was built to eliminate exactly that problem. Everything your team
+does — messaging, video calls, task management, leave requests, attendance
+tracking, knowledge sharing, and AI assistance — all of it lives in a single
+application that we built ourselves and that we fully control.
+
+Today I'll walk you through every page, every feature, how it all works under
+the hood, why we chose to build it this way, and what's coming next.
+Let's get started.
+
+============================================================
+SLIDE 2 - THE PROBLEM (3 minutes)
+============================================================
+
+Let me start with the problem.
+
+On the left side of this slide, you'll see the world BEFORE EduTechExOS.
+
+First: tools like Slack and Teams are expensive SaaS products. You pay per
+seat, per month, and you have no control over the data they store about your
+team. For a growing team, that's thousands of rupees every month — money that
+could go toward actual product development.
+
+Second: Google Meet is generic. There's no connection between a meeting and
+the channel discussion that triggered it. You have to share links manually,
+and those links are not tied to any context.
+
+Third: attendance was tracked in spreadsheets. Every morning someone had to
+manually update a sheet. Errors crept in. Data was lost. HR had no reliable
+source of truth.
+
+Fourth: leave approvals happened over email. A member sends a request, waits
+for an admin to see it, then waits again for approval. There was no single
+place to see who was on leave on any given day.
+
+Fifth: AI tools like ChatGPT have no idea who your team members are, what
+channels you have, or what tasks are in progress. They're general-purpose,
+not workspace-aware.
+
+And sixth: tasks, documentation, messaging, and attendance all lived in
+different applications. There was no unified view of team activity.
+
+Now look at the right side. With EduTechExOS, EVERY single one of those
+problems is solved. The platform is self-hosted, so cost is just compute.
+Meetings are tied to channels. Attendance is auto-logged from login events.
+Leave is managed in a dedicated panel with one-click approval. Our AI copilot
+reads your actual workspace data. And everything lives in one application.
+
+============================================================
+SLIDE 3 - ARCHITECTURE & TECH STACK (4 minutes)
+============================================================
+
+Now let's look at how EduTechExOS is built.
+
+I've broken the tech stack into seven layers, each color-coded.
+
+The FRONTEND is built on Next.js 15 with React 19 and TypeScript. We use
+Tailwind CSS for styling and Framer Motion for animations. The result is a
+fast, server-side-rendered application that loads quickly even on slow
+connections.
+
+STATE MANAGEMENT uses Zustand with a persistence layer. This means your
+preferences, dark mode setting, and channel data survive page refreshes
+without hitting the server again. We also use Socket.IO on the client side
+for real-time events, and all message content is encrypted with AES-256
+before it's sent or stored.
+
+The BACKEND is a Node.js and Express.js server — straightforward, fast, and
+well-understood. Socket.IO handles all real-time communication: typing
+indicators, presence updates, new messages, notifications.
+
+The DATABASE is MongoDB with Mongoose. We have over 20 collections — messages,
+users, notifications, kanban tasks, wiki pages, leave requests, attendance
+logs, audit records, and more. MongoDB's flexible schema was the right choice
+for a product that has evolved rapidly.
+
+AI is powered by Google Gemini as the primary model. If Gemini hits a rate
+limit or fails, we automatically fall back to OpenAI's GPT-4o-mini. The
+user never sees this switch — it's completely transparent.
+
+STORAGE uses a priority chain. We first try Backblaze B2, then Cloudflare R2.
+For raw files like PDFs and documents, we skip cloud storage entirely and
+store them as base64 directly in MongoDB, which keeps things simple and avoids
+upload permission issues. Images, video, and audio go to Cloudinary for CDN
+delivery.
+
+Finally, DEPLOYMENT: the frontend is on Vercel — globally distributed, fast
+CDN, zero configuration. The backend is on Render's free tier. The one
+trade-off there is a 50-second cold start if the server hasn't been accessed
+recently, but we handle that with a retry mechanism on the client.
+
+============================================================
+SLIDE 4 - LANDING PAGE (3 minutes)
+============================================================
+
+The landing page at the root URL is our public-facing marketing page, but it
+also serves as a feature showcase for anyone considering EduTechExOS for their
+own team.
+
+Let me walk through the nine feature cards on this page.
+
+Project Channels: the foundation of the platform. Every team or subject area
+gets its own channel. Messages, files, and meetings are always in context.
+
+Embedded AI Agent: our Gemini-powered assistant is embedded directly in the
+dashboard. It reads your channel history, your task board, and your team
+roster before answering questions. This is not a generic chatbot.
+
+Auto Task Extraction: when someone says "can you finish the report by Friday"
+in a channel message, the AI notices that and creates a Kanban card
+automatically. No manual ticket creation needed.
+
+Morning Digest: every morning, every member gets a personalized AI-generated
+briefing. It summarizes what happened overnight in their channels, lists their
+pending tasks, and highlights any attendance flags.
+
+Attendance Tracking: every login event is recorded. Every logout too. The
+system builds a complete picture of who was active, when, and for how long,
+automatically, with no manual input.
+
+Broadcast & Alerts: admins can send org-wide announcements with one click.
+Every member sees the alert in their notification panel.
+
+Org Knowledge Base: a collaborative wiki with rich text editing. Teams can
+document processes, decisions, onboarding guides, and anything else that
+needs to be preserved.
+
+Activity Monitoring: admins can see real-time activity logs — which channels
+are most active, which members have been online, what actions were taken.
+
+And Member Onboarding: the invite flow is designed so that getting a new
+person into the platform takes less than two minutes.
+
+============================================================
+SLIDE 5 - AUTH, INVITE SYSTEM & SECURITY (4 minutes)
+============================================================
+
+Let's talk about how members get in and how security is handled.
+
+The primary flow is the Admin Invite Flow. An admin navigates to the Invites
+tab in the admin panel, enters an email address, and clicks generate. The
+system creates a unique invite token and sends an email. The recipient opens
+the link — which goes to the /invite route — fills in their name and password,
+and their account is created. The invite token is single-use and expires.
+This keeps access tightly controlled.
+
+The Login flow uses email and password. The password is checked against a
+bcrypt hash stored in MongoDB. If it matches, a JWT token is issued. That
+token is stored in localStorage under the key edutechex_token. When a Socket.IO
+connection is established, that token is used to authenticate the socket as
+well, so only logged-in users can receive real-time events.
+
+We also have an Access Request flow. If someone wants to join but doesn't have
+an invite, they can submit a request with their name, email, and a reason.
+Admins see these in the Requests tab and can approve or decline with a note.
+
+Security is multi-layered. Every message body is encrypted with AES-256 before
+it's written to MongoDB. Even if someone got direct database access, they would
+see ciphertext, not readable messages. JWT tokens expire, forcing periodic
+re-authentication. Passwords are never stored — only bcrypt hashes. Invite
+tokens are one-time-use.
+
+When a member is removed by an admin, their account is deactivated immediately.
+Their record is moved to the RemovedMember collection. If they want to return,
+they go through the re-apply flow, which requires explicit admin approval.
+
+============================================================
+SLIDE 6 - DASHBOARD OVERVIEW (3 minutes)
+============================================================
+
+Now we arrive at the heart of the application: the main dashboard.
+
+When you log in, you land on the dashboard at /dashboard. The layout has five
+distinct zones.
+
+The Left Sidebar shows your channel list, direct message threads, and a
+presence indicator for each member. Online members have a green dot. Away
+members have amber. Do Not Disturb shows red. Offline is grey. These states
+update via Socket.IO every 30 seconds.
+
+The Top Bar shows the active channel name, a search button, a meeting button
+to start an instant Jitsi session, a notification bell with an unread badge,
+and your user avatar which opens settings.
+
+The Message Feed takes up the central area. This is where real-time
+conversation happens. Messages appear instantly — first as an optimistic local
+preview, then replaced by the server-confirmed version when the socket echo
+arrives. This gives zero-latency feel while maintaining data consistency.
+
+The Right Rail is a panel that slides open with different tools: the AI
+Copilot, the Kanban board, the Wiki, Leave requests, Insights, Attendance
+calendar, and the Search panel.
+
+And finally, the Settings Panel is accessible from your avatar. It has six
+tabs covering your profile, appearance preferences, notification settings,
+meeting configuration, security (change password), and privacy controls.
+
+============================================================
+SLIDE 7 - REAL-TIME MESSAGING (4 minutes)
+============================================================
+
+Let me go deep on messaging, because it's the most-used feature.
+
+On the interaction side: the message composer uses Tiptap — a full rich text
+editor. You can add emoji reactions to any message by clicking it. You can
+reply in a thread, keeping long conversations organized. You can pin a message
+to your personal pin list — and importantly, pinned messages are private to
+you; other members don't see your pins. You can bookmark messages for later
+reference — again, personal to you. You can @mention teammates, which triggers
+an immediate notification to them.
+
+While you type, other members see a typing indicator at the bottom of the feed.
+This is powered by a Socket.IO event that fires on keydown and clears after
+two seconds of inactivity.
+
+On the file and media side: you can attach any file type. The system
+automatically routes it to the right storage. Images, video, and audio go to
+Cloudinary for fast CDN delivery. PDFs, Word documents, ZIP files, and other
+raw formats go directly to MongoDB as base64 — this avoids the permission
+restrictions that cloud storage providers have on unsigned uploads of non-media
+files.
+
+The size limits are five megabytes for raw files and ten megabytes for media.
+If a file exceeds that, the user gets a clear error toast before the upload
+even starts.
+
+Message deduplication is handled through a clientId system. When you send a
+message, it appears immediately with a temporary local ID. The server saves it,
+assigns a permanent MongoDB ID, and echoes it back via socket. The client
+replaces the local version with the server-confirmed version, matching on
+either the permanent ID or the clientId. This is what ensures bookmarks and
+pins work correctly — they always reference stable server IDs, never temporary
+local ones.
+
+============================================================
+SLIDE 8 - VOICE, RECORDING & FILES (3 minutes)
+============================================================
+
+Let's talk about the media features.
+
+Voice Notes: click the microphone icon in the message input bar. The browser
+requests microphone permission. If granted, MediaRecorder starts capturing
+audio. When you stop, the recording is attached to your message input
+automatically. You send it like any message. The audio player appears inline
+in the message feed. Every channel member can play it back.
+
+Screen Recording: click the record button. The browser shows a screen-picker
+dialog — you choose which screen or window to share. MediaRecorder captures
+the screen output. When you stop recording, the video file is attached to your
+message input. Send it, and everyone sees a video player inline.
+
+An important detail here: the sender can always see their own screen recording.
+This was a bug we fixed — previously, only other members could see the video.
+The fix was making sure the message comes back through the server echo and is
+properly rendered in the sender's feed.
+
+For both voice and screen recording, we've added pre-flight permission checks.
+If your browser has blocked microphone access — which can happen after declining
+the permission prompt — you'll see an actionable error message: "Click the lock
+icon in the address bar, find Microphone, set it to Allow, then refresh." This
+replaces the unhelpful generic error message that we had before.
+
+============================================================
+SLIDE 9 - MEETING MANAGEMENT (3 minutes)
+============================================================
+
+Meetings in EduTechExOS are powered by Jitsi Meet, which is a free,
+open-source video conferencing platform. No account required, no per-minute
+billing, no participant limits.
+
+For an instant meeting: click the meeting button in the top bar while you're
+in a channel. The system generates a room name using the format
+edutechexos-{channel-name}-{timestamp}. It then builds a Jitsi URL:
+https://meet.jit.si/{roomName}. This link is stored in a meeting notification
+and broadcast to all channel members. Anyone who clicks "Join Meeting" in their
+notification panel opens the exact same Jitsi URL. Everyone ends up in the
+same room.
+
+This is deterministic. The room URL is derived from the channel name and
+timestamp, so there's no ambiguity. Every member who receives the notification
+clicks the same link and joins the same call.
+
+For scheduled meetings: admins or users navigate to the Meeting tab in
+settings, fill in the date, time, description, and channel, and submit. The
+system creates a MeetingRequest record in MongoDB and sends notifications to
+all invited members. The notification includes the joinLink so members can
+join directly from the notification panel.
+
+We also have a dedicated meeting room at /meeting/[code]. This is a full-page
+meeting room experience with participant management and access control via the
+MeetingAccess model.
+
+============================================================
+SLIDE 10 - AI COPILOT & AUTOMATION (4 minutes)
+============================================================
+
+AI in EduTechExOS is not a chatbot widget bolted to the side. It's deeply
+integrated into how the platform works.
+
+The Conversational AI Copilot in the right rail can answer any question about
+your workspace. Ask it "what did the engineering channel discuss this week?"
+and it reads the actual message history before responding. Ask it "who is
+assigned to the homepage redesign task?" and it reads the Kanban board. This
+context-awareness is what makes it genuinely useful rather than generic.
+
+Auto Task Extraction: the AI monitors messages and looks for action items.
+"Can you update the API documentation by Thursday" — the AI extracts that,
+creates a Kanban card with the assignee and due date, and places it in the
+Backlog column. No one has to manually create a ticket.
+
+Morning Digest: a scheduled backend job runs every morning. It calls Gemini
+with a prompt that includes overnight message activity, pending tasks, and
+attendance flags. Gemini generates a personalized summary for each member. This
+lands in their notifications when they start their day.
+
+The AI-powered search goes beyond keyword matching. Type a natural-language
+query into the search panel and it finds relevant messages, wiki pages, and
+Kanban cards even if the exact words don't match.
+
+Availability Insights in the admin panel use AI to surface patterns. If a
+member is consistently offline during supposed working hours, or if there's a
+predictable pattern of peak activity, the AI surfaces that for the admin.
+
+And the failover: if Gemini hits a rate limit or returns an error, we
+automatically retry with OpenAI's GPT-4o-mini. The switch is invisible to
+the user. They might get a slightly different response style, but the function
+is identical.
+
+============================================================
+SLIDE 11 - KANBAN BOARD & WIKI (3 minutes)
+============================================================
+
+Two of the most-loved features in the right rail are the Kanban board and
+the Wiki.
+
+The Kanban board has four columns: Backlog, In Progress, Review, and Done.
+Cards can be created manually — click add card, fill in title, description,
+assignee, and due date. Or they can be created automatically by the AI when
+it detects action items in messages.
+
+Drag a card from Backlog to In Progress when work starts. Drag it to Review
+when it's ready for feedback. Drag it to Done when it's complete. These moves
+are broadcast via Socket.IO, so every team member sees the board update in
+real time without refreshing.
+
+The card detail modal lets you add comments, attach files, set priority, and
+view the full history of changes. You can filter by assignee or by channel.
+
+The Wiki is a collaborative knowledge base powered by Tiptap. Every page
+supports rich formatting: headings, lists, code blocks, bold, italic, and links.
+Pages are stored in the WikiPage collection in MongoDB. Any member can create a
+new page. Admins and page creators can edit or delete pages. Pages are listed
+alphabetically in the sidebar.
+
+The wiki is indexed by the search system, so typing a keyword in the search
+panel returns matching wiki pages alongside messages and Kanban cards.
+
+============================================================
+SLIDE 12 - LEAVE MANAGEMENT & ATTENDANCE (4 minutes)
+============================================================
+
+Leave management and attendance are features that really differentiate
+EduTechExOS from a generic messaging tool.
+
+For leave: a member opens the Leave panel in the right rail. They fill in the
+leave type — casual, sick, or earned — the start date, end date, and reason.
+They submit. The request immediately appears in the Admin panel under the
+Leaves tab as "Pending."
+
+The admin sees all pending requests. They can approve with one click, or
+decline with a comment explaining why. When a leave is approved, it appears
+on the Leave Calendar — a visual month-grid that shows all approved leaves
+across all members. Any member can see this calendar and plan their own
+requests accordingly.
+
+Admins can also manually adjust leave balances when needed — for example,
+carrying over unused casual leave from a previous period.
+
+For attendance: every time a member logs in, a LoginEvent record is created
+in MongoDB with the timestamp, IP address, and user agent. When they log out
+or their session ends, another event is recorded. ActivitySession models track
+how long a member was actively using the application versus just having it
+open in the background.
+
+The UserAttendanceCalendar component shows a heatmap view — darker color
+means more active time that day. The LoginTrackerCalendar shows a month
+view with a green/red/amber indicator for each day: present, absent, or late.
+
+Admins see this for ALL members in the Attendance tab, giving HR a complete
+real-time picture of team activity without any manual data entry.
+
+============================================================
+SLIDE 13 - ADMIN PANEL (5 minutes)
+============================================================
+
+The admin panel at /admin is the command center. Let me walk through all
+twelve tabs because each one serves a distinct purpose.
+
+People: view every member of the workspace. See their role, their current
+presence status, when they last logged in. Remove a member, which immediately
+deactivates their account. Promote someone to admin to grant them panel access.
+
+Requests: the queue of people who submitted access requests without an invite.
+Review each request, see their stated reason, and approve or decline. If
+approved, they get an invite link automatically.
+
+Invites: generate new invite tokens for specific email addresses. See which
+invites have been accepted and which are still pending. Revoke a pending invite
+if needed.
+
+Channels: create new channels for new teams or subjects. Rename existing
+channels. Archive channels that are no longer active — archived channels are
+hidden from the sidebar but messages are preserved.
+
+Broadcast: type an announcement message and send it to every single member
+simultaneously. This appears in everyone's notification panel as a broadcast
+alert. No email, no separate system — one click reaches the whole org.
+
+Activity: a real-time activity log showing which members are active, what
+channels they've been posting in, and how many messages were sent in the last
+24 hours. There's also a dedicated /admin/activity route with drill-down
+filters.
+
+Attendance: the full attendance grid — every member on one axis, every day on
+the other. Color-coded cells give HR an immediate visual overview.
+
+Desktop: the AWActivity tab tracks which desktop applications members are using
+during work hours. This is opt-in and uses an activity tracker agent that
+members install voluntarily. The data feeds into productivity analysis.
+
+Availability: the AdminAvailability model lets admins set official office hours
+and see in real time which members are currently online versus away. AI
+surfaces patterns about availability trends.
+
+Leaves: the full leave management interface — all pending, approved, and
+declined requests in one view. Filter by date range, member, or leave type.
+
+Leave Calendar: a visual calendar showing all approved leaves as blocks across
+the month. Admins use this for resource planning — you can see at a glance
+that three people are on leave next Monday before scheduling a critical meeting.
+
+And finally, Audit: every admin action is written to the AuditLog collection
+with a timestamp, the admin's identity, and the action taken. Who removed which
+member and when. Who approved which leave request. Who created which channel.
+This is essential for compliance and accountability.
+
+============================================================
+SLIDE 14 - NOTIFICATIONS, ALERTS & PRESENCE (3 minutes)
+============================================================
+
+The notification system in EduTechExOS is designed around one principle: only
+show you alerts that are relevant to you.
+
+There are six notification types. Reply notifications fire when someone responds
+to a message thread you started. Reaction notifications fire when someone reacts
+with an emoji to your message. Pin notifications fire when a channel moderator
+pins an important message. Task notifications fire when a Kanban card is
+assigned to you. Mention notifications fire instantly when someone types your
+@name in a channel. And Meeting notifications fire when an instant or scheduled
+meeting is created — and these uniquely include a "Join Meeting" button that
+opens the Jitsi room directly.
+
+Each notification type has its own color, icon, and gradient style so you can
+identify it at a glance without reading the text.
+
+The notification panel filters by your email address. Even if a broadcast
+notification goes to the whole org, you only see the ones where your email is
+in the recipient list. This prevents notification overload.
+
+The presence system updates in real time. When you log in, your dot turns green.
+After five minutes of no interaction, it shifts to amber — away. If you manually
+set Do Not Disturb in your settings, it turns red and suppresses non-critical
+notifications. When you close the browser or log out, it turns grey within 30
+seconds via the heartbeat timeout.
+
+============================================================
+SLIDE 15 - PROS, CONS & HONEST ASSESSMENT (3 minutes)
+============================================================
+
+I want to be transparent about EduTechExOS — both what it does brilliantly
+and where there are genuine limitations.
+
+The pros are significant.
+
+The biggest one is cost. Zero per-seat SaaS cost. We pay for compute, not for
+seats. For a team of ten, we're saving tens of thousands of rupees per year
+compared to Slack plus Notion plus Zoom.
+
+Complete customizability. Want a new feature? We build it. No feature request
+queue, no waiting for a vendor's quarterly release.
+
+Deep AI integration. Not a chatbot widget — AI that knows your workspace.
+
+End-to-end AES-256 message encryption. Your conversations are private even from
+us as platform operators.
+
+Jitsi meetings are free and have no participant limits. We could have 100 people
+in a call at no cost.
+
+Single application replacing five separate tools.
+
+Now for the honest cons.
+
+The Render free tier has a 50-second cold start. The first person to visit each
+morning triggers a cold boot. We handle this with a retry mechanism, but it's
+still a rough experience. A paid Render tier would eliminate this.
+
+No native mobile app yet. You access it through a mobile browser, which works
+but isn't as polished as a dedicated app.
+
+File size limits: five megabytes for raw files, ten for media. For teams that
+share large video recordings or design files, this needs improvement.
+
+B2 and R2 storage aren't configured yet, so the fallback is MongoDB base64 for
+raw files, which has storage implications at scale.
+
+No offline mode. No calendar sync with external calendars. Single tenant.
+Limited third-party integrations.
+
+These are all solvable — they're roadmap items, not fundamental limitations.
+
+============================================================
+SLIDE 16 - WHY ONLY THIS APPLICATION (4 minutes)
+============================================================
+
+This is the question I want to answer definitively: why not just use Slack,
+or Teams, or Notion?
+
+The first reason is that EduTechExOS was built FOR us BY us. Every single
+feature on this platform exists because someone on the EduTechEx team needed it.
+There are no features we never use. There are no missing features we have to
+work around. When we need something new, we build it in hours, not months.
+
+The second reason is cost. Let me be specific. Slack Pro costs around 7.25
+dollars per seat per month. For 10 people that's 72 dollars per month — about
+six thousand rupees. Add Notion at 8 dollars per user and Zoom at 14 dollars
+per host, and you're easily at 15,000 rupees per month for tools alone. Over
+a year that's 180,000 rupees. EduTechExOS runs on Render and Vercel free tiers
+— effective cost is near zero.
+
+The third reason is data ownership. When you use Slack, Slack reads your
+messages for AI features, compliance, and product improvement. With EduTechExOS,
+your data lives in your MongoDB instance. Nobody else reads it. With AES-256
+encryption at rest, even a database breach exposes nothing readable.
+
+The fourth reason is AI context. Generic AI tools like ChatGPT know nothing
+about your team. Our Gemini Copilot has read every message in every channel
+you've participated in. It knows who your teammates are, what tasks are open,
+and what was discussed yesterday. The answers are relevant because the context
+is real.
+
+The fifth reason is the single-login experience. Your team members don't have
+to context-switch between five applications. Everything — communication, tasks,
+knowledge, meetings, HR — is in one tab. Cognitive overhead drops dramatically.
+
+And the sixth reason is growth potential. Because we own the codebase, we can
+add a mobile app, calendar sync, LMS integration, or anything else we need.
+We are not dependent on any vendor's roadmap.
+
+============================================================
+SLIDE 17 - FUTURE ROADMAP & THANK YOU (3 minutes)
+============================================================
+
+Let me close by showing you where EduTechExOS is going.
+
+In Q3 2026, we plan to ship a native mobile app using React Native. iOS and
+Android, with push notifications, so the team is connected even away from
+their desks.
+
+Also in Q3, we'll add Google Calendar and Outlook sync. Scheduled meetings
+and approved leave requests will automatically appear in your personal calendar.
+
+In Q4 2026, we'll fully configure Backblaze B2 storage, lifting the file size
+restrictions for raw uploads. We'll also add multi-workspace support — one
+platform instance serving multiple independent teams within EduTechEx.
+
+In Q1 2027, we'll integrate with the LMS — linking course materials and
+assessments directly to channel discussions. We'll also add AI-generated
+meeting minutes: after a recorded meeting ends, Gemini transcribes and
+summarizes it automatically.
+
+In Q2 2027, a public API and Zapier integration will let external tools trigger
+EduTechExOS actions — for example, automatically creating a Kanban card when a
+support ticket is filed. And we'll implement end-to-end encrypted direct
+messages using the Signal protocol.
+
+This is a living platform. It evolves with us.
+
+I want to close by saying: EduTechExOS is not just software. It's infrastructure
+for how this team thinks, communicates, and works together. Every feature we've
+built — the AI that knows your workspace, the attendance that tracks itself,
+the meetings that anyone can join with one click — was built with one goal:
+to make your workday more focused, more connected, and more productive.
+
+Thank you very much. I'm happy to take questions.
+
+============================================================
+TOTAL ESTIMATED SPEAKING TIME: 45-55 minutes
+============================================================
+
+Tips for Q&A:
+- If asked about cost: emphasize zero per-seat SaaS licensing
+- If asked about security: AES-256, bcrypt, JWT, single-use invite tokens
+- If asked about mobile: React Native app is Q3 2026 roadmap
+- If asked about file limits: mention B2 integration on Q4 2026 roadmap
+- If asked about offline: currently not supported; PWA is a possible future direction

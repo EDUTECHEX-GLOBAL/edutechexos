@@ -251,17 +251,37 @@ function deadlineFmtDate(ms: number | null) {
   if (!ms) return 'Date not specified';
   return new Date(ms).toLocaleString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' });
 }
-function gcalEventUrl(task: string, dateMs: number | null) {
-  const title = encodeURIComponent(`[Deadline] ${task}`);
-  const details = encodeURIComponent('Auto-detected from EduTechExOS chat');
+function gcalEventUrl(task: string, dateMs: number | null, durationMs = 3600000) {
+  const title = encodeURIComponent(task);
+  const details = encodeURIComponent('Added from EduTechExOS · Enable notifications in Google Calendar to get phone alerts.');
   const base = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}`;
   if (!dateMs) return base;
   const d = new Date(dateMs),
     p = (n: number) => String(n).padStart(2, '0');
+  // If dateMs has a specific time (not midnight), create a timed event
+  const isTimed = d.getHours() !== 0 || d.getMinutes() !== 0;
+  if (isTimed) {
+    const fmt = (dt: Date) =>
+      `${dt.getFullYear()}${p(dt.getMonth() + 1)}${p(dt.getDate())}T${p(dt.getHours())}${p(dt.getMinutes())}00`;
+    return `${base}&dates=${fmt(d)}/${fmt(new Date(dateMs + durationMs))}`;
+  }
   const s = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
   const e = new Date(dateMs + 86400000);
   const es = `${e.getFullYear()}${p(e.getMonth() + 1)}${p(e.getDate())}`;
   return `${base}&dates=${s}/${es}`;
+}
+function gcalMeetingUrl(title: string, timeStr: string, link: string) {
+  const dt = parseDT(timeStr);
+  const dateMs = dt?.getTime() ?? null;
+  const details = encodeURIComponent(`Join: ${link}\n\nScheduled via EduTechExOS · Enable notifications in Google Calendar to get phone alerts.`);
+  const loc = encodeURIComponent(link);
+  const base = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&details=${details}&location=${loc}`;
+  if (!dateMs) return base;
+  const p = (n: number) => String(n).padStart(2, '0');
+  const d = new Date(dateMs);
+  const fmt = (dt2: Date) =>
+    `${dt2.getFullYear()}${p(dt2.getMonth() + 1)}${p(dt2.getDate())}T${p(dt2.getHours())}${p(dt2.getMinutes())}00`;
+  return `${base}&dates=${fmt(d)}/${fmt(new Date(dateMs + 3600000))}`;
 }
 function buildSrc(email: string) {
   return `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(email)}&ctz=Asia%2FKolkata&showNav=1&showPrint=0&showTabs=0&showCalendars=0&mode=WEEK`;
@@ -527,7 +547,7 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
           {/* GCal status pill in header */}
           {gcalActive && (
             <span className="mr-2 flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1 text-[10px] font-bold text-emerald-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Calendar connected
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Calendar embedded
             </span>
           )}
           <button
@@ -685,6 +705,15 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                                 Contact {m.sender} for access
                               </span>
                             )}
+                            <a
+                              href={gcalMeetingUrl(m.title, m.timeStr, m.link)}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="Add to Google Calendar — enable notifications there to get phone alerts"
+                              className="flex items-center gap-1 rounded-xl border border-[rgba(66,133,244,0.3)] bg-blue-50 px-3 py-1.5 text-[10px] font-bold text-blue-600 hover:bg-blue-100 transition-colors"
+                            >
+                              <Plus size={10} /> Add to Calendar
+                            </a>
                             {isHost &&
                               (grantFor === m.id ? (
                                 <div className="flex flex-1 items-center gap-1">
@@ -1007,18 +1036,32 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                     </div>
                     <div className="text-center">
                       <h3 className="text-base font-black text-[#1E2636]">
-                        Connect Your Google Calendar
+                        View Your Google Calendar
                       </h3>
                       <p className="mt-1 max-w-xs text-sm text-[#7C859E] leading-relaxed">
-                        Once connected, your calendar stays open every time you visit this panel —
-                        until you disconnect manually.
+                        Embed your Google Calendar here for quick reference. Use the{' '}
+                        <strong className="text-indigo-600">Add to Calendar</strong> buttons on
+                        meetings and deadlines to create events — Google Calendar will then send
+                        phone notifications automatically.
+                      </p>
+                    </div>
+
+                    {/* Phone notification info box */}
+                    <div className="w-full max-w-sm rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-left">
+                      <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-blue-400">
+                        How to get phone notifications
+                      </p>
+                      <p className="text-[11px] leading-relaxed text-slate-600">
+                        Click <strong>Add to Calendar</strong> on any meeting or deadline → Google
+                        Calendar opens with all details pre-filled → Save it. Google will send a
+                        push notification to your phone via the Google Calendar app automatically.
                       </p>
                     </div>
 
                     {/* Steps */}
                     <div className="w-full max-w-sm rounded-2xl border border-[rgba(62,74,137,0.10)] bg-white p-4">
                       <p className="mb-3 text-[9px] font-black uppercase tracking-widest text-[#B0B8D1]">
-                        One-time setup
+                        One-time setup to view calendar here
                       </p>
                       <div className="space-y-3">
                         {[
@@ -1028,7 +1071,7 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                           },
                           {
                             n: '2',
-                            text: 'Enter your Gmail address below and click Connect — the app will remember it.',
+                            text: 'Enter your Gmail address below and click Connect — your calendar will be embedded here.',
                           },
                         ].map((s) => (
                           <div key={s.n} className="flex items-start gap-3">
@@ -1066,7 +1109,7 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                         onClick={connectGcal}
                         className="flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 text-sm font-black text-white hover:bg-indigo-700 transition-colors"
                       >
-                        <CalendarDays size={15} /> Connect &amp; Remember
+                        <CalendarDays size={15} /> Embed My Calendar
                       </button>
                     </div>
                     <a

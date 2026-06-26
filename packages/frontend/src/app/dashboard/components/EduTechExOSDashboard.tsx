@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import '../dashboard.css';
 import AppLogo from '@/components/ui/AppLogo';
 import { useDashboardStore } from '@/store/dashboardStore';
+import type { MemberStatus } from '@/store/dashboardStore';
 import { useTheme } from '@/components/ThemeProvider';
 import { sendMentionEmailNotification, changePassword } from '@/app/actions/dbActions';
 import { smartUpload } from '@/lib/uploadToFirebase';
@@ -44,6 +45,7 @@ import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 import { trackEvent } from '@/app/PostHogProvider';
 import { motion, AnimatePresence } from 'framer-motion';
+import SessionTimer from './SessionTimer';
 
 /* Shared spring config used for every modal/panel */
 const SPRING = { type: 'spring', damping: 26, stiffness: 360, mass: 0.8 } as const;
@@ -387,7 +389,6 @@ export default function EduTechExOSDashboard() {
     updateKanbanTaskStatus,
     activeThreadId,
     setActiveThread,
-    unreadCounts,
     incrementUnread,
     clearUnread,
     updateMemberStatus,
@@ -395,6 +396,8 @@ export default function EduTechExOSDashboard() {
     updateMemberLeaveStatus,
     resetUserState,
   } = useDashboardStore();
+  // Separate selector so badge counts always trigger a re-render
+  const unreadCounts = useDashboardStore((s) => s.unreadCounts);
   const [dmToasts, setDmToasts] = useState<ToastData[]>([]);
   const [rightPanel, setRightPanel] = useState<'ai' | 'closed'>('closed');
   const [rightSidePanel, setRightSidePanel] = useState<'pinned' | 'bookmarked' | null>(null);
@@ -786,6 +789,14 @@ export default function EduTechExOSDashboard() {
     const handleReconnect = () => {
       joinAllChannels();
       useDashboardStore.getState().loadLocalMessages?.();
+      // Re-broadcast current status after a socket reconnect so peers see us again
+      const email = currentUserRef.current?.email;
+      if (email) {
+        const st = (useDashboardStore.getState().members.find(
+          (m) => m.email.toLowerCase() === email.toLowerCase()
+        )?.status) ?? 'online';
+        getSocket().emit('user_status_update', { email, status: st });
+      }
     };
 
     const handleNewMessage = async ({
@@ -906,6 +917,7 @@ export default function EduTechExOSDashboard() {
       getSocket().emit('user_status_update', { email: me, status: 'offline' });
       resetUserState();
       localStorage.removeItem('edutechex_token');
+      localStorage.removeItem('edutechex_session_start');
       // Show a brief toast then hard-redirect (toast lib may not render after push, so use replace)
       try {
         toast.error('Your account has been removed by the admin.', { duration: 3000 });
@@ -1022,7 +1034,7 @@ export default function EduTechExOSDashboard() {
     }: { email: string; status: string; name?: string }) => {
       if (!email) return;
       const validStatus = ['online', 'away', 'in-meeting', 'offline'].includes(status)
-        ? (status as import('@/store/dashboardStore').MemberStatus)
+        ? (status as MemberStatus)
         : 'online';
       useDashboardStore.getState().updateMemberStatus(email, validStatus);
       if (name) useDashboardStore.getState().updateMemberName(email, name);
@@ -1127,6 +1139,42 @@ export default function EduTechExOSDashboard() {
       })
       .catch(() => {/* silently ignore */});
   }, [authChecked, currentUserEmail, updateMemberLeaveStatus]);
+
+  // ── Presence: broadcast status via socket + update store ───────────────────
+  const inMeetingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const broadcastStatus = useCallback((status: 'online' | 'away' | 'in-meeting' | 'offline') => {
+    const email = currentUserRef.current?.email;
+    if (!email) return;
+    getSocket().emit('user_status_update', { email, status });
+    // Update store only — never call setSettings here to avoid setState-during-render
+    updateMemberStatus(email, status as MemberStatus);
+  }, [updateMemberStatus]);
+
+  // Broadcast 'online' as soon as the current user is resolved
+  useEffect(() => {
+    if (!currentUser?.email) return;
+    broadcastStatus('online');
+  }, [currentUser?.email]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When page regains visibility and status is 'in-meeting', revert to 'online'
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        const email = currentUserRef.current?.email;
+        if (!email) return;
+        const memberStatus = useDashboardStore.getState().members.find(
+          (m) => m.email.toLowerCase() === email.toLowerCase()
+        )?.status;
+        if (memberStatus === 'in-meeting') {
+          getSocket().emit('user_status_update', { email, status: 'online' });
+          updateMemberStatus(email, 'online');
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [updateMemberStatus]);
 
   // Activity heartbeat — ping backend every 30 s with current activity so admin sees live status.
   useEffect(() => {
@@ -1503,6 +1551,7 @@ export default function EduTechExOSDashboard() {
     }
     resetUserState();
     localStorage.removeItem('edutechex_token');
+    localStorage.removeItem('edutechex_session_start');
     fetch('/api/auth/session', { method: 'DELETE' }).catch(() => {});
     router.push('/sign-up-login-screen');
   }
@@ -1532,7 +1581,7 @@ export default function EduTechExOSDashboard() {
         name: newName,
       });
       // Update own member entry in the store so the People list reflects immediately
-      updateMemberStatus(currentUser.email, settings.status as import('@/store/dashboardStore').MemberStatus);
+      updateMemberStatus(currentUser.email, settings.status as MemberStatus);
       updateMemberName(currentUser.email, newName);
     }
     setSettingsOpen(false);
@@ -1903,23 +1952,24 @@ export default function EduTechExOSDashboard() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json().catch(() => ({}));
-      // If no access record exists at all, allow join (open meeting, no restriction set)
       if (!data.exists) {
         setMeetJoinState((prev) => { const s = { ...prev }; delete s[messageId]; return s; });
         window.open(link, '_blank', 'noreferrer');
+        broadcastStatus('in-meeting');
         return;
       }
       if (data.canJoin) {
         setMeetJoinState((prev) => { const s = { ...prev }; delete s[messageId]; return s; });
         window.open(link, '_blank', 'noreferrer');
+        broadcastStatus('in-meeting');
       } else {
         setMeetJoinState((prev) => ({ ...prev, [messageId]: 'denied' }));
         setTimeout(() => setMeetJoinState((prev) => { const s = { ...prev }; delete s[messageId]; return s; }), 4000);
       }
     } catch {
-      // On network error, fall through and allow join
       setMeetJoinState((prev) => { const s = { ...prev }; delete s[messageId]; return s; });
       window.open(link, '_blank', 'noreferrer');
+      broadcastStatus('in-meeting');
     }
   }
 
@@ -2027,11 +2077,10 @@ export default function EduTechExOSDashboard() {
 
   function startNewMeeting() {
     if (!channel) return;
-    // Open Google Meet new meeting page — user gets a unique meeting URL there
     window.open('https://meet.google.com/new', '_blank');
-    // Show the share-link dialog so the user can paste their Google Meet URL into chat
     setShareMeetLinkValue('');
     setShareMeetLinkOpen(true);
+    broadcastStatus('in-meeting');
   }
 
   function shareInstantMeetLink() {
@@ -2126,6 +2175,7 @@ export default function EduTechExOSDashboard() {
           <button
             onClick={() => {
               localStorage.removeItem('edutechex_token');
+              localStorage.removeItem('edutechex_session_start');
               window.location.replace('/sign-up-login-screen');
             }}
             style={{ width: '100%', padding: '13px', background: 'transparent', border: '1.5px solid rgba(26,27,58,0.12)', borderRadius: 10, fontSize: 12, fontWeight: 700, color: 'rgba(90,95,128,0.65)', cursor: 'pointer', letterSpacing: '.08em', transition: 'all .2s' }}
@@ -2156,6 +2206,7 @@ export default function EduTechExOSDashboard() {
           <button
             onClick={() => {
               localStorage.removeItem('edutechex_token');
+              localStorage.removeItem('edutechex_session_start');
               window.location.replace('/sign-up-login-screen');
             }}
             style={{ width: '100%', padding: '13px', background: '#EF476F', border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 700, color: '#FFFFFF', cursor: 'pointer', letterSpacing: '.08em' }}
@@ -2955,6 +3006,7 @@ export default function EduTechExOSDashboard() {
         {/* ── Footer / User panel ─────────────────────────── */}
         <div className="sidebar-footer">
           <UserAttendanceCalendar />
+          <SessionTimer />
           <div className="flex items-center gap-2">
             <div className="relative shrink-0">
               <div
@@ -6324,8 +6376,21 @@ export default function EduTechExOSDashboard() {
                           {member.email}
                         </span>
                       </span>
-                      <span className="rounded-full bg-[rgba(62,74,137,0.08)] px-2 py-1 text-[10px] font-black uppercase text-[#7C859E]">
-                        {member.status}
+                      <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black ${
+                        member.status === 'online' ? 'bg-emerald-50 text-emerald-700' :
+                        member.status === 'in-meeting' ? 'bg-red-50 text-red-600' :
+                        member.status === 'away' ? 'bg-amber-50 text-amber-700' :
+                        'bg-slate-100 text-slate-500'
+                      }`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${
+                          member.status === 'online' ? 'bg-emerald-500' :
+                          member.status === 'in-meeting' ? 'bg-red-500' :
+                          member.status === 'away' ? 'bg-amber-400' :
+                          'bg-slate-400'
+                        }`} />
+                        {member.status === 'online' ? 'Active now' :
+                         member.status === 'in-meeting' ? 'In Meeting' :
+                         member.status === 'away' ? 'Away' : 'Offline'}
                       </span>
                     </button>
                   ))

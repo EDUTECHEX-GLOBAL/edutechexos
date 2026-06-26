@@ -56,10 +56,9 @@ async function getLatestEvent(bucketId: string): Promise<Record<string, unknown>
   } catch { return null; }
 }
 
-async function getTodayEvents(bucketId: string): Promise<Record<string, unknown>[]> {
-  const now    = new Date();
-  const start  = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  const end    = now.toISOString();
+async function getEventsForDate(bucketId: string, date: Date): Promise<Record<string, unknown>[]> {
+  const start  = new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString();
+  const end    = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).toISOString();
   const params = new URLSearchParams({ start, end, limit: '2000' });
   const res    = await awFetch(`/api/0/buckets/${encodeURIComponent(bucketId)}/events?${params}`);
   if (!res?.ok) return [];
@@ -69,12 +68,16 @@ async function getTodayEvents(bucketId: string): Promise<Record<string, unknown>
   } catch { return []; }
 }
 
+async function getTodayEvents(bucketId: string): Promise<Record<string, unknown>[]> {
+  return getEventsForDate(bucketId, new Date());
+}
+
 function extractDomain(url: string): string {
   try { return new URL(url).hostname.replace(/^www\./, ''); }
   catch { return url.split('/')[0] || url; }
 }
 
-async function buildSummary() {
+async function buildSummary(forDate: Date = new Date()) {
   const buckets = await getBuckets();
   const keys    = Object.keys(buckets);
 
@@ -90,12 +93,14 @@ async function buildSummary() {
 
   if (!windowBucket) return null;
 
-  const cur          = await getLatestEvent(windowBucket);
+  const isToday = forDate.toDateString() === new Date().toDateString();
+
+  const cur          = isToday ? await getLatestEvent(windowBucket) : null;
   const curData      = cur?.data as Record<string, string> | undefined;
   const currentApp   = curData?.app   || curData?.title || '';
   const currentTitle = curData?.title || '';
 
-  const windowEvents  = await getTodayEvents(windowBucket);
+  const windowEvents  = await getEventsForDate(windowBucket, forDate);
   const appSecs: Record<string, number> = {};
   let totalActiveSec  = 0;
 
@@ -116,7 +121,7 @@ async function buildSummary() {
   let totalAfkSec = 0;
 
   if (afkBucket) {
-    const afkEvents  = await getTodayEvents(afkBucket);
+    const afkEvents  = await getEventsForDate(afkBucket, forDate);
     const latestAfk  = afkEvents[0] as { data?: { status?: string } } | undefined;
     isAfk = latestAfk?.data?.status === 'afk';
     for (const ev of afkEvents) {
@@ -130,16 +135,18 @@ async function buildSummary() {
   const domainSecs: Record<string, { minutes: number; title: string }> = {};
 
   for (const wb of webBuckets) {
-    const latestWeb = await getLatestEvent(wb);
-    if (latestWeb) {
-      const wd = latestWeb.data as { url?: string; title?: string; incognito?: boolean } | undefined;
-      if (wd?.url && !wd.incognito) {
-        currentUrl       = wd.url;
-        currentPageTitle = wd.title || '';
+    if (isToday) {
+      const latestWeb = await getLatestEvent(wb);
+      if (latestWeb) {
+        const wd = latestWeb.data as { url?: string; title?: string; incognito?: boolean } | undefined;
+        if (wd?.url && !wd.incognito) {
+          currentUrl       = wd.url;
+          currentPageTitle = wd.title || '';
+        }
       }
     }
 
-    const webEvents = await getTodayEvents(wb);
+    const webEvents = await getEventsForDate(wb, forDate);
     for (const ev of webEvents) {
       const dur = (ev.duration as number) || 0;
       const d   = ev.data as { url?: string; title?: string; incognito?: boolean } | undefined;
@@ -156,7 +163,12 @@ async function buildSummary() {
     .sort((a, b) => b.minutes - a.minutes)
     .slice(0, 20);
 
+  // dateStr in IST so backend stores under the correct local date
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const dateStr = new Date(forDate.getTime() + istOffset).toISOString().slice(0, 10);
+
   return {
+    dateStr,
     currentApp, currentTitle, currentUrl, currentPageTitle,
     isAfk,
     totalActiveMinutes: Math.round(totalActiveSec / 60),
@@ -198,13 +210,29 @@ export function useActivityWatchSync(active: boolean) {
     const token = getToken();
     if (!token || !isMounted.current) return;
     try {
-      const summary = await buildSummary();
+      const today     = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+
+      // Always push today's data
+      const summary = await buildSummary(today);
       if (!summary || !isMounted.current) return;
       await fetch(`${API_BASE}/api/activity/aw-sync`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body:    JSON.stringify(summary),
       });
+
+      // Also push yesterday's data so admin sees full history even if browser was closed
+      if (!isMounted.current) return;
+      const ySummary = await buildSummary(yesterday);
+      if (ySummary && ySummary.totalActiveMinutes > 0 && isMounted.current) {
+        await fetch(`${API_BASE}/api/activity/aw-sync`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body:    JSON.stringify(ySummary),
+        });
+      }
     } catch { /* non-fatal */ }
   }, []);
 

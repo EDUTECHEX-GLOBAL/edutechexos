@@ -64,15 +64,6 @@ const nextConfig = {
         destination: `${backendUrl}/api/:path*`,
       },
     ];
-    // In local dev, proxy ActivityWatch (localhost:5600) through Next.js to avoid
-    // browser CORS — the browser hits /aw-proxy/* (same origin) and Next.js
-    // forwards server-side to localhost:5600. Never runs on Vercel.
-    if (process.env.NODE_ENV === 'development') {
-      rules.unshift({
-        source: '/aw-proxy/:path*',
-        destination: 'http://localhost:5600/:path*',
-      });
-    }
     return rules;
   },
 };
