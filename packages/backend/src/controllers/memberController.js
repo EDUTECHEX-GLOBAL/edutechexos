@@ -1,7 +1,7 @@
 const bcrypt = require('bcrypt');
 const { VALID_ACCOUNTS, revokedEmails, getDeterministicColor } = require('../utils/helpers');
 const { sendBrevoEmail } = require('../services/emailService');
-const { AccessRequest, RemovedMember } = require('../models/index');
+const { AccessRequest, RemovedMember, UserSettings } = require('../models/index');
 
 async function removeMember(req, res) {
   if (!req.user || req.user.role !== 'Admin') {
@@ -88,6 +88,15 @@ async function getMembers(req, res) {
       if (!allMembers.some((m) => m.email.toLowerCase() === dbm.email.toLowerCase())) {
         allMembers.push(dbm);
       }
+    });
+
+    // Merge availability from UserSettings
+    const settingsDocs = await UserSettings.find({}).lean();
+    const availabilityByEmail = new Map(
+      settingsDocs.map((s) => [s.email.toLowerCase(), !!s.available])
+    );
+    allMembers.forEach((m) => {
+      m.isAvailable = availabilityByEmail.get(m.email.toLowerCase()) ?? false;
     });
 
     res.json({ success: true, members: allMembers });

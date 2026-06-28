@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import '../dashboard.css';
 import AppLogo from '@/components/ui/AppLogo';
 import { useDashboardStore } from '@/store/dashboardStore';
@@ -27,10 +27,10 @@ import {
 import MyActivityCalendar from './MyActivityCalendar';
 import CalendarPanel from './CalendarPanel';
 import AdminAvailabilityView from './AdminAvailabilityView';
+import PeopleStatusPanel from './PeopleStatusPanel';
 import LeavePanel from './LeavePanel';
+import MeetingStartedCard from './MeetingStartedCard';
 import SearchPanel from './SearchPanel';
-
-import IntegrationsPanel from './IntegrationsPanel';
 import { useActivityWatchSync } from '@/lib/useActivityWatchSync';
 
 import UserProfileModal from './UserProfileModal';
@@ -39,13 +39,14 @@ import KanbanBoard from './KanbanBoard';
 import AnalyticsPanel from './AnalyticsPanel';
 import BookmarksPanel from './BookmarksPanel';
 import NotepadPanel from './NotepadPanel';
+import StandupPanel from './StandupPanel';
 import UserAttendanceCalendar from './UserAttendanceCalendar';
+import SessionTimer from './SessionTimer';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 import { trackEvent } from '@/app/PostHogProvider';
 import { motion, AnimatePresence } from 'framer-motion';
-import SessionTimer from './SessionTimer';
 
 /* Shared spring config used for every modal/panel */
 const SPRING = { type: 'spring', damping: 26, stiffness: 360, mass: 0.8 } as const;
@@ -127,12 +128,20 @@ type CurrentUser = {
 const DEFAULT_COMPANY_MEET_LINK = 'https://meet.google.com/uie-jxkt-vkx';
 const THURSDAY_AFTERNOON_MEET_LINK = 'https://meet.google.com/dss-wmvy-cuq';
 const FRIDAY_MEET_LINK = 'https://meet.google.com/eeq-maem-ztc';
-const GOOGLE_MEET_LINKS = [
-  { label: 'Main meet (Mon–Thu AM)', link: DEFAULT_COMPANY_MEET_LINK, days: 'Mon–Thu morning' },
-  { label: 'Thursday PM meet', link: THURSDAY_AFTERNOON_MEET_LINK, days: 'Thursday afternoon' },
-  { label: 'Friday meet', link: FRIDAY_MEET_LINK, days: 'Friday' },
-];
+function getGoogleMeetLinks(settings?: DashboardSettings) {
+  return [
+    { label: 'Main meet (Mon–Thu AM)', link: settings?.meetLink?.trim() || DEFAULT_COMPANY_MEET_LINK, days: 'Mon–Thu morning' },
+    { label: 'Thursday PM meet', link: settings?.meetLinkThuPM?.trim() || THURSDAY_AFTERNOON_MEET_LINK, days: 'Thursday afternoon' },
+    { label: 'Friday meet', link: settings?.meetLinkFriday?.trim() || FRIDAY_MEET_LINK, days: 'Friday' },
+  ];
+}
 const settingsKey = (email: string) => `edutechex_dashboard_settings_${email.toLowerCase()}`;
+function userIdFromDmChannel(channelId: string, myId: string): string {
+  const after = channelId.replace('dm-', '');
+  const sep = after.indexOf(myId);
+  if (sep === -1) return after;
+  return after.slice(0, sep) + after.slice(sep + myId.length);
+}
 const EMOJI_OPTIONS = [
   '😀',
   '😂',
@@ -216,6 +225,8 @@ type DashboardSettings = {
   status: 'online' | 'away' | 'in-meeting' | 'offline';
   // Meeting
   meetLink: string;
+  meetLinkThuPM: string;
+  meetLinkFriday: string;
   // Notifications
   emailNotifications: boolean;
   desktopNotifications: boolean;
@@ -240,9 +251,16 @@ type RecordedPreview = {
   mimeType: string;
 };
 
-function getMeetingButtonState(now = new Date()): MeetingButtonState {
+function getMeetingButtonState(
+  now = new Date(),
+  linkOverrides?: { main: string; thuPM: string; fri: string }
+): MeetingButtonState {
   const day = now.getDay();
   const hour = now.getHours();
+
+  const mainLink = linkOverrides?.main || DEFAULT_COMPANY_MEET_LINK;
+  const thuPMLink = linkOverrides?.thuPM || THURSDAY_AFTERNOON_MEET_LINK;
+  const friLink = linkOverrides?.fri || FRIDAY_MEET_LINK;
 
   if (day === 0 || day === 6) {
     return {
@@ -255,7 +273,7 @@ function getMeetingButtonState(now = new Date()): MeetingButtonState {
   if (day === 5) {
     return {
       label: 'Friday meet',
-      link: FRIDAY_MEET_LINK,
+      link: friLink,
       message: 'Friday meeting link is active.',
     };
   }
@@ -263,14 +281,14 @@ function getMeetingButtonState(now = new Date()): MeetingButtonState {
   if (day === 4 && hour >= 14) {
     return {
       label: 'Thursday PM meet',
-      link: THURSDAY_AFTERNOON_MEET_LINK,
+      link: thuPMLink,
       message: 'Thursday afternoon meeting link is active.',
     };
   }
 
   return {
     label: 'Main meet',
-    link: DEFAULT_COMPANY_MEET_LINK,
+    link: mainLink,
     message: 'Main meeting link is active.',
   };
 }
@@ -410,6 +428,7 @@ export default function EduTechExOSDashboard() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const [peopleStatusOpen, setPeopleStatusOpen] = useState(false);
   const [channelsExpanded, setChannelsExpanded] = useState(true);
   const [membersOpen, setMembersOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -467,6 +486,8 @@ export default function EduTechExOSDashboard() {
     avatarEmoji: '',
     status: 'online',
     meetLink: DEFAULT_COMPANY_MEET_LINK,
+    meetLinkThuPM: THURSDAY_AFTERNOON_MEET_LINK,
+    meetLinkFriday: FRIDAY_MEET_LINK,
     emailNotifications: true,
     desktopNotifications: false,
     soundNotifications: true,
@@ -530,6 +551,8 @@ export default function EduTechExOSDashboard() {
               ...(s.avatarEmoji !== undefined && { avatarEmoji: s.avatarEmoji }),
               ...(s.status !== undefined && { status: s.status }),
               ...(s.meetLink !== undefined && { meetLink: s.meetLink }),
+              ...(s.meetLinkThuPM !== undefined && { meetLinkThuPM: s.meetLinkThuPM }),
+              ...(s.meetLinkFriday !== undefined && { meetLinkFriday: s.meetLinkFriday }),
               ...(s.emailNotifications !== undefined && {
                 emailNotifications: s.emailNotifications,
               }),
@@ -604,8 +627,7 @@ export default function EduTechExOSDashboard() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [bookmarksPanelOpen, setBookmarksPanelOpen] = useState(false);
   const [notepadOpen, setNotepadOpen] = useState(false);
-
-  const [integrationsOpen, setIntegrationsOpen] = useState(false);
+  const [standupOpen, setStandupOpen] = useState(false);
   const [profileMember, setProfileMember] = useState<(typeof members)[0] | null>(null);
   const currentMember = currentUser?.email
     ? members.find((member) => member.email.toLowerCase() === currentUser.email.toLowerCase())
@@ -679,7 +701,11 @@ export default function EduTechExOSDashboard() {
       item.recipientEmails.map((email) => email.toLowerCase()).includes(currentUserEmail)
   );
   const unreadNotifications = visibleNotifications.filter((item) => !item.read).length;
-  const meetingButtonState = getMeetingButtonState();
+  const meetingButtonState = getMeetingButtonState(new Date(), {
+    main: settings.meetLink.trim() || DEFAULT_COMPANY_MEET_LINK,
+    thuPM: settings.meetLinkThuPM.trim() || THURSDAY_AFTERNOON_MEET_LINK,
+    fri: settings.meetLinkFriday.trim() || FRIDAY_MEET_LINK,
+  });
   const companyMeetLink = settings.meetLink.trim() || DEFAULT_COMPANY_MEET_LINK;
   const mentionQuery = useMemo(() => {
     const match = composerMessage
@@ -808,7 +834,7 @@ export default function EduTechExOSDashboard() {
     }) => {
       let displayMessage = message;
 
-      if (channelId.startsWith('member-') && isEncrypted(message.text)) {
+      if ((channelId.startsWith('member-') || channelId.startsWith('dm-')) && isEncrypted(message.text)) {
         try {
           const authData = localStorage.getItem('edutechex_token');
           const token = authData ? (() => { try { return JSON.parse(authData).token; } catch { return null; } })() : null;
@@ -1056,6 +1082,26 @@ export default function EduTechExOSDashboard() {
     };
     socket.on('leave_status_update', handleLeaveStatusUpdate);
 
+    // Real-time availability toggle from other users
+    const handleAvailabilityUpdate = ({ email, isAvailable }: { email: string; isAvailable: boolean }) => {
+      if (!email) return;
+      useDashboardStore.getState().updateMemberAvailability(email, !!isAvailable);
+    };
+    socket.on('user_availability', handleAvailabilityUpdate);
+
+    // Real-time meeting request notifications
+    const handleMeetingRequestCreated = (data: { requestId: string; userName: string; userEmail: string; date: string; time: string; purpose?: string }) => {
+      if (currentUserRef.current?.role !== 'Admin') return;
+      toast.success(`Meeting request from ${data.userName}`, { description: `${data.date} at ${data.time}` });
+      loadLocalNotifications?.(currentUserEmail ?? '');
+    };
+    const handleMeetingRequestReviewed = (data: { requestId: string; status: string; date: string; time: string }) => {
+      toast.info(`Meeting ${data.status === 'confirmed' ? 'confirmed' : 'declined'}`, { description: `${data.date} at ${data.time}` });
+      loadLocalNotifications?.(currentUserEmail ?? '');
+    };
+    socket.on('meeting_request_created', handleMeetingRequestCreated);
+    socket.on('meeting_request_reviewed', handleMeetingRequestReviewed);
+
     return () => {
       socket.off('connect', handleReconnect);
       socket.off('new_message', handleNewMessage);
@@ -1075,6 +1121,9 @@ export default function EduTechExOSDashboard() {
       socket.off('user_status_update', handleUserStatusUpdate);
       socket.off('unread_increment', handleUnreadIncrement);
       socket.off('leave_status_update', handleLeaveStatusUpdate);
+      socket.off('user_availability', handleAvailabilityUpdate);
+      socket.off('meeting_request_created', handleMeetingRequestCreated);
+      socket.off('meeting_request_reviewed', handleMeetingRequestReviewed);
       socket.emit('leave_channel', activeChannelId);
     };
   }, [activeChannelId, addMessageFromSocket, updateMessageFromSocket, deleteMessageFromSocket, currentUserEmail, addNotification]);
@@ -1176,7 +1225,7 @@ export default function EduTechExOSDashboard() {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [updateMemberStatus]);
 
-  // Activity heartbeat — ping backend every 30 s with current activity so admin sees live status.
+  // Activity heartbeat — ping backend every 60 s with current activity so admin sees live status.
   useEffect(() => {
     if (!currentUserEmail) return;
     const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
@@ -1209,7 +1258,7 @@ export default function EduTechExOSDashboard() {
     };
 
     ping();
-    const intervalId = setInterval(ping, 30_000);
+    const intervalId = setInterval(ping, 60_000);
     return () => clearInterval(intervalId);
   }, [currentUserEmail, wikiOpen, kanbanOpen, calendarOpen, leaveOpen, activeChannel, channels]);
 
@@ -1374,16 +1423,22 @@ export default function EduTechExOSDashboard() {
       text,
     };
 
-    if (activeChannelId.startsWith('member-') && token) {
+    if ((activeChannelId.startsWith('member-') || activeChannelId.startsWith('dm-')) && token) {
       // ── DM: encrypt before sending to server, keep plaintext locally ─────────
-      const partner = members.find((m) => m.id === activeChannelId);
+      const partnerEmail = activeChannelId.startsWith('member-')
+        ? members.find((m) => m.id === activeChannelId)?.email
+        : (() => {
+            const myId = members.find((m) => m.email === currentUserEmail)?.id;
+            const otherId = userIdFromDmChannel(activeChannelId, myId ?? '');
+            return members.find((m) => m.id === otherId)?.email;
+          })();
       let textToSend = text;
-      if (partner?.email) {
+      if (partnerEmail) {
         try {
           const { privateKeyJwk } = await getOrCreateKeyPair();
-          const partnerPub = await fetchPartnerPublicKey(partner.email, token);
+          const partnerPub = await fetchPartnerPublicKey(partnerEmail, token);
           if (partnerPub) {
-            const cKey = dmCacheKey(currentUserEmail, partner.email);
+            const cKey = dmCacheKey(currentUserEmail, partnerEmail);
             textToSend = await encryptDMMessage(text, privateKeyJwk, partnerPub, cKey);
           }
         } catch { /* fallback: send plaintext */ }
@@ -1454,36 +1509,16 @@ export default function EduTechExOSDashboard() {
         });
       }
 
-      // Auto-create a Kanban task when the message contains an @mention + an action keyword
-      const ACTION_KEYWORDS =
-        /\b(todo|task|please|add|create|fix|update|review|prepare|finish|complete|implement|deploy|build|test|set\s*up|check|write|design|handle|send|assign|make|ensure|submit|upload|schedule|do)\b/i;
-      if (ACTION_KEYWORDS.test(text)) {
-        const firstMentioned = mentionedMembers[0];
+      // Auto-create a Kanban task for each @mentioned member
+      mentionedMembers.forEach((member) => {
         addKanbanTask({
           text: text.slice(0, 200),
-          assignee: firstMentioned.name,
-          assigneeInitials: firstMentioned.initials,
-          assigneeEmail: firstMentioned.email,
+          assignee: member.name,
+          assigneeInitials: member.initials,
+          assigneeEmail: member.email,
           sourceChannel: `#${channel.name}`,
           status: 'todo',
         });
-        // Post a task card message so everyone sees the assignment in chat
-        addMessage(activeChannelId, {
-          id: `task-card-${Date.now()}`,
-          sender: currentUser?.name ?? 'EduTechExOS',
-          initials: currentUser?.initials ?? 'ET',
-          color: currentUser?.color ?? '#5B4FDB',
-          timestamp: new Date().toISOString(),
-          text: text.slice(0, 200),
-          taskCard: {
-            assignee: firstMentioned.name,
-            assigneeInitials: firstMentioned.initials,
-            assigneeColor: firstMentioned.color ?? '#3E4A89',
-            taskText: text.slice(0, 200),
-            status: 'todo',
-          },
-        });
-        // Notify the assigned person so they see it in Alerts
         addNotification({
           type: 'task',
           actor: currentUser?.name ?? 'EduTechExOS',
@@ -1492,14 +1527,14 @@ export default function EduTechExOSDashboard() {
           channel: channel.name,
           channelId: activeChannelId,
           message: `📋 Task assigned to you: "${text.slice(0, 120)}"`,
-          recipientEmails: [firstMentioned.email],
+          recipientEmails: [member.email],
         });
         trackEvent('task_created', {
           source: 'mention',
           channel: channel?.name,
-          assignee: firstMentioned.name,
+          assignee: member.name,
         });
-      }
+      });
     }
 
     setComposerMessage('');
@@ -2771,9 +2806,16 @@ export default function EduTechExOSDashboard() {
                     className="group flex h-9 items-center gap-2 rounded px-1.5 transition-colors duration-100 hover:bg-white/[0.06] cursor-pointer"
                   >
                     <motion.button
-                      onClick={() => { setActiveChannel(member.id); clearUnread(member.id); }}
+                      onClick={() => {
+                        if (member.id === currentMemberId) {
+                          setSettingsOpen(true);
+                          setSettingsTab('profile');
+                        } else {
+                          setActiveChannel(member.id);
+                        }
+                      }}
                       whileTap={{ scale: 0.95 }}
-                      title={`Chat with ${member.name}`}
+                      title={member.id === currentMemberId ? 'Edit your profile' : `Chat with ${member.name}`}
                       className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
                     >
                       <div
@@ -3184,7 +3226,7 @@ export default function EduTechExOSDashboard() {
                   <div className="my-1.5 h-px mx-1" style={{ background: 'rgba(62,74,137,0.08)' }} />
                   {/* Day-specific links */}
                   <p className="px-3 pb-1 text-[9px] font-black uppercase tracking-[0.15em] text-[#9BA6D3]">Team Meeting Links</p>
-                  {GOOGLE_MEET_LINKS.map(({ label, link, days }) => {
+                  {getGoogleMeetLinks(settings).map(({ label, link, days }) => {
                     const isActive = meetingButtonState.link === link;
                     return (
                       <button
@@ -3315,15 +3357,7 @@ export default function EduTechExOSDashboard() {
                     </button>
                   )}
 
-                  <button
-                    onClick={() => {
-                      setMoreOpen(false);
-                      setIntegrationsOpen(true);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]"
-                  >
-                    <Zap size={15} /> Integrations
-                  </button>
+
                 </div>
               )}
             </div>
@@ -3393,6 +3427,8 @@ export default function EduTechExOSDashboard() {
                   next.sender !== message.sender ||
                   gap5m(message.timestamp, next.timestamp);
                 const scheduledMeet = parseScheduledMeet(message.text);
+                const isInstantMeet = message.id?.startsWith('meeting-started-');
+                const instantMeetLink = isInstantMeet ? message.text?.match(/\[Click here to join the meeting\]\(([^)]+)\)/)?.[1] : undefined;
                 const isPinned = (pinnedMessageIds[activeChannelId] ?? []).includes(message.id);
                 const isBookmarked = bookmarkedMessageIds.includes(message.id);
                 const taskCard = message.taskCard;
@@ -3479,6 +3515,12 @@ export default function EduTechExOSDashboard() {
                                 </div>
                               </div>
                             </div>
+                          ) : isInstantMeet && instantMeetLink ? (
+                            <MeetingStartedCard
+                              title={`${message.sender} started a meeting`}
+                              subtitle="Join on Google Meet"
+                              meetLink={instantMeetLink}
+                            />
                           ) : scheduledMeet ? (
                             /* ── Meeting Scheduled Card ─────────────────── */
                             <div
@@ -4389,6 +4431,15 @@ export default function EduTechExOSDashboard() {
           <span className="rail-label">Avail.</span>
         </motion.button>
 
+        <motion.button whileTap={{ scale: 0.88 }} onClick={() => setPeopleStatusOpen(true)} className="rail-btn"
+          style={{ color: '#000000' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#000000'; e.currentTarget.style.background = 'rgba(16,185,129,0.14)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#000000'; e.currentTarget.style.background = 'transparent'; }}
+        >
+          <Users size={18} strokeWidth={1.8} />
+          <span className="rail-label">People</span>
+        </motion.button>
+
         <motion.button whileTap={{ scale: 0.88 }} onClick={() => setLeaveOpen(true)} className="rail-btn"
           style={{ color: '#000000' }}
           onMouseEnter={e => { e.currentTarget.style.color = '#000000'; e.currentTarget.style.background = 'rgba(245,158,11,0.12)'; }}
@@ -4398,13 +4449,15 @@ export default function EduTechExOSDashboard() {
           <span className="rail-label">Leave</span>
         </motion.button>
 
-        <motion.button whileTap={{ scale: 0.88 }} onClick={() => setIntegrationsOpen(true)} className="rail-btn"
+
+
+        <motion.button whileTap={{ scale: 0.88 }} onClick={() => setStandupOpen(true)} className="rail-btn"
           style={{ color: '#000000' }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#000000'; e.currentTarget.style.background = 'rgba(139,92,246,0.14)'; }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#000000'; e.currentTarget.style.background = 'rgba(10,232,208,0.14)'; }}
           onMouseLeave={e => { e.currentTarget.style.color = '#000000'; e.currentTarget.style.background = 'transparent'; }}
         >
-          <Zap size={18} strokeWidth={1.8} />
-          <span className="rail-label">Integr.</span>
+          <Clock size={18} strokeWidth={1.8} />
+          <span className="rail-label">Standup</span>
         </motion.button>
 
         {isAdmin && (
@@ -4867,15 +4920,8 @@ export default function EduTechExOSDashboard() {
       <AnimatePresence>
         {calendarOpen && <CalendarPanel key="calendar" onClose={() => setCalendarOpen(false)} />}
         {availabilityOpen && <AdminAvailabilityView key="availability" onClose={() => setAvailabilityOpen(false)} />}
+        {peopleStatusOpen && <PeopleStatusPanel onClose={() => setPeopleStatusOpen(false)} />}
         {leaveOpen && <LeavePanel key="leave" onClose={() => setLeaveOpen(false)} />}
-
-        {integrationsOpen && (
-          <IntegrationsPanel
-            key="integrations"
-            onClose={() => setIntegrationsOpen(false)}
-            channels={channels}
-          />
-        )}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -5440,12 +5486,46 @@ export default function EduTechExOSDashboard() {
                         style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}
                       >
                         <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">
-                          Override main meet link
+                          Override main meet link (Mon–Thu AM)
                         </label>
                         <input
                           value={settings.meetLink}
                           onChange={(e) => setSettings((v) => ({ ...v, meetLink: e.target.value }))}
                           placeholder={DEFAULT_COMPANY_MEET_LINK}
+                          className="mt-2 h-10 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-semibold text-[#1E2636] outline-none focus:border-[#3E4A89] focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0]"
+                        />
+                        <p className="mt-1.5 text-[11px] text-[#9BA6D3]">
+                          Leave blank to use the built-in link.
+                        </p>
+                      </div>
+                      <div
+                        className="rounded-2xl p-4"
+                        style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}
+                      >
+                        <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">
+                          Thursday PM meet link
+                        </label>
+                        <input
+                          value={settings.meetLinkThuPM}
+                          onChange={(e) => setSettings((v) => ({ ...v, meetLinkThuPM: e.target.value }))}
+                          placeholder={THURSDAY_AFTERNOON_MEET_LINK}
+                          className="mt-2 h-10 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-semibold text-[#1E2636] outline-none focus:border-[#3E4A89] focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0]"
+                        />
+                        <p className="mt-1.5 text-[11px] text-[#9BA6D3]">
+                          Leave blank to use the built-in link.
+                        </p>
+                      </div>
+                      <div
+                        className="rounded-2xl p-4"
+                        style={{ border: '1px solid rgba(62,74,137,0.08)', background: '#fff' }}
+                      >
+                        <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">
+                          Friday meet link
+                        </label>
+                        <input
+                          value={settings.meetLinkFriday}
+                          onChange={(e) => setSettings((v) => ({ ...v, meetLinkFriday: e.target.value }))}
+                          placeholder={FRIDAY_MEET_LINK}
                           className="mt-2 h-10 w-full rounded-xl border border-[rgba(62,74,137,0.12)] px-3 text-sm font-semibold text-[#1E2636] outline-none focus:border-[#3E4A89] focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0]"
                         />
                         <p className="mt-1.5 text-[11px] text-[#9BA6D3]">
@@ -6357,8 +6437,8 @@ export default function EduTechExOSDashboard() {
                     <button
                       key={member.id}
                       onClick={() => {
-                        setActiveChannel(member.id);
                         setMembersOpen(false);
+                        setActiveChannel(member.id);
                       }}
                       className="flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-[rgba(62,74,137,0.06)]"
                     >
@@ -6558,6 +6638,11 @@ export default function EduTechExOSDashboard() {
             </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Standup Panel */}
+      <AnimatePresence>
+        {standupOpen && <StandupPanel key="standup" onClose={() => setStandupOpen(false)} />}
       </AnimatePresence>
 
       {/* ─── Share Google Meet Link Modal ─────────────────────────────────────── */}
@@ -6840,6 +6925,7 @@ export default function EduTechExOSDashboard() {
         toasts={dmToasts}
         onDismiss={(id) => setDmToasts((prev) => prev.filter((t) => t.id !== id))}
       />
+
     </div>
   );
 }

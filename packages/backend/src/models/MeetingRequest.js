@@ -4,9 +4,10 @@ const MeetingRequestSchema = new mongoose.Schema({
   userEmail:  { type: String, required: true },
   userName:   { type: String, required: true },
   adminEmail: { type: String, required: true, default: 'admin@edutechex.in' },
-  date:       { type: String, required: true },
-  time:       { type: String, required: true },
-  purpose:    { type: String, default: '' },
+   date:       { type: String, required: true },
+   time:       { type: String, required: true },
+   timeEnd:    { type: String, default: '' },
+   purpose:    { type: String, default: '' },
   status:     { type: String, enum: ['pending', 'confirmed', 'declined'], default: 'pending' },
 }, { timestamps: true });
 

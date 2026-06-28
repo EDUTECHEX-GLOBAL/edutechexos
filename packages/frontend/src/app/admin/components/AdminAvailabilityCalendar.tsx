@@ -11,7 +11,7 @@ type Slot = { time: string; status: SlotStatus; label: string };
 type DayRecord = { date: string; adminEmail: string; slots: Slot[]; _id?: string };
 type MeetingRequest = {
   _id: string; userEmail: string; userName: string; date: string;
-  time: string; purpose: string; status: 'pending' | 'confirmed' | 'declined';
+  time: string; timeEnd: string; purpose: string; status: 'pending' | 'confirmed' | 'declined';
 };
 
 const TIME_OPTIONS = [
@@ -275,7 +275,7 @@ export default function AdminAvailabilityCalendar() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-[#4A5578]">
-                      {new Date(req.date + 'T12:00:00').toLocaleDateString('default', { weekday: 'short', month: 'short', day: 'numeric' })} at {req.time}
+                      {new Date(req.date + 'T12:00:00').toLocaleDateString('default', { weekday: 'short', month: 'short', day: 'numeric' })} {req.timeEnd ? `${req.time} – ${req.timeEnd}` : `at ${req.time}`}
                     </span>
                   </div>
                   {req.purpose && <p className="text-xs text-[#9BA6D3] mt-1">{req.purpose}</p>}

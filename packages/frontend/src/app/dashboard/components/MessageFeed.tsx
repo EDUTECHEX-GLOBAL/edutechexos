@@ -19,6 +19,7 @@ import { useDashboardStore } from '@/store/dashboardStore';
 import { MESSAGES_BY_CHANNEL } from '@/data/mockData';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import MeetingStartedCard from './MeetingStartedCard';
 
 interface MessageFeedProps {
   channelId: string;
@@ -504,6 +505,8 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
         const isBookmarked = bookmarkedIds.includes(msg.id);
         const isOwn = msg.sender === currentUser?.name;
         const isMeeting = msg.text?.startsWith('Meeting Scheduled:');
+        const isInstantMeet = msg.id?.startsWith('meeting-started-');
+        const instantMeetLink = isInstantMeet ? msg.text?.match(/\[Click here to join the meeting\]\(([^)]+)\)/)?.[1] : undefined;
         const replies = !parentId ? replyCount(msg.id) : 0;
 
         return (
@@ -628,7 +631,7 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
                       <div
                         className={`relative group/bubble rounded-2xl shadow-sm
                         ${
-                          isMeeting
+                          isMeeting || isInstantMeet
                             ? `p-0 bg-transparent border-0 overflow-hidden ${isPinned ? 'ring-2 ring-amber-400' : ''}`
                             : `px-3.5 py-2.5 ${
                                 isOwn
@@ -638,7 +641,13 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
                         }
                       `}
                       >
-                        {isMeeting ? (
+                        {isInstantMeet && instantMeetLink ? (
+                          <MeetingStartedCard
+                            title={`${msg.sender} started a meeting`}
+                            subtitle="Join on Google Meet"
+                            meetLink={instantMeetLink}
+                          />
+                        ) : isMeeting ? (
                           <MeetingCard text={msg.text} currentUser={currentUser} />
                         ) : (
                           <div className={isOwn ? 'text-white' : 'text-[#1E2636]'}>

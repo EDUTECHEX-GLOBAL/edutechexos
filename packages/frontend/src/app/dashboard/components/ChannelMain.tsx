@@ -24,6 +24,7 @@ import { useDashboardStore } from '@/store/dashboardStore';
 import { getSocket } from '@/lib/socket';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { getMeetingState as getMeetLinkState } from '@/lib/meetLinks';
 
 interface ChannelMainProps {
   onToggleAI: () => void;
@@ -38,19 +39,6 @@ interface ChannelMainProps {
   onOpenAnalytics?: () => void;
   onOpenBookmarks?: () => void;
   onOpenVideoCall?: () => void;
-}
-
-const MEET_LINK = process.env.NEXT_PUBLIC_MEET_LINK ?? null;
-
-function getMeetingState(now = new Date()) {
-  const day = now.getDay();
-  if (day === 0 || day === 6)
-    return { label: 'No meeting', link: null, message: 'No meeting on weekends.' };
-  return {
-    label: 'Team meet',
-    link: MEET_LINK,
-    message: 'Daily standup.',
-  };
 }
 
 export default function ChannelMain({
@@ -82,7 +70,7 @@ export default function ChannelMain({
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
   const [startMeetOpen, setStartMeetOpen] = useState(false);
-  const meetingState = getMeetingState();
+  const meetingState = getMeetLinkState();
 
   // Listen for remote typing events so TypingIndicator shows other users
   // Pins are per-user and private — no socket broadcast needed for them
@@ -355,18 +343,29 @@ export default function ChannelMain({
                   >
                     {member.initials}
                     <span
-                      className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-slate-900 ${member.status === 'online' ? 'bg-emerald-500' : member.status === 'away' ? 'bg-amber-400' : 'bg-slate-300'}`}
+                      className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-slate-900 ${member.status === 'online' ? 'bg-emerald-500' : member.status === 'away' ? 'bg-amber-400' : member.status === 'in-meeting' ? 'bg-red-400' : 'bg-slate-300'}`}
                     />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-[#1E2636]">{member.name}</p>
                     <p className="text-xs text-[#7C859E] dark:text-[#7C859E]">{member.role}</p>
                   </div>
-                  <span
-                    className={`text-[10px] font-bold capitalize ${member.status === 'online' ? 'text-emerald-600' : member.status === 'away' ? 'text-amber-500' : 'text-[#7C859E]'}`}
-                  >
-                    {member.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {member.onLeave ? (
+                      <span className="text-[9px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-400 rounded-md px-1.5 py-0.5">
+                        On Leave
+                      </span>
+                    ) : member.isAvailable ? (
+                      <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-md px-1.5 py-0.5">
+                        Available
+                      </span>
+                    ) : null}
+                    <span
+                      className={`text-[10px] font-bold capitalize ${member.status === 'online' ? 'text-emerald-600' : member.status === 'away' ? 'text-amber-500' : member.status === 'in-meeting' ? 'text-red-500' : 'text-[#7C859E]'}`}
+                    >
+                      {member.status}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>

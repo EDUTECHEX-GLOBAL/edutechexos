@@ -49,7 +49,7 @@ async function processMentions(text, senderName, channelId, messageId, io, appUr
             <a href="${appUrl || 'https://edutechexos.vercel.app'}/dashboard" style="display:inline-block;background:#0D9488;color:#fff;text-decoration:none;padding:11px 28px;border-radius:8px;font-size:13px;font-weight:700;">View in Dashboard →</a>
           </div>
         </div>`,
-    }).catch(() => {});
+    }).catch((e) => console.error('[email] notification send failed:', e));
   }
 }
 
@@ -76,10 +76,13 @@ async function getMessages(req, res) {
     }
 
     const allChannelIds = await Message.distinct('channelId');
+    // Only return non-DM channels in the aggregate endpoint to prevent
+    // leaking private DMs to users who are not participants.
+    const visibleChIds = allChannelIds.filter((id) => !id.startsWith('member-') && !id.startsWith('dm-'));
     const grouped  = {};
     const hasMoreMap = {};
 
-    for (const chId of allChannelIds) {
+    for (const chId of visibleChIds) {
       const msgs = await Message.find({ channelId: chId })
         .sort({ timestamp: -1 })
         .limit(pageSize + 1)
@@ -126,7 +129,7 @@ async function postMessage(req, res) {
     if (preSaveText) {
       const senderName = messageData.sender || req.user?.name || 'Someone';
       const appUrl = process.env.APP_URL || 'https://edutechexos.vercel.app';
-      processMentions(preSaveText, senderName, base.channelId, base.id, io, appUrl).catch(() => {});
+      processMentions(preSaveText, senderName, base.channelId, base.id, io, appUrl).catch((e) => console.error('[mentions] processing failed:', e));
     }
 
     res.json({ success: true, message: base });

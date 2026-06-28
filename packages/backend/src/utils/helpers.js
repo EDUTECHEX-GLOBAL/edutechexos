@@ -69,6 +69,7 @@ const SETTINGS_FIELDS = [
   'displayName', 'avatarEmoji', 'status', 'meetLink',
   'emailNotifications', 'desktopNotifications', 'soundNotifications',
   'compactChat', 'fontSize', 'enterToSend', 'darkMode',
+  'meetLinkThuPM', 'meetLinkFriday',
 ];
 
 const PAGE_SIZE = 50;

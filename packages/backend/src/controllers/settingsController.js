@@ -22,6 +22,7 @@ async function saveSettings(req, res) {
       'displayName','avatarEmoji','status','meetLink',
       'emailNotifications','desktopNotifications','soundNotifications',
       'compactChat','fontSize','enterToSend','darkMode',
+      'meetLinkThuPM','meetLinkFriday',
     ];
     const safe = {};
     for (const k of allowed) {

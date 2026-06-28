@@ -137,7 +137,11 @@ export default function WikiPanel({ onClose, activeChannel }: WikiPanelProps) {
   }, [selectedPageId, editor]);
 
   useEffect(() => {
-    if (!selectedPageId && pages.length > 0) setSelectedPageId(pages[0].id);
+    if (pages.length > 0) {
+      if (!selectedPageId || !pages.find(p => p.id === selectedPageId)) {
+        setSelectedPageId(pages[0].id);
+      }
+    }
   }, [pages, selectedPageId]);
 
   useEffect(() => {

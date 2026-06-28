@@ -23,6 +23,15 @@ async function saveAvailability(req, res) {
     if (!date || !Array.isArray(slots)) {
       return res.status(400).json({ success: false, error: 'date and slots required.' });
     }
+    const parsed = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (isNaN(parsed.getTime())) {
+      return res.status(400).json({ success: false, error: 'date must be a valid date.' });
+    }
+    if (parsed < today) {
+      return res.status(400).json({ success: false, error: 'date cannot be in the past.' });
+    }
     const record = await AdminAvailability.findOneAndUpdate(
       { date, adminEmail: email },
       { $set: { slots, adminEmail: email } },

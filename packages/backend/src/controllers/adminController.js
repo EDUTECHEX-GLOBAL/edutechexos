@@ -51,6 +51,9 @@ async function setPassword(req, res) {
 
 async function generatePassword(req, res) {
   try {
+    if (!req.user || req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Admin access required.' });
+    }
     const { requestId } = req.body;
     if (!requestId) return res.status(400).json({ success: false, error: 'requestId is required.' });
     const request = await AccessRequest.findById(requestId).lean();
@@ -110,6 +113,9 @@ async function generatePassword(req, res) {
 
 async function sendInvite(req, res) {
   try {
+    if (!req.user || req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Admin access required.' });
+    }
     const { email, name, role, requestId } = req.body;
     if (!email || !name) return res.status(400).json({ success: false, error: 'email and name are required.' });
     const emailClean = String(email).trim().toLowerCase();
@@ -226,6 +232,9 @@ async function broadcastEmail(req, res) {
 
 async function migrateEncrypt(req, res) {
   try {
+    if (!req.user || req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Admin access required.' });
+    }
     if (!_encKey()) {
       return res.status(500).json({ success: false, error: 'ENCRYPTION_KEY is not set or invalid on this server.' });
     }

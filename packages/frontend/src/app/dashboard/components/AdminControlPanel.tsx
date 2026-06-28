@@ -110,6 +110,7 @@ export default function AdminControlPanel({
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [meetingRequests, setMeetingRequests] = useState<{ _id: string; userEmail: string; userName: string; date: string; time: string; timeEnd: string; purpose: string; status: 'pending' | 'confirmed' | 'declined' }[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
@@ -136,10 +137,14 @@ export default function AdminControlPanel({
   const fetchChannels  = useCallback(async () => { const r = await fetch(`${API}/api/channels`, { headers: h }).catch(() => null); if (r?.ok) { const d = await r.json(); setChannels(Array.isArray(d) ? d : d.channels ?? []); } }, []);
   const fetchAudit     = useCallback(async () => { const r = await fetch(`${API}/api/admin/audit-log`, { headers: h }).catch(() => null); if (r?.ok) { const d = await r.json(); setAuditLog(Array.isArray(d) ? d : d.logs ?? []); } }, []);
   const fetchLive      = useCallback(async () => { const r = await fetch(`${API}/api/activity/live`, { headers: h }).catch(() => null); if (r?.ok) { const d = await r.json(); setLiveCount(d.count ?? d.online ?? 0); } }, []);
+  const fetchMeetingRequests = useCallback(async () => {
+    const r = await fetch(`${API}/api/meeting-requests`, { headers: h }).catch(() => null);
+    if (r?.ok) { const d = await r.json(); setMeetingRequests(d.requests ?? []); }
+  }, []);
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchUsers(), fetchRequests(), fetchLeaves(), fetchAttendance(), fetchChannels(), fetchAudit(), fetchLive()])
+    Promise.all([fetchUsers(), fetchRequests(), fetchLeaves(), fetchAttendance(), fetchChannels(), fetchAudit(), fetchLive(), fetchMeetingRequests()])
       .finally(() => setLoading(false));
     // Live heartbeat
     const interval = setInterval(fetchLive, 15000);
@@ -147,13 +152,22 @@ export default function AdminControlPanel({
     const socket = getSocket();
     const onActivity = (d: any) => { if (d?.online !== undefined) setLiveCount(d.online); };
     socket.on('user_activity_update', onActivity);
-    return () => { clearInterval(interval); socket.off('user_activity_update', onActivity); };
+    const onMeetingRequest = () => { fetchMeetingRequests(); };
+    socket.on('meeting_request_created', onMeetingRequest);
+    socket.on('meeting_request_reviewed', onMeetingRequest);
+    return () => { clearInterval(interval); socket.off('user_activity_update', onActivity); socket.off('meeting_request_created', onMeetingRequest); socket.off('meeting_request_reviewed', onMeetingRequest); };
   }, []);
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     const r = await fetch(`${API}/api/admin/users/${userId}/role`, { method: 'PATCH', headers: h, body: JSON.stringify({ role: newRole }) }).catch(() => null);
     if (r?.ok) { toast.success('Role updated'); setUsers(p => p.map(u => u.id === userId ? { ...u, role: newRole } : u)); }
     else toast.error('Failed to update role');
+  };
+
+  const handleMeetingRequest = async (id: string, status: 'confirmed' | 'declined') => {
+    const r = await fetch(`${API}/api/meeting-requests/${id}`, { method: 'PATCH', headers: h, body: JSON.stringify({ status }) }).catch(() => null);
+    if (r?.ok) { toast.success(`Meeting ${status}.`); setMeetingRequests(p => p.map(m => m._id === id ? { ...m, status } : m)); }
+    else toast.error('Failed to update.');
   };
 
   const handleDeleteUser = async (userId: string, name: string) => {
@@ -658,13 +672,63 @@ export default function AdminControlPanel({
           {/* ═══ AVAILABILITY ═══ */}
           {tab === 'availability' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
-              <div style={S.sectionTitle}>Availability</div>
-              <div style={S.sectionSub}>Team member availability schedules.</div>
-              <div style={{ ...S.card, padding: '40px', textAlign: 'center', color: '#94A3B8' }}>
-                <Calendar size={32} style={{ margin: '0 auto 10px', opacity: .4 }} />
-                <div style={{ fontSize: 13, marginBottom: 4 }}>Availability calendar coming soon</div>
-                <div style={{ fontSize: 11.5 }}>Members set their availability from their profile.</div>
+              <div style={S.sectionTitle}>Meeting Requests</div>
+              <div style={S.sectionSub}>
+                {meetingRequests.filter(r => r.status === 'pending').length} pending · {meetingRequests.length} total
               </div>
+              {meetingRequests.length === 0 ? (
+                <div style={{ ...S.card, padding: '40px', textAlign: 'center', color: '#94A3B8' }}>
+                  <Calendar size={32} style={{ margin: '0 auto 10px', opacity: .4 }} />
+                  <div style={{ fontSize: 13 }}>No meeting requests yet.</div>
+                  <div style={{ fontSize: 11.5, marginTop: 4 }}>Users can request meetings from the dashboard availability panel.</div>
+                </div>
+              ) : (
+                <>
+                  {(['pending', 'confirmed', 'declined'] as const).map(status => {
+                    const filtered = meetingRequests.filter(r => r.status === status);
+                    if (!filtered.length) return null;
+                    const cfg = {
+                      pending: { color: '#D97706', bg: '#FFFBEB', border: '#FDE68A', label: 'Awaiting Approval' },
+                      confirmed: { color: '#059669', bg: '#ECFDF5', border: '#A7F3D0', label: 'Confirmed' },
+                      declined: { color: '#DC2626', bg: '#FEF2F2', border: '#FECACA', label: 'Declined' },
+                    }[status];
+                    return (
+                      <div key={status} style={{ marginBottom: 24 }}>
+                        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: cfg.color, marginBottom: 10 }}>
+                          {cfg.label} ({filtered.length})
+                        </div>
+                        {filtered.map(r => (
+                          <div key={r._id} style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, borderRadius: 10, padding: '14px 16px', marginBottom: 8 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{r.userName}</div>
+                                <div style={{ fontSize: 11, color: '#64748B' }}>{r.userEmail}</div>
+                              </div>
+                            </div>
+                            <div style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>
+                              <strong>{new Date(r.date + 'T12:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</strong>
+                              {' · '}{r.timeEnd ? `${r.time} – ${r.timeEnd}` : r.time}
+                            </div>
+                            {r.purpose && <div style={{ fontSize: 12, color: '#64748B', marginBottom: 8 }}>“{r.purpose}”</div>}
+                            {status === 'pending' && (
+                              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                                <button onClick={() => handleMeetingRequest(r._id, 'confirmed')}
+                                  style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: '1px solid #A7F3D0', background: '#D1FAE5', color: '#065F46', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                                  <Check size={13} style={{ marginRight: 4, display: 'inline' }} /> Confirm
+                                </button>
+                                <button onClick={() => handleMeetingRequest(r._id, 'declined')}
+                                  style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: '1px solid #FECACA', background: '#FEE2E2', color: '#991B1B', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                                  <X size={13} style={{ marginRight: 4, display: 'inline' }} /> Decline
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </>
+              )}
             </motion.div>
           )}
 

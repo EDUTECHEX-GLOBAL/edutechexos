@@ -11,6 +11,7 @@ const WikiPageSchema = new mongoose.Schema({
   timestamps: true
 });
 WikiPageSchema.index({ title: 'text', content: 'text' });
+WikiPageSchema.index({ channelId: 1, title: 1 }, { unique: true });
 
 const WikiPage = mongoose.model('WikiPage', WikiPageSchema);
 module.exports = WikiPage;

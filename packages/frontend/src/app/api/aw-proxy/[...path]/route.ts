@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const AW_BASE = 'http://localhost:5600';
 
-async function handler(req: NextRequest, { params }: { params: { path: string[] } }) {
-  const path = '/' + (params.path ?? []).join('/');
+async function handler(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  const { path: pathSegments } = await params;
+  const path = '/' + (pathSegments ?? []).join('/');
   const search = req.nextUrl.search ?? '';
   const target = `${AW_BASE}${path}${search}`;
 

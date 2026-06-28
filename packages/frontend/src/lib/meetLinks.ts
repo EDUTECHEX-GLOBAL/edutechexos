@@ -14,31 +14,49 @@ export type MeetingState = {
 };
 
 /** Returns the correct meeting link + label based on the current day/time. */
-export function getMeetingState(now = new Date()): MeetingState {
+export function getMeetingState(
+  now = new Date(),
+  linkOverrides?: { main: string; thuPM: string; fri: string }
+): MeetingState {
   const day = now.getDay();
   const hour = now.getHours();
+
+  const mainLink = linkOverrides?.main || MAIN_MEET_LINK;
+  const thuPMLink = linkOverrides?.thuPM || THURSDAY_PM_MEET_LINK;
+  const friLink = linkOverrides?.fri || FRIDAY_MEET_LINK;
 
   if (day === 0 || day === 6)
     return { label: 'No meeting', link: null, message: 'No meeting on weekends.' };
   if (day === 5)
     return {
       label: 'Friday meet',
-      link: FRIDAY_MEET_LINK,
+      link: friLink,
       message: 'Friday meeting link is active.',
     };
   if (day === 4 && hour >= 14)
     return {
       label: 'Thursday PM',
-      link: THURSDAY_PM_MEET_LINK,
+      link: thuPMLink,
       message: 'Thursday afternoon meeting link is active.',
     };
 
-  return { label: 'Main meet', link: MAIN_MEET_LINK, message: 'Main meeting link is active.' };
+  return { label: 'Main meet', link: mainLink, message: 'Main meeting link is active.' };
 }
 
+export type MeetLinkItem = { label: string; link: string; days: string };
+
 /** Ordered list used in CalendarPanel and the settings modal. */
-export const GOOGLE_MEET_LINKS = [
-  { label: 'Main meet (Mon–Thu AM)', link: MAIN_MEET_LINK, days: 'Mon–Thu' },
-  { label: 'Thursday PM meet', link: THURSDAY_PM_MEET_LINK, days: 'Thu PM' },
-  { label: 'Friday meet', link: FRIDAY_MEET_LINK, days: 'Fri' },
-];
+export function getGoogleMeetLinks(overrides?: {
+  main?: string;
+  thuPM?: string;
+  fri?: string;
+}): MeetLinkItem[] {
+  return [
+    { label: 'Main meet (Mon–Thu AM)', link: overrides?.main?.trim() || MAIN_MEET_LINK, days: 'Mon–Thu' },
+    { label: 'Thursday PM meet', link: overrides?.thuPM?.trim() || THURSDAY_PM_MEET_LINK, days: 'Thu PM' },
+    { label: 'Friday meet', link: overrides?.fri?.trim() || FRIDAY_MEET_LINK, days: 'Fri' },
+  ];
+}
+
+// Kept for backward compatibility
+export const GOOGLE_MEET_LINKS = getGoogleMeetLinks();

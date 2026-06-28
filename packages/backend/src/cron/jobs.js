@@ -2,7 +2,7 @@ const cron = require('node-cron');
 const { sendDigestEmails } = require('../services/digestService');
 const { sendBrevoEmail } = require('../services/emailService');
 const { decryptField } = require('../services/encryptionService');
-const { Message, AccessRequest } = require('../models');
+const { Message, AccessRequest, ActivitySession, Notification } = require('../models');
 const { VALID_ACCOUNTS } = require('../utils/helpers');
 
 function startCronJobs(io) {
@@ -21,6 +21,83 @@ function startCronJobs(io) {
   });
 
   console.log('[digest-cron] Scheduled daily digest at 03:30 UTC (09:00 IST) via node-cron');
+
+  // ── Burnout / Overwork Alert — every hour at minute 0 ─────────────────
+  cron.schedule('0 * * * *', async () => {
+    console.log('[overwork-cron] Checking for overwork alerts…');
+    try {
+      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      const overworked = await ActivitySession.find({
+        dateStr: todayStr,
+        totalMinutes: { $gte: 480 },
+      }).lean();
+
+      if (!overworked.length) {
+        console.log('[overwork-cron] No users over 8 h today.');
+        return;
+      }
+
+      for (const session of overworked) {
+        const hours = (session.totalMinutes / 60).toFixed(1);
+        const account = VALID_ACCOUNTS.find(a => a.email === session.email);
+        const name = account ? account.name : 'User';
+
+        await Notification.create({
+          type: 'alert',
+          actor: 'System',
+          actorInitials: 'S',
+          actorColor: '#ef4444',
+          message: `You've been active for ${hours}+ hours — consider taking a break.`,
+          channel: 'overwork-alert',
+          timestamp: new Date(),
+          recipientEmails: [session.email],
+          joinLink: '',
+        });
+
+        const html = `
+          <div style="font-family:system-ui,-apple-system,sans-serif;max-width:520px;margin:0 auto;">
+            <div style="background:linear-gradient(135deg,#dc2626,#ef4444);padding:24px 28px;border-radius:14px 14px 0 0;">
+              <h1 style="color:#fff;font-size:22px;font-weight:900;margin:0;">EduTechExOS</h1>
+              <p style="color:rgba(255,255,255,.8);font-size:13px;margin:4px 0 0;">Overwork Alert</p>
+            </div>
+            <div style="background:#fff;padding:28px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 14px 14px;">
+              <p style="margin:0 0 16px;color:#374151;font-size:16px;">Hi ${name},</p>
+              <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">
+                You've been active for <strong>${hours} hours</strong> today — that's over 8 hours of screen time.
+                Prolonged work without breaks can lead to burnout and reduced productivity.
+              </p>
+              <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.6;">
+                Please take a moment to step away, stretch, hydrate, and rest your eyes.
+                Your well-being matters.
+              </p>
+              <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px;margin-bottom:20px;">
+                <p style="margin:0;color:#991b1b;font-size:13px;font-weight:600;">💡 Tips for a healthy work session:</p>
+                <ul style="margin:8px 0 0;padding-left:18px;color:#991b1b;font-size:13px;">
+                  <li>Follow the 20-20-20 rule (look 20 ft away for 20 s every 20 min)</li>
+                  <li>Take a 5–10 min break every hour</li>
+                  <li>Stay hydrated and maintain good posture</li>
+                </ul>
+              </div>
+              <p style="margin:0;color:#6b7280;font-size:12px;">This is an automated alert from EduTechExOS.</p>
+            </div>
+          </div>`;
+
+        await sendBrevoEmail({
+          to: [{ email: session.email, name }],
+          subject: 'EduTechExOS: Overwork Alert',
+          html,
+        });
+      }
+
+      console.log(`[overwork-cron] Alerted ${overworked.length} user(s)`);
+    } catch (err) {
+      console.error('[overwork-cron] Failed:', err);
+    }
+  }, {
+    timezone: 'UTC',
+  });
+
+  console.log('[overwork-cron] Scheduled overwork alert every hour via node-cron');
 }
 
 module.exports = { startCronJobs };

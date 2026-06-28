@@ -54,6 +54,8 @@ export default function AdminLeaveCalendar() {
   const [avail, setAvail]         = useState<Record<string, DayRec>>({});
   const [loading, setLoading]     = useState(false);
   const [selected, setSelected]   = useState<string | null>(null);
+  const [viewMode, setViewMode]   = useState<'day' | 'user'>('day');
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
 
   const monthKey = `${year}-${String(month + 1).padStart(2,'0')}`;
 
@@ -86,7 +88,7 @@ export default function AdminLeaveCalendar() {
       const end   = l.endDate ? new Date(l.endDate + 'T00:00:00') : start;
       const cur   = new Date(start);
       while (cur <= end) {
-        const k = cur.toISOString().split('T')[0];
+        const k = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
         if (!map[k]) map[k] = [];
         map[k].push(l);
         cur.setDate(cur.getDate() + 1);
@@ -94,6 +96,27 @@ export default function AdminLeaveCalendar() {
     });
     return map;
   }, [leaves]);
+
+  // Unique users extracted from all leaves
+  const users = useMemo(() => {
+    const map = new Map<string, { name: string; email: string }>();
+    leaves.forEach(l => {
+      if (!map.has(l.email)) map.set(l.email, { name: l.name, email: l.email });
+    });
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [leaves]);
+
+  // Leaves grouped by user
+  const leavesByUser = useMemo(() => {
+    const map: Record<string, LeaveRecord[]> = {};
+    leaves.forEach(l => {
+      if (!map[l.email]) map[l.email] = [];
+      map[l.email].push(l);
+    });
+    return map;
+  }, [leaves]);
+
+  const selectedUserLeaves = selectedUser ? (leavesByUser[selectedUser] ?? []) : [];
 
   // Calendar grid
   const firstDay = new Date(year, month, 1).getDay();
@@ -105,8 +128,8 @@ export default function AdminLeaveCalendar() {
 
   const todayStr = toYMD(today.getFullYear(), today.getMonth(), today.getDate());
 
-  function prevMonth() { if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1); setSelected(null); }
-  function nextMonth() { if (month === 11) { setYear(y => y + 1); setMonth(0);  } else setMonth(m => m + 1); setSelected(null); }
+  function prevMonth() { if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1); setSelected(null); setSelectedUser(null); }
+  function nextMonth() { if (month === 11) { setYear(y => y + 1); setMonth(0);  } else setMonth(m => m + 1); setSelected(null); setSelectedUser(null); }
 
   const selectedLeaves = selected ? (leavesOnDay[selected] ?? []) : [];
   const selectedAvail  = selected ? avail[selected] : null;
@@ -246,59 +269,176 @@ export default function AdminLeaveCalendar() {
         {/* ── Side panel ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-          {/* Day detail */}
-          {selected ? (
-            <div style={{ borderRadius: 18, border: '1.5px solid rgba(91,79,219,0.15)', background: '#fff', boxShadow: '0 2px 20px rgba(91,79,219,0.07)', overflow: 'hidden' }}>
-              <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(26,27,58,0.06)', background: 'rgba(91,79,219,0.04)' }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#1A1B3A' }}>{fmtDate(selected)}</p>
-                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(90,95,128,0.55)' }}>
-                  {selectedLeaves.length} on leave · {selectedAvail?.slots?.length ?? 0} slots
-                </p>
-              </div>
-              <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 340, overflowY: 'auto' }}>
-                {selectedLeaves.length === 0 && !selectedAvail && (
-                  <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(90,95,128,0.45)', padding: '24px 0' }}>No leaves or availability on this day.</p>
-                )}
-                {/* Leaves */}
-                {selectedLeaves.map(l => (
-                  <div key={l.id} style={{ borderRadius: 12, border: `1.5px solid ${CAT_COLOR[l.leaveCategory]}28`, background: `${CAT_COLOR[l.leaveCategory]}08`, padding: '10px 12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <span style={{ fontSize: 16 }}>{CAT_EMOJI[l.leaveCategory]}</span>
-                      <div>
-                        <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: '#1A1B3A' }}>{l.name}</p>
-                        <p style={{ margin: 0, fontSize: 10.5, color: 'rgba(90,95,128,0.55)' }}>{l.email}</p>
+          {/* View mode toggle */}
+          <div style={{ display: 'flex', borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.08)', background: '#F8F9FC', padding: 3 }}>
+            {(['day', 'user'] as const).map(mode => (
+              <button key={mode} onClick={() => { setViewMode(mode); setSelectedUser(null); }}
+                style={{
+                  flex: 1, padding: '7px 12px', borderRadius: 10, cursor: 'pointer',
+                  border: 'none', fontSize: 11, fontWeight: 700,
+                  background: viewMode === mode ? '#fff' : 'transparent',
+                  color: viewMode === mode ? '#5B4FDB' : 'rgba(90,95,128,0.55)',
+                  boxShadow: viewMode === mode ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
+                  transition: 'all .15s',
+                }}>
+                {mode === 'day' ? '📅 Day View' : '👥 User View'}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Day View ── */}
+          {viewMode === 'day' && (
+            selected ? (
+              <div style={{ borderRadius: 18, border: '1.5px solid rgba(91,79,219,0.15)', background: '#fff', boxShadow: '0 2px 20px rgba(91,79,219,0.07)', overflow: 'hidden' }}>
+                <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(26,27,58,0.06)', background: 'rgba(91,79,219,0.04)' }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#1A1B3A' }}>{fmtDate(selected)}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(90,95,128,0.55)' }}>
+                    {selectedLeaves.length} on leave · {selectedAvail?.slots?.length ?? 0} slots
+                  </p>
+                </div>
+                <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 340, overflowY: 'auto' }}>
+                  {selectedLeaves.length === 0 && !selectedAvail && (
+                    <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(90,95,128,0.45)', padding: '24px 0' }}>No leaves or availability on this day.</p>
+                  )}
+                  {selectedLeaves.map(l => (
+                    <div key={l.id} style={{ borderRadius: 12, border: `1.5px solid ${CAT_COLOR[l.leaveCategory]}28`, background: `${CAT_COLOR[l.leaveCategory]}08`, padding: '10px 12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 16 }}>{CAT_EMOJI[l.leaveCategory]}</span>
+                        <div>
+                          <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: '#1A1B3A' }}>{l.name}</p>
+                          <p style={{ margin: 0, fontSize: 10.5, color: 'rgba(90,95,128,0.55)' }}>{l.email}</p>
+                        </div>
                       </div>
+                      <p style={{ margin: 0, fontSize: 11, color: '#4A5578' }}>
+                        <strong>Category:</strong> {l.leaveCategory} · <strong>Type:</strong> {l.type}
+                      </p>
+                      {l.reason && <p style={{ margin: '4px 0 0', fontSize: 11, color: '#4A5578', lineHeight: 1.5 }}>{l.reason}</p>}
                     </div>
-                    <p style={{ margin: 0, fontSize: 11, color: '#4A5578' }}>
-                      <strong>Category:</strong> {l.leaveCategory} · <strong>Type:</strong> {l.type}
-                    </p>
-                    {l.reason && <p style={{ margin: '4px 0 0', fontSize: 11, color: '#4A5578', lineHeight: 1.5 }}>{l.reason}</p>}
-                  </div>
-                ))}
-                {/* Availability slots */}
-                {selectedAvail?.slots?.length ? (
-                  <div style={{ borderRadius: 12, border: '1.5px solid rgba(16,201,138,0.22)', background: 'rgba(16,201,138,0.04)', padding: '10px 12px' }}>
-                    <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: '#10C98A', textTransform: 'uppercase', letterSpacing: '.08em' }}>Admin Availability</p>
-                    {selectedAvail.slots.map((s, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: i < selectedAvail.slots.length - 1 ? 6 : 0 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: SLOT_CFG[s.status].color, flexShrink: 0 }} />
-                        <span style={{ fontSize: 11.5, fontWeight: 600, color: '#1A1B3A' }}>{s.time === 'All Day' ? 'All Day' : s.time}</span>
-                        <span style={{ fontSize: 11, color: 'rgba(90,95,128,0.55)' }}>{s.label || SLOT_CFG[s.status].label}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
+                  ))}
+                  {selectedAvail?.slots?.length ? (
+                    <div style={{ borderRadius: 12, border: '1.5px solid rgba(16,201,138,0.22)', background: 'rgba(16,201,138,0.04)', padding: '10px 12px' }}>
+                      <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: '#10C98A', textTransform: 'uppercase', letterSpacing: '.08em' }}>Admin Availability</p>
+                      {selectedAvail.slots.map((s, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: i < selectedAvail.slots.length - 1 ? 6 : 0 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: SLOT_CFG[s.status].color, flexShrink: 0 }} />
+                          <span style={{ fontSize: 11.5, fontWeight: 600, color: '#1A1B3A' }}>{s.time === 'All Day' ? 'All Day' : s.time}</span>
+                          <span style={{ fontSize: 11, color: 'rgba(90,95,128,0.55)' }}>{s.label || SLOT_CFG[s.status].label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div style={{ borderRadius: 18, border: '1.5px dashed rgba(26,27,58,0.12)', background: 'rgba(26,27,58,0.02)', padding: '32px 20px', textAlign: 'center' }}>
-              <CalendarX size={28} style={{ color: 'rgba(90,95,128,0.25)', marginBottom: 8 }} />
-              <p style={{ margin: 0, fontSize: 12.5, fontWeight: 600, color: 'rgba(90,95,128,0.50)' }}>Click a day to see details</p>
-            </div>
+            ) : (
+              <div style={{ borderRadius: 18, border: '1.5px dashed rgba(26,27,58,0.12)', background: 'rgba(26,27,58,0.02)', padding: '32px 20px', textAlign: 'center' }}>
+                <CalendarX size={28} style={{ color: 'rgba(90,95,128,0.25)', marginBottom: 8 }} />
+                <p style={{ margin: 0, fontSize: 12.5, fontWeight: 600, color: 'rgba(90,95,128,0.50)' }}>Click a day to see details</p>
+              </div>
+            )
+          )}
+
+          {/* ── User View ── */}
+          {viewMode === 'user' && (
+            selectedUser ? (
+              <div style={{ borderRadius: 18, border: '1.5px solid rgba(91,79,219,0.15)', background: '#fff', boxShadow: '0 2px 20px rgba(91,79,219,0.07)', overflow: 'hidden' }}>
+                <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(26,27,58,0.06)', background: 'rgba(91,79,219,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#1A1B3A' }}>
+                      {selectedUserLeaves[0]?.name ?? 'Unknown User'}
+                    </p>
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(90,95,128,0.55)' }}>
+                      {selectedUser} · {selectedUserLeaves.length} leave{selectedUserLeaves.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <button onClick={() => setSelectedUser(null)}
+                    style={{ padding: '5px 10px', borderRadius: 8, border: '1.5px solid rgba(26,27,58,0.10)', background: '#fff', fontSize: 11, fontWeight: 600, color: 'rgba(90,95,128,0.60)', cursor: 'pointer' }}>
+                    Back
+                  </button>
+                </div>
+                <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 400, overflowY: 'auto' }}>
+                  {selectedUserLeaves.length === 0 && (
+                    <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(90,95,128,0.45)', padding: '24px 0' }}>No leave records for this user.</p>
+                  )}
+                  {selectedUserLeaves
+                    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+                    .map(l => (
+                    <div key={l.id} style={{ borderRadius: 12, border: `1.5px solid ${CAT_COLOR[l.leaveCategory]}28`, background: `${CAT_COLOR[l.leaveCategory]}08`, padding: '10px 12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 14 }}>{CAT_EMOJI[l.leaveCategory]}</span>
+                          <span style={{ fontSize: 11.5, fontWeight: 700, color: '#1A1B3A' }}>
+                            {l.leaveCategory} {l.type ? `· ${l.type}` : ''}
+                          </span>
+                        </div>
+                        <span style={{
+                          padding: '2px 7px', borderRadius: 5, fontSize: 9.5, fontWeight: 700,
+                          color: l.status === 'approved' ? '#10C98A' : l.status === 'rejected' ? '#EF476F' : '#F59E0B',
+                          background: l.status === 'approved' ? 'rgba(16,201,138,0.12)' : l.status === 'rejected' ? 'rgba(239,71,111,0.10)' : 'rgba(245,158,11,0.12)',
+                        }}>
+                          {l.status}
+                        </span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: 11, color: '#4A5578' }}>
+                        <strong>Dates:</strong> {fmtDate(l.startDate)}{l.endDate ? ` – ${fmtDate(l.endDate)}` : ''} {l.duration ? `(${l.duration})` : ''}
+                      </p>
+                      {l.reason && <p style={{ margin: '4px 0 0', fontSize: 11, color: '#4A5578', lineHeight: 1.5 }}><strong>Reason:</strong> {l.reason}</p>}
+                      {l.adminNote && <p style={{ margin: '4px 0 0', fontSize: 10.5, color: 'rgba(90,95,128,0.60)', fontStyle: 'italic' }}>Note: {l.adminNote}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{ borderRadius: 18, border: '1.5px solid rgba(26,27,58,0.08)', background: '#fff', overflow: 'hidden' }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(26,27,58,0.06)' }}>
+                  <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: 'rgba(90,95,128,0.45)', textTransform: 'uppercase', letterSpacing: '.10em' }}>
+                    All Users ({users.length})
+                  </p>
+                </div>
+                <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 380, overflowY: 'auto' }}>
+                  {users.length === 0 && (
+                    <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(90,95,128,0.45)', padding: '24px 0' }}>No leave data available.</p>
+                  )}
+                  {users.map(u => {
+                    const userLeaves = leavesByUser[u.email] ?? [];
+                    const approved = userLeaves.filter(l => l.status === 'approved').length;
+                    const pending = userLeaves.filter(l => l.status === 'pending').length;
+                    return (
+                      <div key={u.email}
+                        onClick={() => setSelectedUser(u.email)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 10,
+                          background: selectedUser === u.email ? 'rgba(91,79,219,0.06)' : 'transparent',
+                          cursor: 'pointer', transition: 'background .15s',
+                        }}
+                        onMouseEnter={e => { if (selectedUser !== u.email) (e.currentTarget as HTMLElement).style.background = 'rgba(26,27,58,0.03)'; }}
+                        onMouseLeave={e => { if (selectedUser !== u.email) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                      >
+                        <div style={{
+                          width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#5B4FDB,#7C6EEB)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0,
+                        }}>
+                          {u.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</p>
+                          <p style={{ margin: 0, fontSize: 10.5, color: 'rgba(90,95,128,0.50)' }}>{u.email}</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          {approved > 0 && <span style={{ padding: '2px 6px', borderRadius: 5, background: 'rgba(16,201,138,0.10)', fontSize: 9.5, fontWeight: 700, color: '#10C98A' }}>{approved}✓</span>}
+                          {pending > 0 && <span style={{ padding: '2px 6px', borderRadius: 5, background: 'rgba(245,158,11,0.10)', fontSize: 9.5, fontWeight: 700, color: '#F59E0B' }}>{pending}⏳</span>}
+                          <ChevronRight size={13} color="rgba(90,95,128,0.30)" />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )
           )}
 
           {/* Pending leaves list */}
-          {pendingLeaves.length > 0 && (
+          {pendingLeaves.length > 0 && viewMode === 'day' && (
             <div style={{ borderRadius: 18, border: '1.5px solid rgba(245,158,11,0.18)', background: '#FFFDF5', overflow: 'hidden' }}>
               <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(245,158,11,0.10)', background: 'rgba(245,158,11,0.05)' }}>
                 <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '.10em' }}>
@@ -329,6 +469,7 @@ export default function AdminLeaveCalendar() {
               { label: 'Approved leaves',  val: leaves.filter(l => l.status === 'approved').length, color: '#10C98A' },
               { label: 'Pending requests', val: pendingLeaves.length,                               color: '#F59E0B' },
               { label: 'Rejected',         val: leaves.filter(l => l.status === 'rejected').length, color: '#EF476F' },
+              { label: 'Total users',    val: users.length,                                       color: '#5B4FDB' },
               { label: 'Days with availability', val: Object.keys(avail).length,                   color: '#6366f1' },
             ] as {label:string;val:number;color:string}[]).map(row => (
               <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid rgba(26,27,58,0.05)' }}>

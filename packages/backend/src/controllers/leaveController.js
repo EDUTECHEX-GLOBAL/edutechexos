@@ -13,7 +13,8 @@ async function userWantsEmail(email) {
 
 async function getLeaves(req, res) {
   try {
-    const isAdmin = req.user?.role === 'Admin';
+    if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    const isAdmin = req.user.role === 'Admin';
     const query = isAdmin ? {} : { email: req.user.email };
     const leaves = await Leave.find(query).sort({ requestedAt: -1 }).lean();
     const formatted = leaves.map(({ _id, __v, ...rest }) => ({ ...rest, id: _id.toString() }));
@@ -32,6 +33,11 @@ async function createLeave(req, res) {
     const start = new Date(startDate);
     if (isNaN(start.getTime())) {
       return res.status(400).json({ success: false, error: 'startDate must be a valid date.' });
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (start < today) {
+      return res.status(400).json({ success: false, error: 'startDate cannot be in the past.' });
     }
     if (endDate) {
       const end = new Date(endDate);

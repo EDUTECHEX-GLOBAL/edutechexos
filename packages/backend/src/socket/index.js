@@ -1,6 +1,7 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const { ALLOWED_ORIGINS, revokedEmails } = require('../utils/helpers');
+const UserSettings = require('../models/UserSettings');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -70,12 +71,31 @@ function createSocketServer(httpServer) {
     socket.on('user_status_update', ({ email, status, name }) => {
       if (!email) return;
       socket.broadcast.emit('user_status_update', { email, status, name });
+      // Persist to MongoDB so status survives page reload
+      const updateFields = { status };
+      if (name) updateFields.displayName = name;
+      UserSettings.findOneAndUpdate(
+        { email: email.toLowerCase() },
+        { $set: updateFields },
+        { upsert: true, new: false }
+      ).lean().catch(() => {});
     });
 
     // Relay leave status so all users see the leave badge instantly
     socket.on('leave_status_update', ({ email, onLeave }) => {
       if (!email) return;
       socket.broadcast.emit('leave_status_update', { email, onLeave });
+    });
+
+    // Relay availability toggle so everyone sees availability status in real-time
+    socket.on('user_availability', ({ email, isAvailable }) => {
+      if (!email) return;
+      socket.broadcast.emit('user_availability', { email, isAvailable });
+      UserSettings.findOneAndUpdate(
+        { email: email.toLowerCase() },
+        { $set: { available: !!isAvailable } },
+        { upsert: true, new: false }
+      ).lean().catch(() => {});
     });
 
     socket.on('typing_start', ({ channelId, userName }) => {

@@ -6,6 +6,7 @@ import {
   CheckCircle2, XCircle, AlertCircle, Sparkles, Calendar, MessageSquare,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getSocket } from '@/lib/socket';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
@@ -13,7 +14,7 @@ type SlotStatus = 'available' | 'busy' | 'ooo';
 type Slot       = { time: string; status: SlotStatus; label: string };
 type DayRecord  = { date: string; adminEmail: string; slots: Slot[] };
 type MeetingRequest = {
-  _id: string; date: string; time: string; purpose: string;
+  _id: string; date: string; time: string; timeEnd: string; purpose: string;
   status: 'pending' | 'confirmed' | 'declined'; createdAt: string;
 };
 
@@ -58,6 +59,7 @@ export default function AdminAvailabilityView({ onClose }: Props) {
   // Request flow
   const [requestSlot, setRequestSlot] = useState<Slot | null>(null);
   const [requestDate, setRequestDate] = useState<string>('');
+  const [requestTimeEnd, setRequestTimeEnd] = useState('');
   const [purpose, setPurpose]         = useState('');
   const [submitting, setSubmitting]   = useState(false);
 
@@ -93,6 +95,25 @@ export default function AdminAvailabilityView({ onClose }: Props) {
 
   useEffect(() => { loadMonth(); },       [loadMonth]);
   useEffect(() => { loadMyRequests(); }, [loadMyRequests]);
+  useEffect(() => {
+    const socket = getSocket();
+    const onReviewed = () => { loadMyRequests(); };
+    socket.on('meeting_request_reviewed', onReviewed);
+    return () => { socket.off('meeting_request_reviewed', onReviewed); };
+  }, [loadMyRequests]);
+
+  function computeEndOptions(start: string): string[] {
+    const [h, m] = start.split(':').map(Number);
+    const opts: string[] = [];
+    for (let mins = 30; mins <= 240; mins += 30) {
+      const total = h * 60 + m + mins;
+      const eh = Math.floor(total / 60);
+      const em = total % 60;
+      if (eh >= 24) break;
+      opts.push(`${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`);
+    }
+    return opts;
+  }
 
   async function sendRequest() {
     if (!requestDate || !requestSlot) return;
@@ -102,12 +123,12 @@ export default function AdminAvailabilityView({ onClose }: Props) {
       const res  = await fetch(`${API_BASE}/api/meeting-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}` },
-        body: JSON.stringify({ date: requestDate, time: requestSlot.time, purpose }),
+        body: JSON.stringify({ date: requestDate, time: requestSlot.time, timeEnd: requestTimeEnd || undefined, purpose }),
       });
       const data = await res.json();
       if (data.success) {
         toast.success('Request sent — admin will confirm shortly.');
-        setPurpose(''); setRequestSlot(null); setRequestDate(''); setSelected(null);
+        setPurpose(''); setRequestSlot(null); setRequestDate(''); setRequestTimeEnd(''); setSelected(null);
         loadMyRequests();
       } else toast.error(data.error ?? 'Failed to send request.');
     } catch { toast.error('Network error.'); }
@@ -350,10 +371,33 @@ export default function AdminAvailabilityView({ onClose }: Props) {
                         {requestSlot.label && ` · ${requestSlot.label}`}
                       </p>
                     </div>
-                    <button onClick={() => { setRequestSlot(null); setRequestDate(''); setPurpose(''); }}
+                    <button onClick={() => { setRequestSlot(null); setRequestDate(''); setRequestTimeEnd(''); setPurpose(''); }}
                       className="p-1 rounded hover:bg-[#E8EAF6]">
                       <X size={14} className="text-[#9BA6D3]" />
                     </button>
+                  </div>
+                  {(() => {
+                    const endOpts = computeEndOptions(requestSlot.time);
+                    if (!requestTimeEnd && endOpts.length > 0 && endOpts[0]) {
+                      setTimeout(() => { if (!requestTimeEnd) setRequestTimeEnd(endOpts[0]); }, 0);
+                    }
+                    return null;
+                  })()}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <label className="text-xs font-medium text-[#4A5578] mb-1 block">Start</label>
+                      <div className="border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm font-semibold text-[#1E2636] bg-white">
+                        {requestSlot.time}
+                      </div>
+                    </div>
+                    <div className="flex items-center pt-5 text-[#9BA6D3]">→</div>
+                    <div className="flex-1">
+                      <label className="text-xs font-medium text-[#4A5578] mb-1 block">End</label>
+                      <select value={requestTimeEnd} onChange={(e) => setRequestTimeEnd(e.target.value)}
+                        className="w-full border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm text-[#1E2636] bg-white focus:outline-none focus:border-[#3E4A89]">
+                        {computeEndOptions(requestSlot.time).map((t) => <option key={t}>{t}</option>)}
+                      </select>
+                    </div>
                   </div>
                   <textarea
                     value={purpose}
@@ -401,7 +445,7 @@ export default function AdminAvailabilityView({ onClose }: Props) {
                               <span className="text-sm font-semibold text-[#1E2636]">
                                 {fmt(req.date, { weekday: 'short', month: 'short', day: 'numeric' })}
                               </span>
-                              <span className="text-xs text-[#9BA6D3]">at {req.time}</span>
+                              <span className="text-xs text-[#9BA6D3]">{req.timeEnd ? `${req.time} – ${req.timeEnd}` : `at ${req.time}`}</span>
                             </div>
                             {req.purpose && (
                               <p className="text-xs text-[#4A5578] leading-relaxed max-w-xs">{req.purpose}</p>

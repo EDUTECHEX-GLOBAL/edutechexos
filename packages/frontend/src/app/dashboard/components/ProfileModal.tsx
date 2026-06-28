@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef } from 'react';
-import { X, User, Lock, Camera, Check, Loader2, Eye, EyeOff } from 'lucide-react';
+import { X, User, Lock, Camera, Check, Loader2, Eye, EyeOff, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -174,6 +174,32 @@ export default function ProfileModal({ open, onClose, currentUser, onProfileUpda
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                 Save Changes
               </button>
+
+              <div className="pt-4 mt-4 border-t border-slate-200">
+                <button onClick={async () => {
+                  try {
+                    const raw = localStorage.getItem('edutechex_token');
+                    const token = raw ? JSON.parse(raw).token : null;
+                    if (token) {
+                      await fetch(`${API}/api/auth/logout`, {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${token}` },
+                      }).catch(() => {});
+                    }
+                  } catch { /* ignore */ }
+                  localStorage.removeItem('edutechex_token');
+                  localStorage.removeItem('edutechex_access_requests');
+                  localStorage.removeItem('edutechex_session_start');
+                  localStorage.removeItem('edutechex_lunch_pause_ms');
+                  const { useDashboardStore } = await import('@/store/dashboardStore');
+                  useDashboardStore.getState().resetUserState();
+                  window.location.href = '/sign-up-login-screen';
+                }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold bg-red-50 text-red-600 hover:bg-red-100 transition-all border border-red-200">
+                  <LogOut size={14} />
+                  Sign Out
+                </button>
+              </div>
             </div>
           )}
 

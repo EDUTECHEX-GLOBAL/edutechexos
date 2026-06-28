@@ -5,6 +5,7 @@ const { getPages, upsertPage, deletePage } = require('../controllers/wikiControl
 
 router.get('/', authMiddleware, requireAuth, getPages);
 router.post('/', authMiddleware, requireAuth, upsertPage);
+router.patch('/:id', authMiddleware, requireAuth, upsertPage);
 router.delete('/:id', authMiddleware, requireAuth, deletePage);
 
 module.exports = router;

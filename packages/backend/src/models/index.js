@@ -22,11 +22,12 @@ const MeetingRequest = require('./MeetingRequest');
 const WorkspaceChannel = require('./WorkspaceChannel');
 const MeetingAccess = require('./MeetingAccess');
 const InviteToken = require('./InviteToken');
+const StandupReply = require('./StandupReply');
 
 module.exports = {
   Message, AccessRequest, Leave, ResetCode, LoginOtp,
   KanbanTask, WikiPage, Bookmark, Notification, Webhook,
   LoginEvent, AWActivity, ActivitySession, MediaFile, RemovedMember,
   AuditLog, UserSettings, PinnedMessage, UserKey, AdminAvailability,
-  MeetingRequest, WorkspaceChannel, MeetingAccess, InviteToken,
+  MeetingRequest, WorkspaceChannel, MeetingAccess, InviteToken, StandupReply,
 };

@@ -133,11 +133,12 @@ export type Message = {
 
 export type WikiPage = {
   id: string;
+  channelId: string;
   title: string;
   content: string;
   createdAt: string;
   updatedAt: string;
-  isPrivate?: boolean;  // true = only creator can see; false = shared with channel
+  isPrivate?: boolean;
   createdBy?: string | null;
 };
 
@@ -180,6 +181,7 @@ type Member = {
   color: string;
   channelIds?: string[];
   onLeave?: boolean;
+  isAvailable?: boolean;
 };
 
 type Channel = {
@@ -236,6 +238,8 @@ type DashboardState = {
   darkMode: boolean;
   toggleDarkMode: () => void;
 
+
+
   searchQuery: string;
   setSearchQuery: (q: string) => void;
 
@@ -283,6 +287,7 @@ type DashboardState = {
   updateMemberStatus: (email: string, status: MemberStatus) => void;
   updateMemberName: (email: string, name: string) => void;
   updateMemberLeaveStatus: (email: string, onLeave: boolean) => void;
+  updateMemberAvailability: (email: string, isAvailable: boolean) => void;
 
   unreadCounts: Record<string, number>;
   incrementUnread: (channelId: string) => void;
@@ -293,7 +298,7 @@ type DashboardState = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const isDM = (id: string) => id.startsWith('member-');
+const isDM = (id: string) => id.startsWith('member-') || id.startsWith('dm-');
 const isWS = (id: string) => !isDM(id);
 const isExtraWS = (id: string) => isWS(id) && id !== 'general';
 const withM = (ids: string[] = [], id: string) => (ids.includes(id) ? ids : [...ids, id]);
@@ -683,7 +688,7 @@ export const useDashboardStore = create<DashboardState>()(
       bookmarkedMessageIds: [],
       toggleBookmark: (
         messageId,
-        message?: { channelId?: string; text?: string; sender?: string; timestamp?: string }
+        _message?: { channelId?: string; text?: string; sender?: string; timestamp?: string }
       ) => {
         // Local optimistic toggle
         set((s) => ({
@@ -691,13 +696,11 @@ export const useDashboardStore = create<DashboardState>()(
             ? s.bookmarkedMessageIds.filter((id) => id !== messageId)
             : [...s.bookmarkedMessageIds, messageId],
         }));
-        // Persist to backend
-        if (message) {
-          apiFetch(`${API_BASE}/api/bookmarks/toggle`, {
-            method: 'POST',
-            body: JSON.stringify({ messageId, ...message }),
-          }).catch(() => {});
-        }
+        // Always persist to backend (message metadata is optional — only messageId is required)
+        apiFetch(`${API_BASE}/api/bookmarks/toggle`, {
+          method: 'POST',
+          body: JSON.stringify({ messageId }),
+        }).catch(() => {});
       },
       loadLocalBookmarkedIds: async () => {
         try {
@@ -737,6 +740,8 @@ export const useDashboardStore = create<DashboardState>()(
             document.documentElement.classList.toggle('dark', next);
           return { darkMode: next };
         }),
+
+
 
       searchQuery: '',
       setSearchQuery: (q) => set({ searchQuery: q }),
@@ -805,6 +810,7 @@ export const useDashboardStore = create<DashboardState>()(
         const tempId = `wiki-${Date.now()}`;
         const page: WikiPage = {
           id: tempId,
+          channelId,
           ...data,
           isPrivate: data.isPrivate !== false,
           createdAt: new Date().toISOString(),
@@ -819,17 +825,20 @@ export const useDashboardStore = create<DashboardState>()(
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: tempId, channelId, title: data.title, content: data.content, isPrivate: data.isPrivate !== false }),
         })
-          .then((res) => res.json())
+          .then((r) => r.json())
           .then((res) => {
             if (res.success && res.page) {
-              set((s) => ({
-                wikiPages: {
-                  ...s.wikiPages,
-                  [channelId]: (s.wikiPages[channelId] ?? []).map((p) =>
-                    p.id === tempId ? res.page : p
-                  ) as WikiPage[],
-                },
-              }));
+              set((s) => {
+                const existing = s.wikiPages[channelId] ?? [];
+                return {
+                  wikiPages: {
+                    ...s.wikiPages,
+                    [channelId]: existing.map((p) =>
+                      p.id === tempId ? { ...p, ...res.page } : p
+                    ) as WikiPage[],
+                  },
+                };
+              });
             }
           })
           .catch(() => {
@@ -897,21 +906,22 @@ export const useDashboardStore = create<DashboardState>()(
             const merged: Record<string, WikiPage[]> = { ...grouped };
             Object.entries(s.wikiPages).forEach(([chId, localPages]) => {
               if (!merged[chId]) {
-                // Channel not in backend response — keep local pages as-is
                 merged[chId] = localPages;
               } else {
                 merged[chId] = merged[chId].map((serverPage) => {
                   const local = localPages.find((lp) => lp.id === serverPage.id);
                   if (!local) return serverPage;
-                  // Keep whichever version was updated more recently
                   return new Date(local.updatedAt) >= new Date(serverPage.updatedAt)
                     ? local
                     : serverPage;
                 });
-                // Preserve local-only pages not yet synced to backend
                 const serverIds = new Set(merged[chId].map((p) => p.id));
                 localPages.forEach((lp) => {
-                  if (!serverIds.has(lp.id)) merged[chId].push(lp);
+                  const isTempId = lp.id.startsWith('wiki-');
+                  const hasBackendDup = isTempId && merged[chId].some(
+                    (sp) => sp.channelId === lp.channelId && sp.title === lp.title
+                  );
+                  if (!serverIds.has(lp.id) && !hasBackendDup) merged[chId].push(lp);
                 });
               }
             });
@@ -1380,6 +1390,14 @@ export const useDashboardStore = create<DashboardState>()(
         }));
       },
 
+      updateMemberAvailability: (email, isAvailable) => {
+        set((s) => ({
+          members: s.members.map((m) =>
+            m.email.toLowerCase() === email.toLowerCase() ? { ...m, isAvailable } : m
+          ),
+        }));
+      },
+
       unreadCounts: {},
       incrementUnread: (channelId) => {
         set((s) => ({
@@ -1399,13 +1417,27 @@ export const useDashboardStore = create<DashboardState>()(
       },
       clearAllUnread: () => set({ unreadCounts: {} }),
       resetUserState: () => {
-        // Clear all per-user in-memory state when a user logs out so the
+        // Clear ALL per-user in-memory state when a user logs out so the
         // next user who logs in on the same device starts completely clean.
+        // Includes persisted fields (messages, wikiPages, channels, members)
+        // that would otherwise leak previous user's data via localStorage.
         set({
+          activeChannel: 'general',
+          messages: {},
+          hasMoreMessages: {},
+          isLoadingMore: {},
+          pinnedMessageIds: {},
+          bookmarkedMessageIds: [],
+          activeThreadId: null,
+          typingUsers: {},
           unreadCounts: {},
           notifications: [],
           kanbanTasks: [],
+          wikiPages: {},
           aiSummary: {},
+          channels: [],
+          members: [],
+          searchQuery: '',
         });
       },
     }),
@@ -1420,6 +1452,7 @@ export const useDashboardStore = create<DashboardState>()(
         wikiPages: s.wikiPages,
         // messages persisted so they survive refresh when backend is sleeping (Render free tier)
         messages: s.messages,
+        unreadCounts: s.unreadCounts,
         // NOTE: pinnedMessageIds, bookmarkedMessageIds, notifications are NOT persisted —
         // they are user-specific and loaded from backend on login. Persisting them would
         // leak one user's data to the next user who logs in on the same device.

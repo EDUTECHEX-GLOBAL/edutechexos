@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { useDashboardStore } from '@/store/dashboardStore';
+import { useDashboardStore, type MemberStatus } from '@/store/dashboardStore';
 import { useTheme } from '@/components/ThemeProvider';
 import DashboardLayout, { type LayoutTab } from './DashboardLayout';
 import DashboardTopBar from './DashboardTopBar';
@@ -10,9 +10,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Hash, MessageSquare, Send, Smile, Paperclip, Pin,
   Bookmark, Trash2, Users, Loader2, Bot, X, ChevronLeft,
-  Globe, Lock, AtSign, Sparkles, ExternalLink, CheckSquare, Menu,
+  Globe, Lock, AtSign, Sparkles, ExternalLink, CheckSquare, Menu, Clock, CalendarCheck,
 } from 'lucide-react';
 import { getSocket } from '@/lib/socket';
+import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useRouter } from 'next/navigation';
@@ -28,10 +29,14 @@ import OfflineIndicator from './OfflineIndicator';
 import DMPanel from './DMPanel';
 import AnalyticsPanel from './AnalyticsPanel';
 import BookmarksPanel from './BookmarksPanel';
+import PeopleStatusPanel from './PeopleStatusPanel';
 import LeavePanel from './LeavePanel';
 import NotepadPanel from './NotepadPanel';
-import IntegrationsPanel from './IntegrationsPanel';
 import SearchPanel from './SearchPanel';
+import StandupPanel from './StandupPanel';
+import SessionTimer from './SessionTimer';
+import AdminAvailabilityView from './AdminAvailabilityView';
+import MeetingStartedCard from './MeetingStartedCard';
 
 export default function DashboardRedesigned() {
   const { theme, toggleTheme } = useTheme();
@@ -47,9 +52,10 @@ export default function DashboardRedesigned() {
     toggleBookmark, toggleReaction, bookmarkedMessageIds,
     pinnedMessageIds, notifications, addNotification,
     loadLocalMessages, loadLocalWikiPages, loadLocalKanbanTasks,
-    loadPinnedMessages, loadWorkspaceChannels,
+    loadPinnedMessages, loadWorkspaceChannels, updateMemberStatus, updateMemberName, updateMemberAvailability,
     kanbanTasks, darkMode, toggleDarkMode,
     activeThreadId, setActiveThread,
+    addKanbanTask,
   } = store;
 
   const [currentUser, setCurrentUser] = useState<{
@@ -63,6 +69,8 @@ export default function DashboardRedesigned() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [standupOpen, setStandupOpen] = useState(false);
+  const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [sendBounce, setSendBounce] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
@@ -146,7 +154,7 @@ export default function DashboardRedesigned() {
   useEffect(() => {
     if (!currentUser) return;
     const socket = getSocket();
-    const handler = (data: { recipientEmail: string; senderName: string; channelId: string; messageId: string; preview: string }) => {
+    const mentionHandler = (data: { recipientEmail: string; senderName: string; channelId: string; messageId: string; preview: string }) => {
       if (data.recipientEmail?.toLowerCase() === currentUser.email?.toLowerCase()) {
         addNotification?.({
           type: 'mention',
@@ -158,8 +166,48 @@ export default function DashboardRedesigned() {
         });
       }
     };
-    socket.on('mention_notification', handler);
-    return () => { socket.off('mention_notification', handler); };
+    socket.on('mention_notification', mentionHandler);
+
+    // Live kanban updates from other users
+    const kanbanHandler = () => { loadLocalKanbanTasks?.(); };
+    socket.on('kanban_changed', kanbanHandler);
+
+    // Live status/name updates from other users
+    const statusHandler = ({ email, status, name }: { email: string; status: string; name?: string }) => {
+      if (!email) return;
+      const validStatus = ['online', 'away', 'in-meeting', 'offline'].includes(status)
+        ? (status as MemberStatus) : 'online';
+      if (status) updateMemberStatus(email, validStatus);
+      if (name) updateMemberName(email, name);
+    };
+    socket.on('user_status_update', statusHandler);
+
+    // Live availability updates from other users
+    const availabilityHandler = ({ email, isAvailable }: { email: string; isAvailable: boolean }) => {
+      if (!email) return;
+      updateMemberAvailability(email, !!isAvailable);
+    };
+    socket.on('user_availability', availabilityHandler);
+
+    // Meeting request notifications
+    const meetingRequestCreatedHandler = (data: { userName: string; date: string; time: string }) => {
+      if (currentUser?.role !== 'Admin') return;
+      toast.success(`Meeting request from ${data.userName}`, { description: `${data.date} at ${data.time}` });
+    };
+    const meetingRequestReviewedHandler = (data: { status: string; date: string; time: string }) => {
+      toast.info(`Meeting ${data.status === 'confirmed' ? 'confirmed' : 'declined'}`, { description: `${data.date} at ${data.time}` });
+    };
+    socket.on('meeting_request_created', meetingRequestCreatedHandler);
+    socket.on('meeting_request_reviewed', meetingRequestReviewedHandler);
+
+    return () => {
+      socket.off('mention_notification', mentionHandler);
+      socket.off('kanban_changed', kanbanHandler);
+      socket.off('user_status_update', statusHandler);
+      socket.off('user_availability', availabilityHandler);
+      socket.off('meeting_request_created', meetingRequestCreatedHandler);
+      socket.off('meeting_request_reviewed', meetingRequestReviewedHandler);
+    };
   }, [currentUser]);
 
   const handleSend = useCallback(async () => {
@@ -175,9 +223,41 @@ export default function DashboardRedesigned() {
       timestamp: new Date().toISOString(),
       text,
     });
+
+    // @mention → Kanban task creation for each mentioned member
+    const mentionRegex = /@([\w. ]+)/g;
+    const mentionMatches = text.match(mentionRegex);
+    if (mentionMatches && currentUser) {
+      const mentionedInText = mentionMatches.map((m) => m.slice(1).toLowerCase().trim());
+      const mentionedMembers = members.filter((member) =>
+        mentionedInText.includes(member.name?.toLowerCase()) ||
+        mentionedInText.includes(member.email?.toLowerCase())
+      );
+      mentionedMembers.forEach((member) => {
+        addKanbanTask?.({
+          text: text.slice(0, 200),
+          assignee: member.name,
+          assigneeInitials: (member.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)) ?? '??',
+          assigneeEmail: member.email,
+          sourceChannel: `#${channel.name}`,
+          status: 'todo',
+        });
+        addNotification?.({
+          type: 'task',
+          actor: currentUser.name,
+          actorInitials: currentUser.initials,
+          actorColor: '#FF6B7F',
+          channel: channel.name,
+          channelId: channel.id,
+          message: `📋 Task assigned to you: "${text.slice(0, 120)}"`,
+          recipientEmails: [member.email],
+        });
+      });
+    }
+
     setComposerMessage('');
     if (composerRef.current) composerRef.current.focus();
-  }, [composerMessage, channel, currentUser, addMessage]);
+  }, [composerMessage, channel, currentUser, addMessage, members, addKanbanTask, addNotification]);
 
   if (!authChecked) {
     return (
@@ -212,7 +292,6 @@ export default function DashboardRedesigned() {
     : activeTab === 'leave' ? 'Leave'
     : activeTab === 'bookmarks' ? 'Saved Messages'
     : activeTab === 'notepad' ? 'Notes'
-    : activeTab === 'integrations' ? 'Integrations'
     : activeTab === 'reports' ? 'Reports'
     : 'Analytics';
 
@@ -307,6 +386,11 @@ export default function DashboardRedesigned() {
             <LeavePanel onClose={() => setActiveTab('chats')} />
           </div>
         )}
+        {activeTab === 'people' && (
+          <div className="flex-1 overflow-y-auto p-4 scrollbar-dark">
+            <PeopleStatusPanel onClose={() => setActiveTab('chats')} />
+          </div>
+        )}
         {activeTab === 'bookmarks' && (
           <div className="flex-1 overflow-y-auto scrollbar-dark">
             <BookmarksPanel onClose={() => setActiveTab('chats')} />
@@ -317,11 +401,7 @@ export default function DashboardRedesigned() {
             <NotepadPanel onClose={() => setActiveTab('chats')} activeChannel={channel?.id ?? ''} />
           </div>
         )}
-        {activeTab === 'integrations' && (
-          <div className="flex-1 overflow-y-auto scrollbar-dark">
-            <IntegrationsPanel onClose={() => setActiveTab('chats')} channels={channels} />
-          </div>
-        )}
+
       </div>
 
       <AnimatePresence>
@@ -371,8 +451,13 @@ export default function DashboardRedesigned() {
             open={profileOpen}
             onClose={() => setProfileOpen(false)}
             currentUser={currentUser}
-            onProfileUpdated={(name, avatarUrl) => {
-              setCurrentUser(prev => prev ? { ...prev, name, initials: name.split(' ').map((p: string) => p[0]).join('').toUpperCase().slice(0, 2) } : prev);
+            onProfileUpdated={(name) => {
+              const newInitials = name.split(' ').map((p: string) => p[0]).join('').toUpperCase().slice(0, 2);
+              setCurrentUser(prev => prev ? { ...prev, name, initials: newInitials } : prev);
+              if (currentUser) {
+                updateMemberName(currentUser.email, name);
+                getSocket().emit('user_status_update', { email: currentUser.email, status: 'online', name });
+              }
             }}
           />
         )}
@@ -437,6 +522,38 @@ export default function DashboardRedesigned() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Availability FAB */}
+      <button
+        onClick={() => setAvailabilityOpen(true)}
+        className="fixed bottom-6 right-20 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all"
+        title="Admin Availability"
+      >
+        <CalendarCheck size={18} />
+      </button>
+
+      {/* Standup FAB */}
+      <button
+        onClick={() => setStandupOpen(true)}
+        className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all"
+        title="Daily Standup"
+      >
+        <Clock size={18} />
+      </button>
+
+      <AnimatePresence>
+        {standupOpen && (
+          <StandupPanel onClose={() => setStandupOpen(false)} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {availabilityOpen && (
+          <AdminAvailabilityView key="availability" onClose={() => setAvailabilityOpen(false)} />
+        )}
+      </AnimatePresence>
+
+      <SessionTimer />
     </DashboardLayout>
   );
 }
@@ -586,6 +703,8 @@ function ChatView({
           const isFirst = !prev || prev.sender !== msg.sender;
           const isPinned = pinIds.includes(msg.id);
           const isBookmarked = bookmarkedMessageIds.includes(msg.id);
+          const isInstantMeet = msg.id?.startsWith('meeting-started-');
+          const instantMeetLink = isInstantMeet ? msg.text?.match(/\[Click here to join the meeting\]\(([^)]+)\)/)?.[1] : undefined;
 
           return (
             <motion.div
@@ -628,21 +747,35 @@ function ChatView({
                 )}
 
                 <div
-                  className={`relative rounded-2xl px-4 py-2.5 shadow-lg transition-all group-hover:shadow-xl
-                    ${isOwn
-                      ? 'bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-br-sm'
-                      : 'bg-white border border-slate-100 text-slate-800 rounded-bl-sm shadow-sm'
+                  className={`relative rounded-2xl transition-all group-hover:shadow-xl
+                    ${isInstantMeet
+                      ? 'p-0 bg-transparent border-0 overflow-hidden'
+                      : `px-4 py-2.5 shadow-lg ${
+                          isOwn
+                            ? 'bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-br-sm'
+                            : 'bg-white border border-slate-100 text-slate-800 rounded-bl-sm shadow-sm'
+                        }`
                     }
-                    ${isPinned ? 'ring-1 ring-amber-500 ring-offset-1 ring-offset-slate-100' : ''}
-                    ${isBookmarked ? 'shadow-[0_0_16px_rgba(245,158,11,0.08)]' : ''}
+                    ${isPinned && !isInstantMeet ? 'ring-1 ring-amber-500 ring-offset-1 ring-offset-slate-100' : ''}
+                    ${isBookmarked && !isInstantMeet ? 'shadow-[0_0_16px_rgba(245,158,11,0.08)]' : ''}
                   `}
                 >
+                  {isInstantMeet && instantMeetLink ? (
+                    <div className="mb-1">
+                      <MeetingStartedCard
+                        title={`${msg.sender} started a meeting`}
+                        subtitle="Join on Google Meet"
+                        meetLink={instantMeetLink}
+                      />
+                    </div>
+                  ) : null}
                   {isPinned && (
                     <div className="flex items-center gap-1 mb-1.5">
                       <Pin size={10} className="text-[#F59E0B]" />
                       <span className="text-[9px] font-bold uppercase tracking-wider text-[#F59E0B]">Pinned</span>
                     </div>
                   )}
+                  {!isInstantMeet && (
                   <div className={`text-sm leading-relaxed ${isOwn ? 'font-medium' : ''}`}>
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
@@ -683,9 +816,10 @@ function ChatView({
                       {msg.text}
                     </ReactMarkdown>
                   </div>
+                  )}
 
                   {/* Link Preview */}
-                  {msg.linkPreview && (
+                  {!isInstantMeet && msg.linkPreview && (
                     <a href={msg.linkPreview.url} target="_blank" rel="noreferrer"
                       className={`mt-2 flex gap-2.5 rounded-xl p-2.5 transition-colors no-underline border ${
                         isOwn ? 'border-white/20 bg-white/10 hover:bg-white/20' : 'border-slate-100 bg-slate-50 hover:bg-slate-100/80'
@@ -707,7 +841,7 @@ function ChatView({
                   )}
 
                   {/* Task Card */}
-                  {msg.taskCard && (
+                  {!isInstantMeet && msg.taskCard && (
                     <div className={`mt-2 flex items-start gap-2.5 rounded-xl border p-2.5 ${
                       isOwn ? 'border-white/20 bg-white/10' : 'border-teal-100 bg-teal-50/50'
                     }`}>
@@ -736,11 +870,11 @@ function ChatView({
                     </div>
                   )}
 
-                  <div className={`mt-1.5 flex items-center justify-end gap-1 text-[10px] ${isOwn ? 'text-white/70' : 'text-slate-400'}`}>
+                  <div className={`mt-1.5 flex items-center justify-end gap-1 text-[10px] ${isOwn && !isInstantMeet ? 'text-white/70' : isInstantMeet ? 'text-slate-400' : 'text-slate-400'}`}>
                     <span>{formatTime(msg.timestamp)}</span>
                   </div>
 
-                  <AnimatePresence>
+                  {!isInstantMeet && (<AnimatePresence>
                     <motion.div
                       initial={{ opacity: 0, y: 4 }}
                       whileInView={{ opacity: 1, y: 0 }}
@@ -797,7 +931,7 @@ function ChatView({
                         )}
                       </div>
                     </motion.div>
-                  </AnimatePresence>
+                  </AnimatePresence>)}
                 </div>
               </div>
             </motion.div>

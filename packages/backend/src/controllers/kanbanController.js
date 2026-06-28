@@ -4,9 +4,8 @@ const KanbanTask = require('../models/KanbanTask');
 async function getTasks(req, res) {
   try {
     const requestingUser = getUserEmail(req);
-    const filter = requestingUser
-      ? { $or: [{ assigneeEmail: requestingUser }, { assigneeEmail: { $exists: false } }, { assigneeEmail: null }] }
-      : {};
+    if (!requestingUser) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    const filter = { $or: [{ assigneeEmail: requestingUser }, { assigneeEmail: { $exists: false } }, { assigneeEmail: null }] };
     const tasks = await KanbanTask.find(filter).sort({ createdAt: 1 }).lean();
     const formatted = tasks.map(({ _id, __v, ...rest }) => ({
       ...rest,

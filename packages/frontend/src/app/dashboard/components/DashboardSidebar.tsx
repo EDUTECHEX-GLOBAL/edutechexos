@@ -13,6 +13,8 @@ import {
   LogIn,
   Moon,
   Sun,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
 import AppLogo from '@/components/ui/AppLogo';
@@ -73,6 +75,9 @@ export default function DashboardSidebar({
   const [showEditMemberModal, setShowEditMemberModal] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [editSelectedChannels, setEditSelectedChannels] = useState<string[]>(['general']);
+  const myAvailability = currentUser?.email
+    ? members.find((m) => m.email?.toLowerCase() === currentUser.email.toLowerCase())?.isAvailable
+    : false;
 
   const handleCreateChannel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -270,13 +275,29 @@ export default function DashboardSidebar({
     const handleMemberRemoved = ({ memberId }: { memberId: string }) => {
       if (memberId) useDashboardStore.getState().removeMemberLocally(memberId);
     };
+    const handleStatusUpdate = ({ email, status, name }: { email: string; status: string; name?: string }) => {
+      if (!email) return;
+      const store = useDashboardStore.getState();
+      const validStatus = ['online', 'away', 'in-meeting', 'offline'].includes(status)
+        ? (status as import('@/store/dashboardStore').MemberStatus) : 'online';
+      if (status) store.updateMemberStatus(email, validStatus);
+      if (name) store.updateMemberName(email, name);
+    };
+    const handleAvailabilityUpdate = ({ email, isAvailable }: { email: string; isAvailable: boolean }) => {
+      if (!email) return;
+      useDashboardStore.getState().updateMemberAvailability(email, !!isAvailable);
+    };
     socket.on('login_status_updated', handleLoginUpdate);
     socket.on('member_updated', handleMemberUpdated);
     socket.on('member_removed', handleMemberRemoved);
+    socket.on('user_status_update', handleStatusUpdate);
+    socket.on('user_availability', handleAvailabilityUpdate);
     return () => {
       socket.off('login_status_updated', handleLoginUpdate);
       socket.off('member_updated', handleMemberUpdated);
       socket.off('member_removed', handleMemberRemoved);
+      socket.off('user_status_update', handleStatusUpdate);
+      socket.off('user_availability', handleAvailabilityUpdate);
     };
   }, []);
 
@@ -446,6 +467,11 @@ export default function DashboardSidebar({
                     >
                       <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[11px] font-semibold text-[#4A5578]">
                         {member.initials}
+                        {member.isAvailable && (
+                          <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 border-2 border-slate-50 shadow-sm">
+                            <CheckCircle2 size={6} strokeWidth={3} className="text-white" />
+                          </span>
+                        )}
                         <span
                           className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-slate-50 ${
                             loggedInTodayEmails.has(member.email.toLowerCase())
@@ -460,6 +486,15 @@ export default function DashboardSidebar({
                         />
                       </span>
                       <span className="min-w-0 flex-1 truncate">{member.name}</span>
+                      {member.onLeave ? (
+                        <span className="shrink-0 text-[8px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 rounded-md px-1 py-0.5">
+                          On Leave
+                        </span>
+                      ) : member.isAvailable ? (
+                        <span className="shrink-0 text-[8px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 rounded-md px-1 py-0.5">
+                          Available
+                        </span>
+                      ) : null}
                     </button>
                     <button
                       type="button"
@@ -527,7 +562,7 @@ export default function DashboardSidebar({
         </div>
 
         {/* BOTTOM USER PANEL */}
-        <div className="mt-auto flex w-full flex-col gap-2.5 border-t border-[rgba(62,74,137,0.08)] bg-transparent px-3 pt-3 pb-4 sm:px-4 shrink-0">
+        <div className="mt-auto flex w-full flex-col gap-2 border-t border-[rgba(62,74,137,0.08)] bg-transparent px-3 pt-3 pb-4 sm:px-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="relative shrink-0">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-500 to-indigo-600 text-sm font-black text-white shadow-md shadow-indigo-500/20">
@@ -553,6 +588,26 @@ export default function DashboardSidebar({
               </span>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              const email = currentUser.email;
+              if (!email) return;
+              const newVal = !myAvailability;
+              getSocket().emit('user_availability', { email, isAvailable: newVal });
+              useDashboardStore.getState().updateMemberAvailability(email, newVal);
+            }}
+            className={`flex w-full items-center justify-center gap-2 rounded-xl py-2 text-xs font-black uppercase tracking-widest transition-all ${
+              myAvailability
+                ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/30 hover:bg-emerald-600'
+                : 'border border-dashed border-emerald-400/50 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-400'
+            }`}
+            title={myAvailability ? 'Mark as unavailable' : 'Mark as available'}
+          >
+            {myAvailability ? <CheckCircle2 size={14} strokeWidth={2.5} /> : <XCircle size={14} strokeWidth={2} />}
+            <span>{myAvailability ? 'Available' : 'Mark Available'}</span>
+          </button>
 
           <div className="flex items-center justify-between gap-1.5 bg-[rgba(62,74,137,0.08)]/40 rounded-xl p-1 border border-[rgba(26,27,58,0.18)]/40">
             <button

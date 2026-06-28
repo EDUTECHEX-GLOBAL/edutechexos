@@ -175,7 +175,7 @@ export default function LoginForm({
         const res = await fetch(`${API_BASE}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: emailClean, password: data.password }),
+          body: JSON.stringify({ email: emailClean, password: data.password, mode: authMode }),
         });
 
         setIsRetrying(false);

@@ -267,6 +267,8 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
   }, []);
 
   const channelName = channels.find((c) => c.id === activeChannel)?.name ?? activeChannel;
+  const members = useDashboardStore((s) => s.members);
+
   const kanbanTasks = allKanbanTasks.filter((t) => {
     if (t.assigneeEmail) return t.assigneeEmail.toLowerCase() === currentUserEmail;
     return t.assignee.toLowerCase() === currentUserName;
@@ -279,7 +281,13 @@ export default function KanbanBoard({ onClose }: KanbanBoardProps) {
 
   const handleAddTask = (colId: Status) => (text: string, assignee: string) => {
     const name = assignee || currentUserName || 'Unassigned';
-    addKanbanTask({ text, assignee: name, assigneeInitials: getInitials(name), assigneeEmail: !assignee ? currentUserEmail || undefined : undefined, sourceChannel: channelName, status: colId });
+    const assignedMember = assignee ? members.find((m) => m.name.toLowerCase() === assignee.toLowerCase()) : null;
+    addKanbanTask({
+      text, assignee: name,
+      assigneeInitials: getInitials(name),
+      assigneeEmail: assignedMember?.email ?? (!assignee ? (currentUserEmail || undefined) : undefined),
+      sourceChannel: channelName, status: colId,
+    });
   };
 
   return (

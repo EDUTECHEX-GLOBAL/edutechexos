@@ -27,6 +27,7 @@ router.use('/api/access-requests', globalLimiter, require('./accessRequestRoutes
 router.use('/api/admin', globalLimiter, require('./adminRoutes'));
 router.use('/api/invite', globalLimiter, require('./inviteRoutes'));
 router.use('/api/digest', globalLimiter, require('./digestRoutes'));
+router.use('/api/standup', globalLimiter, require('./standupRoutes'));
 
 router.use('/api', globalLimiter, require('./meetingRoutes'));
 

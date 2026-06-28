@@ -3,16 +3,17 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { JWT_SECRET, JWT_EXPIRY } = require('../middleware/auth');
 const { VALID_ACCOUNTS, revokedEmails } = require('../utils/helpers');
-const { AccessRequest, LoginEvent, LoginOtp, ResetCode, RemovedMember } = require('../models/index');
+const { AccessRequest, LoginEvent, LoginOtp, ResetCode, RemovedMember, Leave } = require('../models/index');
 const { sendResetEmail, sendBrevoEmail } = require('../services/emailService');
 
 async function login(req, res) {
   try {
-    const { email, password } = req.body;
+    const { email, password, mode } = req.body;
     if (!email || !password) {
       return res.status(400).json({ success: false, error: 'invalid', message: 'Email and password are required.' });
     }
     const emailClean = String(email).trim().toLowerCase();
+    const loginMode = mode === 'admin' ? 'admin' : 'user';
 
     const isSystemRemoved = await RemovedMember.exists({ email: emailClean });
     const hardcoded = isSystemRemoved ? null : VALID_ACCOUNTS.find((a) => {
@@ -24,6 +25,12 @@ async function login(req, res) {
       } catch { return false; }
     });
     if (hardcoded) {
+      if (loginMode === 'user' && hardcoded.role === 'Admin') {
+        return res.status(403).json({ success: false, error: 'invalid', message: 'Admins must use the Admin login page.' });
+      }
+      if (loginMode === 'admin' && hardcoded.role !== 'Admin') {
+        return res.status(403).json({ success: false, error: 'invalid', message: 'Only admins can log in from the Admin page.' });
+      }
       const token = jwt.sign(
         { email: hardcoded.email, name: hardcoded.name, role: hardcoded.role },
         JWT_SECRET,
@@ -38,7 +45,7 @@ async function login(req, res) {
         );
         const io = req.app.get('io');
         if (io) io.emit('login_status_updated', { email: emailClean, dateStr, loggedIn: true });
-      } catch (_) {}
+      } catch (e) { console.error('[login] login-event write failed:', e); }
       const { password: _pw, ...safeUser } = hardcoded;
       return res.json({ success: true, user: safeUser, token });
     }
@@ -54,6 +61,13 @@ async function login(req, res) {
     }
     if (request.status === 'rejected') {
       return res.status(401).json({ success: false, error: 'rejected', message: 'Your access request was declined. Contact admin.' });
+    }
+
+    if (loginMode === 'user' && request.role === 'Admin') {
+      return res.status(403).json({ success: false, error: 'invalid', message: 'Admins must use the Admin login page.' });
+    }
+    if (loginMode === 'admin' && request.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'invalid', message: 'Only admins can log in from the Admin page.' });
     }
 
     if (request.status === 'pending') {
@@ -84,7 +98,7 @@ async function login(req, res) {
       );
       const io = req.app.get('io');
       if (io) io.emit('login_status_updated', { email: emailClean, dateStr, loggedIn: true });
-    } catch (_) {}
+    } catch (e) { console.error('[login] login-event write failed:', e); }
 
     return res.json({
       success: true,
@@ -282,7 +296,6 @@ async function logout(req, res) {
     if (event && event.loginAt) {
       const hoursWorked = (logoutAt - new Date(event.loginAt)) / (1000 * 60 * 60);
 
-      const Leave = require('../models/Leave');
       const approvedLeave = await Leave.findOne({
         email: emailClean,
         status: 'approved',

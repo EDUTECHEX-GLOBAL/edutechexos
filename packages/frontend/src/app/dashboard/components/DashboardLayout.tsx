@@ -4,12 +4,12 @@ import React from 'react';
 import {
   MessageSquare, CheckSquare, BookOpen, CalendarDays,
   BarChart2, FileText, Sun, Moon,
-  Bookmark, NotebookPen, Plug, CalendarOff, MessageSquareDot,
-  Hash, ChevronDown, ChevronRight,
+  Bookmark, NotebookPen, CalendarOff, MessageSquareDot,
+  Hash, ChevronDown, ChevronRight, Users,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export type LayoutTab = 'chats' | 'tasks' | 'docs' | 'calendar' | 'analytics' | 'reports' | 'bookmarks' | 'notepad' | 'integrations' | 'leave' | 'dms';
+export type LayoutTab = 'chats' | 'tasks' | 'docs' | 'calendar' | 'analytics' | 'reports' | 'bookmarks' | 'notepad' | 'leave' | 'dms' | 'people';
 
 interface Channel { id: string; name: string; description?: string; type?: string; }
 
@@ -35,10 +35,11 @@ const tabs: { id: LayoutTab; label: string; icon: React.ElementType; adminOnly?:
   { id: 'tasks',        label: 'Tasks',        icon: CheckSquare },
   { id: 'docs',         label: 'Docs',         icon: BookOpen },
   { id: 'calendar',     label: 'Calendar',     icon: CalendarDays },
+  { id: 'people',       label: 'People',       icon: Users },
   { id: 'leave',        label: 'Leave',        icon: CalendarOff },
   { id: 'bookmarks',    label: 'Saved',        icon: Bookmark },
   { id: 'notepad',      label: 'Notes',        icon: NotebookPen },
-  { id: 'integrations', label: 'Integrations', icon: Plug },
+
   { id: 'analytics',    label: 'Analytics',    icon: BarChart2, adminOnly: true },
   { id: 'reports',      label: 'Reports',      icon: FileText,  adminOnly: true },
 ];

@@ -7,6 +7,7 @@ const { sendBrevoEmail } = require('../services/emailService');
 
 async function createMeetingAccess(req, res) {
   try {
+    if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized.' });
     const { messageId, channelId, allowedEmails, meetingCode, meetLink } = req.body;
     const hostEmail = req.user.email;
     if (!messageId || !channelId) {
@@ -56,7 +57,7 @@ async function grantMeetingAccess(req, res) {
     await MeetingAccess.findByIdAndUpdate(doc._id, { $addToSet: { grantedEmails: email.toLowerCase() } });
 
     const io = req.app.get('io');
-    io.emit('meeting_access_granted', { messageId: req.params.messageId, email: email.toLowerCase() });
+    if (io) io.emit('meeting_access_granted', { messageId: req.params.messageId, email: email.toLowerCase() });
 
     res.json({ success: true, message: `Access granted to ${email}.` });
   } catch (err) {
@@ -203,7 +204,7 @@ async function getMeetingRequests(req, res) {
 
 async function createMeetingRequest(req, res) {
   try {
-    const { date, time, purpose, adminEmail } = req.body;
+    const { date, time, timeEnd, purpose, adminEmail } = req.body;
     if (!date || !time) return res.status(400).json({ success: false, error: 'date and time required.' });
     const parsedDate = new Date(date);
     if (isNaN(parsedDate.getTime())) {
@@ -212,27 +213,42 @@ async function createMeetingRequest(req, res) {
     if (parsedDate < new Date(new Date().toDateString())) {
       return res.status(400).json({ success: false, error: 'Meeting date cannot be in the past.' });
     }
+    const timeDisplay = timeEnd ? `${time} – ${timeEnd}` : time;
     const mr = new MeetingRequest({
       userEmail: req.user.email,
       userName:  req.user.name,
       adminEmail: adminEmail || 'admin@edutechex.in',
-      date, time, purpose: purpose || '',
+      date, time, timeEnd, purpose: purpose || '',
     });
     const saved = await mr.save();
+
+    // Email admin
     sendBrevoEmail({
       to: [{ email: adminEmail || 'admin@edutechex.in' }],
-      subject: `EduTechExOS — Meeting request from ${req.user.name} on ${date} at ${time}`,
+      subject: `EduTechExOS — Meeting request from ${req.user.name} on ${date} at ${timeDisplay}`,
       html: `
         <div style="font-family:Arial,sans-serif;max-width:520px;padding:24px;background:#FAF8F5;border-radius:10px;">
           <h2 style="color:#1E2636;margin:0 0 12px;font-size:17px;">New Meeting Request</h2>
           <div style="background:#fff;border:1px solid rgba(62,74,137,0.12);border-radius:8px;padding:14px;margin-bottom:16px;">
             <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>From:</strong> ${req.user.name} (${req.user.email})</p>
-            <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Date:</strong> ${date} at ${time}</p>
+            <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Date:</strong> ${date} at ${timeDisplay}</p>
             <p style="margin:4px 0;font-size:13px;color:#4A5578;"><strong>Purpose:</strong> ${purpose || 'Not specified'}</p>
           </div>
           <a href="${process.env.APP_URL || 'https://edutechexos.vercel.app'}/admin" style="display:inline-block;background:#3E4A89;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:700;">Review in Admin Panel &#x2192;</a>
         </div>`,
     }).catch((err) => console.error('[email] meeting-request admin alert failed:', err));
+
+    // Socket notification to admin
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('meeting_request_created', {
+        requestId: saved._id.toString(),
+        userName: req.user.name,
+        userEmail: req.user.email,
+        date, time: timeDisplay, purpose,
+      });
+    }
+
     res.json({ success: true, request: saved });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
@@ -249,6 +265,7 @@ async function reviewMeetingRequest(req, res) {
       req.params.id, { status }, { new: true }
     ).lean();
     if (!updated) return res.status(404).json({ success: false, error: 'Not found.' });
+    const timeDisplay = updated.timeEnd ? `${updated.time} – ${updated.timeEnd}` : updated.time;
     sendBrevoEmail({
       to: [{ email: updated.userEmail }],
       subject: `EduTechExOS — Your meeting request has been ${status}`,
@@ -256,10 +273,22 @@ async function reviewMeetingRequest(req, res) {
         <div style="font-family:Arial,sans-serif;max-width:520px;padding:24px;background:#FAF8F5;border-radius:10px;">
           <h2 style="color:#1E2636;margin:0 0 12px;font-size:17px;">Meeting Request ${status === 'confirmed' ? 'Confirmed' : 'Declined'}</h2>
           <p style="color:#4A5578;font-size:14px;margin:0 0 12px;">Hi <strong>${updated.userName}</strong>,</p>
-          <p style="color:#4A5578;font-size:14px;margin:0 0 16px;">Your meeting request for <strong>${updated.date}</strong> at <strong>${updated.time}</strong> has been <strong>${status}</strong> by the admin.</p>
+          <p style="color:#4A5578;font-size:14px;margin:0 0 16px;">Your meeting request for <strong>${updated.date}</strong> at <strong>${timeDisplay}</strong> has been <strong>${status}</strong> by the admin.</p>
           <a href="${process.env.APP_URL || 'https://edutechexos.vercel.app'}/dashboard" style="display:inline-block;background:#3E4A89;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:700;">Go to Dashboard &#x2192;</a>
         </div>`,
     }).catch((err) => console.error('[email] meeting-decision notification failed:', err));
+
+    // Socket notification to user
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('meeting_request_reviewed', {
+        requestId: updated._id.toString(),
+        status: updated.status,
+        date: updated.date,
+        time: timeDisplay,
+      });
+    }
+
     res.json({ success: true, request: updated });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });

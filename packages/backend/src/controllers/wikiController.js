@@ -26,7 +26,8 @@ async function getPages(req, res) {
 
 async function upsertPage(req, res) {
   try {
-    const { id, channelId, title, content, isPrivate } = req.body;
+    const id = req.body.id || req.params.id;
+    const { channelId, title, content, isPrivate } = req.body;
     const userEmail = getUserEmail(req);
     const privacy = isPrivate === true;
 
@@ -69,8 +70,8 @@ async function deletePage(req, res) {
     const userEmail = getUserEmail(req);
     const page = await WikiPage.findById(id).lean();
     if (!page) return res.status(404).json({ success: false, error: 'Note not found.' });
-    if (page.isPrivate && page.createdBy && userEmail && page.createdBy.toLowerCase() !== userEmail.toLowerCase()) {
-      return res.status(403).json({ success: false, error: 'You can only delete your own private notes.' });
+    if (page.createdBy && userEmail && page.createdBy.toLowerCase() !== userEmail.toLowerCase()) {
+      return res.status(403).json({ success: false, error: 'You can only delete your own notes.' });
     }
     await WikiPage.findByIdAndDelete(id);
     req.app.get('io')?.emit('wiki_changed');
