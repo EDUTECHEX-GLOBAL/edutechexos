@@ -1160,28 +1160,19 @@ export default function EduTechExOSDashboard() {
   useEffect(() => {
     if (!authChecked || !currentUserEmail) return;
     const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
-    const today = new Date().toISOString().split('T')[0];
     const authRaw = localStorage.getItem('edutechex_token');
     const authToken = authRaw ? (() => { try { return JSON.parse(authRaw).token; } catch { return null; } })() : null;
-    fetch(`${API_BASE}/api/leaves?status=approved`, {
+    // Team-wide on-leave-today endpoint (returns { onLeave: [...] } and works
+    // for non-admins, unlike /api/leaves which is scoped to the requester).
+    fetch(`${API_BASE}/api/leaves/on-leave-today`, {
       headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
     })
       .then((r) => r.json())
-      .then((data: Array<{ email?: string; userEmail?: string; startDate?: string; endDate?: string; type?: string }>) => {
-        if (!Array.isArray(data)) return;
-        const onLeaveEmails = new Set<string>();
-        data.forEach((leave) => {
-          const email = (leave.email ?? leave.userEmail ?? '').toLowerCase();
-          if (!email) return;
-          if (leave.type === 'instant') {
-            const leaveDate = (leave.startDate ?? '').slice(0, 10);
-            if (leaveDate === today) onLeaveEmails.add(email);
-          } else {
-            const start = (leave.startDate ?? '').slice(0, 10);
-            const end = (leave.endDate ?? leave.startDate ?? '').slice(0, 10);
-            if (start <= today && today <= end) onLeaveEmails.add(email);
-          }
-        });
+      .then((data: { success?: boolean; onLeave?: Array<{ email?: string }> }) => {
+        const list = Array.isArray(data?.onLeave) ? data.onLeave : [];
+        const onLeaveEmails = new Set(
+          list.map((l) => (l.email ?? '').toLowerCase()).filter(Boolean)
+        );
         useDashboardStore.getState().members.forEach((m) => {
           updateMemberLeaveStatus(m.email, onLeaveEmails.has(m.email.toLowerCase()));
         });
@@ -1823,9 +1814,15 @@ export default function EduTechExOSDashboard() {
               : MediaRecorder.isTypeSupported('audio/mp4')
                 ? 'audio/mp4'
                 : '';
-      const recorder = mimeType
-        ? new MediaRecorder(stream, { mimeType })
-        : new MediaRecorder(stream);
+      // Cap the bitrate so recordings stay small enough to upload to the
+      // backend (GridFS) and be viewable by everyone. Without a cap a screen
+      // recording can exceed the upload limit and silently fall back to an
+      // inline base64 blob that's too big to reach other users.
+      const recorderOptions: MediaRecorderOptions = kind === 'video'
+        ? { videoBitsPerSecond: 2_000_000, audioBitsPerSecond: 128_000 }
+        : { audioBitsPerSecond: 64_000 };
+      if (mimeType) recorderOptions.mimeType = mimeType;
+      const recorder = new MediaRecorder(stream, recorderOptions);
       const chunks: BlobPart[] = [];
 
       recorder.ondataavailable = (event) => {
@@ -1914,8 +1911,18 @@ export default function EduTechExOSDashboard() {
       );
       const folder = recordedPreview.kind === 'video' ? 'video' : 'audio';
 
-      // Upload directly to Cloudinary (free 25 GB); base64 fallback if not configured
+      // Upload to backend GridFS; base64 data-URL fallback if the backend is
+      // unreachable (e.g. cold start).
       const mediaUrl = await smartUpload(file, { folder });
+
+      // If the upload fell back to an inline base64 blob that's too large, the
+      // message would fail to persist/broadcast and only the sender would see
+      // it. Reject it with a clear message instead of sending a broken one.
+      if (mediaUrl.startsWith('data:') && mediaUrl.length > 18_000_000) {
+        toast.error('Recording is too large to share. Please record a shorter clip and try again.');
+        setRecordingSending(false);
+        return;
+      }
 
       addMessage(activeChannelId, {
         id: `msg-${recordedPreview.kind}-${Date.now()}`,
@@ -1978,34 +1985,12 @@ export default function EduTechExOSDashboard() {
     setScheduleMeetOpen(true);
   }
 
-  async function handleJoinMeeting(messageId: string, link: string) {
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
-    const token = localStorage.getItem('token');
-    setMeetJoinState((prev) => ({ ...prev, [messageId]: 'checking' }));
-    try {
-      const res = await fetch(`${API_BASE}/api/meeting-access/${messageId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!data.exists) {
-        setMeetJoinState((prev) => { const s = { ...prev }; delete s[messageId]; return s; });
-        window.open(link, '_blank', 'noreferrer');
-        broadcastStatus('in-meeting');
-        return;
-      }
-      if (data.canJoin) {
-        setMeetJoinState((prev) => { const s = { ...prev }; delete s[messageId]; return s; });
-        window.open(link, '_blank', 'noreferrer');
-        broadcastStatus('in-meeting');
-      } else {
-        setMeetJoinState((prev) => ({ ...prev, [messageId]: 'denied' }));
-        setTimeout(() => setMeetJoinState((prev) => { const s = { ...prev }; delete s[messageId]; return s; }), 4000);
-      }
-    } catch {
-      setMeetJoinState((prev) => { const s = { ...prev }; delete s[messageId]; return s; });
-      window.open(link, '_blank', 'noreferrer');
-      broadcastStatus('in-meeting');
-    }
+  async function handleJoinMeeting(_messageId: string, link: string) {
+    // Scheduled meetings are open to the whole workspace — everyone joins the
+    // same link, no invite-only gate. (Invitees still get the targeted email /
+    // notification, but anyone in the team can join.)
+    window.open(link, '_blank', 'noreferrer');
+    broadcastStatus('in-meeting');
   }
 
   async function scheduleMeet(event: React.FormEvent) {
@@ -2077,11 +2062,27 @@ export default function EduTechExOSDashboard() {
     const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
     const authHeaders = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
-    // 1. Always create meeting access record (stores meetLink and code so join page works)
+    // Compute the absolute start time so the backend can auto-start the meeting.
+    const startAtIso = (() => {
+      const d = new Date(`${meetDate}T${meetTime}`);
+      return isNaN(d.getTime()) ? null : d.toISOString();
+    })();
+
+    // 1. Always create meeting access record (stores meetLink, code, and the
+    //    scheduled start time so the join page works and the meeting auto-starts)
     fetch(`${BACKEND}/api/meeting-access`, {
       method: 'POST',
       headers: authHeaders,
-      body: JSON.stringify({ messageId: msgId, channelId: activeChannelId, allowedEmails: inviteeEmails, meetingCode, meetLink: googleMeetLink }),
+      body: JSON.stringify({
+        messageId: msgId,
+        channelId: activeChannelId,
+        allowedEmails: inviteeEmails,
+        meetingCode,
+        meetLink: googleMeetLink,
+        startAt: startAtIso,
+        title,
+        channelName: channel?.name ?? activeChannelId,
+      }),
     }).catch((err) => console.error('[meeting-access] record creation failed:', err));
 
     // 2. Always send email to every mentioned person (not gated by settings toggle)

@@ -8,14 +8,27 @@ const { sendBrevoEmail } = require('../services/emailService');
 async function createMeetingAccess(req, res) {
   try {
     if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized.' });
-    const { messageId, channelId, allowedEmails, meetingCode, meetLink } = req.body;
+    const { messageId, channelId, allowedEmails, meetingCode, meetLink, startAt, title, channelName } = req.body;
     const hostEmail = req.user.email;
     if (!messageId || !channelId) {
       return res.status(400).json({ success: false, error: 'messageId and channelId are required.' });
     }
+    const parsedStart = startAt ? new Date(startAt) : null;
     const doc = await MeetingAccess.findOneAndUpdate(
       { messageId, channelId },
-      { $setOnInsert: { hostEmail, allowedEmails: allowedEmails || [], grantedEmails: [], meetingCode, meetLink } },
+      {
+        $setOnInsert: {
+          hostEmail,
+          allowedEmails: allowedEmails || [],
+          grantedEmails: [],
+          meetingCode,
+          meetLink,
+          startAt: parsedStart && !isNaN(parsedStart.getTime()) ? parsedStart : null,
+          started: false,
+          title: title || '',
+          channelName: channelName || '',
+        },
+      },
       { upsert: true, new: true }
     ).lean();
     res.json({ success: true, access: doc });

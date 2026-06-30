@@ -1,8 +1,19 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, X, CalendarDays, Flame, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, X, CalendarDays, Flame, TrendingUp, Clock, Plus, Check, Loader2, Trash2 } from 'lucide-react';
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+
+type Slot = { time: string; status: 'available' | 'busy' | 'ooo'; label?: string };
+
+function getAuthToken(): string | null {
+  try {
+    const raw = localStorage.getItem('edutechex_token');
+    return raw ? JSON.parse(raw).token ?? null : null;
+  } catch { return null; }
+}
 
 function getDaysInMonth(y: number, m: number) {
   return new Date(y, m + 1, 0).getDate();
@@ -47,7 +58,33 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
   const [userName, setUserName] = useState('You');
   const [userInitials, setUserInitials] = useState('ME');
   const [userColor, setUserColor] = useState('#3E4A89');
+  const [userEmail, setUserEmail] = useState('');
+  const [availByDate, setAvailByDate] = useState<Record<string, Slot[]>>({});
+  const [editDate, setEditDate] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  const loadAvailability = useCallback(async (email: string) => {
+    const token = getAuthToken();
+    if (!token || !email) return;
+    const month = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
+    try {
+      const res = await fetch(`${API_BASE}/api/availability?month=${month}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.records)) {
+        const mine: Record<string, Slot[]> = {};
+        data.records
+          .filter((r: { adminEmail?: string }) => (r.adminEmail || '').toLowerCase() === email.toLowerCase())
+          .forEach((r: { date: string; slots: Slot[] }) => { mine[r.date] = r.slots || []; });
+        setAvailByDate(mine);
+      }
+    } catch { /* offline */ }
+  }, [viewYear, viewMonth]);
+
+  useEffect(() => {
+    if (open && userEmail) loadAvailability(userEmail);
+  }, [open, userEmail, loadAvailability]);
 
   useEffect(() => {
     const now = new Date();
@@ -63,6 +100,7 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
       if (!authData) return;
       const { user, token } = JSON.parse(authData);
       if (!user) return;
+      setUserEmail(user.email || '');
       setUserName(user.name?.split(' ')[0] || 'You');
       setUserInitials(
         user.name
@@ -249,8 +287,12 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
               const ds = toDateStr(viewYear, viewMonth, day);
               const isToday = ds === todayStr;
               const isFuture = ds > todayStr;
+              const isPast = ds < todayStr;
               const didLogin = loginDates.includes(ds);
               const weekend = isWeekend(ds);
+              const hasAvail = (availByDate[ds]?.length ?? 0) > 0;
+              // Backend only allows setting availability for today or future days.
+              const canEditAvail = !isPast;
 
               /* cell appearance */
               let cellStyle: React.CSSProperties = {};
@@ -281,14 +323,27 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
               }
 
               return (
-                <div
+                <button
                   key={day}
-                  title={isFuture ? '' : didLogin ? 'Logged in' : weekend ? 'Weekend' : 'No login'}
-                  className="aspect-square rounded-lg flex items-center justify-center text-[11px] font-bold transition-all"
+                  type="button"
+                  disabled={!canEditAvail}
+                  onClick={() => canEditAvail && setEditDate(ds)}
+                  title={
+                    canEditAvail
+                      ? (hasAvail ? 'Availability set — click to edit' : 'Click to set availability')
+                      : didLogin ? 'Logged in' : weekend ? 'Weekend' : 'No login'
+                  }
+                  className={`relative aspect-square rounded-lg flex items-center justify-center text-[11px] font-bold transition-all ${canEditAvail ? 'cursor-pointer hover:ring-1 hover:ring-white/30' : 'cursor-default'}`}
                   style={cellStyle}
                 >
                   <span style={textStyle}>{day}</span>
-                </div>
+                  {hasAvail && (
+                    <span
+                      className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full"
+                      style={{ background: '#34d399' }}
+                    />
+                  )}
+                </button>
               );
             })}
           </div>
@@ -329,6 +384,194 @@ export default function MyActivityCalendar({ open, onClose }: Props) {
             <span className="ml-auto text-[9px] font-semibold text-white/20 tabular-nums">
               {loginDates.length} total
             </span>
+          </div>
+          <p className="mt-2.5 flex items-center gap-1.5 text-[9px] font-medium text-white/30">
+            <Clock size={10} className="text-emerald-400" />
+            Tap any day from today onward to set your availability
+          </p>
+        </div>
+      </div>
+
+      {editDate && (
+        <AvailabilityEditor
+          dateStr={editDate}
+          initialSlots={availByDate[editDate] ?? []}
+          onClose={() => setEditDate(null)}
+          onSaved={(date, slots) => {
+            setAvailByDate((prev) => {
+              const next = { ...prev };
+              if (slots.length === 0) delete next[date];
+              else next[date] = slots;
+              return next;
+            });
+            setEditDate(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function AvailabilityEditor({
+  dateStr,
+  initialSlots,
+  onClose,
+  onSaved,
+}: {
+  dateStr: string;
+  initialSlots: Slot[];
+  onClose: () => void;
+  onSaved: (date: string, slots: Slot[]) => void;
+}) {
+  const isAllDayInitial = initialSlots.length === 1 && initialSlots[0].time === 'all-day';
+  const [mode, setMode] = useState<'all-day' | 'ranges'>(
+    initialSlots.length > 0 && !isAllDayInitial ? 'ranges' : 'all-day'
+  );
+  const [ranges, setRanges] = useState<Array<{ from: string; to: string }>>(
+    isAllDayInitial || initialSlots.length === 0
+      ? [{ from: '09:00', to: '17:00' }]
+      : initialSlots.map((s) => {
+          const [from, to] = s.time.split('-');
+          return { from: from || '09:00', to: to || '17:00' };
+        })
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const prettyDate = new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
+    weekday: 'long', month: 'short', day: 'numeric',
+  });
+
+  function updateRange(i: number, field: 'from' | 'to', value: string) {
+    setRanges((prev) => prev.map((r, idx) => (idx === i ? { ...r, [field]: value } : r)));
+  }
+
+  async function save(clear = false) {
+    setSaving(true);
+    setError('');
+    let slots: Slot[] = [];
+    if (!clear) {
+      if (mode === 'all-day') {
+        slots = [{ time: 'all-day', status: 'available', label: 'Available all day' }];
+      } else {
+        const valid = ranges.filter((r) => r.from && r.to && r.from < r.to);
+        if (valid.length === 0) {
+          setError('Add at least one valid time range (start before end).');
+          setSaving(false);
+          return;
+        }
+        slots = valid.map((r) => ({ time: `${r.from}-${r.to}`, status: 'available' as const, label: '' }));
+      }
+    }
+    const token = getAuthToken();
+    try {
+      const res = await fetch(`${API_BASE}/api/availability`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ date: dateStr, slots }),
+      });
+      const data = await res.json();
+      if (!data.success) { setError(data.error || 'Could not save.'); setSaving(false); return; }
+      onSaved(dateStr, slots);
+    } catch {
+      setError('Network error — please try again.');
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="w-full max-w-[320px] rounded-2xl overflow-hidden shadow-2xl"
+        style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.08)' }}
+      >
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-white/5">
+          <div>
+            <p className="text-sm font-bold text-white">Set availability</p>
+            <p className="text-[11px] text-white/40 mt-0.5">{prettyDate}</p>
+          </div>
+          <button onClick={onClose} className="h-7 w-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/8 transition-all">
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Mode selector */}
+          <div className="flex gap-2">
+            {(['all-day', 'ranges'] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={`flex-1 rounded-xl py-2 text-xs font-bold transition-all border ${
+                  mode === m
+                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                    : 'bg-white/5 text-white/40 border-white/5 hover:text-white/70'
+                }`}
+              >
+                {m === 'all-day' ? 'Available all day' : 'Specific times'}
+              </button>
+            ))}
+          </div>
+
+          {mode === 'ranges' && (
+            <div className="space-y-2">
+              {ranges.map((r, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="time"
+                    value={r.from}
+                    onChange={(e) => updateRange(i, 'from', e.target.value)}
+                    className="flex-1 rounded-lg bg-white/5 border border-white/10 px-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500/50"
+                  />
+                  <span className="text-white/30 text-xs">to</span>
+                  <input
+                    type="time"
+                    value={r.to}
+                    onChange={(e) => updateRange(i, 'to', e.target.value)}
+                    className="flex-1 rounded-lg bg-white/5 border border-white/10 px-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500/50"
+                  />
+                  {ranges.length > 1 && (
+                    <button
+                      onClick={() => setRanges((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="h-7 w-7 shrink-0 rounded-lg flex items-center justify-center text-white/30 hover:text-rose-400 hover:bg-white/5"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                onClick={() => setRanges((prev) => [...prev, { from: '09:00', to: '17:00' }])}
+                className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+              >
+                <Plus size={12} /> Add time range
+              </button>
+            </div>
+          )}
+
+          {error && <p className="text-[11px] text-rose-400">{error}</p>}
+
+          <div className="flex items-center gap-2 pt-1">
+            {initialSlots.length > 0 && (
+              <button
+                onClick={() => save(true)}
+                disabled={saving}
+                className="rounded-xl px-3 py-2 text-xs font-bold text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 transition-all disabled:opacity-50"
+              >
+                Clear
+              </button>
+            )}
+            <button
+              onClick={() => save(false)}
+              disabled={saving}
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-all disabled:opacity-50"
+            >
+              {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+              {saving ? 'Saving…' : 'Save availability'}
+            </button>
           </div>
         </div>
       </div>

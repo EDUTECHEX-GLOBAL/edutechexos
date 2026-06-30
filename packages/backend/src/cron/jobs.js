@@ -3,6 +3,7 @@ const { sendDigestEmails } = require('../services/digestService');
 const { sendBrevoEmail } = require('../services/emailService');
 const { decryptField } = require('../services/encryptionService');
 const { Message, AccessRequest, ActivitySession, Notification } = require('../models');
+const MeetingAccess = require('../models/MeetingAccess');
 const { VALID_ACCOUNTS } = require('../utils/helpers');
 
 function startCronJobs(io) {
@@ -98,6 +99,55 @@ function startCronJobs(io) {
   });
 
   console.log('[overwork-cron] Scheduled overwork alert every hour via node-cron');
+
+  // ── Auto-start scheduled meetings — every minute ──────────────────────────
+  // When a scheduled meeting's startAt arrives, broadcast a "meeting started"
+  // prompt to everyone (the frontend shows a Join toast/card) and post a
+  // persistent notification with the join link. Fires once per meeting.
+  cron.schedule('* * * * *', async () => {
+    try {
+      const now = new Date();
+      // Don't replay meetings that became due more than 10 min ago (e.g. while
+      // the server was asleep) — only fire ones whose time just arrived.
+      const windowStart = new Date(now.getTime() - 10 * 60 * 1000);
+      const due = await MeetingAccess.find({
+        started: { $ne: true },
+        startAt: { $ne: null, $lte: now, $gte: windowStart },
+      }).lean();
+
+      for (const m of due) {
+        const link = m.meetLink || '';
+        const channelName = m.channelName || m.channelId || 'general';
+        if (io) {
+          io.emit('meeting_started', {
+            link,
+            channelName,
+            starter: 'Scheduled meeting',   // neutral so everyone (incl. host) sees it
+            starterInitials: 'SM',
+            starterColor: '#6366f1',
+          });
+        }
+        await Notification.create({
+          type: 'meeting',
+          actor: 'EduTechExOS',
+          actorInitials: 'OS',
+          actorColor: '#6366f1',
+          message: `📹 Meeting "${m.title || 'Team meeting'}" is starting now — click to join.`,
+          channel: channelName,
+          timestamp: new Date(),
+          recipientEmails: Array.isArray(m.allowedEmails) ? m.allowedEmails : [],
+          joinLink: link,
+        }).catch((e) => console.error('[meeting-cron] notification failed:', e));
+        await MeetingAccess.updateOne({ _id: m._id }, { $set: { started: true } });
+      }
+
+      if (due.length) console.log(`[meeting-cron] Auto-started ${due.length} meeting(s)`);
+    } catch (err) {
+      console.error('[meeting-cron] Failed:', err);
+    }
+  }, { timezone: 'UTC' });
+
+  console.log('[meeting-cron] Scheduled meeting auto-start every minute via node-cron');
 }
 
 module.exports = { startCronJobs };

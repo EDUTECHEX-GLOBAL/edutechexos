@@ -672,6 +672,8 @@ function ChatView({
   setActiveThread,
   members,
   onAiOpen,
+  isAvailable,
+  onAvailabilityToggle,
 }: {
   channel: any;
   messages: any[];

@@ -1098,6 +1098,17 @@ export const useDashboardStore = create<DashboardState>()(
 
           const dbMembers: Member[] = data.members;
           set((s) => {
+            // Preserve client-only flags that the /api/members payload does not
+            // carry (e.g. onLeave is derived from approved leaves on the client).
+            // Without this, the 30 s members refresh wipes the on-leave indicator,
+            // making it flash and disappear instead of persisting for the day.
+            const prevByEmail = new Map(
+              s.members.map((m) => [m.email.toLowerCase(), m])
+            );
+            const mergedMembers: Member[] = dbMembers.map((m) => {
+              const prev = prevByEmail.get(m.email.toLowerCase());
+              return prev ? { ...m, onLeave: m.onLeave ?? prev.onLeave } : m;
+            });
             // Build per-channel member lists honouring each member's channelIds assignment.
             // Admins/Managers get access to every channel; regular members only get the
             // channels an admin has explicitly assigned to them (+ #general for everyone).
@@ -1140,7 +1151,7 @@ export const useDashboardStore = create<DashboardState>()(
             });
 
             return {
-              members: dbMembers,
+              members: mergedMembers,
               channels: [...newChannels, ...dmChannelsToAdd],
               messages: {
                 ...s.messages,

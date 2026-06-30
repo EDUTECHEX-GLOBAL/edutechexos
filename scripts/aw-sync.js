@@ -11,13 +11,17 @@
  *   - The script listens on localhost:7891 for signals from EduTechExOS
  *   - When you LOG IN  to EduTechExOS → syncing starts automatically
  *   - When you LOG OUT of EduTechExOS → syncing stops automatically
- *   - Every day: login activates it, logout stops it — no token management needed
+ *   - Time is only counted while logged in AND within working hours
+ *     (default 10:00–18:40 local). Activity before login, before 10:00, or
+ *     after 18:40 is never counted. Resets automatically each day.
  *
  * ENV VARS (optional):
  *   EDUTECHEX_BACKEND — backend URL   (default: Render URL)
  *   AW_BASE           — ActivityWatch (default: http://localhost:5600/api/0)
  *   SYNC_INTERVAL_MS  — sync interval (default: 300000 = 5 min)
  *   AW_SYNC_PORT      — local control port (default: 7891)
+ *   WORK_START        — daily start "HH:MM" (default: 10:00)
+ *   WORK_END          — daily end   "HH:MM" (default: 18:40)
  */
 
 const http     = require('http');
@@ -26,10 +30,39 @@ const AW_BASE  = process.env.AW_BASE            || 'http://localhost:5600/api/0'
 const INTERVAL = parseInt(process.env.SYNC_INTERVAL_MS || '300000', 10);
 const PORT     = parseInt(process.env.AW_SYNC_PORT     || '7891',   10);
 
+// Daily working-hours bound. Activity is only counted inside this window AND
+// while logged in — whichever is the smaller span. Time before login, before
+// the start time, or after the end time is never counted; it resets each day.
+// Defaults to 10:00–18:40 local time; override with WORK_START / WORK_END "HH:MM".
+function parseHHMM(str, fallbackMin) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(str || ''));
+  if (!m) return fallbackMin;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+const WORK_START_MIN = parseHHMM(process.env.WORK_START, 10 * 60);      // 10:00
+const WORK_END_MIN   = parseHHMM(process.env.WORK_END,   18 * 60 + 40); // 18:40
+
 // ─── State ────────────────────────────────────────────────────────────────────
 
-let currentToken  = null;   // set on /activate, cleared on /deactivate
-let syncTimer     = null;   // setInterval handle
+let currentToken   = null;  // set on /activate, cleared on /deactivate
+let syncTimer      = null;  // setInterval handle
+let sessionWindows = [];    // [{ start: ms, end: ms|null }] — logged-in periods today
+
+// Seconds of an ActivityWatch event that fall *inside* the logged-in windows.
+// This is what makes the totals count from EduTechExOS login → logout only,
+// instead of from when the laptop was powered on.
+function eventSecondsInWindows(ev, windows, nowMs) {
+  const evStart = Date.parse(ev.timestamp);
+  if (!Number.isFinite(evStart)) return 0;
+  const evEnd = evStart + (ev.duration || 0) * 1000;
+  let total = 0;
+  for (const w of windows) {
+    const wEnd = w.end ?? nowMs;
+    const overlap = Math.min(evEnd, wEnd) - Math.max(evStart, w.start);
+    if (overlap > 0) total += overlap;
+  }
+  return total / 1000;
+}
 
 // ─── AW helpers ───────────────────────────────────────────────────────────────
 
@@ -64,8 +97,22 @@ async function sync() {
     }
 
     const now   = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const nowMs = now.getTime();
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const start = new Date(todayMidnight).toISOString();
     const end   = now.toISOString();
+
+    // Effective tracking windows = logged-in sessions ∩ today ∩ working hours.
+    // So a session that starts before 10:00 only counts from 10:00, and nothing
+    // past 18:40 is counted even if the user stays logged in.
+    const workStartMs = todayMidnight + WORK_START_MIN * 60 * 1000;
+    const workEndMs   = todayMidnight + WORK_END_MIN   * 60 * 1000;
+    const windows = sessionWindows
+      .map((w) => ({
+        start: Math.max(w.start, todayMidnight, workStartMs),
+        end:   Math.min(w.end ?? nowMs, workEndMs),
+      }))
+      .filter((w) => w.end > w.start);
 
     const [windowEvents, afkEvents, webEvents] = await Promise.all([
       fetchEvents(windowId, start, end),
@@ -73,24 +120,29 @@ async function sync() {
       webId ? fetchEvents(webId, start, end) : Promise.resolve([]),
     ]);
 
-    // App time breakdown
+    // App time breakdown — only the slice of each event spent while logged in
     const appMinutes = {};
     for (const ev of windowEvents) {
+      const secs = eventSecondsInWindows(ev, windows, nowMs);
+      if (secs <= 0) continue;
       const app = ev.data?.app || ev.data?.title || 'Unknown';
-      appMinutes[app] = (appMinutes[app] || 0) + (ev.duration || 0) / 60;
+      appMinutes[app] = (appMinutes[app] || 0) + secs / 60;
     }
     for (const ev of webEvents) {
+      const secs = eventSecondsInWindows(ev, windows, nowMs);
+      if (secs <= 0) continue;
       try {
         const site = new URL(ev.data?.url || '').hostname.replace('www.', '');
-        appMinutes[`🌐 ${site}`] = (appMinutes[`🌐 ${site}`] || 0) + (ev.duration || 0) / 60;
+        appMinutes[`🌐 ${site}`] = (appMinutes[`🌐 ${site}`] || 0) + secs / 60;
       } catch { /* bad URL */ }
     }
 
-    // AFK
+    // AFK (also restricted to logged-in windows)
     let totalAfkMinutes = 0;
     let isAfk = false;
     for (const ev of afkEvents) {
-      if (ev.data?.status === 'afk') totalAfkMinutes += (ev.duration || 0) / 60;
+      if (ev.data?.status !== 'afk') continue;
+      totalAfkMinutes += eventSecondsInWindows(ev, windows, nowMs) / 60;
     }
     const lastAfk = afkEvents[afkEvents.length - 1];
     if (lastAfk?.data?.status === 'afk') isAfk = true;
@@ -138,13 +190,23 @@ async function sync() {
 
 function startSync(token) {
   currentToken = token;
+  // Open a new logged-in window (unless one is already open).
+  if (!sessionWindows.some((w) => w.end === null)) {
+    sessionWindows.push({ start: Date.now(), end: null });
+  }
+  // Drop windows that fully belong to previous days to avoid unbounded growth.
+  const todayMidnight = new Date().setHours(0, 0, 0, 0);
+  sessionWindows = sessionWindows.filter((w) => (w.end ?? Date.now()) >= todayMidnight);
   if (syncTimer) clearInterval(syncTimer);
-  console.log('[aw-sync] ▶ Activated — syncing every', INTERVAL / 1000, 's');
+  console.log('[aw-sync] ▶ Activated — counting time from now until logout');
   sync(); // immediate first sync
   syncTimer = setInterval(sync, INTERVAL);
 }
 
 function stopSync() {
+  // Close the open logged-in window so no time after logout is ever counted.
+  const open = sessionWindows.find((w) => w.end === null);
+  if (open) open.end = Date.now();
   currentToken = null;
   if (syncTimer) { clearInterval(syncTimer); syncTimer = null; }
   console.log('[aw-sync] ⏹ Deactivated — waiting for next login.');

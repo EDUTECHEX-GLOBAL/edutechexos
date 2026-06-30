@@ -24,6 +24,34 @@ async function getLeaves(req, res) {
   }
 }
 
+// Team-wide list of who is on approved leave *today*. Available to any
+// authenticated user (this is the same info already shown via the on-leave
+// indicator next to names) — unlike getLeaves, it is not scoped to self.
+async function getOnLeaveToday(req, res) {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    const today = new Date().toISOString().slice(0, 10);
+    const approved = await Leave.find({ status: 'approved' }).lean();
+    const onLeave = approved
+      .filter((l) => {
+        const start = String(l.startDate || '').slice(0, 10);
+        const end = String(l.endDate || l.startDate || '').slice(0, 10);
+        return start && start <= today && today <= end;
+      })
+      .map((l) => ({
+        email: l.email,
+        name: l.name,
+        startDate: l.startDate,
+        endDate: l.endDate || l.startDate,
+        type: l.type,
+        duration: l.duration || 'full',
+      }));
+    res.json({ success: true, onLeave });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
 async function createLeave(req, res) {
   try {
     const { type, leaveCategory, startDate, endDate, duration, reason } = req.body;
@@ -160,4 +188,4 @@ async function reviewLeave(req, res) {
   }
 }
 
-module.exports = { getLeaves, createLeave, reviewLeave };
+module.exports = { getLeaves, getOnLeaveToday, createLeave, reviewLeave };
