@@ -18,8 +18,8 @@ const ENC_PREFIX = 'ENC:';
 
 const API_BASE =
   typeof process !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com')
-    : 'https://edutechexos-backend.onrender.com';
+    ? (process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com')
+    : 'https://edutechexos-ueoq.onrender.com';
 
 // ── Key generation & persistence ──────────────────────────────────────────────
 

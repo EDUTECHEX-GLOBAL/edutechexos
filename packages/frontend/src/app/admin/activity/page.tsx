@@ -20,7 +20,7 @@ import { useDashboardStore } from '@/store/dashboardStore';
 import AdminGuard from '@/app/components/AdminGuard';
 import LoginTrackerCalendar from '../components/LoginTrackerCalendar';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 
 type ActivityStat = {
   email: string;

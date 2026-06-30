@@ -22,7 +22,7 @@
  *   --password   your EduTechExOS password (required)
  *   --startup    register this script to run on Windows startup (one time)
  *   --remove     remove Windows startup registration
- *   --api        https://edutechexos-backend.onrender.com (default)
+ *   --api        https://edutechexos-ueoq.onrender.com (default)
  *   --aw         http://localhost:5600 (ActivityWatch URL, default)
  *   --interval   sync interval in minutes (default: 5)
  */

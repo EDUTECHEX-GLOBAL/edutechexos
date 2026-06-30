@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle2, Clock, Eye, EyeOff, Lock, ShieldCheck, XCircle } from 'lucide-react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 
 type InviteInfo = { email: string; name: string; role: string; expiresAt: string };
 type Phase = 'loading' | 'valid' | 'used' | 'expired' | 'invalid' | 'success';

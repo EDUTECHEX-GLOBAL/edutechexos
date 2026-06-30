@@ -4,7 +4,7 @@ import { X, User, Lock, Camera, Check, Loader2, Eye, EyeOff, LogOut } from 'luci
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 
 function getAuth() {
   try { const d = JSON.parse(localStorage.getItem('edutechex_token') ?? ''); return { token: d.token, user: d.user }; }

@@ -21,7 +21,7 @@
  */
 
 const http     = require('http');
-const BACKEND  = process.env.EDUTECHEX_BACKEND  || 'https://edutechexos-backend.onrender.com';
+const BACKEND  = process.env.EDUTECHEX_BACKEND  || 'https://edutechexos-ueoq.onrender.com';
 const AW_BASE  = process.env.AW_BASE            || 'http://localhost:5600/api/0';
 const INTERVAL = parseInt(process.env.SYNC_INTERVAL_MS || '300000', 10);
 const PORT     = parseInt(process.env.AW_SYNC_PORT     || '7891',   10);

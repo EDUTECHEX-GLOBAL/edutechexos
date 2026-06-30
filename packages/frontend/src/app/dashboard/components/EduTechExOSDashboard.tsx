@@ -536,7 +536,7 @@ export default function EduTechExOSDashboard() {
     try {
       const { token } = JSON.parse(raw);
       fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com'}/api/settings`,
+        `${process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com'}/api/settings`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -587,7 +587,7 @@ export default function EduTechExOSDashboard() {
       try {
         const { token } = JSON.parse(raw);
         fetch(
-          `${process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com'}/api/settings`,
+          `${process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com'}/api/settings`,
           {
             method: 'PUT',
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -1159,7 +1159,7 @@ export default function EduTechExOSDashboard() {
   // Load approved leaves so members on leave show indicator
   useEffect(() => {
     if (!authChecked || !currentUserEmail) return;
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
     const today = new Date().toISOString().split('T')[0];
     const authRaw = localStorage.getItem('edutechex_token');
     const authToken = authRaw ? (() => { try { return JSON.parse(authRaw).token; } catch { return null; } })() : null;
@@ -1228,7 +1228,7 @@ export default function EduTechExOSDashboard() {
   // Activity heartbeat — ping backend every 60 s with current activity so admin sees live status.
   useEffect(() => {
     if (!currentUserEmail) return;
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
     let endpointAvailable = true;
 
     const getCurrentActivity = (): { currentActivity: string; currentPanel: string } => {
@@ -1388,7 +1388,7 @@ export default function EduTechExOSDashboard() {
     const text = composerMessage.trim();
     if (!text || !channel) return;
 
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
     const authData = localStorage.getItem('edutechex_token');
     const token = authData ? (() => { try { return JSON.parse(authData).token; } catch { return null; } })() : null;
 
@@ -1979,7 +1979,7 @@ export default function EduTechExOSDashboard() {
   }
 
   async function handleJoinMeeting(messageId: string, link: string) {
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
     const token = localStorage.getItem('token');
     setMeetJoinState((prev) => ({ ...prev, [messageId]: 'checking' }));
     try {
@@ -2074,7 +2074,7 @@ export default function EduTechExOSDashboard() {
     // Run email + access-record creation concurrently in the background
     const authData = localStorage.getItem('edutechex_token');
     const token = authData ? JSON.parse(authData).token : null;
-    const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+    const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
     const authHeaders = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
     // 1. Always create meeting access record (stores meetLink and code so join page works)

@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { getSocket } from '@/lib/socket';
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 
 function getToken() {
   try { return JSON.parse(localStorage.getItem('edutechex_token') ?? '').token ?? null; }

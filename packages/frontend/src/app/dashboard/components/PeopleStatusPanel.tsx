@@ -4,7 +4,7 @@ import { X, CheckCircle2, CalendarOff, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDashboardStore } from '@/store/dashboardStore';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 
 function getToken(): string | null {
   try {

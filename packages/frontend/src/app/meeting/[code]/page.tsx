@@ -19,7 +19,7 @@ export default function MeetingJoinPage() {
 
   useEffect(() => {
     if (!code) return;
-    const backend = process.env.NEXT_PUBLIC_API_URL || 'https://edutechexos-backend.onrender.com';
+    const backend = process.env.NEXT_PUBLIC_API_URL || 'https://edutechexos-ueoq.onrender.com';
     let token = '';
     try { token = JSON.parse(localStorage.getItem('edutechex_token') ?? '').token ?? ''; } catch { /* not logged in */ }
     const headers: Record<string, string> = {};

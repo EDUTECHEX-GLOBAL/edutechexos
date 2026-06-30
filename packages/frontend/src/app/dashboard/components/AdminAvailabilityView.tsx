@@ -8,7 +8,7 @@ import {
 import { toast } from 'sonner';
 import { getSocket } from '@/lib/socket';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 
 type SlotStatus = 'available' | 'busy' | 'ooo';
 type Slot       = { time: string; status: SlotStatus; label: string };

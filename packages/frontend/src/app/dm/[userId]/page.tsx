@@ -6,7 +6,7 @@ import { ArrowLeft, Send, Loader2, Clock, CheckCheck } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { getSocket } from '@/lib/socket';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 
 function getAuth() {
   try {
