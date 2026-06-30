@@ -38,13 +38,15 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "font-src 'self' https://fonts.gstatic.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://vercel.live",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.fontshare.com",
+              "font-src 'self' https://fonts.gstatic.com https://api.fontshare.com https://cdn.fontshare.com",
               "img-src 'self' data: blob: https:",
               "connect-src 'self' https: wss:",
-              "media-src 'self' blob:",
-              "frame-src 'self' https://calendar.google.com",
+              // Allow recordings/voice notes served from Cloudinary, the API
+              // (same-origin via rewrite), and inline base64/blob fallbacks.
+              "media-src 'self' blob: data: https:",
+              "frame-src 'self' https://calendar.google.com https://vercel.live",
             ].join('; '),
           },
         ],
