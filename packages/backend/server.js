@@ -28,6 +28,18 @@ const { errorHandler } = require('./src/middleware/errorHandler');
 
 const app = express();
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
+// Lightweight security headers. Deliberately omits CSP / X-Frame-Options /
+// Cross-Origin-Resource-Policy because this API serves images & PDFs that the
+// Vercel frontend loads cross-origin — those headers would break them.
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  next();
+});
 
 const httpServer = http.createServer(app);
 
