@@ -4,6 +4,26 @@ import { MessageSquareDot, Send, ArrowLeft, Search, Loader2 } from 'lucide-react
 import { motion } from 'framer-motion';
 import { useDashboardStore } from '@/store/dashboardStore';
 
+function isSameDay(a: string, b: string) {
+  const da = new Date(a), db = new Date(b);
+  return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
+}
+function fmtDateLabel(ts: string): string {
+  const d = new Date(ts);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+  const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (msgDay.getTime() === today.getTime()) return 'Today';
+  if (msgDay.getTime() === yesterday.getTime()) return 'Yesterday';
+  const diffDays = Math.floor((today.getTime() - msgDay.getTime()) / 86400000);
+  if (diffDays < 7) return d.toLocaleDateString('en-IN', { weekday: 'long' });
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+}
+function fmtTime(ts: string): string {
+  return new Date(ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
 
 function getAuth() {
@@ -19,6 +39,8 @@ interface Props {
   members: any[];
 }
 
+const DM_LAST_CHANNEL_KEY = 'edutechex_last_dm_channel';
+
 export default function DMPanel({ currentUser, members }: Props) {
   const [dmChannels, setDmChannels] = useState<DMChannel[]>([]);
   const [activeChannel, setActiveChannel] = useState<DMChannel | null>(null);
@@ -31,7 +53,28 @@ export default function DMPanel({ currentUser, members }: Props) {
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
   const myEmail = user?.email?.toLowerCase() ?? '';
 
+  // Persist last active DM channel across tab switches
+  function persistChannel(ch: DMChannel | null) {
+    if (ch) sessionStorage.setItem(DM_LAST_CHANNEL_KEY, JSON.stringify(ch));
+    else sessionStorage.removeItem(DM_LAST_CHANNEL_KEY);
+    setActiveChannel(ch);
+  }
+
   useEffect(() => { loadDMChannels(); }, []);
+
+  // Restore last DM channel after channels load
+  useEffect(() => {
+    if (!dmChannels.length) return;
+    const saved = sessionStorage.getItem(DM_LAST_CHANNEL_KEY);
+    if (saved && !activeChannel) {
+      try {
+        const ch = JSON.parse(saved) as DMChannel;
+        const found = dmChannels.find(c => c.id === ch.id);
+        if (found) setActiveChannel(found);
+      } catch { /* ignore */ }
+    }
+  }, [dmChannels]);
+
   useEffect(() => { if (activeChannel) loadMessages(activeChannel.id); }, [activeChannel?.id]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -63,7 +106,7 @@ export default function DMPanel({ currentUser, members }: Props) {
       });
       const data = await res.json();
       if (data.channel) {
-        setActiveChannel(data.channel);
+        persistChannel(data.channel);
         setDmChannels(prev => prev.find(c => c.id === data.channel.id) ? prev : [data.channel, ...prev]);
       }
     } catch {}
@@ -120,7 +163,7 @@ export default function DMPanel({ currentUser, members }: Props) {
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 shrink-0">
-          <button onClick={() => setActiveChannel(null)} className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
+          <button onClick={() => persistChannel(null)} className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
             <ArrowLeft size={14} />
           </button>
           <div className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white shrink-0"
@@ -134,16 +177,34 @@ export default function DMPanel({ currentUser, members }: Props) {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 scrollbar-light">
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 scrollbar-light bg-slate-50">
           {loading && <div className="flex justify-center py-4"><Loader2 size={16} className="animate-spin text-slate-400" /></div>}
-          {messages.map(msg => {
+          {messages.map((msg, idx) => {
             const isOwn = msg.senderEmail === myEmail || msg.sender === currentUser?.name;
+            const prev = messages[idx - 1];
+            const showDate = !prev || !isSameDay(prev.timestamp, msg.timestamp);
             return (
-              <div key={msg.id} className={`flex gap-2 ${isOwn ? 'flex-row-reverse' : ''}`}>
-                <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${isOwn ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-medium rounded-br-sm' : 'bg-white text-slate-800 border border-slate-100 rounded-bl-sm shadow-sm'}`}>
-                  {msg.text}
+              <React.Fragment key={msg.id}>
+                {showDate && msg.timestamp && (
+                  <div className="flex items-center gap-3 my-3 select-none">
+                    <div className="flex-1 h-px bg-slate-200" />
+                    <span className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-0.5 text-[10px] font-bold text-slate-400 shadow-sm">
+                      {fmtDateLabel(msg.timestamp)}
+                    </span>
+                    <div className="flex-1 h-px bg-slate-200" />
+                  </div>
+                )}
+                <div className={`flex gap-2 items-end ${isOwn ? 'flex-row-reverse' : ''}`}>
+                  <div className={`max-w-[80%] px-3.5 py-2 rounded-2xl text-sm ${isOwn ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-medium rounded-br-sm' : 'bg-white text-slate-800 border border-slate-100 rounded-bl-sm shadow-sm'}`}>
+                    <div>{msg.text}</div>
+                    {msg.timestamp && (
+                      <div className={`text-[9px] mt-0.5 ${isOwn ? 'text-white/60 text-right' : 'text-slate-400'}`}>
+                        {fmtTime(msg.timestamp)}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </React.Fragment>
             );
           })}
           <div ref={bottomRef} />
@@ -192,7 +253,7 @@ export default function DMPanel({ currentUser, members }: Props) {
             const name = getOtherName(ch);
             const member = members.find(m => m.email?.toLowerCase() === getOtherEmail(ch));
             return (
-              <button key={ch.id} onClick={() => setActiveChannel(ch)}
+              <button key={ch.id} onClick={() => persistChannel(ch)}
                 className="flex items-center gap-2.5 w-full px-2 py-2 rounded-xl hover:bg-slate-100/80 transition-all text-left">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-bold text-white shrink-0"
                   style={{ background: member?.color ?? 'linear-gradient(135deg,#7C5CFC,#FF6B7F)' }}>

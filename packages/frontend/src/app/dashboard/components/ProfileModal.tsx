@@ -187,6 +187,8 @@ export default function ProfileModal({ open, onClose, currentUser, onProfileUpda
                       }).catch(() => {});
                     }
                   } catch { /* ignore */ }
+                  // Tell local aw-sync agent to stop syncing
+                  fetch('http://localhost:7891/deactivate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
                   localStorage.removeItem('edutechex_token');
                   localStorage.removeItem('edutechex_access_requests');
                   localStorage.removeItem('edutechex_session_start');

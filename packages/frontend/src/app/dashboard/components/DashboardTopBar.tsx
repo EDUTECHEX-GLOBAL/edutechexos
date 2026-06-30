@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, Bell, Menu } from 'lucide-react';
+import { Search, Bell, Menu, Bot } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface DashboardTopBarProps {
@@ -11,6 +11,9 @@ interface DashboardTopBarProps {
   onSearchOpen?: () => void;
   onNotificationsOpen?: () => void;
   onMobileMenuOpen?: () => void;
+  onAiOpen?: () => void;
+  isAvailable?: boolean;
+  onAvailabilityToggle?: () => void;
 }
 
 export default function DashboardTopBar({
@@ -20,56 +23,66 @@ export default function DashboardTopBar({
   onSearchOpen,
   onNotificationsOpen,
   onMobileMenuOpen,
+  onAiOpen,
+  isAvailable,
+  onAvailabilityToggle,
 }: DashboardTopBarProps) {
   return (
-    <div className="flex h-14 items-center justify-between px-5">
-      <div className="flex items-center gap-2 min-w-0">
+    <div className="flex h-14 items-center justify-between px-4 bg-white border-b border-slate-100">
+      <div className="flex items-center gap-2.5 min-w-0">
         {onMobileMenuOpen && (
           <button onClick={onMobileMenuOpen}
-            className="md:hidden flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all shrink-0">
-            <Menu size={16} />
+            className="md:hidden flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 active:bg-slate-200 transition-all shrink-0">
+            <Menu size={18} />
           </button>
         )}
         <div className="min-w-0">
-          <h1 className="text-lg font-black text-slate-800 tracking-tight">
+          <h1 className="text-[15px] md:text-lg font-black text-slate-800 tracking-tight truncate">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-xs font-medium text-slate-500 truncate">
-              {subtitle}
-            </p>
+            <p className="text-[11px] font-medium text-slate-400 truncate">{subtitle}</p>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
+        {/* Availability pill — mobile only */}
+        {onAvailabilityToggle && (
+          <motion.button whileTap={{ scale: 0.93 }} onClick={onAvailabilityToggle}
+            className={`md:hidden flex h-7 items-center gap-1 rounded-full px-2.5 text-[10px] font-bold border transition-all ${
+              isAvailable
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-red-50 text-red-600 border-red-200'
+            }`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${isAvailable ? 'bg-emerald-500' : 'bg-red-500'}`} />
+            {isAvailable ? 'Available' : 'Busy'}
+          </motion.button>
+        )}
+
+        {/* AI Copilot — shown on mobile only (desktop uses channel sub-header button) */}
+        {onAiOpen && (
+          <motion.button whileTap={{ scale: 0.93 }} onClick={onAiOpen}
+            className="md:hidden flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 active:bg-slate-200 transition-all">
+            <Bot size={18} />
+          </motion.button>
+        )}
+
         {onSearchOpen && (
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onSearchOpen}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all"
-          >
+          <motion.button whileTap={{ scale: 0.93 }} onClick={onSearchOpen}
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 active:bg-slate-200 transition-all">
             <Search size={17} />
           </motion.button>
         )}
 
         {onNotificationsOpen && (
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onNotificationsOpen}
-            className="relative flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all"
-          >
+          <motion.button whileTap={{ scale: 0.93 }} onClick={onNotificationsOpen}
+            className="relative flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 active:bg-slate-200 transition-all">
             <Bell size={17} />
             {unreadNotifications > 0 && (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[14px] items-center justify-center rounded-full bg-[#FF6B7F] px-1 text-[8px] font-bold text-white shadow-sm shadow-[#FF6B7F]/30"
-              >
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[14px] items-center justify-center rounded-full bg-[#FF6B7F] px-1 text-[8px] font-black text-white">
                 {unreadNotifications > 9 ? '9+' : unreadNotifications}
-              </motion.span>
+              </span>
             )}
           </motion.button>
         )}

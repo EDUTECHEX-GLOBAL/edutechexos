@@ -1983,7 +1983,7 @@ export default function EduTechExOSDashboard() {
     const token = localStorage.getItem('token');
     setMeetJoinState((prev) => ({ ...prev, [messageId]: 'checking' }));
     try {
-      const res = await fetch(`${API_BASE}/api/meeting-access/check/${messageId}`, {
+      const res = await fetch(`${API_BASE}/api/meeting-access/${messageId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json().catch(() => ({}));
@@ -2077,14 +2077,12 @@ export default function EduTechExOSDashboard() {
     const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-backend.onrender.com';
     const authHeaders = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
-    // 1. Create meeting access record so backend enforces invite-only join
-    if (inviteeEmails.length > 0) {
-      fetch(`${BACKEND}/api/meeting-access`, {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify({ messageId: msgId, channelId: activeChannelId, allowedEmails: inviteeEmails, meetingCode, meetLink: googleMeetLink }),
-      }).catch((err) => console.error('[meeting-access] record creation failed:', err));
-    }
+    // 1. Always create meeting access record (stores meetLink and code so join page works)
+    fetch(`${BACKEND}/api/meeting-access`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({ messageId: msgId, channelId: activeChannelId, allowedEmails: inviteeEmails, meetingCode, meetLink: googleMeetLink }),
+    }).catch((err) => console.error('[meeting-access] record creation failed:', err));
 
     // 2. Always send email to every mentioned person (not gated by settings toggle)
     if (inviteeEmails.length > 0) {

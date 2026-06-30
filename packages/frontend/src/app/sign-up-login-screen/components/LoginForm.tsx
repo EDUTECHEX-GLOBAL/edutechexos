@@ -9,6 +9,17 @@ import { identifyUser, trackEvent } from '@/app/PostHogProvider';
 
 type LoginFormData = { email: string; password: string };
 
+// Fire-and-forget: tell local aw-sync agent that user just logged in/out.
+// If the agent isn't running, the fetch fails silently — no error shown.
+function notifyAwSync(action: 'activate' | 'deactivate', token?: string) {
+  const body = action === 'activate' ? JSON.stringify({ token }) : '{}';
+  fetch(`http://localhost:7891/${action}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  }).catch(() => { /* aw-sync not running — that's fine */ });
+}
+
 type AccessRequest = {
   id: string;
   name: string;
@@ -102,6 +113,7 @@ export default function LoginForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
+      notifyAwSync('activate', token);
       toast.success(`Welcome back, ${loginAccount.name.split(' ')[0]}!`);
       identifyUser(loginAccount.email, loginAccount.name);
       trackEvent('login', { role: loginAccount.role });
@@ -152,6 +164,7 @@ export default function LoginForm({
     } else {
       toast.success(`Welcome back, ${loginAccount.name.split(' ')[0]}!`);
     }
+    notifyAwSync('activate', token);
     identifyUser(loginAccount.email, loginAccount.name);
     trackEvent('login', { role: loginAccount.role });
     setIsLoading(false);

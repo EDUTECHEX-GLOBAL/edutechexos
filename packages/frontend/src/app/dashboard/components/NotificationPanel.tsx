@@ -72,7 +72,7 @@ type Tab = 'all' | 'unread' | 'meetings' | 'tasks';
 interface NotificationPanelProps {
   open: boolean;
   onClose: () => void;
-  onGoToChannel?: (channelId: string) => void;
+  onGoToChannel?: (channelId: string, messageId?: string) => void;
 }
 
 export default function NotificationPanel({ open, onClose, onGoToChannel }: NotificationPanelProps) {
@@ -111,11 +111,11 @@ export default function NotificationPanel({ open, onClose, onGoToChannel }: Noti
   const meetingCount  = notifications.filter(n => !!n.joinLink).length;
   const taskCount     = notifications.filter(n => n.type === 'task').length;
 
-  function goTo(channelId: string, notifId: string) {
+  function goTo(channelId: string, notifId: string, messageId?: string) {
     setActiveChannel(channelId);
     clearUnread(channelId);
     markRead(notifId);
-    if (onGoToChannel) onGoToChannel(channelId);
+    if (onGoToChannel) onGoToChannel(channelId, messageId);
     onClose();
   }
 
@@ -305,11 +305,12 @@ function NotifCard({
   index: number;
   onMarkRead: () => void;
   onDismiss: () => void;
-  onGoTo: (channelId: string, notifId: string) => void;
+  onGoTo: (channelId: string, notifId: string, messageId?: string) => void;
 }) {
   const cfg = TYPE[notif.type as NotifType] ?? TYPE.mention;
   const Icon = cfg.icon;
   const channelId = (notif as { channelId?: string }).channelId;
+  const messageId = (notif as { messageId?: string }).messageId;
   const isUnread = !notif.read;
 
   return (
@@ -411,10 +412,10 @@ function NotifCard({
               </button>
             )}
 
-            {/* Message: go to channel */}
+            {/* Message: go to channel and jump to message */}
             {channelId && !notif.joinLink && (
               <button
-                onClick={() => onGoTo(channelId, notif.id)}
+                onClick={() => onGoTo(channelId, notif.id, messageId)}
                 className="flex items-center gap-2 rounded-xl px-4 py-2 text-[12px] font-black text-white transition-all active:scale-95 hover:opacity-90"
                 style={{
                   background: 'linear-gradient(135deg,#4F46E5,#6366F1)',
@@ -422,7 +423,7 @@ function NotifCard({
                 }}
               >
                 <Hash size={13} strokeWidth={2.5} />
-                View message
+                Jump to message
                 <ArrowRight size={12} strokeWidth={2.5} />
               </button>
             )}

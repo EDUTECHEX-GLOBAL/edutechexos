@@ -20,11 +20,18 @@ export default function MeetingJoinPage() {
   useEffect(() => {
     if (!code) return;
     const backend = process.env.NEXT_PUBLIC_API_URL || 'https://edutechexos-backend.onrender.com';
-    fetch(`${backend}/api/meetings/code/${encodeURIComponent(code)}`)
+    let token = '';
+    try { token = JSON.parse(localStorage.getItem('edutechex_token') ?? '').token ?? ''; } catch { /* not logged in */ }
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    fetch(`${backend}/api/meetings/code/${encodeURIComponent(code)}`, { headers })
       .then((r) => r.json())
       .then((d) => {
         if (d.success) setInfo(d);
-        else setError(d.error || 'Meeting not found');
+        else if (d.error === 'Authentication required' || d.error?.includes('auth')) {
+          // Token missing or expired — redirect to login then back
+          window.location.replace(`/sign-up-login-screen?mode=user&redirect=/meeting/${encodeURIComponent(code)}`);
+        } else setError(d.error || 'Meeting not found');
       })
       .catch(() => setError('Could not load meeting details'))
       .finally(() => setLoading(false));

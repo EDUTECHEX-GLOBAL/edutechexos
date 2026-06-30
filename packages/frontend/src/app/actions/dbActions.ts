@@ -334,12 +334,14 @@ export async function sendBroadcastEmail(
 }
 
 /**
- * Fetch a single note for a given channel.
+ * Fetch a single note for a given channel and user.
  */
-export async function getNoteAction(channelId: string) {
+export async function getNoteAction(channelId: string, userEmail?: string) {
   try {
     await ensureDbExists();
-    const note = await Note.findOne({ channelId }).lean();
+    const query: Record<string, string> = { channelId };
+    if (userEmail) query.userEmail = userEmail.toLowerCase();
+    const note = await Note.findOne(query).lean();
     if (!note) return null;
     const { _id, __v, ...rest } = note;
     return { ...rest, id: _id.toString() };
@@ -392,11 +394,13 @@ export async function changePassword(
   }
 }
 
-export async function saveNoteAction(channelId: string, content: string) {
+export async function saveNoteAction(channelId: string, content: string, userEmail?: string) {
   try {
     await ensureDbExists();
+    const filter: Record<string, string> = { channelId };
+    if (userEmail) filter.userEmail = userEmail.toLowerCase();
     const updated = await Note.findOneAndUpdate(
-      { channelId },
+      filter,
       { content, updatedAt: new Date() },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     ).lean();

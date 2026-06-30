@@ -66,36 +66,63 @@ export async function summarizeChannelChat(messages: ChatMessage[]) {
 }
 
 export async function extractActionItems(messages: ChatMessage[]) {
+  if (!messages || messages.length === 0) return { success: true, data: [] };
+  const transcript = messages.map((m) => `${m.sender}: ${m.text}`).join('\n');
+  const systemPrompt = 'You are an AI task extraction agent. Extract only concrete actionable tasks.';
+  const userPrompt = `Read the following team conversation and identify actionable tasks with who they are assigned to.\nReturn ONLY a JSON array (no markdown, no explanation) in this exact format:\n[{"text":"task description","assignee":"Person Name","assigneeInitials":"PN"}]\nIf none found return: []\n\nTranscript:\n${transcript}`;
+
+  // Try generateObject first (works well with OpenAI; Gemini may not support it)
+  const primary = getPrimaryModel();
+  if (primary) {
+    try {
+      const { object } = await generateObject({
+        model: primary,
+        schema: z.object({
+          tasks: z.array(
+            z.object({
+              text: z.string(),
+              assignee: z.string(),
+              assigneeInitials: z.string().max(2),
+            })
+          ),
+        }),
+        system: systemPrompt,
+        prompt: `Read the following team conversation and identify actionable tasks. If none found, return empty array.\n\nTranscript:\n${transcript}`,
+      });
+      return { success: true, data: object.tasks };
+    } catch {
+      // Gemini or other model doesn't support generateObject — fall through
+    }
+  }
+
+  // Fallback: generateText + manual JSON parse (works with all models including Gemini)
+  const fallback = primary ?? getFallbackModel();
+  if (!fallback) return { success: false, error: 'No AI API key configured.' };
   try {
-    const model = getPrimaryModel();
-    if (!model) throw new Error('No AI API key configured.');
-    if (!messages || messages.length === 0) return { success: true, data: [] };
-
-    const transcript = messages.map((m) => `${m.sender}: ${m.text}`).join('\n');
-
-    const { object } = await generateObject({
-      model,
-      schema: z.object({
-        tasks: z.array(
-          z.object({
-            text: z.string(),
-            assignee: z.string(),
-            assigneeInitials: z.string().max(2),
-          })
-        ),
-      }),
-      system: 'You are an AI task extraction agent. Extract only concrete actionable tasks.',
-      prompt: `Read the following team conversation and identify actionable tasks. If none found, return empty array.\n\nTranscript:\n${transcript}`,
+    const { text } = await generateText({
+      model: fallback,
+      system: systemPrompt,
+      prompt: userPrompt,
+      maxOutputTokens: 800,
     });
-
-    return { success: true, data: object.tasks };
+    const clean = text.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
+    const start = clean.indexOf('[');
+    const jsonStr = start >= 0 ? clean.slice(start) : clean;
+    const parsed = JSON.parse(jsonStr);
+    if (!Array.isArray(parsed)) return { success: true, data: [] };
+    const tasks = parsed
+      .map((t: { text?: string; assignee?: string; assigneeInitials?: string }) => ({
+        text: t.text ?? '',
+        assignee: t.assignee ?? 'Unassigned',
+        assigneeInitials:
+          t.assigneeInitials ??
+          (t.assignee ?? 'UN').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
+      }))
+      .filter((t: { text: string }) => t.text);
+    return { success: true, data: tasks };
   } catch (error) {
     console.error('Error extracting tasks:', error);
-    return {
-      success: false,
-      error:
-        'Failed to extract tasks. The AI service may be temporarily unavailable — please try again in a moment.',
-    };
+    return { success: false, error: 'Failed to extract tasks. Please try again in a moment.' };
   }
 }
 

@@ -111,8 +111,9 @@ export default function NotepadPanel({ onClose, activeChannel }: NotepadPanelPro
 
   useEffect(() => {
     const loadNote = async () => {
-      // Try fetching note from MongoDB
-      const dbNote = await getNoteAction(selectedPadId);
+      const email = getCurrentUserEmail();
+      // Try fetching note from MongoDB (scoped to this user)
+      const dbNote = await getNoteAction(selectedPadId, email);
       if (dbNote && dbNote.content) {
         setNote(dbNote.content);
       } else {
@@ -133,9 +134,10 @@ export default function NotepadPanel({ onClose, activeChannel }: NotepadPanelPro
     setIsSaving(true);
     setSaveStatus('idle');
     const timer = setTimeout(async () => {
+      const email = getCurrentUserEmail();
       localStorage.setItem(getNoteKey(selectedPadId), note);
       localStorage.setItem(getTimestampKey(selectedPadId), String(Date.now()));
-      await saveNoteAction(selectedPadId, note);
+      await saveNoteAction(selectedPadId, note, email);
       setIsSaving(false);
       setSaveStatus('saved');
       setSavedPads(recomputeSavedPads());

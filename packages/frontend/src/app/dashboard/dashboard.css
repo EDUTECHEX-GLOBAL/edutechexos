@@ -702,3 +702,7 @@ html.dark, .dark {
   .mobile-drawer-overlay { display: none !important; }
   .mobile-panel-overlay  { display: none !important; }
 }
+
+/* Jump-to-message highlight */
+.highlight-message { animation: msg-flash 2.5s ease-out forwards; }
+@keyframes msg-flash { 0%,20% { background: rgba(99,102,241,0.18); border-radius: 10px; } 100% { background: transparent; } }

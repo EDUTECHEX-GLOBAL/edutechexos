@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 
 interface InsightsPanelProps {
   activeChannel?: string;
-  members?: Array<{ id: string; initials: string; name: string; color?: string; status?: string }>;
+  members?: Array<{ id: string; initials: string; name: string; color?: string; status?: string; isAvailable?: boolean }>;
   kanbanTasks?: Array<{ status: string }>;
   messages?: Record<string, Array<{ timestamp: string }>>;
 }
@@ -25,6 +25,7 @@ export default function InsightsPanel({
   ).length;
 
   const onlineMembers = members.filter((m) => m.status === 'online');
+  const availableMembers = members.filter((m) => m.isAvailable === true);
 
   const todoTasks = kanbanTasks.filter((t) => t.status === 'todo').length;
   const doneTasks = kanbanTasks.filter((t) => t.status === 'done').length;
@@ -79,7 +80,7 @@ export default function InsightsPanel({
         </div>
       </motion.section>
 
-      {onlineMembers.length > 0 && (
+      {(onlineMembers.length > 0 || availableMembers.length > 0) && (
         <motion.section
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -87,29 +88,40 @@ export default function InsightsPanel({
         >
           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 mb-3 flex items-center gap-2">
             <Users size={11} className="text-emerald-500" />
-            Online
+            Team
           </p>
           <div className="flex flex-wrap gap-2">
-            {onlineMembers.slice(0, 8).map((member) => (
-              <motion.div
-                key={member.id}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="relative flex h-9 w-9 items-center justify-center rounded-xl text-[10px] font-black text-white shadow-lg"
-                style={{ background: member.color ?? 'linear-gradient(135deg, #FF6B7F, #FF4770)' }}
-                title={member.name}
-              >
-                {member.initials}
-                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white" />
-                <span className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/10" />
-              </motion.div>
-            ))}
-            {onlineMembers.length > 8 && (
+            {members.slice(0, 10).map((member) => {
+              const online = member.status === 'online';
+              const avail = member.isAvailable;
+              return (
+                <motion.div
+                  key={member.id}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="relative flex h-9 w-9 items-center justify-center rounded-xl text-[10px] font-black text-white shadow-lg"
+                  style={{ background: member.color ?? 'linear-gradient(135deg, #FF6B7F, #FF4770)' }}
+                  title={`${member.name}${avail !== undefined ? (avail ? ' · Available' : ' · Busy') : ''}`}
+                >
+                  {member.initials}
+                  <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${
+                    avail === true ? 'bg-emerald-500' : avail === false ? 'bg-slate-400' : online ? 'bg-emerald-500' : 'bg-slate-300'
+                  }`} />
+                  <span className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/10" />
+                </motion.div>
+              );
+            })}
+            {members.length > 10 && (
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-[10px] font-bold text-slate-600 border border-slate-200">
-                +{onlineMembers.length - 8}
+                +{members.length - 10}
               </div>
             )}
           </div>
+          {availableMembers.length > 0 && (
+            <p className="mt-2 text-[10px] text-emerald-600 font-semibold">
+              {availableMembers.length} available now
+            </p>
+          )}
         </motion.section>
       )}
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { useDashboardStore, type MemberStatus } from '@/store/dashboardStore';
+import { useDashboardStore, type MemberStatus, type Message } from '@/store/dashboardStore';
 import { useTheme } from '@/components/ThemeProvider';
 import DashboardLayout, { type LayoutTab } from './DashboardLayout';
 import DashboardTopBar from './DashboardTopBar';
@@ -56,6 +56,8 @@ export default function DashboardRedesigned() {
     kanbanTasks, darkMode, toggleDarkMode,
     activeThreadId, setActiveThread,
     addKanbanTask,
+    unreadCounts, incrementUnread, clearUnread,
+    updateMemberLeaveStatus,
   } = store;
 
   const [currentUser, setCurrentUser] = useState<{
@@ -72,6 +74,8 @@ export default function DashboardRedesigned() {
   const [standupOpen, setStandupOpen] = useState(false);
   const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [sendBounce, setSendBounce] = useState(false);
+  const [myStatus, setMyStatus] = useState<'online' | 'away' | 'in-meeting' | 'offline'>('online');
+  const [myAvailability, setMyAvailability] = useState(true);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
@@ -150,6 +154,50 @@ export default function DashboardRedesigned() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  // Clear unread when switching to a channel
+  useEffect(() => {
+    if (activeChannel) clearUnread?.(activeChannel);
+  }, [activeChannel]);
+
+  // Socket listeners: new messages → update state + increment unread for non-active channels
+  useEffect(() => {
+    if (!currentUser) return;
+    const socket = getSocket();
+
+    const handleNewMessage = (msg: Message & { channelId: string }) => {
+      const chId = msg.channelId;
+      addMessageFromSocket?.(chId, msg);
+      if (chId !== activeChannel) {
+        incrementUnread?.(chId);
+      }
+    };
+    const handleUpdatedMessage = (msg: Message & { channelId: string }) => {
+      if (msg.channelId) {
+        const { updateMessageFromSocket } = useDashboardStore.getState();
+        updateMessageFromSocket?.(msg.channelId, msg);
+      }
+    };
+    const handleDeletedMessage = ({ channelId, messageId }: { channelId: string; messageId: string }) => {
+      const { deleteMessageFromSocket } = useDashboardStore.getState();
+      deleteMessageFromSocket?.(channelId, messageId);
+    };
+    const handleLeaveStatus = ({ email, onLeave }: { email: string; onLeave: boolean }) => {
+      if (email) updateMemberLeaveStatus?.(email, !!onLeave);
+    };
+
+    socket.on('new_message', handleNewMessage);
+    socket.on('message_updated', handleUpdatedMessage);
+    socket.on('message_deleted', handleDeletedMessage);
+    socket.on('leave_status_update', handleLeaveStatus);
+
+    return () => {
+      socket.off('new_message', handleNewMessage);
+      socket.off('message_updated', handleUpdatedMessage);
+      socket.off('message_deleted', handleDeletedMessage);
+      socket.off('leave_status_update', handleLeaveStatus);
+    };
+  }, [currentUser, activeChannel]);
+
   // @mention notification via socket
   useEffect(() => {
     if (!currentUser) return;
@@ -163,6 +211,8 @@ export default function DashboardRedesigned() {
           actorColor: '#5B4FDB',
           message: data.preview,
           channel: data.channelId,
+          channelId: data.channelId,
+          messageId: data.messageId,
         });
       }
     };
@@ -259,6 +309,21 @@ export default function DashboardRedesigned() {
     if (composerRef.current) composerRef.current.focus();
   }, [composerMessage, channel, currentUser, addMessage, members, addKanbanTask, addNotification]);
 
+  const handleStatusChange = useCallback((status: 'online' | 'away' | 'in-meeting' | 'offline') => {
+    if (!currentUser) return;
+    setMyStatus(status);
+    updateMemberStatus(currentUser.email, status);
+    getSocket().emit('user_status_update', { email: currentUser.email, status });
+  }, [currentUser, updateMemberStatus]);
+
+  const handleAvailabilityToggle = useCallback(() => {
+    if (!currentUser) return;
+    const next = !myAvailability;
+    setMyAvailability(next);
+    updateMemberAvailability(currentUser.email, next);
+    getSocket().emit('user_availability', { email: currentUser.email, isAvailable: next });
+  }, [currentUser, myAvailability, updateMemberAvailability]);
+
   if (!authChecked) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-50/50">
@@ -306,7 +371,11 @@ export default function DashboardRedesigned() {
       onSettingsOpen={() => isAdmin ? setAdminPanelOpen(true) : setProfileOpen(true)}
       channels={channels.filter((c: any) => c.type !== 'dm')}
       activeChannel={channel?.id ?? ''}
-      onChannelChange={(id: string) => { setActiveChannel(id); setActiveTab('chats'); }}
+      onChannelChange={(id: string) => { setActiveChannel(id); setActiveTab('chats'); clearUnread?.(id); }}
+      unreadCounts={unreadCounts}
+      dmUnread={Object.entries(unreadCounts).filter(([id]) => id.startsWith('dm-')).reduce((s, [, n]) => s + n, 0)}
+      currentUserStatus={myStatus}
+      onStatusChange={handleStatusChange}
       topBar={
         <DashboardTopBar
           title={tabLabel}
@@ -315,6 +384,9 @@ export default function DashboardRedesigned() {
           onSearchOpen={() => setGlobalSearchOpen(true)}
           onNotificationsOpen={() => setNotificationsOpen(true)}
           onMobileMenuOpen={() => setMobileSidebarOpen(true)}
+          onAiOpen={activeTab === 'chats' ? () => setAiPanelOpen(true) : undefined}
+          isAvailable={myAvailability}
+          onAvailabilityToggle={handleAvailabilityToggle}
         />
       }
       rightPanel={
@@ -349,6 +421,8 @@ export default function DashboardRedesigned() {
             setActiveThread={setActiveThread}
             members={members}
             onAiOpen={() => setAiPanelOpen(true)}
+            isAvailable={myAvailability}
+            onAvailabilityToggle={handleAvailabilityToggle}
           />
         )}
         {activeTab === 'dms' && (
@@ -441,7 +515,26 @@ export default function DashboardRedesigned() {
         )}
       </AnimatePresence>
 
-      <NotificationPanel open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+      <NotificationPanel
+        open={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+        onGoToChannel={(channelId, messageId) => {
+          setActiveChannel(channelId);
+          setActiveTab('chats');
+          setNotificationsOpen(false);
+          if (messageId) {
+            // Wait for channel to render, then scroll to and highlight the message
+            setTimeout(() => {
+              const el = document.getElementById(`msg-${messageId}`);
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('highlight-message');
+                setTimeout(() => el.classList.remove('highlight-message'), 2500);
+              }
+            }, 400);
+          }
+        }}
+      />
 
       <OfflineIndicator />
 
@@ -526,7 +619,7 @@ export default function DashboardRedesigned() {
       {/* Availability FAB */}
       <button
         onClick={() => setAvailabilityOpen(true)}
-        className="fixed bottom-6 right-20 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all"
+        className="fixed bottom-20 md:bottom-6 right-20 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all"
         title="Admin Availability"
       >
         <CalendarCheck size={18} />
@@ -535,7 +628,7 @@ export default function DashboardRedesigned() {
       {/* Standup FAB */}
       <button
         onClick={() => setStandupOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all"
+        className="fixed bottom-20 md:bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all"
         title="Daily Standup"
       >
         <Clock size={18} />
@@ -600,6 +693,8 @@ function ChatView({
   setActiveThread: (id: string | null) => void;
   members: any[];
   onAiOpen: () => void;
+  isAvailable: boolean;
+  onAvailabilityToggle: () => void;
 }) {
   const channelId = channel?.id ?? 'general';
   const pinIds = pinnedMessageIds[channelId] ?? [];
@@ -623,14 +718,27 @@ function ChatView({
     composerRef.current?.focus();
   }
 
-  const firstMessageDate = messages[0]?.timestamp
-    ? new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short' })
-      .format(new Date(messages[0].timestamp)).toUpperCase()
-    : 'TODAY';
-
   function formatTime(ts: string) {
     return new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit', hour12: true })
       .format(new Date(ts)).replace(' ', '');
+  }
+
+  function formatDateLabel(ts: string): string {
+    const d = new Date(ts);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    if (msgDay.getTime() === today.getTime()) return 'Today';
+    if (msgDay.getTime() === yesterday.getTime()) return 'Yesterday';
+    const diffDays = Math.floor((today.getTime() - msgDay.getTime()) / 86400000);
+    if (diffDays < 7) return d.toLocaleDateString('en-IN', { weekday: 'long' });
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+  }
+
+  function isSameDay(a: string, b: string) {
+    const da = new Date(a), db = new Date(b);
+    return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -642,7 +750,8 @@ function ChatView({
 
   return (
     <>
-      <div className="flex items-center justify-between shrink-0 px-5 py-3 border-b border-slate-200/60 bg-white/60 backdrop-blur-md">
+      {/* Channel sub-header — desktop only (mobile uses DashboardTopBar) */}
+      <div className="hidden md:flex items-center justify-between shrink-0 px-5 py-3 border-b border-slate-200/60 bg-white/60 backdrop-blur-md">
         <div className="flex items-center gap-3 min-w-0">
           <motion.span
             initial={{ scale: 0.8 }}
@@ -662,40 +771,33 @@ function ChatView({
             )}
           </div>
         </div>
-
         <div className="flex items-center gap-2">
+          {/* Availability toggle */}
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onAiOpen}
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-500 hover:text-teal-600 hover:bg-teal-50/60 transition-all"
-            title="AI Copilot"
+            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+            onClick={onAvailabilityToggle}
+            title={isAvailable ? 'You are Available — click to set Busy' : 'You are Busy — click to set Available'}
+            className={`flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-bold transition-all border ${
+              isAvailable
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+            }`}
           >
+            <span className={`h-1.5 w-1.5 rounded-full ${isAvailable ? 'bg-emerald-500' : 'bg-red-500'}`} />
+            {isAvailable ? 'Available' : 'Busy'}
+          </motion.button>
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={onAiOpen}
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-500 hover:text-teal-600 hover:bg-teal-50/60 transition-all" title="AI Copilot">
             <Bot size={16} />
           </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-800 transition-all"
-          >
-            <Users size={13} />
-            {members.length}
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+            className="flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-800 transition-all">
+            <Users size={13} />{members.length}
           </motion.button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1 scrollbar-light">
-        <div className="flex items-center gap-3 my-6">
-          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200/80 to-transparent" />
-          <motion.span
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]"
-          >
-            {firstMessageDate}
-          </motion.span>
-          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200/80 to-transparent" />
-        </div>
+      <div className="flex-1 overflow-y-auto px-3 md:px-4 py-3 space-y-1 scrollbar-light bg-slate-50 md:bg-transparent">
 
         {messages.map((msg, idx) => {
           const prev = messages[idx - 1];
@@ -705,33 +807,49 @@ function ChatView({
           const isBookmarked = bookmarkedMessageIds.includes(msg.id);
           const isInstantMeet = msg.id?.startsWith('meeting-started-');
           const instantMeetLink = isInstantMeet ? msg.text?.match(/\[Click here to join the meeting\]\(([^)]+)\)/)?.[1] : undefined;
+          const showDateSep = !prev || !isSameDay(prev.timestamp, msg.timestamp);
 
           return (
+            <React.Fragment key={msg.id}>
+            {showDateSep && (
+              <div className="flex items-center gap-3 my-4 select-none">
+                <div className="flex-1 h-px bg-slate-200/70" />
+                <span className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-0.5 text-[10px] font-bold text-slate-400 shadow-sm">
+                  {formatDateLabel(msg.timestamp)}
+                </span>
+                <div className="flex-1 h-px bg-slate-200/70" />
+              </div>
+            )}
             <motion.div
-              key={msg.id}
               id={`msg-${msg.id}`}
               initial={{ opacity: 0, y: 8, scale: 0.99 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className={`group flex gap-2.5 ${isOwn ? 'flex-row-reverse' : ''} ${isFirst ? 'mt-5' : 'mt-0.5'}`}
+              className={`group flex gap-2.5 ${isOwn ? 'flex-row-reverse' : ''} ${isFirst && !showDateSep ? 'mt-5' : 'mt-0.5'}`}
             >
               {!isOwn && (
                 <div className="shrink-0 pt-1">
                   {isFirst ? (() => {
-                    const senderMember = members.find(m => m.name === msg.sender);
+                    const senderMember = members.find((m: any) => m.name === msg.sender);
                     const avatarUrl = senderMember?.avatarUrl;
+                    const avail = senderMember?.isAvailable;
                     return (
-                      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
-                        className="h-8 w-8 rounded-full overflow-hidden shadow-lg shrink-0">
-                        {avatarUrl ? (
-                          <img src={avatarUrl} alt={msg.sender} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[11px] font-bold text-white"
-                            style={{ background: msg.color ?? 'linear-gradient(135deg, #FF6B7F, #FF4770)' }}>
-                            {msg.initials}
-                          </div>
+                      <div className="relative">
+                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+                          className="h-8 w-8 rounded-full overflow-hidden shadow-lg shrink-0">
+                          {avatarUrl ? (
+                            <img src={avatarUrl} alt={msg.sender} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-[11px] font-bold text-white"
+                              style={{ background: msg.color ?? 'linear-gradient(135deg, #FF6B7F, #FF4770)' }}>
+                              {msg.initials}
+                            </div>
+                          )}
+                        </motion.div>
+                        {avail !== undefined && (
+                          <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${avail ? 'bg-emerald-500' : 'bg-slate-400'}`} title={avail ? 'Available' : 'Busy'} />
                         )}
-                      </motion.div>
+                      </div>
                     );
                   })() : (
                     <div className="h-8 w-8" />
@@ -739,7 +857,7 @@ function ChatView({
                 </div>
               )}
 
-              <div className={`flex flex-col max-w-[75%] ${isOwn ? 'items-end' : 'items-start'}`}>
+              <div className={`flex flex-col max-w-[85%] md:max-w-[75%] ${isOwn ? 'items-end' : 'items-start'}`}>
                 {isFirst && !isOwn && (
                   <span className="mb-1 ml-1 text-xs font-bold text-slate-600">
                     {msg.sender}
@@ -935,26 +1053,26 @@ function ChatView({
                 </div>
               </div>
             </motion.div>
+            </React.Fragment>
           );
         })}
         <div ref={chatBottomRef} />
       </div>
 
-      <div className="shrink-0 px-4 pb-4 pt-2 bg-gradient-to-t from-slate-100/90 via-slate-50/30 to-transparent">
-        <div className="relative group">
+      <div className="shrink-0 px-3 pb-3 pt-2 md:px-4 md:pb-4 bg-white border-t border-slate-100">
+        <div className="relative">
           {/* @mention autocomplete */}
           <AnimatePresence>
             {mentionOpen && mentionFiltered.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
                 transition={{ duration: 0.12 }}
-                className="absolute bottom-full left-4 mb-2 z-30 rounded-xl overflow-hidden shadow-xl border border-slate-200 bg-white/95 backdrop-blur-xl"
-                style={{ minWidth: 200 }}
+                className="absolute bottom-full left-0 mb-2 z-30 rounded-xl overflow-hidden shadow-xl border border-slate-200 bg-white w-56"
               >
                 {mentionFiltered.map(m => (
                   <button key={m.id} type="button" onMouseDown={() => insertMention(m.name)}
-                    className="flex items-center gap-2.5 w-full px-3 py-2 text-left hover:bg-teal-50/60 transition-colors">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white shrink-0"
+                    className="flex items-center gap-2.5 w-full px-3 py-2.5 text-left hover:bg-teal-50 transition-colors border-b border-slate-50 last:border-0">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white shrink-0"
                       style={{ background: m.color ?? '#6366f1' }}>{m.initials}</span>
                     <div>
                       <div className="text-xs font-bold text-slate-800">{m.name}</div>
@@ -965,48 +1083,66 @@ function ChatView({
               </motion.div>
             )}
           </AnimatePresence>
-          <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-teal-400 to-teal-500 opacity-0 group-focus-within:opacity-15 blur-sm transition-all duration-500" />
-          <div className="relative rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 group-focus-within:border-teal-400/60 group-focus-within:shadow-teal-50">
-            <textarea
-              ref={composerRef}
-              value={composerMessage}
-              onChange={handleComposerChange}
-              onKeyDown={handleKeyDown}
-              placeholder={`Message #${channel?.name ?? 'general'}... (type @ to mention)`}
-              className="w-full resize-none bg-transparent px-4 py-3.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none"
-              rows={1}
-              style={{ maxHeight: '120px', overflowY: 'auto' }}
-            />
-            <div className="flex items-center justify-between px-3 pb-2.5">
-              <div className="flex items-center gap-1">
+
+          {/* Mobile: single-row compact composer */}
+          <div className="flex md:hidden items-center gap-2">
+            <div className="flex-1 flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 focus-within:border-teal-400 focus-within:bg-white transition-all">
+              <textarea
+                ref={composerRef}
+                value={composerMessage}
+                onChange={handleComposerChange}
+                onKeyDown={handleKeyDown}
+                placeholder={`Message #${channel?.name ?? 'general'}…`}
+                className="flex-1 resize-none bg-transparent text-[15px] text-slate-800 placeholder-slate-400 focus:outline-none leading-tight"
+                rows={1}
+                style={{ maxHeight: 80, overflowY: 'auto' }}
+              />
+            </div>
+            <motion.button
+              animate={sendBounce ? { scale: [1, 1.2, 0.9, 1] } : {}}
+              transition={sendBounce ? { duration: 0.3 } : {}}
+              onClick={onSend}
+              disabled={!composerMessage.trim()}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-500 text-white disabled:opacity-30 shadow-md shadow-teal-500/25 active:scale-95 transition-all"
+            >
+              <Send size={15} />
+            </motion.button>
+          </div>
+
+          {/* Desktop: full composer with toolbar */}
+          <div className="hidden md:block relative group">
+            <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-teal-400 to-teal-500 opacity-0 group-focus-within:opacity-15 blur-sm transition-all duration-500" />
+            <div className="relative rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 group-focus-within:border-teal-400/60">
+              <textarea
+                value={composerMessage}
+                onChange={handleComposerChange}
+                onKeyDown={handleKeyDown}
+                placeholder={`Message #${channel?.name ?? 'general'}... (type @ to mention)`}
+                className="w-full resize-none bg-transparent px-4 py-3.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none"
+                rows={1}
+                style={{ maxHeight: '120px', overflowY: 'auto' }}
+              />
+              <div className="flex items-center justify-between px-3 pb-2.5">
+                <div className="flex items-center gap-1">
+                  <button className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all" title="Emoji">
+                    <Smile size={16} />
+                  </button>
+                  <button className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all" title="Attach">
+                    <Paperclip size={16} />
+                  </button>
+                </div>
                 <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
-                  title="Emoji"
+                  whileHover={composerMessage.trim() ? { scale: 1.05 } : {}}
+                  whileTap={composerMessage.trim() ? { scale: 0.95 } : {}}
+                  animate={sendBounce ? { scale: [1, 1.2, 0.9, 1] } : {}}
+                  transition={sendBounce ? { duration: 0.4 } : {}}
+                  onClick={onSend}
+                  disabled={!composerMessage.trim()}
+                  className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-md shadow-teal-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  <Smile size={16} />
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
-                  title="Attach"
-                >
-                  <Paperclip size={16} />
+                  <Send size={14} />
                 </motion.button>
               </div>
-              <motion.button
-                whileHover={composerMessage.trim() ? { scale: 1.05 } : {}}
-                whileTap={composerMessage.trim() ? { scale: 0.95 } : {}}
-                animate={sendBounce ? { scale: [1, 1.2, 0.9, 1] } : {}}
-                transition={sendBounce ? { duration: 0.4 } : {}}
-                onClick={onSend}
-                disabled={!composerMessage.trim()}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-md shadow-teal-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              >
-                <Send size={14} />
-              </motion.button>
             </div>
           </div>
         </div>
