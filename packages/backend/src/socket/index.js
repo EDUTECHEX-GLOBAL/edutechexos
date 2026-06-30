@@ -67,15 +67,17 @@ function createSocketServer(httpServer) {
       io.emit('meeting_started', { link, channelName, starter, starterInitials, starterColor });
     });
 
-    // Relay status/name change so every connected client updates in real-time
-    socket.on('user_status_update', ({ email, status, name }) => {
-      if (!email) return;
-      socket.broadcast.emit('user_status_update', { email, status, name });
+    // Relay status/name change so every connected client updates in real-time.
+    // The email is taken from the authenticated socket — never the payload — so
+    // a user cannot change another user's status, name, or persisted settings.
+    socket.on('user_status_update', ({ status, name }) => {
+      if (!userEmail) return;
+      socket.broadcast.emit('user_status_update', { email: userEmail, status, name });
       // Persist to MongoDB so status survives page reload
       const updateFields = { status };
       if (name) updateFields.displayName = name;
       UserSettings.findOneAndUpdate(
-        { email: email.toLowerCase() },
+        { email: userEmail },
         { $set: updateFields },
         { upsert: true, new: false }
       ).lean().catch(() => {});
@@ -87,12 +89,13 @@ function createSocketServer(httpServer) {
       socket.broadcast.emit('leave_status_update', { email, onLeave });
     });
 
-    // Relay availability toggle so everyone sees availability status in real-time
-    socket.on('user_availability', ({ email, isAvailable }) => {
-      if (!email) return;
-      socket.broadcast.emit('user_availability', { email, isAvailable });
+    // Relay availability toggle so everyone sees availability status in real-time.
+    // Identity comes from the authenticated socket, not the client payload.
+    socket.on('user_availability', ({ isAvailable }) => {
+      if (!userEmail) return;
+      socket.broadcast.emit('user_availability', { email: userEmail, isAvailable });
       UserSettings.findOneAndUpdate(
-        { email: email.toLowerCase() },
+        { email: userEmail },
         { $set: { available: !!isAvailable } },
         { upsert: true, new: false }
       ).lean().catch(() => {});

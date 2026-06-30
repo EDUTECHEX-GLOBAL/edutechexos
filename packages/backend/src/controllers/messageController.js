@@ -104,7 +104,10 @@ async function postMessage(req, res) {
   try {
     const { id, ...messageData } = req.body;
     const userEmail = getUserEmail(req);
-    if (userEmail && !messageData.senderEmail) {
+    // Identity is authoritative from the verified JWT — never trust a
+    // client-supplied senderEmail (prevents posting as / deleting as another
+    // user, since senderEmail drives the edit/delete ownership checks).
+    if (userEmail) {
       messageData.senderEmail = userEmail;
     }
 
@@ -162,6 +165,16 @@ async function deleteMessage(req, res) {
       return res.json({ success: true, deleted: 'for-me' });
     }
 
+    // "Delete for everyone" is restricted to the message author or an admin.
+    const target = await Message.findById(id).select('senderEmail').lean();
+    if (!target) {
+      return res.status(404).json({ success: false, error: 'Message not found' });
+    }
+    const owns = target.senderEmail && target.senderEmail.toLowerCase() === userEmail;
+    if (!owns && req.user?.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'You can only delete your own messages for everyone.' });
+    }
+
     const updated = await Message.findByIdAndUpdate(
       id,
       { deletedAt: new Date(), deletedForEveryone: true, deletedBy: userEmail },
@@ -183,6 +196,22 @@ async function patchMessage(req, res) {
   try {
     const { id } = req.params;
     const { text, editedAt, reactions, poll } = req.body;
+    const requester = req.user?.email?.toLowerCase();
+    const isAdmin = req.user?.role === 'Admin';
+
+    // Editing the text is restricted to the author (or an admin). Reactions and
+    // poll votes are collaborative and may be updated by any authenticated user.
+    if (text !== undefined) {
+      const existing = await Message.findById(id).select('senderEmail').lean();
+      if (!existing) {
+        return res.status(404).json({ success: false, error: 'Message not found' });
+      }
+      const owns = existing.senderEmail && existing.senderEmail.toLowerCase() === requester;
+      if (!owns && !isAdmin) {
+        return res.status(403).json({ success: false, error: 'You can only edit your own messages.' });
+      }
+    }
+
     const updates = {};
     const plainText = text;
     if (text     !== undefined) updates.text     = encryptField(text);
@@ -271,18 +300,53 @@ async function search(req, res) {
   }
 }
 
+function isPrivateIPv4(a, b) {
+  if (a === 127) return true;                       // loopback
+  if (a === 10) return true;                        // private
+  if (a === 172 && b >= 16 && b <= 31) return true; // private
+  if (a === 192 && b === 168) return true;          // private
+  if (a === 169 && b === 254) return true;          // link-local / cloud metadata
+  if (a === 0) return true;                         // "this" network
+  return false;
+}
+
 function isPrivateUrl(rawUrl) {
   try {
     const u = new URL(rawUrl);
     if (!['http:', 'https:'].includes(u.protocol)) return true;
-    const host = u.hostname.toLowerCase();
-    if (host === 'localhost' || host === '0.0.0.0' || host === '::1') return true;
-    const parts = host.split('.').map(Number);
-    if (parts[0] === 127) return true;
-    if (parts[0] === 10) return true;
-    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
-    if (parts[0] === 192 && parts[1] === 168) return true;
-    if (parts[0] === 169 && parts[1] === 254) return true;
+    const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+
+    // Block obvious internal names and IPv6 loopback/private (fc00::/7, fe80::/10)
+    if (host === 'localhost' || host === '0.0.0.0' || host === '::1' || host === '::') return true;
+    if (host.endsWith('.localhost') || host.endsWith('.internal') || host.endsWith('.local')) return true;
+    if (host.includes(':')) {
+      // IPv6 literal — block unique-local (fc/fd) and link-local (fe8-feb)
+      if (/^f[cd]/.test(host) || /^fe[89ab]/.test(host)) return true;
+      return false;
+    }
+
+    // Single-token numeric hosts (decimal/hex/octal IPv4 encodings, e.g. 2130706433, 0x7f000001)
+    if (/^(0x[0-9a-f]+|\d+)$/i.test(host)) {
+      const n = host.startsWith('0x') ? parseInt(host, 16) : parseInt(host, 10);
+      if (Number.isFinite(n)) {
+        const a = (n >>> 24) & 0xff;
+        const b = (n >>> 16) & 0xff;
+        if (isPrivateIPv4(a, b)) return true;
+      }
+      return true; // numeric host that doesn't decode cleanly — reject to be safe
+    }
+
+    // Dotted IPv4 — parse each octet honouring hex (0x..) and octal (0..) notation
+    if (/^[0-9a-fx.]+$/i.test(host) && host.includes('.')) {
+      const octets = host.split('.').map((p) => {
+        if (/^0x[0-9a-f]+$/i.test(p)) return parseInt(p, 16);
+        if (/^0[0-7]+$/.test(p)) return parseInt(p, 8);
+        return parseInt(p, 10);
+      });
+      if (octets.every((o) => Number.isFinite(o))) {
+        if (isPrivateIPv4(octets[0], octets[1])) return true;
+      }
+    }
     return false;
   } catch { return true; }
 }

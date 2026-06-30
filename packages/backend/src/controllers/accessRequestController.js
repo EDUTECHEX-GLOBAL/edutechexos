@@ -6,7 +6,12 @@ const { RemovedMember } = require('../models/index');
 
 async function submitRequest(req, res) {
   try {
-    const { name, email, role } = req.body;
+    const { name, email } = req.body;
+    // Never trust a self-submitted role: a signup must not be able to request
+    // "Admin" (which would become live the moment an admin clicks Approve).
+    // Admin promotion is a separate, deliberate admin-only action.
+    const requestedRole = String(req.body.role || 'Member');
+    const role = requestedRole.toLowerCase() === 'admin' ? 'Member' : requestedRole;
     const emailClean = String(email).trim().toLowerCase();
 
     const ALLOWED_DOMAINS = ['edutechex.in', 'edutechex.com'];

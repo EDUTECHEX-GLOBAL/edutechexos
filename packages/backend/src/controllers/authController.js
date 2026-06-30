@@ -150,14 +150,26 @@ async function resetPassword(req, res) {
     }
     const emailClean = String(email).trim().toLowerCase();
 
-    const resetCode = await ResetCode.findOne({ email: emailClean, code: String(code), used: false }).lean();
-    if (!resetCode) {
+    // Fetch the active code for this email (not by code) so we can rate-limit
+    // wrong guesses and prevent brute-forcing the 6-digit code.
+    const MAX_ATTEMPTS = 5;
+    const active = await ResetCode.findOne({ email: emailClean, used: false }).sort({ expiresAt: -1 });
+    if (!active) {
       return res.status(400).json({ success: false, error: 'Invalid or expired reset code.' });
     }
-    if (new Date(resetCode.expiresAt) < new Date()) {
-      await ResetCode.findByIdAndDelete(resetCode._id);
+    if (new Date(active.expiresAt) < new Date()) {
+      await ResetCode.findByIdAndDelete(active._id);
       return res.status(400).json({ success: false, error: 'Reset code has expired. Please request a new one.' });
     }
+    if ((active.attempts || 0) >= MAX_ATTEMPTS) {
+      await ResetCode.findByIdAndDelete(active._id);
+      return res.status(429).json({ success: false, error: 'Too many incorrect attempts. Please request a new reset code.' });
+    }
+    if (active.code !== String(code)) {
+      await ResetCode.findByIdAndUpdate(active._id, { $inc: { attempts: 1 } });
+      return res.status(400).json({ success: false, error: 'Invalid or expired reset code.' });
+    }
+    const resetCode = active;
     if (newPassword.length < 8) {
       return res.status(400).json({ success: false, error: 'Password must be at least 8 characters.' });
     }

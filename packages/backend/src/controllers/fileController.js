@@ -62,12 +62,22 @@ async function serveFile(req, res) {
     if (!files.length) return res.status(404).send('File not found');
 
     const file = files[0];
+    const storedType = (file.contentType || 'application/octet-stream').toLowerCase();
+
+    // Only let safe media render inline in the browser. Anything else (HTML,
+    // SVG, scripts, etc.) is forced to download to prevent stored-XSS / phishing
+    // when the file is served from the API origin.
+    const inlineSafe = /^(image\/(png|jpe?g|gif|webp|bmp|x-icon)|application\/pdf|video\/|audio\/)/.test(storedType)
+      && storedType !== 'image/svg+xml';
+    const disposition = inlineSafe ? 'inline' : 'attachment';
+
     res.set('Content-Type', file.contentType || 'application/octet-stream');
     res.set('Content-Length', String(file.length));
     res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.set('X-Content-Type-Options', 'nosniff');
     res.set(
       'Content-Disposition',
-      `inline; filename="${encodeURIComponent(file.filename || 'file')}"`
+      `${disposition}; filename="${encodeURIComponent(file.filename || 'file')}"`
     );
 
     const dl = bucket.openDownloadStream(objectId);
