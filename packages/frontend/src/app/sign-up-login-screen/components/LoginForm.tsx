@@ -45,6 +45,7 @@ export default function LoginForm({
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [connectingMsg, setConnectingMsg] = useState('');
 
   // ── Forgot-password modal state ────────────────────────────────────────────
   const lastForgotRef = useRef<number>(0);
@@ -183,34 +184,48 @@ export default function LoginForm({
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
+    setConnectingMsg('');
     await new Promise((r) => setTimeout(r, 500));
 
     const emailClean = data.email.trim().toLowerCase();
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailClean, password: data.password, mode: authMode }),
-      });
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 15000;
 
-      const result = await res.json();
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailClean, password: data.password, mode: authMode }),
+        });
 
-      if (!result.success) {
-        setIsLoading(false);
-        if (result.error === 'pending') {
-          setError('password', { message: 'Your request is waiting for admin approval.' });
-        } else if (result.error === 'rejected') {
-          setError('password', { message: 'Your access request was declined. Contact admin.' });
-        } else {
-          setError('password', { message: result.message ?? 'Invalid credentials.' });
+        setConnectingMsg('');
+        const result = await res.json();
+
+        if (!result.success) {
+          setIsLoading(false);
+          if (result.error === 'pending') {
+            setError('password', { message: 'Your request is waiting for admin approval.' });
+          } else if (result.error === 'rejected') {
+            setError('password', { message: 'Your access request was declined. Contact admin.' });
+          } else {
+            setError('password', { message: result.message ?? 'Invalid credentials.' });
+          }
+          return;
         }
-        return;
-      }
 
-      await finishLogin(result.user, result.token);
-    } catch {
-      setIsLoading(false);
-      setError('password', { message: 'Unable to reach the server. Please check your connection and try again.' });
+        await finishLogin(result.user, result.token);
+        return;
+      } catch {
+        if (attempt < MAX_RETRIES) {
+          setConnectingMsg(`Server is starting up, retrying… (${attempt}/${MAX_RETRIES - 1})`);
+          await new Promise((r) => setTimeout(r, RETRY_DELAY));
+        } else {
+          setIsLoading(false);
+          setConnectingMsg('');
+          setError('password', { message: 'Server is unreachable. Please try again in a moment.' });
+        }
+      }
     }
   };
 
@@ -323,7 +338,7 @@ export default function LoginForm({
               {isLoading ? (
                 <>
                   <Loader2 size={15} className="animate-spin" />
-                  Authenticating...
+                  {connectingMsg || 'Authenticating...'}
                 </>
               ) : (
                 <>
