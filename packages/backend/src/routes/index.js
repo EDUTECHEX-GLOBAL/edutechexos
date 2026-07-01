@@ -38,6 +38,9 @@ router.get('/api/login-status', globalLimiter, authMiddleware, requireAuth, getL
 router.post('/webhook/github/:token', express.json({ type: '*/*' }), githubReceiver);
 router.post('/webhook/incoming/:token', express.json({ type: '*/*' }), genericReceiver);
 
+// ── Health check (no auth — used to pre-warm Render cold starts) ───────────
+router.get('/api/health', (req, res) => res.json({ ok: true }));
+
 // ── Internal email relay (used by Next.js server actions) ──────────────────
 const { sendBrevoEmail } = require('../services/emailService');
 router.post('/api/internal/send-email', express.json(), async (req, res) => {

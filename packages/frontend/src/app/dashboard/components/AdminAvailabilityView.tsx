@@ -57,13 +57,28 @@ export default function AdminAvailabilityView({ onClose }: Props) {
   const [tab, setTab]               = useState<Tab>('calendar');
 
   // Request flow
-  const [requestSlot, setRequestSlot] = useState<Slot | null>(null);
-  const [requestDate, setRequestDate] = useState<string>('');
-  const [requestTimeEnd, setRequestTimeEnd] = useState('');
-  const [purpose, setPurpose]         = useState('');
-  const [submitting, setSubmitting]   = useState(false);
+  const [showForm, setShowForm]           = useState(false);
+  const [requestDate, setRequestDate]     = useState<string>('');
+  const [requestStartTime, setRequestStartTime] = useState('10:00');
+  const [requestTimeEnd, setRequestTimeEnd]     = useState('11:00');
+  const [purpose, setPurpose]             = useState('');
+  const [submitting, setSubmitting]       = useState(false);
+  const [requestAdminEmail, setRequestAdminEmail] = useState('');
 
   const monthKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
+
+  // 30-minute time slots from 08:00 to 20:00
+  const TIME_OPTIONS: string[] = [];
+  for (let h = 8; h <= 20; h++) {
+    TIME_OPTIONS.push(`${String(h).padStart(2, '0')}:00`);
+    if (h < 20) TIME_OPTIONS.push(`${String(h).padStart(2, '0')}:30`);
+  }
+
+  // Pick admin email from loaded records; fall back to empty string
+  const adminEmailFromRecords = useMemo(() => {
+    const rec = Object.values(records)[0];
+    return (rec as DayRecord & { adminEmail?: string })?.adminEmail ?? '';
+  }, [records]);
 
   const loadMonth = useCallback(async () => {
     const token = getToken();
@@ -115,20 +130,34 @@ export default function AdminAvailabilityView({ onClose }: Props) {
     return opts;
   }
 
+  function openForm(date = '', startTime = '10:00', adminEmail = '') {
+    setRequestDate(date || todayStr);
+    setRequestStartTime(startTime);
+    setRequestTimeEnd(computeEndOptions(startTime)[1] ?? computeEndOptions(startTime)[0] ?? '11:00');
+    setRequestAdminEmail(adminEmail || adminEmailFromRecords);
+    setShowForm(true);
+  }
+
   async function sendRequest() {
-    if (!requestDate || !requestSlot) return;
+    if (!requestDate || !requestStartTime) return;
     setSubmitting(true);
     const token = getToken();
     try {
       const res  = await fetch(`${API_BASE}/api/meeting-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}` },
-        body: JSON.stringify({ date: requestDate, time: requestSlot.time, timeEnd: requestTimeEnd || undefined, purpose }),
+        body: JSON.stringify({
+          date: requestDate,
+          time: requestStartTime,
+          timeEnd: requestTimeEnd || undefined,
+          purpose,
+          adminEmail: requestAdminEmail || undefined,
+        }),
       });
       const data = await res.json();
       if (data.success) {
         toast.success('Request sent — admin will confirm shortly.');
-        setPurpose(''); setRequestSlot(null); setRequestDate(''); setRequestTimeEnd(''); setSelected(null);
+        setPurpose(''); setShowForm(false); setRequestDate(''); setRequestStartTime('10:00'); setRequestTimeEnd('11:00'); setSelected(null);
         loadMyRequests();
       } else toast.error(data.error ?? 'Failed to send request.');
     } catch { toast.error('Network error.'); }
@@ -171,9 +200,9 @@ export default function AdminAvailabilityView({ onClose }: Props) {
     return result.slice(0, 5);
   }, [records, todayStr]);
 
-  const selectedSlots   = selected ? (records[selected]?.slots ?? []) : [];
-  const availableInDay  = selectedSlots.filter((s) => s.status === 'available');
-  const pendingCount    = myRequests.filter((r) => r.status === 'pending').length;
+  const selectedSlots  = selected ? (records[selected]?.slots ?? []) : [];
+  const availableInDay = selectedSlots.filter((s) => s.status === 'available');
+  const pendingCount   = myRequests.filter((r) => r.status === 'pending').length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
@@ -237,7 +266,7 @@ export default function AdminAvailabilityView({ onClose }: Props) {
                   <div className="flex flex-wrap gap-2">
                     {upcomingSlots.map(({ date, slot }, i) => (
                       <button key={i}
-                        onClick={() => { setRequestDate(date); setRequestSlot(slot); setSelected(date); }}
+                        onClick={() => { setSelected(date); openForm(date, slot.time, records[date]?.adminEmail ?? ''); }}
                         className="flex items-center gap-2 bg-white border border-emerald-200 rounded-lg px-3 py-2 text-xs hover:border-[#3E4A89] hover:shadow-sm transition-all group">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                         <span className="font-semibold text-[#1E2636]">
@@ -321,7 +350,7 @@ export default function AdminAvailabilityView({ onClose }: Props) {
                     <h4 className="font-semibold text-[#1E2636] text-sm">
                       {fmt(selected, { weekday: 'long', month: 'long', day: 'numeric' })}
                     </h4>
-                    {availableInDay.length > 0 && !requestSlot && (
+                    {availableInDay.length > 0 && !showForm && (
                       <span className="text-xs text-emerald-600 font-medium">{availableInDay.length} slot{availableInDay.length > 1 ? 's' : ''} open</span>
                     )}
                   </div>
@@ -347,7 +376,7 @@ export default function AdminAvailabilityView({ onClose }: Props) {
                           </div>
                           {slot.status === 'available' && (
                             <button
-                              onClick={() => { setRequestDate(selected); setRequestSlot(slot); }}
+                              onClick={() => openForm(selected, slot.time, records[selected]?.adminEmail ?? '')}
                               className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#3E4A89] text-white hover:bg-[#2A3568] transition-colors"
                             >
                               Request
@@ -360,45 +389,66 @@ export default function AdminAvailabilityView({ onClose }: Props) {
                 </div>
               )}
 
-              {/* Request meeting form */}
-              {requestSlot && requestDate && (
+              {/* Request meeting — always accessible */}
+              {!showForm ? (
+                <button
+                  onClick={() => openForm(selected ?? todayStr)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-[#C5CAE0] text-[#3E4A89] text-sm font-semibold hover:border-[#3E4A89] hover:bg-[#F0F2FF] transition-all"
+                >
+                  <Send size={13} /> Request a Meeting
+                </button>
+              ) : (
                 <div className="border border-[#3E4A89]/20 rounded-xl p-4 bg-[#F8F9FF] space-y-3">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-[#1E2636] text-sm">Request a Meeting</p>
-                      <p className="text-xs text-[#9BA6D3] mt-0.5">
-                        {fmt(requestDate, { weekday: 'short', month: 'short', day: 'numeric' })} · {requestSlot.time}
-                        {requestSlot.label && ` · ${requestSlot.label}`}
-                      </p>
-                    </div>
-                    <button onClick={() => { setRequestSlot(null); setRequestDate(''); setRequestTimeEnd(''); setPurpose(''); }}
+                    <p className="font-semibold text-[#1E2636] text-sm">Request a Meeting</p>
+                    <button onClick={() => { setShowForm(false); setPurpose(''); }}
                       className="p-1 rounded hover:bg-[#E8EAF6]">
                       <X size={14} className="text-[#9BA6D3]" />
                     </button>
                   </div>
-                  {(() => {
-                    const endOpts = computeEndOptions(requestSlot.time);
-                    if (!requestTimeEnd && endOpts.length > 0 && endOpts[0]) {
-                      setTimeout(() => { if (!requestTimeEnd) setRequestTimeEnd(endOpts[0]); }, 0);
-                    }
-                    return null;
-                  })()}
+
+                  {/* Date */}
+                  <div>
+                    <label className="text-xs font-medium text-[#4A5578] mb-1 block">Date</label>
+                    <input
+                      type="date"
+                      value={requestDate}
+                      min={todayStr}
+                      onChange={(e) => setRequestDate(e.target.value)}
+                      className="w-full border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm text-[#1E2636] bg-white focus:outline-none focus:border-[#3E4A89]"
+                    />
+                  </div>
+
+                  {/* Time range */}
                   <div className="flex items-center gap-3">
                     <div className="flex-1">
-                      <label className="text-xs font-medium text-[#4A5578] mb-1 block">Start</label>
-                      <div className="border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm font-semibold text-[#1E2636] bg-white">
-                        {requestSlot.time}
-                      </div>
+                      <label className="text-xs font-medium text-[#4A5578] mb-1 block">Start Time</label>
+                      <select
+                        value={requestStartTime}
+                        onChange={(e) => {
+                          setRequestStartTime(e.target.value);
+                          const ends = computeEndOptions(e.target.value);
+                          setRequestTimeEnd(ends[1] ?? ends[0] ?? '');
+                        }}
+                        className="w-full border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm text-[#1E2636] bg-white focus:outline-none focus:border-[#3E4A89]"
+                      >
+                        {TIME_OPTIONS.map((t) => <option key={t}>{t}</option>)}
+                      </select>
                     </div>
                     <div className="flex items-center pt-5 text-[#9BA6D3]">→</div>
                     <div className="flex-1">
-                      <label className="text-xs font-medium text-[#4A5578] mb-1 block">End</label>
-                      <select value={requestTimeEnd} onChange={(e) => setRequestTimeEnd(e.target.value)}
-                        className="w-full border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm text-[#1E2636] bg-white focus:outline-none focus:border-[#3E4A89]">
-                        {computeEndOptions(requestSlot.time).map((t) => <option key={t}>{t}</option>)}
+                      <label className="text-xs font-medium text-[#4A5578] mb-1 block">End Time</label>
+                      <select
+                        value={requestTimeEnd}
+                        onChange={(e) => setRequestTimeEnd(e.target.value)}
+                        className="w-full border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm text-[#1E2636] bg-white focus:outline-none focus:border-[#3E4A89]"
+                      >
+                        {computeEndOptions(requestStartTime).map((t) => <option key={t}>{t}</option>)}
                       </select>
                     </div>
                   </div>
+
+                  {/* Purpose */}
                   <textarea
                     value={purpose}
                     onChange={(e) => setPurpose(e.target.value)}
@@ -406,7 +456,8 @@ export default function AdminAvailabilityView({ onClose }: Props) {
                     rows={3}
                     className="w-full border border-[#E8EAF6] rounded-xl px-4 py-3 text-sm text-[#1E2636] bg-white resize-none focus:outline-none focus:border-[#3E4A89] transition-colors"
                   />
-                  <button onClick={sendRequest} disabled={submitting}
+
+                  <button onClick={sendRequest} disabled={submitting || !requestDate}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#3E4A89] text-white text-sm font-semibold hover:bg-[#2A3568] disabled:opacity-60 transition-colors">
                     {submitting ? <Clock size={14} className="animate-spin" /> : <Send size={14} />}
                     {submitting ? 'Sending…' : 'Send Request'}

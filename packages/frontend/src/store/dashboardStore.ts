@@ -1107,7 +1107,7 @@ export const useDashboardStore = create<DashboardState>()(
             );
             const mergedMembers: Member[] = dbMembers.map((m) => {
               const prev = prevByEmail.get(m.email.toLowerCase());
-              return prev ? { ...m, onLeave: m.onLeave ?? prev.onLeave } : m;
+              return prev ? { ...m, onLeave: m.onLeave ?? false } : m;
             });
             // Build per-channel member lists honouring each member's channelIds assignment.
             // Admins/Managers get access to every channel; regular members only get the

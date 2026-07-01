@@ -226,18 +226,23 @@ async function createMeetingRequest(req, res) {
     if (parsedDate < new Date(new Date().toDateString())) {
       return res.status(400).json({ success: false, error: 'Meeting date cannot be in the past.' });
     }
+    // Resolve admin email: use what the client sent, fall back to first Admin in VALID_ACCOUNTS
+    const resolvedAdminEmail =
+      adminEmail ||
+      VALID_ACCOUNTS.find((a) => a.role === 'Admin')?.email ||
+      'admin@edutechex.in';
     const timeDisplay = timeEnd ? `${time} – ${timeEnd}` : time;
     const mr = new MeetingRequest({
       userEmail: req.user.email,
       userName:  req.user.name,
-      adminEmail: adminEmail || 'admin@edutechex.in',
+      adminEmail: resolvedAdminEmail,
       date, time, timeEnd, purpose: purpose || '',
     });
     const saved = await mr.save();
 
     // Email admin
     sendBrevoEmail({
-      to: [{ email: adminEmail || 'admin@edutechex.in' }],
+      to: [{ email: resolvedAdminEmail }],
       subject: `EduTechExOS — Meeting request from ${req.user.name} on ${date} at ${timeDisplay}`,
       html: `
         <div style="font-family:Arial,sans-serif;max-width:520px;padding:24px;background:#FAF8F5;border-radius:10px;">

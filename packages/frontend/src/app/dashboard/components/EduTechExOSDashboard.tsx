@@ -739,10 +739,13 @@ export default function EduTechExOSDashboard() {
     loadPinnedMessages?.();
     loadWorkspaceChannels?.();
     useDashboardStore.getState().loadLocalMembers?.();
+    // Sockets already push new messages/wiki changes in real-time; this poll is
+    // just a periodic reconcile, so keep it infrequent to avoid hammering the
+    // backend (the rate limiter is per-IP and a whole team can share one IP).
     const interval = setInterval(() => {
       loadLocalMessages?.();
       loadLocalWikiPages?.();
-    }, 3000);
+    }, 15000);
     // Refresh members every 30 s so newly approved users appear without a hard reload
     const membersInterval = setInterval(() => {
       useDashboardStore.getState().loadLocalMembers?.();
@@ -1132,7 +1135,9 @@ export default function EduTechExOSDashboard() {
   useEffect(() => {
     if (!currentUserEmail) return;
     loadLocalNotifications?.(currentUserEmail);
-    const interval = setInterval(() => loadLocalNotifications?.(currentUserEmail), 5000);
+    // Mentions arrive in real-time via the socket; this poll is a fallback
+    // reconcile, so 30s is plenty and keeps per-IP request volume low.
+    const interval = setInterval(() => loadLocalNotifications?.(currentUserEmail), 30000);
     return () => clearInterval(interval);
   }, [currentUserEmail, loadLocalNotifications]);
 

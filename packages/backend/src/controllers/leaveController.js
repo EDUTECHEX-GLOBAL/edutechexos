@@ -152,8 +152,12 @@ async function reviewLeave(req, res) {
     const io = req.app.get('io');
     if (io) {
       io.emit('leave_updated', { leaveId: _id.toString(), email: rest.email, status, adminNote: rest.adminNote });
-      // Broadcast leave indicator so all users update the badge in real-time
-      io.emit('leave_status_update', { email: rest.email, onLeave: status === 'approved' });
+      // Only mark as on-leave today if the approved leave dates actually include today
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const leaveStart = String(rest.startDate || '').slice(0, 10);
+      const leaveEnd = String(rest.endDate || rest.startDate || '').slice(0, 10);
+      const onLeaveToday = status === 'approved' && leaveStart <= todayStr && todayStr <= leaveEnd;
+      io.emit('leave_status_update', { email: rest.email, onLeave: onLeaveToday });
     }
     const appUrl = process.env.APP_URL || 'https://edutechexos.vercel.app';
     const statusLabel = status === 'approved' ? 'Approved' : 'Rejected';

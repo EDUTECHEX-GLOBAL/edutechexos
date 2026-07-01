@@ -190,7 +190,7 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
         newTasks.forEach((t) => addKanbanTask({ text: t.text, assignee: t.assignee, assigneeInitials: t.assigneeInitials, sourceChannel: t.sourceChannel, status: 'todo' }));
         toast.success(`${newTasks.length} task${newTasks.length !== 1 ? 's' : ''} extracted`);
       } else {
-        toast.error('Could not parse tasks from AI response.');
+        toast.error((result as { error?: string }).error ?? 'Could not extract tasks. Try again.');
       }
     } catch { toast.error('Task extraction failed.'); }
   };

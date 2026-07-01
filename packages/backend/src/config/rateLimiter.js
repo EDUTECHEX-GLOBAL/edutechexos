@@ -28,21 +28,24 @@ function makeRateLimiter({ windowMs, max, message }) {
   return rateLimitMiddleware;
 }
 
+// NOTE: limits are per-IP. A whole team often shares one public IP (same
+// office/college NAT), so these are sized for many users behind one IP plus
+// cold-start login retries — not a single user.
 const authLimiter = makeRateLimiter({
   windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { error: 'Too many auth attempts. Please wait 15 minutes before trying again.' },
+  max: 60,
+  message: { error: 'Too many auth attempts. Please wait a few minutes before trying again.' },
 });
 
 const apiLimiter = makeRateLimiter({
   windowMs: 60 * 1000,
-  max: 120,
+  max: 300,
   message: { error: 'Too many requests. Please slow down.' },
 });
 
 const globalLimiter = makeRateLimiter({
   windowMs: 60 * 1000,
-  max: 300,
+  max: 1200,
   message: { error: 'Too many requests.' },
 });
 

@@ -456,9 +456,10 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
       today = new Date(),
       yest = new Date(today);
     yest.setDate(today.getDate() - 1);
-    if (d.toDateString() === today.toDateString()) return 'Today';
-    if (d.toDateString() === yest.toDateString()) return 'Yesterday';
-    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    const weekday = d.toLocaleDateString('en-IN', { weekday: 'long' });
+    if (d.toDateString() === today.toDateString()) return `Today · ${weekday}`;
+    if (d.toDateString() === yest.toDateString()) return `Yesterday · ${weekday}`;
+    return d.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   };
 
   if (messages.length === 0) {
@@ -552,7 +553,7 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
               )}
 
               {/* Bubble column */}
-              <div className={`flex flex-col max-w-[72%] ${isOwn ? 'items-start' : 'items-end'}`}>
+              <div className={`flex flex-col max-w-[72%] min-w-0 ${isOwn ? 'items-start' : 'items-end'}`}>
                 {/* Sender name (only for first in group, receiver side) */}
                 {msg.isFirst && !isOwn && (
                   <span className="mb-1 mr-1 text-[14px] font-bold" style={{ color: msg.color }}>
@@ -629,7 +630,7 @@ export default function MessageFeed({ channelId, parentId }: MessageFeedProps) {
                     {/* Main bubble */}
                     {!msg.poll && (
                       <div
-                        className={`relative group/bubble rounded-2xl shadow-sm
+                        className={`relative group/bubble rounded-2xl shadow-sm break-words min-w-0 w-full
                         ${
                           isMeeting || isInstantMeet
                             ? `p-0 bg-transparent border-0 overflow-hidden ${isPinned ? 'ring-2 ring-amber-400' : ''}`

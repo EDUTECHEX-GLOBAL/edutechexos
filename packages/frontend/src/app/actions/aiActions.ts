@@ -106,9 +106,19 @@ export async function extractActionItems(messages: ChatMessage[]) {
       maxOutputTokens: 800,
     });
     const clean = text.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
-    const start = clean.indexOf('[');
-    const jsonStr = start >= 0 ? clean.slice(start) : clean;
-    const parsed = JSON.parse(jsonStr);
+    // Extract JSON — handle plain array OR object wrapper like {"tasks":[...]}
+    let jsonStr = clean;
+    const arrStart = clean.indexOf('[');
+    const objStart = clean.indexOf('{');
+    if (arrStart >= 0 && (objStart < 0 || arrStart <= objStart)) {
+      const arrEnd = clean.lastIndexOf(']');
+      jsonStr = arrEnd > arrStart ? clean.slice(arrStart, arrEnd + 1) : clean.slice(arrStart);
+    } else if (objStart >= 0) {
+      const objEnd = clean.lastIndexOf('}');
+      jsonStr = objEnd > objStart ? clean.slice(objStart, objEnd + 1) : clean.slice(objStart);
+    }
+    const raw = JSON.parse(jsonStr);
+    const parsed = Array.isArray(raw) ? raw : (Array.isArray(raw?.tasks) ? raw.tasks : []);
     if (!Array.isArray(parsed)) return { success: true, data: [] };
     const tasks = parsed
       .map((t: { text?: string; assignee?: string; assigneeInitials?: string }) => ({

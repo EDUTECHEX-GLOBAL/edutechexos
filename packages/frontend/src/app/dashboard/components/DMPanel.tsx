@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquareDot, Send, ArrowLeft, Search, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDashboardStore } from '@/store/dashboardStore';
+import { getSocket } from '@/lib/socket';
 
 function isSameDay(a: string, b: string) {
   const da = new Date(a), db = new Date(b);
@@ -49,6 +50,7 @@ export default function DMPanel({ currentUser, members }: Props) {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const activeChannelRef = useRef<DMChannel | null>(null);
   const { token, user } = getAuth();
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
   const myEmail = user?.email?.toLowerCase() ?? '';
@@ -57,6 +59,7 @@ export default function DMPanel({ currentUser, members }: Props) {
   function persistChannel(ch: DMChannel | null) {
     if (ch) sessionStorage.setItem(DM_LAST_CHANNEL_KEY, JSON.stringify(ch));
     else sessionStorage.removeItem(DM_LAST_CHANNEL_KEY);
+    activeChannelRef.current = ch;
     setActiveChannel(ch);
   }
 
@@ -70,12 +73,40 @@ export default function DMPanel({ currentUser, members }: Props) {
       try {
         const ch = JSON.parse(saved) as DMChannel;
         const found = dmChannels.find(c => c.id === ch.id);
-        if (found) setActiveChannel(found);
+        if (found) { activeChannelRef.current = found; setActiveChannel(found); }
       } catch { /* ignore */ }
     }
   }, [dmChannels]);
 
   useEffect(() => { if (activeChannel) loadMessages(activeChannel.id); }, [activeChannel?.id]);
+
+  // Join all DM rooms and listen for incoming messages in real-time
+  useEffect(() => {
+    const socket = getSocket();
+
+    const joinAll = () => {
+      dmChannels.forEach(ch => socket.emit('join_channel', ch.id));
+    };
+    joinAll();
+    socket.on('connect', joinAll);
+
+    const handleNewMessage = ({ channelId, message }: { channelId: string; message: DMMessage }) => {
+      const active = activeChannelRef.current;
+      if (!active || channelId !== active.id) return;
+      setMessages(prev => {
+        // drop optimistic duplicate
+        const filtered = prev.filter(m => !m.id.startsWith('opt-') || m.text !== message.text);
+        if (filtered.some(m => m.id === message.id)) return filtered;
+        return [...filtered, message];
+      });
+    };
+
+    socket.on('new_message', handleNewMessage);
+    return () => {
+      socket.off('connect', joinAll);
+      socket.off('new_message', handleNewMessage);
+    };
+  }, [dmChannels]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   async function loadDMChannels() {

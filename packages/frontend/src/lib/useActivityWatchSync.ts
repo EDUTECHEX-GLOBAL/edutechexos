@@ -276,15 +276,23 @@ export function useActivityWatchSync(active: boolean) {
           setStatus('connected');
         } else {
           setStatus('offline');
-          // Keep re-checking locally every 30s so it auto-connects if AW starts
-          checkTimer.current = setInterval(async () => {
+          // Re-check with exponential backoff so we don't spam the console when AW is offline.
+          // Starts at 30s, doubles each miss, caps at 10 minutes.
+          let backoff = CHECK_MS;
+          const scheduleNextCheck = () => {
             if (!isMounted.current) return;
-            const running = await isAWRunning();
-            if (running) {
-              if (checkTimer.current) { clearInterval(checkTimer.current); checkTimer.current = null; }
-              startBrowserSync();
-            }
-          }, CHECK_MS);
+            checkTimer.current = setTimeout(async () => {
+              if (!isMounted.current) return;
+              const running = await isAWRunning();
+              if (running) {
+                startBrowserSync();
+              } else {
+                backoff = Math.min(backoff * 2, 10 * 60 * 1000);
+                scheduleNextCheck();
+              }
+            }, backoff) as unknown as ReturnType<typeof setInterval>;
+          };
+          scheduleNextCheck();
         }
       }
 
