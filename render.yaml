@@ -2,6 +2,7 @@ services:
   - type: web
     name: edutechexos-backend
     env: node
+    plan: starter
     # Build and run from the backend sub-folder so its own package.json
     # (which lists express, cors, socket.io, etc. as *dependencies*, not devDependencies)
     # is used — avoids production builds skipping devDeps from the root.
