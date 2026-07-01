@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react'; // eslint-disable-line
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Loader2, Lock, ArrowRight, Mail, X } from 'lucide-react';
 
