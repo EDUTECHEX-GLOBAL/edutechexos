@@ -16,8 +16,10 @@ import {
 } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { toast } from 'sonner';
-import { getNoteAction, saveNoteAction } from '@/app/actions/dbActions';
-// Server actions for note persistence
+
+// Notes persist via the authenticated backend (identity comes from the JWT), so
+// a user can only ever read/write their OWN notes.
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 
 interface NotepadPanelProps {
   onClose: () => void;
@@ -38,6 +40,16 @@ function getCurrentUserEmail(): string {
     return raw ? (JSON.parse(raw).user?.email?.toLowerCase() ?? 'guest') : 'guest';
   } catch {
     return 'guest';
+  }
+}
+
+function getToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('edutechex_token');
+    return raw ? (JSON.parse(raw).token ?? null) : null;
+  } catch {
+    return null;
   }
 }
 
@@ -111,14 +123,21 @@ export default function NotepadPanel({ onClose, activeChannel }: NotepadPanelPro
 
   useEffect(() => {
     const loadNote = async () => {
-      const email = getCurrentUserEmail();
-      // Try fetching note from MongoDB (scoped to this user)
-      const dbNote = await getNoteAction(selectedPadId, email);
-      if (dbNote && dbNote.content) {
-        setNote(dbNote.content);
-      } else {
-        const local = localStorage.getItem(getNoteKey(selectedPadId)) || '';
-        setNote(local);
+      const token = getToken();
+      let loaded = false;
+      if (token) {
+        try {
+          const res = await fetch(`${API_BASE}/api/notes/${encodeURIComponent(selectedPadId)}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success) { setNote(data.content ?? ''); loaded = true; }
+          }
+        } catch { /* fall back to localStorage below */ }
+      }
+      if (!loaded) {
+        setNote(localStorage.getItem(getNoteKey(selectedPadId)) || '');
       }
       setSaveStatus('idle');
     };
@@ -134,10 +153,18 @@ export default function NotepadPanel({ onClose, activeChannel }: NotepadPanelPro
     setIsSaving(true);
     setSaveStatus('idle');
     const timer = setTimeout(async () => {
-      const email = getCurrentUserEmail();
       localStorage.setItem(getNoteKey(selectedPadId), note);
       localStorage.setItem(getTimestampKey(selectedPadId), String(Date.now()));
-      await saveNoteAction(selectedPadId, note, email);
+      const token = getToken();
+      if (token) {
+        try {
+          await fetch(`${API_BASE}/api/notes/${encodeURIComponent(selectedPadId)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ content: note }),
+          });
+        } catch { /* localStorage still holds it */ }
+      }
       setIsSaving(false);
       setSaveStatus('saved');
       setSavedPads(recomputeSavedPads());

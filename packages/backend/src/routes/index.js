@@ -30,6 +30,7 @@ router.use('/api/digest', globalLimiter, require('./digestRoutes'));
 router.use('/api/standup', globalLimiter, require('./standupRoutes'));
 router.use('/api/google-calendar', globalLimiter, require('./googleCalendarRoutes'));
 router.use('/api/deadlines', globalLimiter, require('./deadlineRoutes'));
+router.use('/api/notes', globalLimiter, require('./noteRoutes'));
 
 router.use('/api', globalLimiter, require('./meetingRoutes'));
 

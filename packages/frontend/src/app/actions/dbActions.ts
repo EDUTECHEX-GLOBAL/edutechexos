@@ -13,7 +13,6 @@ function esc(str: string): string {
 }
 import connectToDatabase from '../../lib/mongoose';
 import Message from '../models/Message';
-import Note from '../models/Note';
 import User from '../models/User';
 import { generateTempPassword, hashPassword } from '../lib/auth';
 
@@ -333,40 +332,10 @@ export async function sendBroadcastEmail(
   return sendBrevoEmail({ to: recipients, subject, htmlContent });
 }
 
-/**
- * Fetch a single note for a given channel and user.
- */
-export async function getNoteAction(channelId: string, userEmail?: string) {
-  try {
-    await ensureDbExists();
-    const query: Record<string, string> = { channelId };
-    if (userEmail) query.userEmail = userEmail.toLowerCase();
-    const note = await Note.findOne(query).lean();
-    if (!note) return null;
-    const { _id, __v, ...rest } = note;
-    return { ...rest, id: _id.toString() };
-  } catch (err) {
-    console.error('Failed to get note from MongoDB:', err);
-    return null;
-  }
-}
-
-/**
- * Fetch all notes across channels.
- */
-export async function getAllNotesAction() {
-  try {
-    await ensureDbExists();
-    const notes = await Note.find({}).lean();
-    return notes.map((n) => {
-      const { _id, __v, ...rest } = n;
-      return { ...rest, id: _id.toString() };
-    });
-  } catch (err) {
-    console.error('Failed to get all notes from MongoDB:', err);
-    return [];
-  }
-}
+// Note persistence moved to the authenticated backend (GET/PUT /api/notes/:channelId)
+// so a user can only read/write their own notes — see noteController.js. The old
+// getNoteAction/getAllNotesAction/saveNoteAction server actions were removed
+// because they trusted a client-supplied userEmail (IDOR).
 
 export async function changePassword(
   email: string,
@@ -394,20 +363,3 @@ export async function changePassword(
   }
 }
 
-export async function saveNoteAction(channelId: string, content: string, userEmail?: string) {
-  try {
-    await ensureDbExists();
-    const filter: Record<string, string> = { channelId };
-    if (userEmail) filter.userEmail = userEmail.toLowerCase();
-    const updated = await Note.findOneAndUpdate(
-      filter,
-      { content, updatedAt: new Date() },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    ).lean();
-    const { _id, __v, ...rest } = updated;
-    return { success: true, note: { ...rest, id: _id.toString() } };
-  } catch (err) {
-    console.error('Failed to save note to MongoDB:', err);
-    return { success: false, error: String(err) };
-  }
-}
