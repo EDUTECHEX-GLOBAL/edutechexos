@@ -1,4 +1,3 @@
-import { blobToDataUrl } from '@/lib/uploadToR2';
 import { uploadToMongo } from '@/lib/uploadToMongo';
 
 /**
@@ -17,4 +16,14 @@ export async function smartUpload(
   if (mongoUrl) return mongoUrl;
 
   return blobToDataUrl(file);
+}
+
+/** Converts a Blob to a base64 data URL — used as last-resort fallback */
+export function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }

@@ -1,8 +1,9 @@
 'use client';
 import React, { useState, useRef } from 'react';
-import { X, User, Lock, Camera, Check, Loader2, Eye, EyeOff, LogOut } from 'lucide-react';
+import { X, User, Lock, Camera, Check, Loader2, Eye, EyeOff, LogOut, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { bankSessionTime } from '@/lib/sessionTimer';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 
@@ -18,8 +19,26 @@ interface Props {
   onProfileUpdated?: (name: string, avatarUrl?: string) => void;
 }
 
+type NotifPrefs = {
+  emailNotifications: boolean;
+  emailOnMentions: boolean;
+  emailOnMeetings: boolean;
+  emailOnLeave: boolean;
+  emailOnDigest: boolean;
+};
+
+const DEFAULT_NOTIF_PREFS: NotifPrefs = {
+  emailNotifications: true,
+  emailOnMentions: true,
+  emailOnMeetings: true,
+  emailOnLeave: true,
+  emailOnDigest: true,
+};
+
 export default function ProfileModal({ open, onClose, currentUser, onProfileUpdated }: Props) {
-  const [tab, setTab] = useState<'profile' | 'security'>('profile');
+  const [tab, setTab] = useState<'profile' | 'security' | 'notifications'>('profile');
+  const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>(DEFAULT_NOTIF_PREFS);
+  const [notifLoaded, setNotifLoaded] = useState(false);
   const [name, setName] = useState(currentUser?.name ?? '');
   const [bio, setBio] = useState('');
   const [timezone, setTimezone] = useState('Asia/Kolkata');
@@ -91,6 +110,36 @@ export default function ProfileModal({ open, onClose, currentUser, onProfileUpda
     setChangingPw(false);
   }
 
+  React.useEffect(() => {
+    if (!open || notifLoaded) return;
+    fetch(`${API}/api/settings`, { headers })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.settings) {
+          const s = data.settings;
+          setNotifPrefs((prev) => ({
+            emailNotifications: s.emailNotifications ?? prev.emailNotifications,
+            emailOnMentions: s.emailOnMentions ?? prev.emailOnMentions,
+            emailOnMeetings: s.emailOnMeetings ?? prev.emailOnMeetings,
+            emailOnLeave: s.emailOnLeave ?? prev.emailOnLeave,
+            emailOnDigest: s.emailOnDigest ?? prev.emailOnDigest,
+          }));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setNotifLoaded(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  function toggleNotifPref(key: keyof NotifPrefs) {
+    const next = { ...notifPrefs, [key]: !notifPrefs[key] };
+    setNotifPrefs(next);
+    fetch(`${API}/api/settings`, {
+      method: 'PUT', headers,
+      body: JSON.stringify({ [key]: next[key] }),
+    }).catch(() => toast.error('Failed to save preference'));
+  }
+
   const initials = (name || currentUser?.name || '?').split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2);
 
   return (
@@ -114,11 +163,11 @@ export default function ProfileModal({ open, onClose, currentUser, onProfileUpda
 
         {/* Tabs */}
         <div className="flex gap-1 px-5 pt-4">
-          {(['profile', 'security'] as const).map(t => (
+          {(['profile', 'security', 'notifications'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${tab === t ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
-              {t === 'profile' ? <User size={11} /> : <Lock size={11} />}
-              {t === 'profile' ? 'Profile' : 'Security'}
+              {t === 'profile' ? <User size={11} /> : t === 'security' ? <Lock size={11} /> : <Bell size={11} />}
+              {t === 'profile' ? 'Profile' : t === 'security' ? 'Security' : 'Notifications'}
             </button>
           ))}
         </div>
@@ -189,10 +238,12 @@ export default function ProfileModal({ open, onClose, currentUser, onProfileUpda
                   } catch { /* ignore */ }
                   // Tell local aw-sync agent to stop syncing
                   fetch('http://localhost:7891/deactivate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
+                  // Clear the middleware's auth cookie — without this, /dashboard
+                  // stays reachable on this browser even after localStorage is wiped.
+                  fetch('/api/auth/session', { method: 'DELETE' }).catch(() => {});
+                  bankSessionTime();
                   localStorage.removeItem('edutechex_token');
                   localStorage.removeItem('edutechex_access_requests');
-                  localStorage.removeItem('edutechex_session_start');
-                  localStorage.removeItem('edutechex_lunch_pause_ms');
                   const { useDashboardStore } = await import('@/store/dashboardStore');
                   useDashboardStore.getState().resetUserState();
                   window.location.href = '/sign-up-login-screen';
@@ -227,8 +278,69 @@ export default function ProfileModal({ open, onClose, currentUser, onProfileUpda
               </button>
             </div>
           )}
+
+          {tab === 'notifications' && (
+            <div className="space-y-4">
+              <NotifToggle
+                label="Email Notifications"
+                description="Master switch — turn off to stop all email notifications."
+                checked={notifPrefs.emailNotifications}
+                onChange={() => toggleNotifPref('emailNotifications')}
+              />
+              <div className="h-px bg-slate-100" />
+              <NotifToggle
+                label="Mentions"
+                description="Email me when someone @mentions me in chat."
+                checked={notifPrefs.emailOnMentions}
+                disabled={!notifPrefs.emailNotifications}
+                onChange={() => toggleNotifPref('emailOnMentions')}
+              />
+              <NotifToggle
+                label="Meetings"
+                description="Meeting invites, cancellations, and requests."
+                checked={notifPrefs.emailOnMeetings}
+                disabled={!notifPrefs.emailNotifications}
+                onChange={() => toggleNotifPref('emailOnMeetings')}
+              />
+              <NotifToggle
+                label="Leave requests"
+                description="Leave approvals and rejections."
+                checked={notifPrefs.emailOnLeave}
+                disabled={!notifPrefs.emailNotifications}
+                onChange={() => toggleNotifPref('emailOnLeave')}
+              />
+              <NotifToggle
+                label="Daily digest"
+                description="Daily summary of team activity."
+                checked={notifPrefs.emailOnDigest}
+                disabled={!notifPrefs.emailNotifications}
+                onChange={() => toggleNotifPref('emailOnDigest')}
+              />
+            </div>
+          )}
         </div>
       </motion.div>
+    </div>
+  );
+}
+
+function NotifToggle({ label, description, checked, disabled, onChange }: {
+  label: string; description: string; checked: boolean; disabled?: boolean; onChange: () => void;
+}) {
+  return (
+    <div className={`flex items-start justify-between gap-3 ${disabled ? 'opacity-50' : ''}`}>
+      <div>
+        <p className="text-xs font-bold text-slate-800">{label}</p>
+        <p className="text-[11px] text-slate-500 mt-0.5">{description}</p>
+      </div>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onChange}
+        className={`relative shrink-0 w-9 h-5 rounded-full transition-colors ${checked ? 'bg-indigo-600' : 'bg-slate-300'} disabled:cursor-not-allowed`}
+      >
+        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${checked ? 'translate-x-4' : ''}`} />
+      </button>
     </div>
   );
 }

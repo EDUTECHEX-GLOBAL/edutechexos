@@ -28,6 +28,8 @@ router.use('/api/admin', globalLimiter, require('./adminRoutes'));
 router.use('/api/invite', globalLimiter, require('./inviteRoutes'));
 router.use('/api/digest', globalLimiter, require('./digestRoutes'));
 router.use('/api/standup', globalLimiter, require('./standupRoutes'));
+router.use('/api/google-calendar', globalLimiter, require('./googleCalendarRoutes'));
+router.use('/api/deadlines', globalLimiter, require('./deadlineRoutes'));
 
 router.use('/api', globalLimiter, require('./meetingRoutes'));
 
@@ -35,6 +37,8 @@ router.get('/api/search', apiLimiter, authMiddleware, requireAuth, search);
 router.get('/api/og', apiLimiter, authMiddleware, requireAuth, ogLinkPreview);
 router.get('/api/login-status', globalLimiter, authMiddleware, requireAuth, getLoginStatus);
 
+// GitHub signs the RAW request bytes. The global express.json (server.js) stashes
+// those exact bytes on req.rawBody via its verify hook, which githubReceiver HMACs.
 router.post('/webhook/github/:token', express.json({ type: '*/*' }), githubReceiver);
 router.post('/webhook/incoming/:token', express.json({ type: '*/*' }), genericReceiver);
 

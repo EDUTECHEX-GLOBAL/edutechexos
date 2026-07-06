@@ -8,6 +8,7 @@ const LoginEventSchema = new mongoose.Schema({
   hoursWorked: { type: Number, default: null },
   attendance:  { type: String, enum: ['full', 'half', 'absent', null], default: null },
   dateStr:     { type: String, required: true, index: true },
+  authMethod:  { type: String, enum: ['password', 'google', null], default: null },
 });
 LoginEventSchema.index({ email: 1, dateStr: 1 }, { unique: true });
 

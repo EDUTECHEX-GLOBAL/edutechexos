@@ -31,3 +31,19 @@ services:
         sync: false
       # Brevo SMTP credentials — transactional email (no IP allowlist on SMTP relay)
       # Get SMTP login + key from Brevo → Settings → SMTP & API
+      # Google Calendar auto-sync — from Google Cloud Console → APIs & Services → Credentials.
+      # Without these, /api/google-calendar/* returns "not configured" but nothing else breaks.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # Must exactly match an "Authorized redirect URI" on the OAuth client, e.g.
+      # https://edutechexos-ueoq.onrender.com/api/google-calendar/oauth-callback
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      # "Sign in with Google" login — same OAuth client as above, just add this
+      # as a SECOND "Authorized redirect URI" on it, e.g.
+      # https://edutechexos-ueoq.onrender.com/api/auth/google/callback
+      # Without this, the Google Sign-In button returns "not configured".
+      - key: GOOGLE_LOGIN_REDIRECT_URI
+        sync: false

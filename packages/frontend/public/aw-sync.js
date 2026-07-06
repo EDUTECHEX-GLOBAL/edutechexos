@@ -17,6 +17,13 @@
  * TO JUST RUN MANUALLY (without auto-start):
  *   node aw-sync.js --email you@edutechex.in --password yourpassword
  *
+ * Even though this script itself can run all day in the background, it only
+ * actually collects and sends data when BOTH are true:
+ *   - it's within working hours (default 10:00-18:30 local time), AND
+ *   - you're currently logged into and active on the EduTechExOS dashboard
+ *     (checked via a recent heartbeat) — not just running this script.
+ * Outside that, it silently skips the sync — nothing is sent to the admin.
+ *
  * OPTIONS:
  *   --email      your EduTechExOS login email (required)
  *   --password   your EduTechExOS password (required)
@@ -25,6 +32,8 @@
  *   --api        https://edutechexos-ueoq.onrender.com (default)
  *   --aw         http://localhost:5600 (ActivityWatch URL, default)
  *   --interval   sync interval in minutes (default: 5)
+ *   --work-start daily start "HH:MM" (default: 10:00)
+ *   --work-end   daily end   "HH:MM" (default: 18:30)
  */
 
 const https  = require('https');
@@ -47,6 +56,26 @@ const AW_BASE  = getArg('--aw')       || process.env.AW_BASE     || 'http://loca
 const INTERVAL = parseInt(getArg('--interval') || process.env.AW_INTERVAL || '5', 10);
 const DEVICE_ID   = `${os.hostname()}-${os.platform()}-${os.arch()}`;
 const DEVICE_NAME = os.hostname();
+
+// ── Working-hours + active-session gate ──────────────────────────────────────
+// This agent used to sync 24/7 on its own timer regardless of whether you were
+// actually logged into EduTechExOS or what time it was. It now only syncs
+// while (a) it's within the daily working-hours window, AND (b) the web
+// dashboard has sent a heartbeat recently (i.e. you're actually logged in and
+// using the app right now) — matching the same rule scripts/aw-sync.js and the
+// browser-based sync already enforce.
+function parseHHMM(str, fallbackMin) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(str || ''));
+  if (!m) return fallbackMin;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+const WORK_START_MIN = parseHHMM(getArg('--work-start') || process.env.WORK_START, 10 * 60);      // 10:00
+const WORK_END_MIN   = parseHHMM(getArg('--work-end')   || process.env.WORK_END,   18 * 60 + 30); // 18:30
+function isWithinWorkingHours() {
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  return mins >= WORK_START_MIN && mins < WORK_END_MIN;
+}
 
 // ── Windows auto-startup helpers ──────────────────────────────────────────────
 function getStartupBatPath() {
@@ -225,14 +254,24 @@ async function buildSummary() {
 
   const windowBucket = keys.find((k) => buckets[k].type === 'currentwindow' || k.includes('aw-watcher-window'));
   const afkBucket    = keys.find((k) => buckets[k].type === 'afkstatus'     || k.includes('aw-watcher-afk'));
+  const webBucket    = keys.find((k) => k.includes('aw-watcher-web'));
 
   if (!windowBucket) {
     console.warn('[aw] No window-watcher bucket found. Is ActivityWatch running?');
     return null;
   }
 
-  const now        = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  // Align the day window with the SERVER, which keys AWActivity by IST dateStr.
+  // Compute the current IST calendar day and its exact UTC bounds so the agent's
+  // "today" and the server's "today" always agree, even for non-IST machines and
+  // around midnight. We also send dateStr explicitly.
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  const now      = new Date();
+  const istNow   = new Date(now.getTime() + IST_OFFSET_MS);
+  const dateStr  = istNow.toISOString().slice(0, 10); // YYYY-MM-DD in IST
+  const startOfDay = new Date(
+    Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate()) - IST_OFFSET_MS
+  ).toISOString();
   const endOfDay   = now.toISOString();
 
   const currentEvent = await getCurrentWindow(windowBucket);
@@ -241,13 +280,13 @@ async function buildSummary() {
 
   const windowEvents = await queryEvents(windowBucket, startOfDay, endOfDay);
   const appSeconds   = {};
-  let totalActiveSec = 0;
+  let totalWindowSec = 0;
 
   for (const ev of windowEvents) {
     const dur = ev.duration || 0;
     const app = ev.data?.app || ev.data?.title || 'Unknown';
     appSeconds[app] = (appSeconds[app] || 0) + dur;
-    totalActiveSec += dur;
+    totalWindowSec += dur;
   }
 
   const appBreakdown = Object.entries(appSeconds)
@@ -268,19 +307,65 @@ async function buildSummary() {
     }
   }
 
+  // "Active" = time a window was focused MINUS idle (AFK) time, so idling with a
+  // window open no longer counts as active work. Clamp at 0 for safety.
+  const totalActiveSec = Math.max(0, totalWindowSec - totalAfkSec);
+
+  // ── Optional web (browser) activity, if aw-watcher-web is installed ──────────
+  let currentUrl = '';
+  let currentPageTitle = '';
+  let webBreakdown = [];
+  if (webBucket) {
+    const currentWeb = await getCurrentWindow(webBucket);
+    currentUrl       = currentWeb?.data?.url   || '';
+    currentPageTitle = currentWeb?.data?.title || '';
+
+    const webEvents  = await queryEvents(webBucket, startOfDay, endOfDay);
+    const domSeconds = {};
+    for (const ev of webEvents) {
+      const dur = ev.duration || 0;
+      let domain = 'unknown';
+      try { domain = new url.URL(ev.data?.url || '').hostname || 'unknown'; } catch { /* not a URL */ }
+      if (!domSeconds[domain]) domSeconds[domain] = { secs: 0, title: ev.data?.title || '' };
+      domSeconds[domain].secs += dur;
+    }
+    webBreakdown = Object.entries(domSeconds)
+      .map(([domain, v]) => ({ domain, minutes: Math.round(v.secs / 60), title: v.title }))
+      .filter(({ minutes }) => minutes > 0)
+      .sort((a, b) => b.minutes - a.minutes)
+      .slice(0, 20);
+  }
+
   return {
+    dateStr,
     currentApp,
     currentTitle,
     isAfk,
     totalActiveMinutes: Math.round(totalActiveSec / 60),
     totalAfkMinutes:    Math.round(totalAfkSec / 60),
     appBreakdown,
+    currentUrl,
+    currentPageTitle,
+    webBreakdown,
   };
 }
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
 async function sync() {
   try {
+    if (!isWithinWorkingHours()) {
+      console.log(`[${new Date().toLocaleTimeString()}] outside working hours — skipped, no data sent.`);
+      return;
+    }
+
+    const activeCheck = await request(API_BASE, '/api/activity/session-active', 'GET', null, {
+      Authorization: `Bearer ${authToken}`,
+    });
+    if (!activeCheck.body?.active) {
+      console.log(`[${new Date().toLocaleTimeString()}] not logged into the dashboard right now — skipped, no data sent.`);
+      return;
+    }
+
     const summary = await buildSummary();
     if (!summary) return;
 

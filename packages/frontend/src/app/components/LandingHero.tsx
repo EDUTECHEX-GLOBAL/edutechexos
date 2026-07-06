@@ -139,174 +139,205 @@ export default function LandingHero() {
     return () => clearInterval(dId);
   }, []);
 
+  const features = [
+    { title: 'AI Copilot', desc: 'Your always-on assistant for smarter decisions.', icon: '✦', color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.08)' },
+    { title: 'Real-time Channels', desc: 'Instant updates. Better collaboration.', icon: '💬', color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.08)' },
+    { title: 'Knowledge Base', desc: 'Find, share, learn. All in one place.', icon: '📚', color: '#6366F1', bg: 'rgba(99, 102, 241, 0.08)' },
+    { title: 'Task Boards', desc: 'Organize work. Drive results.', icon: '⊞', color: '#10B981', bg: 'rgba(16, 185, 129, 0.08)' },
+    { title: 'Attendance', desc: 'Accurate tracking. Actionable insights.', icon: '✓', color: '#10B981', bg: 'rgba(16, 185, 129, 0.08)' },
+    { title: 'Leave Management', desc: 'Seamless requests. Smart approvals.', icon: '↪', color: '#06B6D4', bg: 'rgba(6, 182, 212, 0.08)' },
+    { title: 'Analytics', desc: 'Beautiful dashboards. Real impact.', icon: '📈', color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.08)' },
+    { title: 'Video Meetings', desc: 'Connect face-to-face. From anywhere.', icon: '🎥', color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.08)' },
+  ];
+
   return (
-    <section className="relative w-full min-h-screen flex items-center overflow-hidden" style={{ background: '#ECEAF8' }}>
+    <section className="relative w-full min-h-screen flex flex-col items-center overflow-hidden" style={{ background: '#EBF0F5' }}>
       <style>{`
         @keyframes hero-in {
-          from { opacity: 0; transform: translateY(28px); }
+          from { opacity: 0; transform: translateY(20px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes hero-float {
-          0%,100% { transform: translateY(0px) rotate(-0.5deg); }
-          50%      { transform: translateY(-14px) rotate(0.5deg); }
-        }
-        @keyframes badge-float-1 {
           0%,100% { transform: translateY(0px); }
           50%      { transform: translateY(-8px); }
         }
-        @keyframes badge-float-2 {
-          0%,100% { transform: translateY(0px); }
-          50%      { transform: translateY(8px); }
-        }
-        @keyframes bubble-pop {
-          0% { transform: scale(1); }
-          40% { transform: scale(1.12); }
-          70% { transform: scale(0.96); }
-          100% { transform: scale(1); }
-        }
-
         .h-in { opacity: 0; animation: hero-in 1s cubic-bezier(.19,1,.22,1) forwards; }
         .h-d1 { animation-delay: 60ms; }
         .h-d2 { animation-delay: 180ms; }
         .h-d3 { animation-delay: 320ms; }
         .h-d4 { animation-delay: 480ms; }
-        .h-d5 { animation-delay: 640ms; }
-
-        .mockup-float { animation: hero-float 8s ease-in-out infinite 1.2s; }
-        .badge-1 { animation: badge-float-1 6s ease-in-out infinite 0.4s; }
-        .badge-2 { animation: badge-float-2 7s ease-in-out infinite 1.0s; }
 
         .hero-cta-primary {
-          position: relative; overflow: hidden;
-          display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-          padding: 15px 34px;
-          background: linear-gradient(135deg, #5B4FDB 0%, #7B6FEB 100%);
+          display: inline-flex; align-items: center; justify-content: center;
+          padding: 14px 28px;
+          background: #111827;
           color: #FFFFFF;
-          font-size: 11px; font-weight: 800; letter-spacing: .20em; text-transform: uppercase;
+          font-size: 15px; font-weight: 600;
           text-decoration: none; border-radius: 8px;
-          box-shadow: 0 4px 20px rgba(91,79,219,0.32), 0 1px 0 rgba(255,255,255,0.20) inset;
-          border: 1px solid rgba(91,79,219,0.20);
-          transition: all 0.25s cubic-bezier(0.22,1,0.36,1);
-          font-family: 'JetBrains Mono', monospace;
+          box-shadow: 0 4px 12px rgba(17, 24, 39, 0.15);
+          transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         .hero-cta-primary:hover {
-          background: linear-gradient(135deg, #4238C8 0%, #6B5FDB 100%);
-          box-shadow: 0 8px 36px rgba(91,79,219,0.45);
-          transform: translateY(-2px) scale(1.02);
+          background: #1F2937;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(17, 24, 39, 0.25);
         }
-        .hero-cta-primary:active { animation: bubble-pop 0.4s; transform: scale(0.97); }
 
         .hero-cta-ghost {
           display: inline-flex; align-items: center; justify-content: center;
-          padding: 15px 30px;
-          background: rgba(255,255,255,0.90);
-          color: #5B4FDB;
-          font-size: 11px; font-weight: 700; letter-spacing: .20em; text-transform: uppercase;
+          padding: 14px 28px;
+          background: #FFFFFF;
+          color: #1F2937;
+          font-size: 15px; font-weight: 600;
           text-decoration: none; border-radius: 8px;
-          border: 1.5px solid rgba(91,79,219,0.22);
-          backdrop-filter: blur(12px);
-          transition: all 0.25s ease;
-          font-family: 'JetBrains Mono', monospace;
+          border: 1px solid #D1D5DB;
+          transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         .hero-cta-ghost:hover {
-          background: #FFFFFF;
-          border-color: rgba(91,79,219,0.40);
-          box-shadow: 0 4px 20px rgba(91,79,219,0.14);
+          background: #F9FAFB;
+          border-color: #9CA3AF;
           transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
+
+        .feature-card {
+          background: #FFFFFF;
+          border: 1px solid #E5E7EB;
+          border-radius: 16px;
+          padding: 24px 16px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+          transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+          display: flex; flex-direction: column; align-items: center; text-align: center;
+        }
+        .feature-card:hover {
+          transform: translateY(-4px);
+          border-color: #5B4FDB;
+          box-shadow: 0 12px 24px rgba(91, 79, 219, 0.08);
+        }
+
+        .mockup-float { animation: hero-float 6s ease-in-out infinite; }
       `}</style>
 
-      {/* ── Background: soft lavender mesh ── */}
-      <div className="absolute inset-0 dot-grid pointer-events-none" />
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(91,79,219,0.07) 0%, transparent 70%)' }} />
+      {/* ── Background Gradients (Soft, matching mockup glow) ── */}
+      <div className="absolute pointer-events-none" style={{ width: 700, height: 700, top: '15%', right: '-5%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(91,79,219,0.05) 0%, transparent 70%)', filter: 'blur(50px)' }} />
 
-      {/* ── Ambient orbs ── */}
-      <div className="absolute pointer-events-none" style={{ width: 700, height: 700, top: '-20%', left: '-15%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(26,27,58,0.15) 0%, transparent 60%)', filter: 'blur(80px)' }} />
-      <div className="absolute pointer-events-none" style={{ width: 500, height: 500, bottom: '-10%', right: '5%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,63,219,0.08) 0%, transparent 60%)', filter: 'blur(64px)' }} />
-      <div className="absolute pointer-events-none" style={{ width: 400, height: 400, top: '40%', left: '38%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(13,175,206,0.07) 0%, transparent 60%)', filter: 'blur(52px)' }} />
+      <div className="relative w-full max-w-[1400px] mx-auto px-6 lg:px-10 pt-32 pb-12 flex flex-col items-center" style={{ zIndex: 2 }}>
+        
+        {/* Main Hero Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full mb-16">
+          {/* Left: Content */}
+          <div className="flex flex-col items-start text-left">
+            {/* Pill */}
+            <div className="h-in h-d1 mb-6 inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full" style={{
+              background: 'rgba(139, 92, 246, 0.06)',
+              border: '1px solid rgba(139, 92, 246, 0.15)',
+              fontSize: 12.5,
+              fontWeight: 600,
+              color: '#5B4FDB',
+            }}>
+              <div style={{
+                width: 18, height: 18,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#FFFFFF', fontSize: 10, fontWeight: 900
+              }}>
+                ✦
+              </div>
+              <span>AI-Powered. People-Centric. Future-Ready.</span>
+              <div style={{
+                width: 16, height: 16,
+                borderRadius: '50%',
+                background: 'rgba(139, 92, 246, 0.12)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#5B4FDB', fontSize: 10, fontWeight: 900
+              }}>
+                ›
+              </div>
+            </div>
 
-      {/* ── Spectrum bar at top ── */}
-      <div className="absolute top-0 left-0 right-0 pointer-events-none spectrum-bar" />
+            {/* Headline */}
+            <h1 className="h-in h-d2" style={{
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 'clamp(2.75rem, 4.5vw, 4rem)',
+              fontWeight: 800, lineHeight: 1.15, letterSpacing: '-0.02em',
+              color: '#111827', marginBottom: '1.5rem'
+            }}>
+              The <span style={{ background: 'linear-gradient(135deg, #8B5CF6, #3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>AI</span> Operating<br />
+              System Your<br />
+              Institution Runs On
+            </h1>
 
-      {/* ── Art Deco sunburst backdrop + corner brackets ── */}
-      <div className="absolute pointer-events-none deco-shimmer" style={{ top: '12%', right: '6%', zIndex: 1 }}>
-        <DecoSunburst size={360} rays={36} opacity={0.10} />
-      </div>
-      <div className="absolute pointer-events-none" style={{ top: 84, left: 24, zIndex: 1 }}>
-        <DecoCorner corner="tl" size={96} opacity={0.4} />
-      </div>
-      <div className="absolute pointer-events-none" style={{ bottom: 24, right: 24, zIndex: 1 }}>
-        <DecoCorner corner="br" size={96} opacity={0.4} />
-      </div>
+            {/* Description */}
+            <p className="h-in h-d3" style={{ fontSize: '1.1rem', fontWeight: 400, lineHeight: 1.6, color: '#4B5563', maxWidth: '44ch', marginBottom: '2.5rem' }}>
+              Unify operations. Empower people. Elevate outcomes with the power of AI.
+            </p>
 
-      {/* ══════════════════════════════════════
-          CONTENT
-      ══════════════════════════════════════ */}
-      <div className="relative w-full max-w-screen-xl mx-auto px-6 lg:px-10 xl:px-16 pt-28 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center" style={{ zIndex: 2 }}>
-
-        {/* ── Left: Headline + CTAs ── */}
-        <div>
-          {/* Overline — Art Deco eyebrow */}
-          <div className="h-in h-d1 mb-8">
-            <DecoEyebrow label="EduTechExOS · Institutional Workspace" />
+            {/* CTAs */}
+            <div className="h-in h-d4 flex flex-col sm:flex-row flex-wrap gap-4 w-full sm:w-auto">
+              <Link href="/sign-up-login-screen?mode=signup" className="hero-cta-primary">
+                Get Started
+              </Link>
+              <Link href="/contact" className="hero-cta-ghost">
+                Talk to an Expert
+              </Link>
+            </div>
           </div>
 
-          {/* Headline */}
-          <h1 className="h-in h-d2" style={{
-            fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif",
-            fontSize: 'clamp(3.2rem, 5.5vw, 5.4rem)',
-            fontWeight: 900, lineHeight: 1.0, letterSpacing: '-0.04em',
-            color: '#1A1B3A', marginBottom: '1.6rem', maxWidth: '14ch',
+          {/* Right: Mockup */}
+          <div className="relative h-full flex items-center justify-center">
+            <div className="mockup-float" style={{ position: 'relative', zIndex: 2, width: '100%', maxWidth: 680 }}>
+               <img src="/hero-bg.jpg.png" alt="Platform Mockup" style={{ width: '100%', height: 'auto', borderRadius: 24, boxShadow: '0 20px 48px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.05)' }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Features Grid */}
+        <div className="w-full grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-16 h-in" style={{ animationDelay: '800ms' }}>
+          {features.map((feature, i) => (
+            <div key={i} className="feature-card">
+              <div style={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: feature.bg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 16,
+                color: feature.color,
+                marginBottom: 14
+              }}>
+                {feature.icon}
+              </div>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 8 }}>{feature.title}</h3>
+              <p style={{ fontSize: 11, color: '#6B7280', lineHeight: 1.5 }}>{feature.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Unified Search Bar */}
+        <div className="w-full max-w-2xl mx-auto h-in" style={{ animationDelay: '1000ms' }}>
+          <div style={{
+            display: 'flex', background: '#FFFFFF', borderRadius: 50,
+            padding: '12px 24px', boxShadow: '0 10px 30px rgba(0,0,0,0.04)', border: '1px solid #E5E7EB',
+            alignItems: 'center', gap: 16
           }}>
-            The OS your<br />
-            institution<br />
-            <span style={{ background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>runs on.</span>
-          </h1>
-
-          {/* Art Deco gold rule with center diamond */}
-          <div className="h-in h-d2" style={{ marginBottom: '1.75rem' }}>
-            <DecoRule width={220} />
-          </div>
-
-          {/* Descriptor */}
-          <p className="h-in h-d3" style={{ fontSize: '1rem', fontWeight: 400, lineHeight: 1.78, color: 'rgba(90,95,128,0.80)', maxWidth: '38ch', marginBottom: '2.4rem' }}>
-            Channels, embedded AI, auto‑extracted tasks, morning digests, and attendance — all in one vibrant workspace built for your institution.
-          </p>
-
-          {/* CTA row */}
-          <div className="h-in h-d4 flex flex-col sm:flex-row gap-3" style={{ marginBottom: '2.8rem' }}>
-            <Link href="/sign-up-login-screen" className="hero-cta-primary">
-              Sign In
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
-                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </Link>
-            <Link href="/sign-up-login-screen?mode=signup" className="hero-cta-ghost">
-              Create Account
-            </Link>
-          </div>
-
-        </div>
-
-        {/* ── Right: Floating dashboard mockup ── */}
-        <div className="hidden lg:flex relative items-center justify-center" style={{ minHeight: 520 }}>
-          {/* Floating stat badges */}
-          <div className="badge-1 absolute" style={{ top: '8%', right: '-2%', zIndex: 5 }}>
-            <StatBadge label="online now" value="7" color="#10C98A" bg="#E7FBF5" />
-          </div>
-          <div className="badge-2 absolute" style={{ bottom: '10%', left: '-4%', zIndex: 5 }}>
-            <StatBadge label="AI tasks extracted" value="12" color="#8B3FDB" bg="#F3E8FF" />
-          </div>
-
-          {/* Glow behind mockup */}
-          <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(26,27,58,0.14) 0%, transparent 70%)', filter: 'blur(20px)' }} />
-
-          <div className="mockup-float" style={{ position: 'relative', zIndex: 2, width: '100%' }}>
-            <HeroDashboardMockup dotCount={dotCount} />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>Unified Search</div>
+              <div style={{ fontSize: 12, color: '#9CA3AF' }}>Search people, documents, tasks, and more...</div>
+            </div>
+            <div style={{ background: '#F3F4F6', padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, color: '#6B7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span>⌘</span>K
+            </div>
           </div>
         </div>
+
       </div>
-
     </section>
   );
 }

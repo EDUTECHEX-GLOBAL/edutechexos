@@ -88,13 +88,13 @@ const steps = [
 
 export default function LandingHowItWorks() {
   return (
-    <section id="how-it-works" className="relative overflow-hidden" style={{ background: '#FFFFFF' }}>
+    <section id="how-it-works" className="relative overflow-hidden" style={{ background: '#E9EBF7' }}>
       {/* Light dot grid */}
       <div className="absolute inset-0 dot-grid pointer-events-none" />
 
       {/* Soft colorful orbs */}
-      <div className="absolute pointer-events-none" style={{ width: 480, height: 480, top: '5%', right: '-8%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(13,175,206,0.08) 0%, transparent 65%)', filter: 'blur(56px)' }} />
-      <div className="absolute pointer-events-none" style={{ width: 380, height: 380, bottom: '5%', left: '-6%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(91,79,219,0.07) 0%, transparent 65%)', filter: 'blur(48px)' }} />
+      <div className="absolute pointer-events-none" style={{ width: 480, height: 480, top: '5%', right: '-8%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(13,175,206,0.03) 0%, transparent 65%)', filter: 'blur(56px)' }} />
+      <div className="absolute pointer-events-none" style={{ width: 380, height: 380, bottom: '5%', left: '-6%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(91,79,219,0.03) 0%, transparent 65%)', filter: 'blur(48px)' }} />
 
       <div className="relative max-w-screen-xl mx-auto px-6 lg:px-10">
 
@@ -105,20 +105,20 @@ export default function LandingHowItWorks() {
               <div className="mb-5">
                 <DecoEyebrow label="How it works" />
               </div>
-              <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(2.8rem, 5.5vw, 4.8rem)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 0.92, color: '#1A1B3A' }}>
+              <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 'clamp(2.5rem, 5vw, 3.5rem)', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.1, color: '#111827' }}>
                 Three steps<br />
-                <span style={{ background: 'linear-gradient(135deg, #0DAFCE, #5B4FDB)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>to full</span><br />
+                <span style={{ background: 'linear-gradient(135deg, #8B5CF6, #3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>to full</span><br />
                 context.
               </h2>
             </div>
-            <p style={{ fontSize: 15, fontWeight: 400, lineHeight: 1.72, color: 'rgba(90,95,128,0.75)', maxWidth: '36ch' }}>
+            <p style={{ fontSize: 14.5, fontWeight: 400, lineHeight: 1.6, color: '#4B5563', maxWidth: '36ch' }}>
               From zero to fully operational in minutes — your team will be running on EduTechExOS before lunch.
             </p>
           </div>
         </AnimatedSection>
 
         {/* Steps */}
-        <div style={{ borderTop: '1.5px solid rgba(26,27,58,0.14)' }}>
+        <div style={{ borderTop: '1px solid #E5E7EB' }}>
           {steps.map((step, i) => {
             const { Icon } = step;
             const isEven = i % 2 === 1;
@@ -126,14 +126,14 @@ export default function LandingHowItWorks() {
               <AnimatedSection key={step.id} direction="up" delay={i * 0.1}>
                 <div
                   className="grid grid-cols-1 lg:grid-cols-2 gap-0"
-                  style={{ borderBottom: '1.5px solid rgba(26,27,58,0.14)' }}
+                  style={{ borderBottom: '1px solid #E5E7EB' }}
                 >
                   {/* Text side */}
                   <div
                     className={`relative flex flex-col justify-center px-8 lg:px-16 py-16 ${isEven ? 'lg:order-2' : 'lg:order-1'}`}
                     style={{
-                      borderRight: isEven ? 'none' : '1.5px solid rgba(26,27,58,0.14)',
-                      borderLeft: isEven ? '1.5px solid rgba(26,27,58,0.14)' : 'none',
+                      borderRight: isEven ? 'none' : '1px solid #E5E7EB',
+                      borderLeft: isEven ? '1px solid #E5E7EB' : 'none',
                     }}
                   >
                     {/* Big bg number */}
@@ -143,18 +143,18 @@ export default function LandingHowItWorks() {
 
                     {/* Step badge */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 13, background: step.accentBg, border: `1.5px solid ${step.accentBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 16px ${step.accent}18` }}>
-                        <Icon size={20} style={{ color: step.accent }} />
+                      <div style={{ width: 40, height: 40, borderRadius: 12, background: step.accentBg, border: `1px solid ${step.accentBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: `0 4px 12px ${step.accent}10` }}>
+                        <Icon size={18} style={{ color: step.accent }} />
                       </div>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: step.accent }}>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: step.accent }}>
                         Step {step.number}
                       </span>
                     </div>
 
-                    <h3 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.15, color: '#1A1B3A', marginBottom: 16 }}>
+                    <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.15, color: '#111827', marginBottom: 16 }}>
                       {step.title}
                     </h3>
-                    <p style={{ fontSize: 14, fontWeight: 400, lineHeight: 1.72, color: 'rgba(90,95,128,0.75)', maxWidth: '38ch' }}>
+                    <p style={{ fontSize: 14, fontWeight: 400, lineHeight: 1.6, color: '#4B5563', maxWidth: '38ch' }}>
                       {step.description}
                     </p>
                   </div>
@@ -164,7 +164,7 @@ export default function LandingHowItWorks() {
                     className={`flex flex-col justify-center px-8 lg:px-16 py-16 ${isEven ? 'lg:order-1' : 'lg:order-2'}`}
                     style={{ background: step.sectionBg }}
                   >
-                    <div style={{ padding: 24, borderRadius: 18, background: 'rgba(255,255,255,0.80)', border: `1.5px solid ${step.accentBorder}`, boxShadow: `0 8px 32px ${step.accent}10`, backdropFilter: 'blur(12px)' }}>
+                    <div style={{ padding: 24, borderRadius: 18, background: 'rgba(255,255,255,0.85)', border: `1px solid ${step.accentBorder}`, boxShadow: `0 8px 32px ${step.accent}0a`, backdropFilter: 'blur(12px)' }}>
                       {step.demo}
                     </div>
                   </div>
@@ -177,10 +177,10 @@ export default function LandingHowItWorks() {
         {/* Bottom label */}
         <AnimatedSection direction="up" delay={0.4}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '56px 0', fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5 }}>
-            <div style={{ flex: 1, height: 1.5, background: 'linear-gradient(90deg, transparent, rgba(91,79,219,0.15))', borderRadius: 1 }} />
-            <span style={{ fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.45)', whiteSpace: 'nowrap' }}>From setup to live</span>
+            <div style={{ flex: 1, height: 1.5, background: 'linear-gradient(90deg, transparent, rgba(91,79,219,0.1))', borderRadius: 1 }} />
+            <span style={{ fontWeight: 700, letterSpacing: '.22em', textTransform: 'uppercase', color: '#9CA3AF', whiteSpace: 'nowrap' }}>From setup to live</span>
             <span style={{ fontWeight: 900, letterSpacing: '.22em', color: '#5B4FDB', whiteSpace: 'nowrap' }}>— &lt; 2 MINUTES</span>
-            <div style={{ flex: 1, height: 1.5, background: 'linear-gradient(90deg, rgba(91,79,219,0.15), transparent)', borderRadius: 1 }} />
+            <div style={{ flex: 1, height: 1.5, background: 'linear-gradient(90deg, rgba(91,79,219,0.1), transparent)', borderRadius: 1 }} />
           </div>
         </AnimatedSection>
       </div>

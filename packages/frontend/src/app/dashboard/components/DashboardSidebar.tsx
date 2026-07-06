@@ -57,7 +57,8 @@ export default function DashboardSidebar({
     projects: ['general'] as string[],
   });
   const [showActivityCalendar, setShowActivityCalendar] = useState(false);
-  const [loggedInTodayEmails, setLoggedInTodayEmails] = useState<Set<string>>(new Set());
+  // Emails that are CURRENTLY connected (live socket presence), not "logged in today".
+  const [onlineEmails, setOnlineEmails] = useState<Set<string>>(new Set());
 
   // New Channel states
   const [showNewChannelModal, setShowNewChannelModal] = useState(false);
@@ -193,7 +194,9 @@ export default function DashboardSidebar({
     }
   }, [channels]);
 
-  // Fetch real login status (green = logged in today, red = not logged in today)
+  // Fetch live presence (green = currently online, grey = offline). The backend
+  // returns `onlineEmails` = users with an open socket right now — authoritative
+  // and rebuilt on every server start, so it never shows a stale "online".
   const fetchLoginStatus = useCallback(async () => {
     try {
       const authData = localStorage.getItem('edutechex_token');
@@ -204,8 +207,8 @@ export default function DashboardSidebar({
       });
       if (!res.ok) return;
       const data = await res.json();
-      if (data.success && Array.isArray(data.loggedInEmails)) {
-        setLoggedInTodayEmails(new Set(data.loggedInEmails.map((e: string) => e.toLowerCase())));
+      if (data.success && Array.isArray(data.onlineEmails)) {
+        setOnlineEmails(new Set(data.onlineEmails.map((e: string) => e.toLowerCase())));
       }
     } catch {
       /* backend unavailable */
@@ -214,8 +217,9 @@ export default function DashboardSidebar({
 
   useEffect(() => {
     fetchLoginStatus();
-    // Refresh every 2 minutes
-    const interval = setInterval(fetchLoginStatus, 2 * 60 * 1000);
+    // Reconcile presence every 45s (socket events handle instant changes; this is
+    // the self-heal backstop in case a broadcast was missed).
+    const interval = setInterval(fetchLoginStatus, 45 * 1000);
     return () => clearInterval(interval);
   }, [fetchLoginStatus]);
 
@@ -223,7 +227,8 @@ export default function DashboardSidebar({
   useEffect(() => {
     const socket = getSocket();
     const handleLoginUpdate = ({ email, loggedIn }: { email: string; loggedIn: boolean }) => {
-      setLoggedInTodayEmails((prev) => {
+      if (!email) return;
+      setOnlineEmails((prev) => {
         const next = new Set(prev);
         if (loggedIn) next.add(email.toLowerCase());
         else next.delete(email.toLowerCase());
@@ -282,6 +287,13 @@ export default function DashboardSidebar({
         ? (status as import('@/store/dashboardStore').MemberStatus) : 'online';
       if (status) store.updateMemberStatus(email, validStatus);
       if (name) store.updateMemberName(email, name);
+      // Keep the live-presence dot in sync instantly (offline removes, anything else adds).
+      setOnlineEmails((prev) => {
+        const next = new Set(prev);
+        if (validStatus === 'offline') next.delete(email.toLowerCase());
+        else next.add(email.toLowerCase());
+        return next;
+      });
     };
     const handleAvailabilityUpdate = ({ email, isAvailable }: { email: string; isAvailable: boolean }) => {
       if (!email) return;
@@ -474,14 +486,14 @@ export default function DashboardSidebar({
                         )}
                         <span
                           className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-slate-50 ${
-                            loggedInTodayEmails.has(member.email.toLowerCase())
+                            onlineEmails.has(member.email.toLowerCase())
                               ? 'bg-emerald-500'
-                              : 'bg-red-400'
+                              : 'bg-slate-300'
                           }`}
                           title={
-                            loggedInTodayEmails.has(member.email.toLowerCase())
-                              ? 'Logged in today'
-                              : 'Not logged in today'
+                            onlineEmails.has(member.email.toLowerCase())
+                              ? 'Online'
+                              : 'Offline'
                           }
                         />
                       </span>

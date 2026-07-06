@@ -11,6 +11,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { getSocket } from '@/lib/socket';
+import { useDashboardStore } from '@/store/dashboardStore';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 
@@ -68,13 +69,32 @@ function RolePill({ role }: { role: string }) {
   );
 }
 
-function StatusDot({ online = false }: { online?: boolean }) {
+type PresenceStatus = 'online' | 'away' | 'in-meeting' | 'offline';
+
+const PRESENCE_STYLE: Record<PresenceStatus, { color: string; dot: string; label: string }> = {
+  'online':     { color: '#059669', dot: '#10B981', label: 'Active now' },
+  'away':       { color: '#D97706', dot: '#F59E0B', label: 'Away' },
+  'in-meeting': { color: '#DC2626', dot: '#EF4444', label: 'In meeting' },
+  'offline':    { color: '#94A3B8', dot: '#CBD5E1', label: 'Offline' },
+};
+
+function StatusDot({ online, status, onLeave }: { online?: boolean; status?: PresenceStatus; onLeave?: boolean }) {
+  if (onLeave) {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: '#D97706' }}>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#F59E0B', display: 'inline-block' }} />
+        On leave
+      </span>
+    );
+  }
+  // Fall back to the legacy `online` boolean prop for any caller not yet passing `status`.
+  const resolved: PresenceStatus = status ?? (online ? 'online' : 'offline');
+  const s = PRESENCE_STYLE[resolved];
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600,
-      color: online ? '#059669' : '#94A3B8' }}>
-      <span style={{ width: 7, height: 7, borderRadius: '50%', background: online ? '#10B981' : '#CBD5E1',
-        boxShadow: online ? '0 0 0 2px rgba(16,185,129,.2)' : 'none', display: 'inline-block' }} />
-      {online ? 'online' : 'offline'}
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: s.color }}>
+      <span style={{ width: 7, height: 7, borderRadius: '50%', background: s.dot,
+        boxShadow: resolved === 'online' ? '0 0 0 2px rgba(16,185,129,.2)' : 'none', display: 'inline-block' }} />
+      {s.label}
     </span>
   );
 }
@@ -107,6 +127,7 @@ export default function AdminControlPanel({
   currentUser?: { name: string; email: string; role: string; initials: string } | null;
 }) {
   const [tab, setTab] = useState<SideTab>('people');
+  const storeMembers = useDashboardStore((s) => s.members);
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
@@ -608,17 +629,20 @@ export default function AdminControlPanel({
                   </div>
                 ))}
               </div>
-              {users.map((u, i) => (
-                <div key={u.id} style={{ ...S.card, marginBottom: 6, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, borderRadius: 10 }}>
-                  <Avatar name={u.name} size={30} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{u.name}</div>
-                    <div style={{ fontSize: 11, color: '#94A3B8' }}>{u.email}</div>
+              {users.map((u, i) => {
+                const live = storeMembers.find((m) => m.email.toLowerCase() === u.email.toLowerCase());
+                return (
+                  <div key={u.id} style={{ ...S.card, marginBottom: 6, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, borderRadius: 10 }}>
+                    <Avatar name={u.name} size={30} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{u.name}</div>
+                      <div style={{ fontSize: 11, color: '#94A3B8' }}>{u.email}</div>
+                    </div>
+                    <StatusDot status={live?.status} onLeave={live?.onLeave} />
+                    <RolePill role={u.role} />
                   </div>
-                  <StatusDot online />
-                  <RolePill role={u.role} />
-                </div>
-              ))}
+                );
+              })}
             </motion.div>
           )}
 

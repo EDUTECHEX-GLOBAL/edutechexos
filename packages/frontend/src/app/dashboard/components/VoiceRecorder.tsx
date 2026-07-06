@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Mic, MicOff, Square, Send, Trash2, Sparkles, Volume2, Loader2 } from 'lucide-react';
-import { smartUpload } from '@/lib/uploadToFirebase';
+import { smartUpload } from '@/lib/smartUpload';
 
 interface VoiceRecorderProps {
   onSend: (url: string) => void;

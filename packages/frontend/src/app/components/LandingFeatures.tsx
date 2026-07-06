@@ -229,21 +229,21 @@ function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
         className="group relative flex flex-col rounded-2xl cursor-pointer overflow-hidden"
         style={{
           background: '#FFFFFF',
-          border: `1.5px solid ${feat.accentBorder}`,
-          boxShadow: `0 2px 12px rgba(0,0,0,0.04)`,
+          border: '1px solid #E5E7EB',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.02)',
           minHeight: 240,
           transition: 'all 0.35s cubic-bezier(0.22,1,0.36,1)',
         }}
         onMouseEnter={e => {
           const el = e.currentTarget;
-          el.style.borderColor = feat.accent + '55';
-          el.style.boxShadow = `0 20px 56px ${feat.accentGlow}, 0 4px 16px rgba(0,0,0,0.05)`;
+          el.style.borderColor = feat.accent;
+          el.style.boxShadow = `0 20px 48px ${feat.accentGlow}, 0 4px 12px rgba(0,0,0,0.04)`;
           el.style.transform = 'translateY(-5px)';
         }}
         onMouseLeave={e => {
           const el = e.currentTarget;
-          el.style.borderColor = feat.accentBorder;
-          el.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)';
+          el.style.borderColor = '#E5E7EB';
+          el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.02)';
           el.style.transform = 'translateY(0)';
         }}
       >
@@ -263,7 +263,7 @@ function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
             {/* Index number */}
             <span style={{
               fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 11, fontWeight: 800,
+              fontSize: 11, fontWeight: 700,
               color: feat.accent,
               background: feat.accentBg,
               border: `1px solid ${feat.accentBorder}`,
@@ -277,38 +277,32 @@ function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
             <div
               className="group-hover:scale-110"
               style={{
-                width: 52, height: 52, borderRadius: 16, flexShrink: 0,
+                width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
                 background: `linear-gradient(140deg, ${feat.accent}, ${feat.accent}aa)`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: `0 6px 20px ${feat.accent}40, 0 2px 6px ${feat.accent}25`,
-                transition: 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s',
+                boxShadow: `0 4px 12px ${feat.accent}30`,
+                transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
                 position: 'relative',
               }}
             >
-              {/* Inner shine */}
-              <div style={{
-                position: 'absolute', top: 0, left: 0, right: 0, height: '50%',
-                borderRadius: '16px 16px 0 0',
-                background: 'rgba(255,255,255,0.18)',
-                pointerEvents: 'none',
-              }} />
               <CustomIcon />
             </div>
           </div>
 
           {/* Title */}
           <h3 style={{
-            fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif",
-            fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em',
-            color: '#1A1B3A', marginBottom: 10, lineHeight: 1.25,
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em',
+            color: '#111827', marginBottom: 10, lineHeight: 1.25,
           }}>
             {feat.title}
           </h3>
 
           {/* Description */}
           <p style={{
-            fontSize: 13, fontWeight: 400, lineHeight: 1.70,
-            color: 'rgba(90,95,128,0.78)', flex: 1,
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 13, fontWeight: 400, lineHeight: 1.6,
+            color: '#4B5563', flex: 1,
           }}>
             {feat.description}
           </p>
@@ -317,7 +311,7 @@ function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
           <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
-              fontSize: 9, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase',
+              fontSize: 9, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase',
               color: feat.accent, background: feat.accentBg,
               border: `1px solid ${feat.accentBorder}`,
               padding: '4px 10px', borderRadius: 20,
@@ -349,14 +343,13 @@ function FeatureCard({ feat, i }: { feat: typeof features[0]; i: number }) {
 
 export default function LandingFeatures() {
   return (
-    <section id="features" className="relative py-28 px-6 lg:px-10 overflow-hidden" style={{ background: '#ECEAF8' }}>
+    <section id="features" className="relative py-28 px-6 lg:px-10 overflow-hidden" style={{ background: '#E3E8FC' }}>
       {/* Dot grid */}
       <div className="absolute inset-0 dot-grid pointer-events-none" />
 
       {/* Colorful orbs */}
-      <div className="absolute pointer-events-none" style={{ width: 520, height: 520, top: '-12%', right: '-6%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(13,175,206,0.08) 0%, transparent 65%)', filter: 'blur(64px)' }} />
-      <div className="absolute pointer-events-none" style={{ width: 440, height: 440, bottom: '0%', left: '-6%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(26,27,58,0.14) 0%, transparent 65%)', filter: 'blur(56px)' }} />
-      <div className="absolute pointer-events-none" style={{ width: 360, height: 360, top: '40%', left: '40%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,201,138,0.06) 0%, transparent 65%)', filter: 'blur(48px)' }} />
+      <div className="absolute pointer-events-none" style={{ width: 520, height: 520, top: '-12%', right: '-6%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(13,175,206,0.03) 0%, transparent 65%)', filter: 'blur(64px)' }} />
+      <div className="absolute pointer-events-none" style={{ width: 440, height: 440, bottom: '0%', left: '-6%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(91,79,219,0.03) 0%, transparent 65%)', filter: 'blur(56px)' }} />
 
       <div className="relative max-w-screen-xl mx-auto">
 
@@ -367,20 +360,20 @@ export default function LandingFeatures() {
               <div className="mb-5">
                 <DecoEyebrow label="What lives inside" />
               </div>
-              <h2 style={{ fontFamily: "'Sora', 'Plus Jakarta Sans', sans-serif", fontSize: 'clamp(2.8rem, 5.5vw, 4.8rem)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 0.92, color: '#1A1B3A' }}>
+              <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 'clamp(2.5rem, 5vw, 3.5rem)', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.1, color: '#111827' }}>
                 Every tool<br />
-                <span style={{ background: 'linear-gradient(135deg, #5B4FDB, #0DAFCE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>your team</span><br />
+                <span style={{ background: 'linear-gradient(135deg, #8B5CF6, #3B82F6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>your team</span><br />
                 needs.
               </h2>
             </div>
             <div className="lg:max-w-xs">
-              <p style={{ fontSize: 15, fontWeight: 400, lineHeight: 1.72, color: 'rgba(90,95,128,0.75)', marginBottom: 20 }}>
+              <p style={{ fontSize: 14.5, fontWeight: 400, lineHeight: 1.6, color: '#4B5563', marginBottom: 20 }}>
                 Nine tightly integrated capabilities that replace five disconnected tools — in one vibrant, precision interface. Click any card to see its unique animation.
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 10, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace", color: '#5B4FDB' }}>
                 <span>09 capabilities</span>
                 <div style={{ height: 1.5, flex: 1, background: 'linear-gradient(90deg, #5B4FDB, transparent)', maxWidth: 40, borderRadius: 1 }} />
-                <span style={{ color: 'rgba(90,95,128,0.55)' }}>1 platform</span>
+                <span style={{ color: '#9CA3AF' }}>1 platform</span>
               </div>
             </div>
           </div>
@@ -396,11 +389,11 @@ export default function LandingFeatures() {
         {/* ── Bottom rule ── */}
         <AnimatedSection direction="up" delay={0.35}>
           <div className="flex items-center gap-6 mt-20">
-            <div style={{ flex: 1, height: 1.5, background: 'linear-gradient(90deg, transparent, rgba(91,79,219,0.15))', borderRadius: 1 }} />
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.28em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.45)', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>
+            <div style={{ flex: 1, height: 1.5, background: 'linear-gradient(90deg, transparent, rgba(91,79,219,0.1))', borderRadius: 1 }} />
+            <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.28em', textTransform: 'uppercase', color: '#9CA3AF', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>
               Designed for EduTechEx · Built for institutions
             </span>
-            <div style={{ flex: 1, height: 1.5, background: 'linear-gradient(90deg, rgba(91,79,219,0.15), transparent)', borderRadius: 1 }} />
+            <div style={{ flex: 1, height: 1.5, background: 'linear-gradient(90deg, rgba(91,79,219,0.1), transparent)', borderRadius: 1 }} />
           </div>
         </AnimatedSection>
       </div>

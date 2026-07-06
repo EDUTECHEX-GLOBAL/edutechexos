@@ -162,6 +162,12 @@ async function reviewRequest(req, res) {
     const { id } = req.params;
     const { status, channelId, channelIds, role } = req.body;
 
+    // Guard the status enum so a record can't be wedged into an unknown state
+    // (mirrors reviewLeave). `pending` is allowed so an admin can un-approve.
+    if (status !== undefined && !['pending', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'status must be pending, approved, or rejected.' });
+    }
+
     const updateFields = {};
     if (status !== undefined) updateFields.status = status;
     if (channelId !== undefined) updateFields.channelId = channelId;

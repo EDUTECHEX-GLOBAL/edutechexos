@@ -6,7 +6,19 @@ const LOGIN_URL = '/sign-up-login-screen';
 
 function isJwtShaped(value: string): boolean {
   const parts = value.split('.');
-  return parts.length === 3 && parts.every((p) => p.length > 0);
+  if (parts.length !== 3 || !parts.every((p) => p.length > 0)) return false;
+  // Best-effort payload sanity check. The Edge middleware can't verify the
+  // signature (the signing secret is backend-only), so this stays a soft gate —
+  // the API still fully validates every token — but rejecting a payload that's
+  // unparseable or already expired closes the easy cases early.
+  try {
+    const json = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(json));
+    if (payload.exp && Date.now() >= payload.exp * 1000) return false;
+  } catch {
+    return false;
+  }
+  return true;
 }
 
 export function middleware(request: NextRequest) {

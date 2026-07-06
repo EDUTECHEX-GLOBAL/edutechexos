@@ -8,6 +8,85 @@ const { encryptField, _encKey } = require('../services/encryptionService');
 const { JWT_SECRET, JWT_EXPIRY } = require('../middleware/auth');
 const { logAudit } = require('../services/auditService');
 const Message = require('../models/Message');
+const Leave = require('../models/Leave');
+const LoginEvent = require('../models/LoginEvent');
+const ActivitySession = require('../models/ActivitySession');
+
+// ── CSV export — attendance / leaves / activity, for payroll or compliance ──
+function toCsvValue(v) {
+  const s = v === null || v === undefined ? '' : String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+function toCsv(rows, columns) {
+  const header = columns.map((c) => toCsvValue(c)).join(',');
+  const body = rows.map((r) => columns.map((c) => toCsvValue(r[c])).join(',')).join('\n');
+  return header + '\n' + body;
+}
+
+async function exportCsv(req, res) {
+  if (!req.user || req.user.role !== 'Admin') {
+    return res.status(403).json({ success: false, error: 'Admin access required.' });
+  }
+  try {
+    const { type } = req.params;
+    const { from, to } = req.query;
+    let rows = [];
+    let columns = [];
+    let filename = `edutechexos-${type}.csv`;
+
+    if (type === 'attendance') {
+      const filter = {};
+      if (from || to) {
+        filter.dateStr = {};
+        if (from) filter.dateStr.$gte = from;
+        if (to) filter.dateStr.$lte = to;
+      }
+      const events = await LoginEvent.find(filter).sort({ dateStr: -1, email: 1 }).lean();
+      columns = ['dateStr', 'email', 'name', 'loginAt', 'logoutAt', 'hoursWorked', 'attendance'];
+      rows = events.map((e) => ({
+        dateStr: e.dateStr, email: e.email, name: e.name,
+        loginAt: e.loginAt ? new Date(e.loginAt).toISOString() : '',
+        logoutAt: e.logoutAt ? new Date(e.logoutAt).toISOString() : '',
+        hoursWorked: e.hoursWorked ?? '', attendance: e.attendance ?? '',
+      }));
+    } else if (type === 'leaves') {
+      const filter = {};
+      if (from || to) {
+        filter.startDate = {};
+        if (from) filter.startDate.$gte = from;
+        if (to) filter.startDate.$lte = to;
+      }
+      const leaves = await Leave.find(filter).sort({ startDate: -1 }).lean();
+      columns = ['email', 'name', 'type', 'leaveCategory', 'startDate', 'endDate', 'duration', 'reason', 'status', 'requestedAt'];
+      rows = leaves.map((l) => ({
+        ...l,
+        requestedAt: l.requestedAt ? new Date(l.requestedAt).toISOString() : '',
+      }));
+    } else if (type === 'activity') {
+      const filter = {};
+      if (from || to) {
+        filter.dateStr = {};
+        if (from) filter.dateStr.$gte = from;
+        if (to) filter.dateStr.$lte = to;
+      }
+      const sessions = await ActivitySession.find(filter).sort({ dateStr: -1, email: 1 }).lean();
+      columns = ['dateStr', 'email', 'name', 'totalMinutes', 'messageCount', 'taskCount'];
+      rows = sessions.map((s) => ({
+        dateStr: s.dateStr, email: s.email, name: s.name,
+        totalMinutes: s.totalMinutes || 0, messageCount: s.messageCount || 0, taskCount: s.taskCount || 0,
+      }));
+    } else {
+      return res.status(400).json({ success: false, error: 'type must be attendance, leaves, or activity.' });
+    }
+
+    const csv = toCsv(rows, columns);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
 
 async function setPassword(req, res) {
   if (!req.user || req.user.role !== 'Admin') {
@@ -349,6 +428,14 @@ async function emailDiagnostics(req, res) {
     return res.status(403).json({ success: false, error: 'Admin access required.' });
   }
   try {
+    // In preview/test mode, don't fire a live Brevo API call (which would also
+    // surface account email + credit balance). Return a harmless stub instead.
+    if (process.env.MAIL_PREVIEW === 'true') {
+      return res.json({
+        success: true,
+        diagnostics: { preview: true, note: 'MAIL_PREVIEW enabled — live Brevo diagnostics skipped.', apiKey: !!process.env.BREVO_API_KEY },
+      });
+    }
     const diag = await diagnoseBrevo();
 
     const fromConfig = process.env.SMTP_FROM || 'EduTechExOS <edutechexos121@gmail.com>';
@@ -452,4 +539,4 @@ async function removeUser(req, res) {
   }
 }
 
-module.exports = { setPassword, generatePassword, sendInvite, broadcastEmail, migrateEncrypt, getAuditLog, validateInvite, acceptInvite, emailDiagnostics, testEmail, getUsers, updateUserRole, removeUser };
+module.exports = { setPassword, generatePassword, sendInvite, broadcastEmail, migrateEncrypt, getAuditLog, validateInvite, acceptInvite, emailDiagnostics, testEmail, getUsers, updateUserRole, removeUser, exportCsv };

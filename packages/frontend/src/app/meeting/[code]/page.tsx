@@ -9,11 +9,12 @@ import {
   DecoEyebrow,
   DecoStyles,
 } from '@/app/components/LandingDeco';
+import { getSocket } from '@/lib/socket';
 
 export default function MeetingJoinPage() {
   const params = useParams();
   const code = params?.code as string;
-  const [info, setInfo] = useState<{ messageId: string; channelId: string; hostEmail: string; meetLink: string } | null>(null);
+  const [info, setInfo] = useState<{ messageId: string; channelId: string; hostEmail: string; meetLink: string | null; canJoin: boolean; started?: boolean; cancelled?: boolean; title?: string; description?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -112,6 +113,13 @@ export default function MeetingJoinPage() {
           </p>
         </div>
 
+        {info?.title && (
+          <div className="mt-4 text-center">
+            <p className="text-sm font-bold text-foreground">{info.title}</p>
+            {info.description && <p className="mt-1 text-xs text-ink-light">{info.description}</p>}
+          </div>
+        )}
+
         {info?.channelId && (
           <div className="mt-6 rounded-xl bg-primary/5 border border-primary/10 px-4 py-3 text-center">
             <p className="text-xs font-bold uppercase tracking-wider text-primary">Channel</p>
@@ -120,11 +128,22 @@ export default function MeetingJoinPage() {
         )}
 
         <div className="mt-8 flex flex-col gap-3">
-          {info?.meetLink && (
+          {info?.cancelled ? (
+            <div className="flex items-center justify-center gap-2 rounded-xl bg-red-50 border border-red-100 px-5 py-3.5 text-sm font-bold text-red-600">
+              This meeting was cancelled.
+            </div>
+          ) : info?.canJoin && !info?.started ? (
+            <div className="flex flex-col items-center gap-2 rounded-xl bg-amber-50 border border-amber-100 px-5 py-4 text-center">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-amber-300 border-t-amber-600" />
+              <p className="text-sm font-bold text-amber-700">Waiting for the host to start the meeting…</p>
+              <p className="text-xs text-amber-600">This page will let you in as soon as they do — check back shortly.</p>
+            </div>
+          ) : info?.meetLink ? (
             <a
               href={info.meetLink}
               target="_blank"
               rel="noreferrer"
+              onClick={() => { try { getSocket().emit('user_status_update', { status: 'in-meeting' }); getSocket().emit('meeting_room_join', info.messageId); } catch { /* best-effort */ } }}
               className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#B8941E] px-5 py-3.5 text-sm font-bold text-foreground transition-all hover:brightness-105 active:scale-[0.98] shadow-md"
               style={{ color: '#1A1B3A' }}
             >
@@ -133,8 +152,14 @@ export default function MeetingJoinPage() {
               </svg>
               Join on Google Meet
             </a>
+          ) : (
+            info?.canJoin === false && (
+              <div className="flex items-center justify-center gap-2 rounded-xl bg-red-50 border border-red-100 px-5 py-3.5 text-sm font-bold text-red-600">
+                You are not invited to this meeting. Contact the host for access.
+              </div>
+            )
           )}
-          
+
           <a
             href={`/dashboard?channel=${info?.channelId || 'general'}`}
             className="btn-primary py-3.5 rounded-xl text-sm"

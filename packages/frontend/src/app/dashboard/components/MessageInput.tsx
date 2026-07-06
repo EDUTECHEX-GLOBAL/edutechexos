@@ -14,7 +14,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
-import { smartUpload } from '@/lib/uploadToFirebase';
+import { smartUpload } from '@/lib/smartUpload';
 import { getSocket } from '@/lib/socket';
 import { toast } from 'sonner';
 

@@ -28,6 +28,9 @@ async function upsertPage(req, res) {
   try {
     const id = req.body.id || req.params.id;
     const { channelId, title, content, isPrivate } = req.body;
+    if (!id) {
+      return res.status(400).json({ success: false, error: 'id is required.' });
+    }
     const userEmail = getUserEmail(req);
     const privacy = isPrivate === true;
 
@@ -70,7 +73,9 @@ async function deletePage(req, res) {
     const userEmail = getUserEmail(req);
     const page = await WikiPage.findById(id).lean();
     if (!page) return res.status(404).json({ success: false, error: 'Note not found.' });
-    if (page.createdBy && userEmail && page.createdBy.toLowerCase() !== userEmail.toLowerCase()) {
+    if (page.createdBy && userEmail &&
+        page.createdBy.toLowerCase() !== userEmail.toLowerCase() &&
+        req.user?.role !== 'Admin') {
       return res.status(403).json({ success: false, error: 'You can only delete your own notes.' });
     }
     await WikiPage.findByIdAndDelete(id);

@@ -26,6 +26,10 @@ const MessageSchema = new mongoose.Schema(
     reactions:   { type: mongoose.Schema.Types.Mixed, default: {} },
     poll:        { type: mongoose.Schema.Types.Mixed },
     linkPreview: { type: mongoose.Schema.Types.Mixed },
+    // DM read receipts — who has seen this message. Only meaningful for
+    // 1-on-1 DM channels (channelId starting with "dm-"); group channels
+    // don't track this (a "seen by N of M" UI is a different, bigger feature).
+    readBy:      { type: [String], default: [] },
   },
   { strict: false }
 );

@@ -23,6 +23,8 @@ const WorkspaceChannel = require('./WorkspaceChannel');
 const MeetingAccess = require('./MeetingAccess');
 const InviteToken = require('./InviteToken');
 const StandupReply = require('./StandupReply');
+const GoogleCalendarToken = require('./GoogleCalendarToken');
+const SyncedCalendarEvent = require('./SyncedCalendarEvent');
 
 module.exports = {
   Message, AccessRequest, Leave, ResetCode, LoginOtp,
@@ -30,4 +32,5 @@ module.exports = {
   LoginEvent, AWActivity, ActivitySession, MediaFile, RemovedMember,
   AuditLog, UserSettings, PinnedMessage, UserKey, AdminAvailability,
   MeetingRequest, WorkspaceChannel, MeetingAccess, InviteToken, StandupReply,
+  GoogleCalendarToken, SyncedCalendarEvent,
 };

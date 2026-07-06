@@ -12,8 +12,8 @@
  *   - When you LOG IN  to EduTechExOS → syncing starts automatically
  *   - When you LOG OUT of EduTechExOS → syncing stops automatically
  *   - Time is only counted while logged in AND within working hours
- *     (default 10:00–18:40 local). Activity before login, before 10:00, or
- *     after 18:40 is never counted. Resets automatically each day.
+ *     (default 10:00–18:30 local). Activity before login, before 10:00, or
+ *     after 18:30 is never counted. Resets automatically each day.
  *
  * ENV VARS (optional):
  *   EDUTECHEX_BACKEND — backend URL   (default: Render URL)
@@ -21,7 +21,7 @@
  *   SYNC_INTERVAL_MS  — sync interval (default: 300000 = 5 min)
  *   AW_SYNC_PORT      — local control port (default: 7891)
  *   WORK_START        — daily start "HH:MM" (default: 10:00)
- *   WORK_END          — daily end   "HH:MM" (default: 18:40)
+ *   WORK_END          — daily end   "HH:MM" (default: 18:30)
  */
 
 const http     = require('http');
@@ -33,14 +33,14 @@ const PORT     = parseInt(process.env.AW_SYNC_PORT     || '7891',   10);
 // Daily working-hours bound. Activity is only counted inside this window AND
 // while logged in — whichever is the smaller span. Time before login, before
 // the start time, or after the end time is never counted; it resets each day.
-// Defaults to 10:00–18:40 local time; override with WORK_START / WORK_END "HH:MM".
+// Defaults to 10:00–18:30 local time; override with WORK_START / WORK_END "HH:MM".
 function parseHHMM(str, fallbackMin) {
   const m = /^(\d{1,2}):(\d{2})$/.exec(String(str || ''));
   if (!m) return fallbackMin;
   return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
 }
 const WORK_START_MIN = parseHHMM(process.env.WORK_START, 10 * 60);      // 10:00
-const WORK_END_MIN   = parseHHMM(process.env.WORK_END,   18 * 60 + 40); // 18:40
+const WORK_END_MIN   = parseHHMM(process.env.WORK_END,   18 * 60 + 30); // 18:30
 
 // ─── State ────────────────────────────────────────────────────────────────────
 

@@ -17,6 +17,20 @@ const IS_LOCALHOST =
   typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
+// Daily working-hours bound, mirroring scripts/aw-sync.js (the standalone
+// agent already enforces this — this hook is the browser-based path, used
+// just by having the dashboard open, and previously had no such gate at all).
+// Outside this window, no ActivityWatch data is collected or sent, even if
+// the dashboard tab stays open and the user is still logged in.
+const WORK_START_MIN = 10 * 60;      // 10:00
+const WORK_END_MIN   = 18 * 60 + 30; // 18:30
+
+function isWithinWorkingHours(): boolean {
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  return mins >= WORK_START_MIN && mins < WORK_END_MIN;
+}
+
 function getToken(): string | null {
   try { return JSON.parse(localStorage.getItem('edutechex_token') ?? '').token ?? null; }
   catch { return null; }
@@ -209,6 +223,8 @@ export function useActivityWatchSync(active: boolean) {
   const sync = useCallback(async () => {
     const token = getToken();
     if (!token || !isMounted.current) return;
+    // Outside 10:00-18:30, don't collect or push any activity data at all.
+    if (!isWithinWorkingHours()) return;
     try {
       const today     = new Date();
       const yesterday = new Date(today);

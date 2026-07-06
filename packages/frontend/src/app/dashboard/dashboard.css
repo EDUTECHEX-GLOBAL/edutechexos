@@ -50,6 +50,10 @@
   --surface-card: #FFFFFF;
   --accent-color: var(--accent);
   --border-color: var(--border);
+
+  --global-header-height: 48px;
+  --topbar-bg: rgba(255, 255, 255, 0.85);
+  --topbar-border: rgba(99, 102, 241, 0.08);
 }
 
 /* ── Twilight Indigo Alternative (Non-Black Dark Mode) ── */
@@ -67,6 +71,9 @@ html.dark, .dark {
   --rail-bg:        #181B2B;
   --sidebar-text:   rgba(226, 232, 240, 0.9);
   --sidebar-muted:  #64748B;
+
+  --topbar-bg: rgba(24, 27, 43, 0.90);
+  --topbar-border: rgba(99, 102, 241, 0.15);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -76,6 +83,9 @@ html.dark, .dark {
   min-height: 100vh;
   background: var(--main-bg);
   font-family: var(--font-family);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .dashboard-workspace {
   display: grid;
@@ -89,10 +99,16 @@ html.dark, .dark {
 }
 .dashboard-workspace-no-panel {
   display: grid;
-  grid-template-columns: var(--rail-w) minmax(0,15.25rem) minmax(0,1fr) var(--rail-w);
   grid-template-rows: minmax(0,1fr);
-  height: 100vh;
+  height: calc(100vh - var(--global-header-height, 48px));
   overflow: hidden;
+  transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sidebar-expanded.dashboard-workspace-no-panel {
+  grid-template-columns: var(--rail-w) 15.25rem minmax(0,1fr) var(--rail-w);
+}
+.sidebar-collapsed.dashboard-workspace-no-panel {
+  grid-template-columns: var(--rail-w) 0px minmax(0,1fr) var(--rail-w);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -273,6 +289,14 @@ html.dark, .dark {
   -webkit-backdrop-filter: blur(16px);
   border-right: 1px solid var(--sidebar-border);
   position: relative;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, border-right-width 0.3s ease;
+  overflow: visible;
+}
+.sidebar-collapsed .workspace-sidebar {
+  width: 0 !important;
+  opacity: 0;
+  pointer-events: none;
+  border-right-width: 0px !important;
 }
 
 .sidebar-workspace-header {
@@ -706,3 +730,81 @@ html.dark, .dark {
 /* Jump-to-message highlight */
 .highlight-message { animation: msg-flash 2.5s ease-out forwards; }
 @keyframes msg-flash { 0%,20% { background: rgba(99,102,241,0.18); border-radius: 10px; } 100% { background: transparent; } }
+
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL TOP HEADER
+   ═══════════════════════════════════════════════════════════════ */
+.global-top-header {
+  height: var(--global-header-height, 48px);
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--topbar-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 100;
+  box-shadow: 0 1px 8px rgba(99, 102, 241, 0.03);
+}
+
+.expand-search {
+  max-width: 600px !important;
+  border-color: var(--brand-500) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+  background: #ffffff !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SIDEBAR TOGGLE BUTTON
+   ═══════════════════════════════════════════════════════════════ */
+.sidebar-toggle-btn {
+  border-color: var(--border) !important;
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.08) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.sidebar-toggle-btn:hover {
+  transform: translateY(-50%) scale(1.1) !important;
+  border-color: var(--brand-400) !important;
+  background-color: var(--bg-primary) !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.14) !important;
+}
+
+/* ── Twilight dark mode overrides for toggle button ── */
+.dark .sidebar-toggle-btn {
+  background-color: #252A42 !important;
+}
+.dark .sidebar-toggle-btn:hover {
+  background-color: #1e2235 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PREMIUM ACTIONS & BUTTONS
+   ═══════════════════════════════════════════════════════════════ */
+.premium-action-btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.premium-action-btn::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -50%;
+  width: 200%; height: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: skewX(-25deg);
+  transition: 0.75s;
+  opacity: 0;
+}
+.premium-action-btn:hover::after {
+  left: 125%;
+  opacity: 1;
+}
+
+.disabled-btn {
+  background: #7C859E !important;
+  box-shadow: none !important;
+  cursor: default !important;
+  opacity: 0.5;
+}

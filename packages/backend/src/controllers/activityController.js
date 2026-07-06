@@ -167,20 +167,37 @@ async function awSync(req, res) {
     const dateStr = /^\d{4}-\d{2}-\d{2}$/.test(payloadDateStr)
       ? payloadDateStr
       : new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+
+    // ── Sanity-clamp self-reported values ────────────────────────────────────
+    // The agent's numbers are client-supplied and cannot be fully trusted, so
+    // clamp them to physically-possible bounds (a day has 1440 minutes) and cap
+    // string/array sizes to avoid absurd or abusive payloads being stored.
+    const clampMin = (n) => {
+      const v = Number(n);
+      return Number.isFinite(v) ? Math.min(1440, Math.max(0, Math.round(v))) : 0;
+    };
+    const str = (s, max) => String(s ?? '').slice(0, max);
+    const safeApps = Array.isArray(appBreakdown)
+      ? appBreakdown.slice(0, 15).map((a) => ({ app: str(a?.app, 200), minutes: clampMin(a?.minutes) }))
+      : [];
+    const safeWeb = Array.isArray(webBreakdown)
+      ? webBreakdown.slice(0, 20).map((w) => ({ domain: str(w?.domain, 200), minutes: clampMin(w?.minutes), title: str(w?.title, 300) }))
+      : [];
+
     await AWActivity.findOneAndUpdate(
       { email, dateStr },
       {
         $set: {
           name,
-          currentApp:       currentApp       || '',
-          currentTitle:     currentTitle     || '',
-          isAfk:            isAfk            ?? false,
-          totalActiveMinutes: totalActiveMinutes || 0,
-          totalAfkMinutes:  totalAfkMinutes  || 0,
-          appBreakdown:     Array.isArray(appBreakdown)  ? appBreakdown.slice(0, 15)  : [],
-          currentUrl:       currentUrl       || '',
-          currentPageTitle: currentPageTitle || '',
-          webBreakdown:     Array.isArray(webBreakdown)  ? webBreakdown.slice(0, 20)  : [],
+          currentApp:       str(currentApp, 200),
+          currentTitle:     str(currentTitle, 300),
+          isAfk:            !!isAfk,
+          totalActiveMinutes: clampMin(totalActiveMinutes),
+          totalAfkMinutes:  clampMin(totalAfkMinutes),
+          appBreakdown:     safeApps,
+          currentUrl:       str(currentUrl, 500),
+          currentPageTitle: str(currentPageTitle, 300),
+          webBreakdown:     safeWeb,
           lastSync: new Date(),
         },
       },
@@ -329,7 +346,10 @@ async function getLoginStatus(req, res) {
     const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
     const events = await LoginEvent.find({ dateStr }).select('email').lean();
     const loggedInEmails = [...new Set(events.map(e => e.email.toLowerCase()).filter(Boolean))];
-    res.json({ success: true, loggedInEmails, dateStr });
+    // Live presence (currently-connected sockets) — distinct from "logged in today".
+    const io = req.app.get('io');
+    const onlineEmails = typeof io?.getOnlineEmails === 'function' ? io.getOnlineEmails() : [];
+    res.json({ success: true, loggedInEmails, onlineEmails, dateStr });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
@@ -389,4 +409,70 @@ async function resetAwDevice(req, res) {
   }
 }
 
-module.exports = { heartbeat, getLive, getHistory, getStats, awSync, getAw, getAWStatus, isSessionActive, logMessage, getAttendance, getLoginHistory, getMyAttendance, getLoginStatus, resetAwDevice };
+// Week-over-week team activity trend, most recent `weeks` 7-day buckets
+// (bucket 0 = the 7 days ending today). Used by the admin trend chart.
+async function getTrend(req, res) {
+  try {
+    if (!req.user || req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Admin only.' });
+    }
+    const weeks = Math.min(Math.max(parseInt(req.query.weeks, 10) || 4, 1), 12);
+    const msPerDay = 86400000;
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const todayIST = new Date(Date.now() + istOffset);
+    const cutoffStr = new Date(todayIST.getTime() - weeks * 7 * msPerDay).toISOString().slice(0, 10);
+
+    const sessions = await ActivitySession.find({ dateStr: { $gte: cutoffStr } }).lean();
+
+    const weekIndexForDate = (dateStr) => {
+      const d = new Date(`${dateStr}T00:00:00Z`);
+      const diffDays = Math.floor((todayIST.getTime() - d.getTime()) / msPerDay);
+      return Math.floor(diffDays / 7);
+    };
+
+    const buckets = Array.from({ length: weeks }, (_, i) => {
+      const endDate = new Date(todayIST.getTime() - i * 7 * msPerDay);
+      const startDate = new Date(endDate.getTime() - 6 * msPerDay);
+      return {
+        label: i === 0 ? 'This week' : i === 1 ? 'Last week' : `${i} weeks ago`,
+        startDate: startDate.toISOString().slice(0, 10),
+        endDate: endDate.toISOString().slice(0, 10),
+        totalMinutes: 0,
+        activeUsers: new Set(),
+        byUser: {},
+      };
+    });
+
+    sessions.forEach((s) => {
+      const idx = weekIndexForDate(s.dateStr);
+      if (idx < 0 || idx >= weeks) return;
+      const bucket = buckets[idx];
+      bucket.totalMinutes += s.totalMinutes || 0;
+      bucket.activeUsers.add(s.email);
+      if (!bucket.byUser[s.email]) {
+        bucket.byUser[s.email] = { email: s.email, name: s.name, totalMinutes: 0, messageCount: 0, taskCount: 0 };
+      }
+      bucket.byUser[s.email].totalMinutes += s.totalMinutes || 0;
+      bucket.byUser[s.email].messageCount += s.messageCount || 0;
+      bucket.byUser[s.email].taskCount += s.taskCount || 0;
+    });
+
+    const result = buckets
+      .slice()
+      .reverse()
+      .map((b) => ({
+        label: b.label,
+        startDate: b.startDate,
+        endDate: b.endDate,
+        totalMinutes: b.totalMinutes,
+        activeUserCount: b.activeUsers.size,
+        byUser: Object.values(b.byUser).sort((a, c) => c.totalMinutes - a.totalMinutes),
+      }));
+
+    res.json({ success: true, weeks: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+module.exports = { heartbeat, getLive, getHistory, getStats, awSync, getAw, getAWStatus, isSessionActive, logMessage, getAttendance, getLoginHistory, getMyAttendance, getLoginStatus, resetAwDevice, getTrend };

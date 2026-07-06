@@ -65,9 +65,44 @@ function getDeterministicColor(email) {
   return colors[Math.abs(hash) % colors.length];
 }
 
+// Derive up-to-2-char initials from a display name (server-side fallback so the
+// API never depends on the client sending an `initials`/`assigneeInitials` field).
+function getInitials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '??';
+  return parts.map((p) => p[0]).join('').toUpperCase().slice(0, 2);
+}
+
+// Map DB layer errors to clean HTTP responses. Mongoose ValidationError/CastError
+// are the client's fault → 400 with a readable message (never leak raw schema/
+// internal error text). Everything else → 500 with a generic message.
+function respondDbError(res, err, fallback = 'Something went wrong. Please try again.') {
+  if (err && err.name === 'ValidationError') {
+    // Build a clean, field-level message WITHOUT leaking mongoose's raw
+    // "Path `x` is required." internal phrasing.
+    const msg = Object.values(err.errors || {})
+      .map((e) => {
+        if (e.kind === 'required') return `${e.path} is required.`;
+        if (e.kind === 'enum')     return `${e.path} has an invalid value.`;
+        return `${e.path} is invalid.`;
+      })
+      .join(' ') || 'Invalid request data.';
+    return res.status(400).json({ success: false, error: msg });
+  }
+  if (err && err.name === 'CastError') {
+    return res.status(400).json({ success: false, error: 'Invalid value for one or more fields.' });
+  }
+  console.error('[server error]', err);
+  return res.status(500).json({ success: false, error: fallback });
+}
+
+// Single source of truth for the user-settings whitelist (used by
+// settingsController.saveSettings to block mass-assignment). Keep this in sync
+// with the UserSettings schema — do NOT edit a copy elsewhere.
 const SETTINGS_FIELDS = [
   'displayName', 'avatarEmoji', 'status', 'meetLink',
   'emailNotifications', 'desktopNotifications', 'soundNotifications',
+  'emailOnMentions', 'emailOnMeetings', 'emailOnLeave', 'emailOnDigest', 'emailOnDeadlines',
   'compactChat', 'fontSize', 'enterToSend', 'darkMode',
   'meetLinkThuPM', 'meetLinkFriday',
 ];
@@ -82,6 +117,8 @@ module.exports = {
   getUserEmail,
   formatMessage,
   getDeterministicColor,
+  getInitials,
+  respondDbError,
   SETTINGS_FIELDS,
   PAGE_SIZE,
 };

@@ -1,4 +1,4 @@
-const { getUserEmail } = require('../utils/helpers');
+const { getUserEmail, getInitials, respondDbError } = require('../utils/helpers');
 const KanbanTask = require('../models/KanbanTask');
 
 async function getTasks(req, res) {
@@ -25,6 +25,11 @@ async function createTask(req, res) {
     if (userEmail && !body.assigneeEmail) {
       body.assigneeEmail = userEmail;
     }
+    // Derive initials server-side when omitted so the API never 500s on a
+    // missing `assigneeInitials` (required by the model).
+    if (!body.assigneeInitials && body.assignee) {
+      body.assigneeInitials = getInitials(body.assignee);
+    }
     const task = new KanbanTask(body);
     const saved = await task.save();
     const { _id, __v, ...rest } = saved.toObject();
@@ -38,7 +43,7 @@ async function createTask(req, res) {
       },
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: String(err) });
+    respondDbError(res, err, 'Failed to create task.');
   }
 }
 

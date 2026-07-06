@@ -63,7 +63,13 @@ const corsOptions = {
 };
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '25mb' }));
+// Capture the raw request bytes alongside JSON parsing so webhook receivers can
+// verify HMAC signatures over the EXACT payload (GitHub signs the raw body, not a
+// re-serialization). Stashed on req.rawBody.
+app.use(express.json({
+  limit: '25mb',
+  verify: (req, _res, buf) => { req.rawBody = buf; },
+}));
 
 app.get('/health', (req, res) => {
   const { getConnectionStatus } = require('./src/config/database');

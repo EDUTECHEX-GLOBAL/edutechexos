@@ -14,7 +14,9 @@ router.post(
   uploadFile
 );
 
-// Serve files — no auth needed; files are referenced by unguessable MongoDB ObjectId
+// Serve files — serveFile itself requires a valid JWT (Authorization header OR the
+// `auth_session` cookie, so inline <img>/<a> loads work). Files are also referenced
+// by unguessable MongoDB ObjectId as defence-in-depth.
 router.get('/:id', serveFile);
 
 module.exports = router;

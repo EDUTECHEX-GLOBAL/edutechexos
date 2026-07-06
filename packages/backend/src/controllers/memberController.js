@@ -51,7 +51,7 @@ async function getMembers(req, res) {
     }
 
     const allHardcoded = [
-      { id: 'member-admin', name: 'Admin', email: 'admin@edutechex.in', role: 'Admin', initials: 'AD', status: 'online', color: '#3E4A89' },
+      { id: 'member-admin', name: 'Admin', email: 'admin@edutechex.in', role: 'Admin', initials: 'AD', color: '#3E4A89' },
     ];
 
     const removedDocs = await RemovedMember.find({}).lean();
@@ -75,7 +75,6 @@ async function getMembers(req, res) {
         name: r.name,
         email: r.email,
         role: r.role,
-        status: 'online',
         color: getDeterministicColor(r.email),
         initials,
         channelId: r.channelId,
@@ -90,13 +89,15 @@ async function getMembers(req, res) {
       }
     });
 
-    // Merge availability from UserSettings
+    // Merge live status + availability from UserSettings so a page reload
+    // reflects the user's real state instead of resetting everyone to "online".
     const settingsDocs = await UserSettings.find({}).lean();
-    const availabilityByEmail = new Map(
-      settingsDocs.map((s) => [s.email.toLowerCase(), !!s.available])
-    );
+    const settingsByEmail = new Map(settingsDocs.map((s) => [s.email.toLowerCase(), s]));
     allMembers.forEach((m) => {
-      m.isAvailable = availabilityByEmail.get(m.email.toLowerCase()) ?? false;
+      const s = settingsByEmail.get(m.email.toLowerCase());
+      m.isAvailable = !!s?.available;
+      // No settings doc yet = never connected/never set a status = offline.
+      m.status = s?.status ?? 'offline';
     });
 
     res.json({ success: true, members: allMembers });

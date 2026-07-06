@@ -34,6 +34,7 @@ import AdminGuard from '../components/AdminGuard';
 import LoginTrackerCalendar from './components/LoginTrackerCalendar';
 import AdminAvailabilityCalendar from './components/AdminAvailabilityCalendar';
 import AdminLeaveCalendar from './components/AdminLeaveCalendar';
+import TeamActivityTrend from './components/TeamActivityTrend';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { getSocket } from '@/lib/socket';
 import './admin.css';
@@ -188,6 +189,9 @@ export default function AdminPage() {
   });
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  type AttendanceRecord = { email: string; name: string; loginAt: string | null; logoutAt: string | null };
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+
   type AuditEntry = {
     id: string; adminEmail: string; adminName: string;
     action: string; target: string; targetName: string;
@@ -195,6 +199,7 @@ export default function AdminPage() {
   };
   const [auditLogs, setAuditLogs]       = useState<AuditEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
+  const [auditCategoryFilter, setAuditCategoryFilter] = useState<'all' | 'member' | 'leave' | 'channel'>('all');
   const [inviteName, setInviteName]     = useState('');
   const [inviteEmail, setInviteEmail]   = useState('');
   const [inviteRole, setInviteRole]     = useState('Developer');
@@ -311,6 +316,28 @@ export default function AdminPage() {
       return JSON.parse(localStorage.getItem('edutechex_token') ?? '').token ?? null;
     } catch {
       return null;
+    }
+  }
+
+  async function downloadCsv(type: 'attendance' | 'leaves' | 'activity') {
+    const token = getAdminToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/export/${type}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) { toast.error('Export failed.'); return; }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `edutechexos-${type}-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Export failed.');
     }
   }
 
@@ -474,9 +501,21 @@ export default function AdminPage() {
       .finally(() => setHistoryLoading(false));
   }, [historyDate]);
 
+  const fetchAttendance = useCallback((date?: string) => {
+    const token = getAdminToken();
+    if (!token) return;
+    const d = date ?? historyDate;
+    fetch(`${API_BASE}/api/activity/attendance?date=${d}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data: { success: boolean; records?: AttendanceRecord[] } | null) => {
+        if (data?.success && Array.isArray(data.records)) setAttendanceRecords(data.records);
+      })
+      .catch(() => {});
+  }, [historyDate]);
+
   useEffect(() => {
-    if (activeTab === 'desktop') fetchHistory();
-  }, [activeTab, fetchHistory]);
+    if (activeTab === 'desktop') { fetchHistory(); fetchAttendance(); }
+  }, [activeTab, fetchHistory, fetchAttendance]);
 
   useEffect(() => {
     if (activeTab === 'audit') fetchAuditLog();
@@ -1530,7 +1569,7 @@ export default function AdminPage() {
                 <table className="premium-table w-full min-w-[700px] text-left">
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(26,27,58,0.10)', background: 'rgba(91,79,219,0.02)' }}>
-                      {['Member', 'Role', 'Status', 'Channels', ''].map((h) => (
+                      {['Member', 'Role', 'Channels', ''].map((h) => (
                         <th key={h} style={{ padding: '11px 20px', fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.55)' }}>
                           {h}
                         </th>
@@ -1592,13 +1631,6 @@ export default function AdminPage() {
                                 )}
                               </div>
                             )}
-                          </td>
-                          {/* Status */}
-                          <td className="px-5 py-3.5">
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: member.status === 'online' ? '#0BA868' : '#5A5F80' }}>
-                              <span style={{ width: 7, height: 7, borderRadius: '50%', background: member.status === 'online' ? '#10C98A' : member.status === 'away' ? '#F59E0B' : '#D4D0CC', boxShadow: member.status === 'online' ? '0 0 6px rgba(16,201,138,0.60)' : 'none', flexShrink: 0 }} />
-                              {member.status ?? 'offline'}
-                            </span>
                           </td>
                           {/* Channels */}
                           <td className="px-5 py-3.5">
@@ -2614,6 +2646,8 @@ export default function AdminPage() {
             };
 
             const fmt = (m: number) => m <= 0 ? '0m' : m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`;
+            const fmtLoginTime = (iso: string | null | undefined) =>
+              iso ? new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—';
             const ago = (iso: string | null | undefined) => {
               if (!iso) return 'never';
               const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
@@ -2631,16 +2665,23 @@ export default function AdminPage() {
               status: 'live' | 'away' | 'offline';
               currentActivity: string; currentPanel: string;
               lastSeen: string | null;
+              loginAt: string | null;
               todayMinutes: number; messageCount: number; taskCount: number;
               appBreakdown: { app: string; minutes: number }[];
               totalActiveMinutes: number; isAfk: boolean; agentConnected: boolean;
+              focusScore: number | null;
             };
 
             const merged: MergedMember[] = members.map((m) => {
-              const live    = liveUsers.find(u => u.email.toLowerCase()    === m.email.toLowerCase());
-              const history = historyUsers.find(u => u.email.toLowerCase() === m.email.toLowerCase());
-              const aw      = awRecords.find(r => r.email.toLowerCase()    === m.email.toLowerCase());
+              const live       = liveUsers.find(u => u.email.toLowerCase()    === m.email.toLowerCase());
+              const history    = historyUsers.find(u => u.email.toLowerCase() === m.email.toLowerCase());
+              const aw         = awRecords.find(r => r.email.toLowerCase()    === m.email.toLowerCase());
+              const attendance = attendanceRecords.find(a => a.email.toLowerCase() === m.email.toLowerCase());
               const status: 'live' | 'away' | 'offline' = live ? 'live' : (history?.totalMinutes ?? 0) > 0 ? 'away' : 'offline';
+              const appBreakdown = aw?.appBreakdown ?? [];
+              const totalAppMins = appBreakdown.reduce((s, a) => s + a.minutes, 0);
+              const distractionMins = appBreakdown.filter(a => isDistraction(a.app)).reduce((s, a) => s + a.minutes, 0);
+              const focusScore = totalAppMins > 0 ? Math.round(((totalAppMins - distractionMins) / totalAppMins) * 100) : null;
               return {
                 email:              m.email,
                 name:               m.name,
@@ -2651,13 +2692,15 @@ export default function AdminPage() {
                 currentActivity:    live?.currentActivity || (history?.currentActivity ?? ''),
                 currentPanel:       live?.currentPanel    || (history?.currentPanel    ?? ''),
                 lastSeen:           live?.lastSeen        || (history?.lastSeen        ?? null),
+                loginAt:            attendance?.loginAt   ?? null,
                 todayMinutes:       history?.totalMinutes ?? (live?.todayMinutes ?? 0),
                 messageCount:       history?.messageCount ?? 0,
                 taskCount:          history?.taskCount    ?? 0,
-                appBreakdown:       aw?.appBreakdown      ?? [],
+                appBreakdown,
                 totalActiveMinutes: aw?.totalActiveMinutes ?? 0,
                 isAfk:              aw?.isAfk ?? false,
                 agentConnected:     !!aw,
+                focusScore,
               };
             }).sort((a, b) => {
               const order: Record<string, number> = { live: 0, away: 1, offline: 2 };
@@ -2668,7 +2711,7 @@ export default function AdminPage() {
             const teamMinutes  = merged.reduce((s, m) => s + m.todayMinutes, 0);
             const agentCount   = merged.filter(m => m.agentConnected).length;
 
-            const refreshAll = () => { fetchLiveUsers(); fetchHistory(viewDate); fetchAwData(viewDate); };
+            const refreshAll = () => { fetchLiveUsers(); fetchHistory(viewDate); fetchAwData(viewDate); fetchAttendance(viewDate); };
 
             const toggleExpand = (email: string) =>
               setExpandedDesktopEmail(prev => prev === email ? null : email);
@@ -2708,7 +2751,7 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input
                     type="date" value={viewDate} max={todayIST}
-                    onChange={e => { const d = e.target.value; setAwDate(d); setHistoryDate(d); fetchHistory(d); fetchAwData(d); }}
+                    onChange={e => { const d = e.target.value; setAwDate(d); setHistoryDate(d); fetchHistory(d); fetchAwData(d); fetchAttendance(d); }}
                     style={{ borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', background: '#fff', padding: '8px 12px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', outline: 'none' }}
                   />
                   <button type="button" onClick={refreshAll}
@@ -2716,6 +2759,15 @@ export default function AdminPage() {
                     <RefreshCw size={13} className={(awLoading || historyLoading || liveLoading) ? 'animate-spin' : ''} />
                     Refresh
                   </button>
+                  <div style={{ display: 'flex', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', overflow: 'hidden' }}>
+                    {(['attendance', 'activity'] as const).map((t, i) => (
+                      <button key={t} type="button" onClick={() => downloadCsv(t)}
+                        title={`Export ${t} as CSV`}
+                        style={{ borderLeft: i > 0 ? '1px solid rgba(26,27,58,0.10)' : 'none', background: '#fff', padding: '8px 12px', fontSize: 11.5, fontWeight: 700, color: '#5B4FDB', cursor: 'pointer' }}>
+                        Export {t === 'attendance' ? 'Attendance' : 'Activity'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -2723,8 +2775,8 @@ export default function AdminPage() {
               <div style={{ borderRadius: 18, border: '1.5px solid rgba(26,27,58,0.09)', background: '#fff', overflow: 'hidden', boxShadow: '0 2px 12px rgba(26,27,58,0.04)' }}>
 
                 {/* Column headers */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 60px 60px 60px 28px', gap: 0, padding: '9px 20px', background: 'rgba(26,27,58,0.03)', borderBottom: '1px solid rgba(26,27,58,0.07)' }}>
-                  {['Member', 'Status', 'Time', 'Msgs', 'Tasks', ''].map((h) => (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 76px 60px 60px 60px 60px 28px', gap: 0, padding: '9px 20px', background: 'rgba(26,27,58,0.03)', borderBottom: '1px solid rgba(26,27,58,0.07)' }}>
+                  {['Member', 'Status', 'Login', 'Time', 'Msgs', 'Tasks', 'Focus', ''].map((h) => (
                     <span key={h} style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.45)' }}>{h}</span>
                   ))}
                 </div>
@@ -2750,7 +2802,7 @@ export default function AdminPage() {
                         className="drow"
                         onClick={() => toggleExpand(person.email)}
                         style={{
-                          display: 'grid', gridTemplateColumns: '1fr 120px 60px 60px 60px 28px',
+                          display: 'grid', gridTemplateColumns: '1fr 120px 76px 60px 60px 60px 60px 28px',
                           alignItems: 'center', padding: '13px 20px', cursor: 'pointer',
                           borderBottom: isExpanded ? 'none' : idx < merged.length - 1 ? '1px solid rgba(26,27,58,0.06)' : 'none',
                           background: isExpanded ? 'rgba(99,102,241,0.03)' : '#fff',
@@ -2773,6 +2825,11 @@ export default function AdminPage() {
                         {/* Status */}
                         <span style={{ fontSize: 11, fontWeight: 700, color: statusFg }}>{statusText}</span>
 
+                        {/* Login time */}
+                        <span style={{ fontSize: 11, fontWeight: 700, color: person.loginAt ? '#1A1B3A' : 'rgba(90,95,128,0.35)' }} title={person.loginAt ? `Logged in at ${fmtLoginTime(person.loginAt)}` : 'Not logged in today'}>
+                          {fmtLoginTime(person.loginAt)}
+                        </span>
+
                         {/* Time */}
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#10B981' }}>{fmt(person.todayMinutes)}</span>
 
@@ -2781,6 +2838,11 @@ export default function AdminPage() {
 
                         {/* Tasks */}
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B' }}>{person.taskCount}</span>
+
+                        {/* Focus score — % of tracked desktop time NOT spent on distracting apps */}
+                        <span style={{ fontSize: 12, fontWeight: 700, color: person.focusScore === null ? 'rgba(90,95,128,0.30)' : person.focusScore >= 70 ? '#10B981' : person.focusScore >= 40 ? '#F59E0B' : '#EF4444' }}>
+                          {person.focusScore === null ? '—' : `${person.focusScore}%`}
+                        </span>
 
                         {/* Chevron */}
                         <span style={{ fontSize: 14, color: 'rgba(90,95,128,0.35)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}></span>
@@ -2869,6 +2931,9 @@ export default function AdminPage() {
                   );
                 })}
               </div>
+
+              <div style={{ height: 1, background: 'rgba(26,27,58,0.08)' }} />
+              <TeamActivityTrend />
             </div>
           );
           })()}
@@ -3017,7 +3082,7 @@ export default function AdminPage() {
           {activeTab === 'leave-calendar' && (
             <div className="card-premium p-6">
               <div style={{ height: 3, background: 'linear-gradient(90deg, #10C98A, #059669)', borderRadius: 3, marginBottom: 24 }} />
-              <AdminLeaveCalendar />
+              <AdminLeaveCalendar members={members} />
             </div>
           )}
 
@@ -3047,28 +3112,58 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              {/* Legend */}
+              {/* Category filter buttons */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {[
-                  { prefix: 'member',  label: 'Member', color: '#6366F1' },
-                  { prefix: 'leave',   label: 'Leave',  color: '#F59E0B' },
-                  { prefix: 'channel', label: 'Channel',color: '#0DAFCE' },
-                ].map(({ prefix, label, color }) => (
-                  <span key={prefix} style={{ fontSize: 10.5, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: `${color}18`, color, border: `1px solid ${color}33` }}>
-                    {label}
-                  </span>
-                ))}
+                  { prefix: 'all' as const,     label: 'All',     color: '#5A5F80' },
+                  { prefix: 'member' as const,  label: 'Member',  color: '#6366F1' },
+                  { prefix: 'leave' as const,   label: 'Leave',   color: '#F59E0B' },
+                  { prefix: 'channel' as const, label: 'Channel', color: '#0DAFCE' },
+                ].map(({ prefix, label, color }) => {
+                  const active = auditCategoryFilter === prefix;
+                  const count = prefix === 'all' ? auditLogs.length : auditLogs.filter(l => l.action.split('.')[0] === prefix).length;
+                  return (
+                    <button
+                      key={prefix}
+                      type="button"
+                      onClick={() => setAuditCategoryFilter(prefix)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                        fontSize: 10.5, fontWeight: 700, padding: '4px 12px', borderRadius: 20,
+                        background: active ? color : `${color}18`,
+                        color: active ? '#fff' : color,
+                        border: `1px solid ${active ? color : `${color}33`}`,
+                        transition: 'all .15s',
+                      }}
+                    >
+                      {label}
+                      <span style={{
+                        fontSize: 9.5, fontWeight: 800, padding: '1px 6px', borderRadius: 10,
+                        background: active ? 'rgba(255,255,255,0.25)' : `${color}22`,
+                        color: active ? '#fff' : color,
+                      }}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Log entries */}
-              {auditLoading ? (
+              {(() => {
+                const filteredAuditLogs = auditCategoryFilter === 'all'
+                  ? auditLogs
+                  : auditLogs.filter(l => l.action.split('.')[0] === auditCategoryFilter);
+                return auditLoading ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'rgba(90,95,128,0.55)', fontSize: 13, padding: '48px 0', justifyContent: 'center' }}>
                   <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Loading audit log
                 </div>
-              ) : auditLogs.length === 0 ? (
+              ) : filteredAuditLogs.length === 0 ? (
                 <div style={{ borderRadius: 16, border: '1.5px dashed rgba(99,102,241,0.20)', background: 'rgba(99,102,241,0.02)', padding: '52px 32px', textAlign: 'center' }}>
                   <ScrollText size={28} style={{ margin: '0 auto 12px', color: 'rgba(99,102,241,0.30)' }} />
-                  <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(90,95,128,0.60)', margin: 0 }}>No admin actions recorded yet</p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(90,95,128,0.60)', margin: 0 }}>
+                    {auditCategoryFilter === 'all' ? 'No admin actions recorded yet' : `No ${auditCategoryFilter} actions recorded yet`}
+                  </p>
                   <p style={{ margin: '4px 0 0', fontSize: 11.5, color: 'rgba(90,95,128,0.40)' }}>Actions will appear here as soon as any admin takes one.</p>
                 </div>
               ) : (
@@ -3080,7 +3175,7 @@ export default function AdminPage() {
                     ))}
                   </div>
 
-                  {auditLogs.map((log, idx) => {
+                  {filteredAuditLogs.map((log, idx) => {
                     const [category] = log.action.split('.');
                     const colorMap: Record<string, string> = { member: '#6366F1', leave: '#F59E0B', channel: '#0DAFCE' };
                     const accent = colorMap[category] || '#94A3B8';
@@ -3104,7 +3199,7 @@ export default function AdminPage() {
                         style={{
                           display: 'grid', gridTemplateColumns: '160px 1fr 180px 200px',
                           alignItems: 'center', padding: '12px 20px',
-                          borderBottom: idx < auditLogs.length - 1 ? '1px solid rgba(26,27,58,0.05)' : 'none',
+                          borderBottom: idx < filteredAuditLogs.length - 1 ? '1px solid rgba(26,27,58,0.05)' : 'none',
                         }}
                       >
                         {/* When */}
@@ -3145,7 +3240,8 @@ export default function AdminPage() {
                     );
                   })}
                 </div>
-              )}
+              );
+              })()}
             </div>
           )}
         </main>

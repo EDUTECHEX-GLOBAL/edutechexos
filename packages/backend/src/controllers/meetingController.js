@@ -4,11 +4,13 @@ const MeetingRequest = require('../models/MeetingRequest');
 const MediaFile = require('../models/MediaFile');
 const AccessRequest = require('../models/AccessRequest');
 const { sendBrevoEmail } = require('../services/emailService');
+const { wantsEmail } = require('../services/notificationPrefsService');
+const googleCalendarService = require('../services/googleCalendarService');
 
 async function createMeetingAccess(req, res) {
   try {
     if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized.' });
-    const { messageId, channelId, allowedEmails, meetingCode, meetLink, startAt, title, channelName } = req.body;
+    const { messageId, channelId, allowedEmails, meetingCode, meetLink, startAt, title, channelName, description, recurring } = req.body;
     const hostEmail = req.user.email;
     if (!messageId || !channelId) {
       return res.status(400).json({ success: false, error: 'messageId and channelId are required.' });
@@ -27,6 +29,9 @@ async function createMeetingAccess(req, res) {
           started: false,
           title: title || '',
           channelName: channelName || '',
+          description: description || '',
+          recurring: !!recurring,
+          cancelled: false,
         },
       },
       { upsert: true, new: true }
@@ -45,11 +50,91 @@ async function checkMeetingAccess(req, res) {
     const userEmail = req.user?.email?.toLowerCase() || '';
     const allowed = doc.allowedEmails.map((e) => e.toLowerCase());
     const granted = doc.grantedEmails.map((e) => e.toLowerCase());
-    const canJoin = userEmail === doc.hostEmail.toLowerCase()
+    const isHostOrAdmin = userEmail === doc.hostEmail.toLowerCase() || req.user?.role === 'Admin';
+    const canJoin = !doc.cancelled && (
+      userEmail === doc.hostEmail.toLowerCase()
       || allowed.includes(userEmail)
-      || granted.includes(userEmail);
+      || granted.includes(userEmail)
+    );
 
-    res.json({ success: true, canJoin, hostEmail: doc.hostEmail, exists: true });
+    res.json({
+      success: true,
+      canJoin,
+      hostEmail: doc.hostEmail,
+      exists: true,
+      cancelled: !!doc.cancelled,
+      started: !!doc.started,
+      title: doc.title,
+      description: doc.description || '',
+      startAt: doc.startAt,
+      recurring: !!doc.recurring,
+      isHostOrAdmin,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+async function editMeetingAccess(req, res) {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    const doc = await MeetingAccess.findOne({ messageId: req.params.messageId }).lean();
+    if (!doc) return res.status(404).json({ success: false, error: 'Meeting not found.' });
+    if (req.user.email.toLowerCase() !== doc.hostEmail.toLowerCase() && req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Only the meeting host or admin can edit this meeting.' });
+    }
+    if (doc.cancelled) return res.status(400).json({ success: false, error: 'This meeting was cancelled.' });
+
+    const { title, description, startAt, allowedEmails } = req.body;
+    const update = {};
+    if (typeof title === 'string' && title.trim()) update.title = title.trim();
+    if (typeof description === 'string') update.description = description;
+    if (Array.isArray(allowedEmails)) update.allowedEmails = allowedEmails;
+    if (startAt) {
+      const parsed = new Date(startAt);
+      if (!isNaN(parsed.getTime())) update.startAt = parsed;
+    }
+
+    const updated = await MeetingAccess.findByIdAndUpdate(doc._id, { $set: update }, { new: true }).lean();
+
+    const io = req.app.get('io');
+    if (io) io.emit('meeting_updated', { messageId: req.params.messageId, channelId: doc.channelId, title: updated.title, description: updated.description, startAt: updated.startAt });
+
+    res.json({ success: true, access: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+async function cancelMeetingAccess(req, res) {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    const doc = await MeetingAccess.findOne({ messageId: req.params.messageId }).lean();
+    if (!doc) return res.status(404).json({ success: false, error: 'Meeting not found.' });
+    if (req.user.email.toLowerCase() !== doc.hostEmail.toLowerCase() && req.user.role !== 'Admin') {
+      return res.status(403).json({ success: false, error: 'Only the meeting host or admin can cancel this meeting.' });
+    }
+
+    await MeetingAccess.findByIdAndUpdate(doc._id, { $set: { cancelled: true } });
+
+    const io = req.app.get('io');
+    if (io) io.emit('meeting_cancelled', { messageId: req.params.messageId, channelId: doc.channelId });
+
+    const notifyEmailsAll = Array.from(new Set([...(doc.allowedEmails || []), ...(doc.grantedEmails || [])]));
+    const notifyFlags = await Promise.all(notifyEmailsAll.map((email) => wantsEmail(email, 'meetings')));
+    const notifyEmails = notifyEmailsAll.filter((_, i) => notifyFlags[i]);
+    if (notifyEmails.length > 0) {
+      sendBrevoEmail({
+        to: notifyEmails.map((email) => ({ email })),
+        subject: `EduTechExOS — Meeting cancelled: ${doc.title || 'Team meeting'}`,
+        html: `<div style="font-family:Arial,sans-serif;max-width:520px;padding:24px;background:#FAF8F5;border-radius:10px;">
+          <h2 style="color:#1E2636;margin:0 0 12px;font-size:17px;">Meeting Cancelled</h2>
+          <p style="color:#4A5578;font-size:14px;">The meeting "<strong>${doc.title || 'Team meeting'}</strong>" hosted by ${doc.hostEmail} has been cancelled.</p>
+        </div>`,
+      }).catch((err) => console.error('[email] meeting-cancel notification failed:', err));
+    }
+
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
@@ -80,7 +165,7 @@ async function grantMeetingAccess(req, res) {
 
 async function sendMeetingInvite(req, res) {
   try {
-    const { title, time, joinLink, channelId, inviteeEmails } = req.body;
+    const { title, time, joinLink, channelId, inviteeEmails, startAt, messageId } = req.body;
     if (!title || !joinLink) {
       return res.status(400).json({ success: false, error: 'title and joinLink are required.' });
     }
@@ -105,6 +190,24 @@ async function sendMeetingInvite(req, res) {
     const senderEmail = req.user?.email?.toLowerCase();
     if (senderEmail) to = to.filter(r => r.email.toLowerCase() !== senderEmail);
     const hostName = req.user?.name || req.user?.email || 'A team member';
+
+    // Auto-push to Google Calendar for anyone (host + invitees) who has
+    // connected their Google account — best-effort, never blocks the response.
+    // Uses the full invitee list, independent of email notification preferences.
+    const calendarExternalId = `meeting-${messageId || channelId + '-' + title}`;
+    const calendarAttendees = senderEmail ? [senderEmail, ...to.map(r => r.email.toLowerCase())] : to.map(r => r.email.toLowerCase());
+    Promise.all(calendarAttendees.map((email) =>
+      googleCalendarService.upsertEvent(email, {
+        externalId: calendarExternalId,
+        title,
+        description: `Join: ${joinLink}\n\nScheduled via EduTechExOS`,
+        startAt,
+        location: joinLink,
+      }).catch((err) => console.error(`[gcal-sync] ${email} failed:`, err))
+    )).catch(() => {});
+
+    const toFlags = await Promise.all(to.map((r) => wantsEmail(r.email, 'meetings')));
+    to = to.filter((_, i) => toFlags[i]);
 
     const html = `
       <div style="font-family:Inter,Arial,sans-serif;background:#f8fafc;padding:32px;">
@@ -240,8 +343,10 @@ async function createMeetingRequest(req, res) {
     });
     const saved = await mr.save();
 
-    // Email admin
-    sendBrevoEmail({
+    // Email admin (respecting their meeting notification preference)
+    wantsEmail(resolvedAdminEmail, 'meetings').then((wants) => {
+      if (!wants) return;
+      sendBrevoEmail({
       to: [{ email: resolvedAdminEmail }],
       subject: `EduTechExOS — Meeting request from ${req.user.name} on ${date} at ${timeDisplay}`,
       html: `
@@ -254,7 +359,8 @@ async function createMeetingRequest(req, res) {
           </div>
           <a href="${process.env.APP_URL || 'https://edutechexos.vercel.app'}/admin" style="display:inline-block;background:#3E4A89;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:700;">Review in Admin Panel &#x2192;</a>
         </div>`,
-    }).catch((err) => console.error('[email] meeting-request admin alert failed:', err));
+      }).catch((err) => console.error('[email] meeting-request admin alert failed:', err));
+    }).catch(() => {});
 
     // Socket notification to admin
     const io = req.app.get('io');
@@ -279,8 +385,13 @@ async function reviewMeetingRequest(req, res) {
       return res.status(403).json({ success: false, error: 'Admin only.' });
     }
     const { status } = req.body;
+    // Guard the status enum so a record can't be wedged into an unknown state
+    // (mirrors reviewLeave / reviewRequest). Matches the MeetingRequest schema enum.
+    if (!['pending', 'confirmed', 'declined'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'status must be pending, confirmed, or declined.' });
+    }
     const updated = await MeetingRequest.findByIdAndUpdate(
-      req.params.id, { status }, { new: true }
+      req.params.id, { status }, { new: true, runValidators: true }
     ).lean();
     if (!updated) return res.status(404).json({ success: false, error: 'Not found.' });
     const timeDisplay = updated.timeEnd ? `${updated.time} – ${updated.timeEnd}` : updated.time;
@@ -317,7 +428,36 @@ async function lookupMeetingByCode(req, res) {
   try {
     const doc = await MeetingAccess.findOne({ meetingCode: req.params.code }).lean();
     if (!doc) return res.status(404).json({ success: false, error: 'Meeting not found.' });
-    res.json({ success: true, messageId: doc.messageId, channelId: doc.channelId, hostEmail: doc.hostEmail, meetLink: doc.meetLink });
+
+    // Same access rule as checkMeetingAccess (used by the Calendar panel),
+    // applied here too so the actual join checkpoint page enforces exactly
+    // what the rest of the app already displays as the access decision —
+    // this was previously unchecked, letting anyone with the code straight in.
+    const userEmail = req.user?.email?.toLowerCase() || '';
+    const allowed = (doc.allowedEmails || []).map((e) => e.toLowerCase());
+    const granted = (doc.grantedEmails || []).map((e) => e.toLowerCase());
+    const isHost = userEmail === doc.hostEmail.toLowerCase();
+    const canJoin = !doc.cancelled && (
+      isHost || allowed.includes(userEmail) || granted.includes(userEmail)
+    );
+
+    res.json({
+      success: true,
+      messageId: doc.messageId,
+      channelId: doc.channelId,
+      hostEmail: doc.hostEmail,
+      title: doc.title || '',
+      description: doc.description || '',
+      startAt: doc.startAt,
+      cancelled: !!doc.cancelled,
+      // Waiting room: non-host invitees only see the real link once the host
+      // has actually started the meeting (or if there's no scheduled time at all).
+      started: !!doc.started || !doc.startAt || isHost,
+      // Don't hand over the real Google Meet link to someone who isn't allowed in
+      // or who's waiting for the host to start.
+      meetLink: canJoin && (!!doc.started || !doc.startAt || isHost) ? doc.meetLink : null,
+      canJoin,
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
@@ -326,6 +466,8 @@ async function lookupMeetingByCode(req, res) {
 module.exports = {
   createMeetingAccess,
   checkMeetingAccess,
+  editMeetingAccess,
+  cancelMeetingAccess,
   grantMeetingAccess,
   sendMeetingInvite,
   registerMedia,

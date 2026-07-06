@@ -49,4 +49,14 @@ const globalLimiter = makeRateLimiter({
   message: { error: 'Too many requests.' },
 });
 
-module.exports = { makeRateLimiter, authLimiter, apiLimiter, globalLimiter };
+// Tighter limit for unauthenticated endpoints that trigger outbound email
+// (each access-request submission sends 2 emails: applicant + admin). Sized to
+// allow normal onboarding from a shared office/college IP while capping abuse
+// that could spam the admin inbox or a victim address. 20/hour/IP.
+const emailActionLimiter = makeRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many requests from this network. Please try again later.' },
+});
+
+module.exports = { makeRateLimiter, authLimiter, apiLimiter, globalLimiter, emailActionLimiter };

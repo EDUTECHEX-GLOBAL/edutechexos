@@ -9,11 +9,12 @@ import { useDashboardStore } from '@/store/dashboardStore';
 import type { MemberStatus } from '@/store/dashboardStore';
 import { useTheme } from '@/components/ThemeProvider';
 import { sendMentionEmailNotification, changePassword } from '@/app/actions/dbActions';
-import { smartUpload } from '@/lib/uploadToFirebase';
+import { smartUpload } from '@/lib/smartUpload';
 import NotificationPanel from './NotificationPanel';
 import AIPanel from './AIPanel';
 import { ToastContainer, type ToastData } from './ToastNotification';
 import { getSocket } from '@/lib/socket';
+import { bankSessionTime } from '@/lib/sessionTimer';
 import {
   getOrCreateKeyPair,
   publishPublicKey,
@@ -40,7 +41,6 @@ import AnalyticsPanel from './AnalyticsPanel';
 import BookmarksPanel from './BookmarksPanel';
 import NotepadPanel from './NotepadPanel';
 import StandupPanel from './StandupPanel';
-import UserAttendanceCalendar from './UserAttendanceCalendar';
 import SessionTimer from './SessionTimer';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -73,6 +73,7 @@ import {
   CalendarDays,
   ChevronDown,
   Hash,
+  Check,
   CheckSquare,
   Loader2,
   Mail,
@@ -313,6 +314,28 @@ function formatDate(value: string) {
     .toUpperCase();
 }
 
+// WhatsApp-style day label: "TODAY" / "YESTERDAY" / weekday name for the
+// last week / full date beyond that. Compares calendar days, not 24h windows.
+function formatDayLabel(value: string): string {
+  const d = new Date(value);
+  const startOfDay = (dt: Date) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const diffDays = Math.round((startOfDay(new Date()) - startOfDay(d)) / dayMs);
+
+  if (diffDays === 0) return 'TODAY';
+  if (diffDays === 1) return 'YESTERDAY';
+  if (diffDays > 1 && diffDays < 7) {
+    return new Intl.DateTimeFormat('en', { weekday: 'long' }).format(d).toUpperCase();
+  }
+  return formatDate(value);
+}
+
+function isSameCalendarDay(a: string, b: string): boolean {
+  const da = new Date(a);
+  const db = new Date(b);
+  return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
+}
+
 function renderWithMentions(
   text: string,
   isOwn: boolean,
@@ -383,6 +406,7 @@ export default function EduTechExOSDashboard() {
     updateMessageFromSocket,
     deleteMessageFromSocket,
     patchLocalMessage,
+    markChannelMessagesRead,
     addNotification,
     loadLocalMessages,
     loadLocalWikiPages,
@@ -420,6 +444,26 @@ export default function EduTechExOSDashboard() {
   const [rightPanel, setRightPanel] = useState<'ai' | 'closed'>('closed');
   const [rightSidePanel, setRightSidePanel] = useState<'pinned' | 'bookmarked' | null>(null);
   const [meetJoinState, setMeetJoinState] = useState<Record<string, 'checking' | 'denied'>>({});
+  // Which meeting (by messageId) the user last clicked "Join" on — used to emit
+  // meeting_room_join/leave so others see a live "X people in this meeting" count.
+  const currentMeetingIdRef = useRef<string | null>(null);
+  const [meetingRoomCounts, setMeetingRoomCounts] = useState<Record<string, number>>({});
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [searchQueryState, setSearchQueryState] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'chat' | 'tasks' | 'ai'>('chat');
   const [composerMessage, setComposerMessage] = useState('');
@@ -462,12 +506,31 @@ export default function EduTechExOSDashboard() {
   const [meetInputMenuOpen, setMeetInputMenuOpen] = useState(false);
   const [shareMeetLinkOpen, setShareMeetLinkOpen] = useState(false);
   const [shareMeetLinkValue, setShareMeetLinkValue] = useState('');
+  const [restrictInstantMeet, setRestrictInstantMeet] = useState(false);
+  const [instantMeetInviteeIds, setInstantMeetInviteeIds] = useState<string[]>([]);
+  // messageId → access info for instant meets. `exists` is false for the
+  // (default) open case — no MeetingAccess record was ever created — so
+  // unrestricted instant meets never show a "denied" state or Grant Access UI.
+  const [instantMeetAccess, setInstantMeetAccess] = useState<Record<string, { canJoin: boolean; exists: boolean }>>({});
+  const [instantMeetGrantFor, setInstantMeetGrantFor] = useState<string | null>(null);
+  const [instantMeetGrantEmail, setInstantMeetGrantEmail] = useState('');
+  const [instantMeetGranting, setInstantMeetGranting] = useState(false);
   const meetInputMenuRef = useRef<HTMLDivElement>(null);
   const [scheduleMeetOpen, setScheduleMeetOpen] = useState(false);
   const [meetTitle, setMeetTitle] = useState('');
   const [meetDate, setMeetDate] = useState('');
   const [meetTime, setMeetTime] = useState('');
+  // A fresh Google Meet link for this specific meeting — same copy-paste
+  // pattern as Instant Meet, so every scheduled meeting gets its own room
+  // instead of reusing the fixed recurring company links.
+  const [scheduleMeetGoogleLink, setScheduleMeetGoogleLink] = useState('');
+  const [meetDescription, setMeetDescription] = useState('');
+  const [meetRecurring, setMeetRecurring] = useState(false);
   const [meetInviteeIds, setMeetInviteeIds] = useState<string[]>([]);
+  // Edit/Cancel an existing scheduled meeting (separate small modal, not the
+  // big create form above).
+  const [editMeetingTarget, setEditMeetingTarget] = useState<{ messageId: string; title: string; description: string; startAt: string } | null>(null);
+  const [editMeetingSaving, setEditMeetingSaving] = useState(false);
   const [sendEmailInvite, setSendEmailInvite] = useState(true);
   const [mentionMenuOpen, setMentionMenuOpen] = useState(false);
   const [emojiMenuOpen, setEmojiMenuOpen] = useState(false);
@@ -568,7 +631,7 @@ export default function EduTechExOSDashboard() {
             }));
           }
         })
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => {
           settingsLoadedFromDB.current = true;
         });
@@ -593,7 +656,7 @@ export default function EduTechExOSDashboard() {
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(settings),
           }
-        ).catch(() => {});
+        ).catch(() => { });
       } catch {
         /* ignore */
       }
@@ -633,6 +696,10 @@ export default function EduTechExOSDashboard() {
     ? members.find((member) => member.email.toLowerCase() === currentUser.email.toLowerCase())
     : null;
   const currentMemberId = currentMember?.id ?? '';
+  const currentMemberIdRef = useRef(currentMemberId);
+  useEffect(() => {
+    currentMemberIdRef.current = currentMemberId;
+  }, [currentMemberId]);
   const isAdmin = currentUser?.role === 'Admin';
   const currentUserColor = currentMember?.color ?? (isAdmin ? '#3E4A89' : '#64748b');
   const workspaceChannels = useMemo(
@@ -681,6 +748,47 @@ export default function EduTechExOSDashboard() {
     }
     return [];
   }, [messages, activeChannelId, channel, currentMemberId]);
+
+  // DM read receipts: mark everything in this DM as read by me the moment I
+  // open it, and tell the other person via socket so their checkmarks update live.
+  useEffect(() => {
+    const myEmail = currentUser?.email?.toLowerCase();
+    if (!activeChannelId.startsWith('dm-') || !myEmail) return;
+    markChannelMessagesRead(activeChannelId, myEmail);
+    const tk = (() => { try { return JSON.parse(localStorage.getItem('edutechex_token') || '{}')?.token; } catch { return ''; } })();
+    if (!tk) return;
+    const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+    fetch(`${BACKEND}/api/messages/read`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tk}` },
+      body: JSON.stringify({ channelId: activeChannelId }),
+    }).catch(() => { });
+  }, [activeChannelId, currentUser?.email, markChannelMessagesRead]);
+
+  // Check backend access for any instant-meet messages in view. Unrestricted
+  // instant meets (the default) have no MeetingAccess record, so this just
+  // confirms `exists: false` and renders exactly as before — only restricted
+  // ones (host opted in) can ever show a "denied" state.
+  useEffect(() => {
+    const tk = (() => { try { return JSON.parse(localStorage.getItem('edutechex_token') || '{}')?.token; } catch { return ''; } })();
+    if (!tk) return;
+    const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+    channelMessages
+      .filter((m) => m.id?.startsWith('meeting-started-') && !(m.id in instantMeetAccess))
+      .forEach(async (m) => {
+        try {
+          const res = await fetch(`${BACKEND}/api/meeting-access/${m.id}`, {
+            headers: { Authorization: `Bearer ${tk}` },
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data.success) {
+            setInstantMeetAccess((prev) => ({ ...prev, [m.id]: { canJoin: !!data.canJoin, exists: !!data.exists } }));
+          }
+        } catch { /* backend unavailable — leave ungated, matches today's default */ }
+      });
+  }, [channelMessages, instantMeetAccess]);
+
   // All users can see the full team list so they can start personal DMs
   const people = members;
   const activeChannelMembers = useMemo(() => {
@@ -691,6 +799,11 @@ export default function EduTechExOSDashboard() {
     return members.filter((member) => channel.memberIds?.includes(member.id));
   }, [channel, currentMemberId, members]);
   const currentUserEmail = currentUser?.email?.toLowerCase() ?? '';
+  // For a DM, channel.id IS the other person's member id — so this gives us
+  // their email directly, for the "read" checkmark below.
+  const dmPartnerEmail = channel?.id.startsWith('member-')
+    ? members.find((m) => m.id === channel.id)?.email?.toLowerCase() ?? null
+    : null;
 
   // ActivityWatch auto-sync — starts on login, stops on logout/unmount
   const awStatus = useActivityWatchSync(!!currentUserEmail);
@@ -706,7 +819,6 @@ export default function EduTechExOSDashboard() {
     thuPM: settings.meetLinkThuPM.trim() || THURSDAY_AFTERNOON_MEET_LINK,
     fri: settings.meetLinkFriday.trim() || FRIDAY_MEET_LINK,
   });
-  const companyMeetLink = settings.meetLink.trim() || DEFAULT_COMPANY_MEET_LINK;
   const mentionQuery = useMemo(() => {
     const match = composerMessage
       .slice(0, composerRef.current?.selectionStart ?? composerMessage.length)
@@ -725,11 +837,6 @@ export default function EduTechExOSDashboard() {
   const broadcastSuggestions = BROADCAST_MENTIONS.filter(
     (b) => !mentionQuery || b.id.slice(1).startsWith(mentionQuery.toLowerCase())
   );
-
-  const firstMessageDate = useMemo(() => {
-    const first = channelMessages[0]?.timestamp;
-    return first ? formatDate(first) : 'TODAY';
-  }, [channelMessages]);
 
   useEffect(() => {
     loadLocalMessages?.();
@@ -754,7 +861,7 @@ export default function EduTechExOSDashboard() {
       clearInterval(interval);
       clearInterval(membersInterval);
     };
-  }, []); // Zustand actions are stable refs � empty deps is safe
+  }, []); // Zustand actions are stable refs - empty deps is safe
 
   // ── Decrypt DM messages loaded from the server ────────────────────────────
   // Runs whenever the messages snapshot changes. Scans all DM channels for any
@@ -793,7 +900,7 @@ export default function EduTechExOSDashboard() {
         }
       }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, currentUserEmail]);
 
   // ── Socket.IO real-time message delivery ──────────────────────────────────
@@ -805,11 +912,23 @@ export default function EduTechExOSDashboard() {
   useEffect(() => {
     const socket = getSocket();
 
-    // Join the active channel, then all others so background DMs arrive in real-time
+    // Join the active channel, then all others so background messages arrive
+    // in real-time even when the user is looking at a different channel/DM/tab.
+    // DM entries in the store use a UI-only id ("member-<id>"), but the actual
+    // room the backend broadcasts to is the paired "dm-<a>-<b>" id (same formula
+    // as activeChannelId above) — so DM rooms must be recomputed here, not
+    // joined by their raw store id, or background DM delivery silently breaks.
     const joinAllChannels = () => {
+      const myMemberId = currentMemberIdRef.current;
+      const roomIdFor = (chId: string) => {
+        if (!chId.startsWith('member-') || !myMemberId) return chId;
+        const sorted = [chId, myMemberId].sort();
+        return `dm-${sorted[0]}-${sorted[1]}`;
+      };
       socket.emit('join_channel', activeChannelId);
       useDashboardStore.getState().channels.forEach((ch) => {
-        if (ch.id !== activeChannelId) socket.emit('join_channel', ch.id);
+        const roomId = roomIdFor(ch.id);
+        if (roomId !== activeChannelId) socket.emit('join_channel', roomId);
       });
     };
     joinAllChannels();
@@ -945,8 +1064,9 @@ export default function EduTechExOSDashboard() {
       // Wipe session and redirect immediately
       getSocket().emit('user_status_update', { email: me, status: 'offline' });
       resetUserState();
+      bankSessionTime();
       localStorage.removeItem('edutechex_token');
-      localStorage.removeItem('edutechex_session_start');
+      fetch('/api/auth/session', { method: 'DELETE' }).catch(() => { });
       // Show a brief toast then hard-redirect (toast lib may not render after push, so use replace)
       try {
         toast.error('Your account has been removed by the admin.', { duration: 3000 });
@@ -965,6 +1085,10 @@ export default function EduTechExOSDashboard() {
     const handleChannelCreated = async () => {
       await useDashboardStore.getState().loadWorkspaceChannels?.();
       await useDashboardStore.getState().loadLocalMembers?.();
+      // A brand-new channel needs its room joined immediately, otherwise its
+      // messages won't arrive in real-time until the user happens to switch away
+      // and back (which re-runs this whole effect).
+      joinAllChannels();
     };
     const handleChannelDeleted = () => {
       useDashboardStore.getState().loadWorkspaceChannels?.();
@@ -1033,7 +1157,7 @@ export default function EduTechExOSDashboard() {
           duration: 30000,
           action: { label: 'Join', onClick: () => window.open(link, '_blank') },
         });
-      }).catch(() => {});
+      }).catch(() => { });
     };
 
     socket.on('connect', handleReconnect);
@@ -1056,6 +1180,16 @@ export default function EduTechExOSDashboard() {
 
     socket.on('meeting_started', handleMeetingStarted);
     socket.on('user_activity_update', handlePresenceUpdate);
+
+    const handleMeetingRoomCount = ({ meetingId, count }: { meetingId: string; count: number }) => {
+      setMeetingRoomCounts((prev) => ({ ...prev, [meetingId]: count }));
+    };
+    socket.on('meeting_room_count', handleMeetingRoomCount);
+
+    const handleMessagesRead = ({ channelId, readerEmail }: { channelId: string; readerEmail: string }) => {
+      markChannelMessagesRead(channelId, readerEmail);
+    };
+    socket.on('messages_read', handleMessagesRead);
 
     // Real-time status & name updates from other users
     const handleUserStatusUpdate = ({
@@ -1121,6 +1255,8 @@ export default function EduTechExOSDashboard() {
       socket.off('mention_notification', handleMentionNotification);
       socket.off('meeting_started', handleMeetingStarted);
       socket.off('user_activity_update', handlePresenceUpdate);
+      socket.off('meeting_room_count', handleMeetingRoomCount);
+      socket.off('messages_read', handleMessagesRead);
       socket.off('user_status_update', handleUserStatusUpdate);
       socket.off('unread_increment', handleUnreadIncrement);
       socket.off('leave_status_update', handleLeaveStatusUpdate);
@@ -1145,13 +1281,13 @@ export default function EduTechExOSDashboard() {
   useEffect(() => {
     if (!authChecked || !currentUserEmail) return;
     const LUNCH_START_H = 12, LUNCH_START_M = 45;
-    const LUNCH_END_H   = 13, LUNCH_END_M   = 15;
+    const LUNCH_END_H = 13, LUNCH_END_M = 15;
     const isLunch = () => {
       const now = new Date();
       const h = now.getHours(), m = now.getMinutes();
       const inMins = h * 60 + m;
       return inMins >= LUNCH_START_H * 60 + LUNCH_START_M &&
-             inMins <  LUNCH_END_H   * 60 + LUNCH_END_M;
+        inMins < LUNCH_END_H * 60 + LUNCH_END_M;
     };
     screenTimeRef.current = setInterval(() => {
       if (!isLunch()) setSessionSeconds((s) => s + 1);
@@ -1182,7 +1318,7 @@ export default function EduTechExOSDashboard() {
           updateMemberLeaveStatus(m.email, onLeaveEmails.has(m.email.toLowerCase()));
         });
       })
-      .catch(() => {/* silently ignore */});
+      .catch(() => {/* silently ignore */ });
   }, [authChecked, currentUserEmail, updateMemberLeaveStatus]);
 
   // ── Presence: broadcast status via socket + update store ───────────────────
@@ -1214,6 +1350,10 @@ export default function EduTechExOSDashboard() {
         if (memberStatus === 'in-meeting') {
           getSocket().emit('user_status_update', { email, status: 'online' });
           updateMemberStatus(email, 'online');
+          if (currentMeetingIdRef.current) {
+            getSocket().emit('meeting_room_leave', currentMeetingIdRef.current);
+            currentMeetingIdRef.current = null;
+          }
         }
       }
     };
@@ -1228,12 +1368,12 @@ export default function EduTechExOSDashboard() {
     let endpointAvailable = true;
 
     const getCurrentActivity = (): { currentActivity: string; currentPanel: string } => {
-      if (wikiOpen)     return { currentActivity: 'Writing in Wiki',      currentPanel: 'wiki'      };
-      if (kanbanOpen)   return { currentActivity: 'Managing Tasks',        currentPanel: 'kanban'    };
-      if (calendarOpen) return { currentActivity: 'Viewing Calendar',      currentPanel: 'calendar'  };
-      if (leaveOpen)    return { currentActivity: 'Viewing Leave',         currentPanel: 'leave'     };
+      if (wikiOpen) return { currentActivity: 'Writing in Wiki', currentPanel: 'wiki' };
+      if (kanbanOpen) return { currentActivity: 'Managing Tasks', currentPanel: 'kanban' };
+      if (calendarOpen) return { currentActivity: 'Viewing Calendar', currentPanel: 'calendar' };
+      if (leaveOpen) return { currentActivity: 'Viewing Leave', currentPanel: 'leave' };
       const chName = channels.find((c) => c.id === activeChannel)?.name;
-      const label  = chName ? `#${chName}` : 'workspace';
+      const label = chName ? `#${chName}` : 'workspace';
       return { currentActivity: `Viewing ${label}`, currentPanel: 'messages' };
     };
 
@@ -1245,9 +1385,9 @@ export default function EduTechExOSDashboard() {
       try {
         const { currentActivity, currentPanel } = getCurrentActivity();
         const res = await fetch(`${API_BASE}/api/activity/heartbeat`, {
-          method:  'POST',
+          method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ currentActivity, currentPanel }),
+          body: JSON.stringify({ currentActivity, currentPanel }),
         });
         if (res.status === 404) { endpointAvailable = false; clearInterval(intervalId); }
       } catch { /* network error — will retry */ }
@@ -1271,7 +1411,7 @@ export default function EduTechExOSDashboard() {
     const authData = localStorage.getItem('edutechex_token');
     const token = authData ? (() => { try { return JSON.parse(authData).token; } catch { return null; } })() : null;
     if (!token) return;
-    getOrCreateKeyPair().then(({ publicKeyJwk }) => publishPublicKey(publicKeyJwk, token)).catch(() => {});
+    getOrCreateKeyPair().then(({ publicKeyJwk }) => publishPublicKey(publicKeyJwk, token)).catch(() => { });
   }, [currentUserEmail]);
 
   // Sync dark mode from store on mount
@@ -1393,7 +1533,7 @@ export default function EduTechExOSDashboard() {
       fetch(`${API_BASE}/api/activity/message`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      }).catch(() => {});
+      }).catch(() => { });
     }
     trackEvent('message_sent', { channel: channel?.name, channelId: activeChannelId });
 
@@ -1424,10 +1564,10 @@ export default function EduTechExOSDashboard() {
       const partnerEmail = activeChannelId.startsWith('member-')
         ? members.find((m) => m.id === activeChannelId)?.email
         : (() => {
-            const myId = members.find((m) => m.email === currentUserEmail)?.id;
-            const otherId = userIdFromDmChannel(activeChannelId, myId ?? '');
-            return members.find((m) => m.id === otherId)?.email;
-          })();
+          const myId = members.find((m) => m.email === currentUserEmail)?.id;
+          const otherId = userIdFromDmChannel(activeChannelId, myId ?? '');
+          return members.find((m) => m.id === otherId)?.email;
+        })();
       let textToSend = text;
       if (partnerEmail) {
         try {
@@ -1449,7 +1589,7 @@ export default function EduTechExOSDashboard() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ ...localMsg, channelId: activeChannelId, text: textToSend }),
-      }).catch(() => {});
+      }).catch(() => { });
     } else {
       addMessage(activeChannelId, localMsg);
     }
@@ -1581,9 +1721,9 @@ export default function EduTechExOSDashboard() {
       getSocket().emit('user_status_update', { email: currentUser.email, status: 'offline' });
     }
     resetUserState();
+    bankSessionTime();
     localStorage.removeItem('edutechex_token');
-    localStorage.removeItem('edutechex_session_start');
-    fetch('/api/auth/session', { method: 'DELETE' }).catch(() => {});
+    fetch('/api/auth/session', { method: 'DELETE' }).catch(() => { });
     router.push('/sign-up-login-screen');
   }
 
@@ -1937,7 +2077,7 @@ export default function EduTechExOSDashboard() {
         timestamp: new Date().toISOString(),
         text:
           composerMessage.trim() ||
-          `${recordedPreview.kind === 'video' ? '�¹ Screen recording' : '🎙�¸ Voice note'}`,
+          `${recordedPreview.kind === 'video' ? '🖥 Screen recording' : '🎙 Voice note'}`,
         ...(recordedPreview.kind === 'video' ? { videoUrl: mediaUrl } : { audioUrl: mediaUrl }),
       });
       setComposerMessage('');
@@ -1979,23 +2119,29 @@ export default function EduTechExOSDashboard() {
     const preMentionedIds =
       mentionedWords.length > 0
         ? availableInvitees
-            .filter((m) => mentionedWords.some((w) => m.name.toLowerCase().includes(w)))
-            .map((m) => m.id)
+          .filter((m) => mentionedWords.some((w) => m.name.toLowerCase().includes(w)))
+          .map((m) => m.id)
         : availableInvitees.map((m) => m.id); // select all by default so form can always submit
 
     setMeetInviteeIds(preMentionedIds);
     setSendEmailInvite(settings.emailNotifications);
     setMeetMenuOpen(false);
     setMeetInputMenuOpen(false);
+    setScheduleMeetGoogleLink('');
+    setMeetDescription('');
+    setMeetRecurring(false);
+    window.open('https://meet.google.com/new', '_blank');
     setScheduleMeetOpen(true);
   }
 
   async function handleJoinMeeting(_messageId: string, link: string) {
-    // Scheduled meetings are open to the whole workspace — everyone joins the
-    // same link, no invite-only gate. (Invitees still get the targeted email /
-    // notification, but anyone in the team can join.)
+    // `link` is the internal /meeting/{code} checkpoint page (not the raw
+    // Google Meet link) — that page itself checks the invite list and only
+    // hands over the real meet link to people who are allowed in.
     window.open(link, '_blank', 'noreferrer');
     broadcastStatus('in-meeting');
+    currentMeetingIdRef.current = _messageId;
+    getSocket().emit('meeting_room_join', _messageId);
   }
 
   async function scheduleMeet(event: React.FormEvent) {
@@ -2007,10 +2153,14 @@ export default function EduTechExOSDashboard() {
       toast.error('Please add a title and set a date & time for the meeting.');
       return;
     }
+    const googleMeetLink = scheduleMeetGoogleLink.trim();
+    if (!googleMeetLink) {
+      toast.error('Paste the fresh Google Meet link before scheduling — switch to the tab that just opened and copy it.');
+      return;
+    }
 
     // Generate a unique meeting code so each meeting has its own shareable link
     const meetingCode = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    const googleMeetLink = companyMeetLink;
     const meetLink = `${window.location.origin}/meeting/${meetingCode}`;
     const inviteeNames = selectedInvitees.map((member) => `@${member.name}`).join(', ');
     // Only invited members get the email and notification
@@ -2054,6 +2204,9 @@ export default function EduTechExOSDashboard() {
     setMeetDate('');
     setMeetTime('');
     setMeetInviteeIds([]);
+    setScheduleMeetGoogleLink('');
+    setMeetDescription('');
+    setMeetRecurring(false);
     setComposerMessage('');
 
     setTimeout(() => {
@@ -2087,6 +2240,8 @@ export default function EduTechExOSDashboard() {
         startAt: startAtIso,
         title,
         channelName: channel?.name ?? activeChannelId,
+        description: meetDescription.trim(),
+        recurring: meetRecurring,
       }),
     }).catch((err) => console.error('[meeting-access] record creation failed:', err));
 
@@ -2096,7 +2251,7 @@ export default function EduTechExOSDashboard() {
         const emailRes = await fetch(`${BACKEND}/api/meetings/invite`, {
           method: 'POST',
           headers: authHeaders,
-          body: JSON.stringify({ title, time: timeLabel, joinLink: meetLink, channelId: activeChannelId, inviteeEmails }),
+          body: JSON.stringify({ title, time: timeLabel, joinLink: meetLink, channelId: activeChannelId, inviteeEmails, startAt: startAtIso, messageId: msgId }),
         });
         const emailResult = await emailRes.json().catch(() => ({}));
         if (emailResult.success) {
@@ -2109,6 +2264,12 @@ export default function EduTechExOSDashboard() {
         toast.warning('Meeting scheduled — could not send email invites. Share the link manually.');
       }
     } else {
+      // No invitees — still push to the host's own Google Calendar if connected.
+      fetch(`${BACKEND}/api/meetings/invite`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ title, time: timeLabel, joinLink: meetLink, channelId: activeChannelId, inviteeEmails: [], startAt: startAtIso, messageId: msgId }),
+      }).catch(() => { });
       toast.success('Meeting scheduled successfully.');
       trackEvent('meeting_scheduled', { emailInviteSent: false });
     }
@@ -2118,6 +2279,8 @@ export default function EduTechExOSDashboard() {
     if (!channel) return;
     window.open('https://meet.google.com/new', '_blank');
     setShareMeetLinkValue('');
+    setRestrictInstantMeet(false);
+    setInstantMeetInviteeIds([]);
     setShareMeetLinkOpen(true);
     broadcastStatus('in-meeting');
   }
@@ -2125,15 +2288,42 @@ export default function EduTechExOSDashboard() {
   function shareInstantMeetLink() {
     if (!channel || !shareMeetLinkValue.trim()) return;
     const meetLink = shareMeetLinkValue.trim();
+    const msgId = `meeting-started-${Date.now()}`;
+    const restrictedEmails = restrictInstantMeet
+      ? members.filter((m) => instantMeetInviteeIds.includes(m.id)).map((m) => m.email)
+      : [];
 
     addMessage(activeChannelId, {
-      id: `meeting-started-${Date.now()}`,
+      id: msgId,
       sender: currentUser?.name ?? 'You',
       initials: currentUser?.initials ?? 'Y',
       color: currentUserColor,
       timestamp: new Date().toISOString(),
-      text: `📹 **Instant Meet Started**\n\n[Click here to join the meeting](${meetLink})\n\nEveryone who clicks this link will enter the same room.`,
+      text: restrictInstantMeet
+        ? `📹 **Instant Meet Started**\n\n[Click here to join the meeting](${meetLink})\n\nOnly invited people can join this one.`
+        : `📹 **Instant Meet Started**\n\n[Click here to join the meeting](${meetLink})\n\nEveryone who clicks this link will enter the same room.`,
     });
+
+    // Only create a MeetingAccess record when the host actually restricts it —
+    // an open instant meet stays exactly as before (no record, no gate), so
+    // this never changes existing behavior unless the host opts in.
+    if (restrictInstantMeet) {
+      const authData = localStorage.getItem('edutechex_token');
+      const token = authData ? JSON.parse(authData).token : null;
+      const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+      fetch(`${BACKEND}/api/meeting-access`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          messageId: msgId,
+          channelId: activeChannelId,
+          allowedEmails: restrictedEmails,
+          meetLink,
+          title: 'Instant Meet',
+          channelName: channel?.name ?? activeChannelId,
+        }),
+      }).catch((err) => console.error('[meeting-access] instant meet record creation failed:', err));
+    }
 
     // Notify ALL workspace members via notifications + real-time socket
     const allOtherMembers = members.filter(
@@ -2161,9 +2351,15 @@ export default function EduTechExOSDashboard() {
       starterColor: currentUserColor,
     });
 
-    toast.success('Meeting link shared! All workspace members can join.');
+    toast.success(
+      restrictInstantMeet
+        ? `Meeting link shared! Only ${restrictedEmails.length} invited member${restrictedEmails.length === 1 ? '' : 's'} can join.`
+        : 'Meeting link shared! All workspace members can join.'
+    );
     setShareMeetLinkOpen(false);
     setShareMeetLinkValue('');
+    setRestrictInstantMeet(false);
+    setInstantMeetInviteeIds([]);
   }
 
   if (!authChecked) {
@@ -2213,8 +2409,9 @@ export default function EduTechExOSDashboard() {
 
           <button
             onClick={() => {
+              bankSessionTime();
               localStorage.removeItem('edutechex_token');
-              localStorage.removeItem('edutechex_session_start');
+              fetch('/api/auth/session', { method: 'DELETE' }).catch(() => { });
               window.location.replace('/sign-up-login-screen');
             }}
             style={{ width: '100%', padding: '13px', background: 'transparent', border: '1.5px solid rgba(26,27,58,0.12)', borderRadius: 10, fontSize: 12, fontWeight: 700, color: 'rgba(90,95,128,0.65)', cursor: 'pointer', letterSpacing: '.08em', transition: 'all .2s' }}
@@ -2244,8 +2441,9 @@ export default function EduTechExOSDashboard() {
           </p>
           <button
             onClick={() => {
+              bankSessionTime();
               localStorage.removeItem('edutechex_token');
-              localStorage.removeItem('edutechex_session_start');
+              fetch('/api/auth/session', { method: 'DELETE' }).catch(() => { });
               window.location.replace('/sign-up-login-screen');
             }}
             style={{ width: '100%', padding: '13px', background: '#EF476F', border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 700, color: '#FFFFFF', cursor: 'pointer', letterSpacing: '.08em' }}
@@ -2258,7 +2456,157 @@ export default function EduTechExOSDashboard() {
   }
 
   return (
-    <div className="dashboard-root dashboard-workspace-no-panel text-[#1E2636]">
+    <div className={`dashboard-root flex flex-col h-screen overflow-hidden text-[#1E2636] ${darkMode ? 'dark' : ''}`}>
+      {/* ── Global Top Header ── */}
+      <header className="global-top-header flex h-12 items-center justify-between border-b px-4 select-none shrink-0" style={{ background: 'var(--header-bg)', borderColor: 'var(--border)' }}>
+        {/* Left side: Brand Logo & Title */}
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 shadow-md">
+            <span className="text-sm font-black text-white">ET</span>
+          </div>
+          <div className="flex flex-col">
+            <h1 className="text-xs font-black tracking-wider text-[#1E2636] dark:text-white uppercase">EduTechEx</h1>
+            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500">Workspace OS</span>
+          </div>
+        </div>
+
+        {/* Center: Command Search Bar */}
+        <div className="relative flex-1 max-w-md mx-6">
+          <div className={`flex h-8.5 items-center gap-2 rounded-lg border bg-slate-50 dark:bg-[#1E2235] px-3 transition-all duration-300 ${searchFocused ? 'expand-search' : 'border-slate-200 dark:border-slate-800'}`}>
+            <Search size={14} className={searchFocused ? 'text-indigo-500' : 'text-slate-400'} />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder='Search messages, files or wiki... (Press "Ctrl + K" to focus)'
+              value={searchQueryState}
+              onChange={(e) => setSearchQueryState(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+              className="w-full bg-transparent text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 outline-none"
+            />
+            <div className="hidden sm:flex items-center gap-0.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-1.5 py-0.5 text-[8.5px] font-bold text-slate-400">
+              <span>Ctrl</span>
+              <span>K</span>
+            </div>
+          </div>
+
+          {/* Quick command search dropdown */}
+          <AnimatePresence>
+            {searchFocused && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                transition={{ duration: 0.15 }}
+                className="absolute left-0 right-0 top-10 z-[310] max-h-72 overflow-y-auto rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] dark:bg-[#1E2235] p-2 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.15em] text-[#9BA6D3]">Quick Commands & Actions</p>
+                <div className="space-y-0.5">
+                  <button
+                    onClick={() => { setKanbanOpen(true); }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-[rgba(62,74,137,0.06)] dark:hover:bg-slate-800 transition-colors text-xs font-bold text-[#1E2636] dark:text-white"
+                  >
+                    <CheckSquare size={13} className="text-[#6C7BF5]" />
+                    <span>/tasks — Open Tasks (Kanban Board)</span>
+                  </button>
+                  <button
+                    onClick={() => { setWikiOpen(true); }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-[rgba(62,74,137,0.06)] dark:hover:bg-slate-800 transition-colors text-xs font-bold text-[#1E2636] dark:text-white"
+                  >
+                    <BookOpen size={13} className="text-[#6C7BF5]" />
+                    <span>/wiki — Search/Write Wiki Pages</span>
+                  </button>
+                  <button
+                    onClick={() => { setNotepadOpen(true); }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-[rgba(62,74,137,0.06)] dark:hover:bg-slate-800 transition-colors text-xs font-bold text-[#1E2636] dark:text-white"
+                  >
+                    <StickyNote size={13} className="text-[#6C7BF5]" />
+                    <span>/notes — Manage Personal Notes</span>
+                  </button>
+                  <button
+                    onClick={() => { setGlobalSearchOpen(true); }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-[rgba(62,74,137,0.06)] dark:hover:bg-slate-800 transition-colors text-xs font-bold text-[#1E2636] dark:text-white"
+                  >
+                    <Search size={13} className="text-[#6C7BF5]" />
+                    <span>Press Enter to open full search dialog</span>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Right side: User Profile & Quick Actions */}
+        <div className="flex items-center gap-2">
+          {/* Notifications */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setNotificationsOpen(true)}
+            className="relative flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100/50 dark:hover:bg-slate-800 transition-colors"
+            style={unreadNotifications > 0 ? { color: '#ef4444' } : { color: 'var(--text-primary)' }}
+          >
+            <Bell size={16} strokeWidth={2} />
+            {unreadNotifications > 0 && (
+              <span
+                className="absolute top-1 right-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full px-0.5 text-[8px] font-black text-white"
+                style={{ background: '#ef4444' }}
+              >
+                {unreadNotifications > 9 ? '9+' : unreadNotifications}
+              </span>
+            )}
+          </motion.button>
+
+          {/* Theme Toggle */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              toggleTheme();
+              storeDarkModeToggle();
+            }}
+            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100/50 dark:hover:bg-slate-800 transition-colors"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            {darkMode ? <Sun size={15} strokeWidth={2} /> : <Moon size={15} strokeWidth={2} />}
+          </motion.button>
+
+          {/* Settings */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              setSettings((v) => ({ ...v, displayName: v.displayName || currentUser?.name || '' }));
+              setSettingsOpen(true);
+            }}
+            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-100/50 dark:hover:bg-slate-800 transition-colors"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            <Settings size={15} strokeWidth={2} />
+          </motion.button>
+
+          {/* Divider */}
+          <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1" />
+
+          {/* Avatar User Menu */}
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onClick={() => {
+              setSettings((v) => ({ ...v, displayName: v.displayName || currentUser?.name || '' }));
+              setSettingsOpen(true);
+            }}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-sm ring-1 ring-slate-200 dark:ring-slate-700"
+            style={
+              settings.avatarEmoji
+                ? { background: 'transparent', fontSize: '1.25rem', lineHeight: 1 }
+                : { background: currentUserColor }
+            }
+          >
+            {settings.avatarEmoji || (currentUser?.initials ?? 'G')}
+          </motion.button>
+        </div>
+      </header>
+
+      {/* Main Workspace Frame */}
+      <div className={`dashboard-workspace-no-panel flex-1 text-[#1E2636] ${sidebarExpanded ? 'sidebar-expanded' : 'sidebar-collapsed'}`}>
       {/* ------------------------------------------------------ LEFT ICON RAIL ------------------------------------------------------ */}
 
       {/* ══ MOBILE HEADER ══ */}
@@ -2387,10 +2735,10 @@ export default function EduTechExOSDashboard() {
                 const statusColor = (member as { status?: string } | undefined)?.status === 'online'
                   ? 'bg-emerald-400'
                   : (member as { status?: string } | undefined)?.status === 'away'
-                  ? 'bg-amber-400'
-                  : (member as { status?: string } | undefined)?.status === 'in-meeting'
-                  ? 'bg-red-400'
-                  : 'bg-[#7C859E]';
+                    ? 'bg-amber-400'
+                    : (member as { status?: string } | undefined)?.status === 'in-meeting'
+                      ? 'bg-red-400'
+                      : 'bg-[#7C859E]';
                 const dmUnread = unreadCounts[ch.id] ?? 0;
                 return (
                   <button
@@ -2426,7 +2774,6 @@ export default function EduTechExOSDashboard() {
         </div>
 
         <div className="sidebar-footer">
-          <UserAttendanceCalendar />
           <div className="flex items-center gap-2">
             <div className="relative">
               <div
@@ -2547,10 +2894,10 @@ export default function EduTechExOSDashboard() {
           </motion.button>
 
           {[
-            { icon: CheckSquare, label: 'Tasks',    action: () => setKanbanOpen(true)   },
-            { icon: BookOpen,    label: 'Wiki',     action: () => setWikiOpen(true)     },
-            { icon: StickyNote,  label: 'Notes',    action: () => setNotepadOpen(true)  },
-            { icon: CalendarDays,label: 'Calendar', action: () => setCalendarOpen(true) },
+            { icon: CheckSquare, label: 'Tasks', action: () => setKanbanOpen(true) },
+            { icon: BookOpen, label: 'Wiki', action: () => setWikiOpen(true) },
+            { icon: StickyNote, label: 'Notes', action: () => setNotepadOpen(true) },
+            { icon: CalendarDays, label: 'Calendar', action: () => setCalendarOpen(true) },
           ].map(({ icon: Icon, label, action }) => (
             <motion.button
               key={label}
@@ -2571,8 +2918,8 @@ export default function EduTechExOSDashboard() {
           <div
             title={
               awStatus === 'connected' ? 'ActivityWatch connected — syncing desktop activity'
-              : awStatus === 'offline'  ? 'ActivityWatch not detected — install & open ActivityWatch on this machine'
-              : 'Checking for ActivityWatch…'
+                : awStatus === 'offline' ? 'ActivityWatch not detected — install & open ActivityWatch on this machine'
+                  : 'Checking for ActivityWatch…'
             }
             className="rail-btn cursor-default select-none"
           >
@@ -2582,8 +2929,8 @@ export default function EduTechExOSDashboard() {
                 strokeWidth={1.8}
                 className={
                   awStatus === 'connected' ? 'text-emerald-500'
-                  : awStatus === 'offline' ? 'text-[#C5CAE0]'
-                  : 'text-[#9BA6D3]'
+                    : awStatus === 'offline' ? 'text-[#C5CAE0]'
+                      : 'text-[#9BA6D3]'
                 }
               />
               {awStatus === 'connected' && (
@@ -2591,72 +2938,15 @@ export default function EduTechExOSDashboard() {
               )}
             </div>
             <span
-              className={`rail-label ${
-                awStatus === 'connected' ? 'text-emerald-600'
+              className={`rail-label ${awStatus === 'connected' ? 'text-emerald-600'
                 : awStatus === 'offline' ? 'text-[#C5CAE0]'
-                : 'text-[#9BA6D3]'
-              }`}
+                  : 'text-[#9BA6D3]'
+                }`}
             >
               {awStatus === 'connected' ? 'AW Live' : awStatus === 'offline' ? 'AW Off' : 'AW…'}
             </span>
           </div>
 
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => {
-              toggleTheme();
-              storeDarkModeToggle();
-            }}
-            className="rail-btn"
-          >
-            {darkMode ? <Sun size={18} strokeWidth={1.8} /> : <Moon size={18} strokeWidth={1.8} />}
-            <span className="rail-label">{darkMode ? 'Light mode' : 'Dark mode'}</span>
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => {
-              setSettings((v) => ({ ...v, displayName: v.displayName || currentUser?.name || '' }));
-              setSettingsOpen(true);
-            }}
-            className="rail-btn"
-          >
-            <Settings size={18} strokeWidth={1.8} />
-            <span className="rail-label">Settings</span>
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.92 }}
-            onClick={() => {
-              setSettings((v) => ({ ...v, displayName: v.displayName || currentUser?.name || '' }));
-              setSettingsOpen(true);
-            }}
-            className="rail-avatar"
-            style={
-              settings.avatarEmoji
-                ? { background: 'transparent', fontSize: '1.35rem', lineHeight: 1 }
-                : { background: currentUserColor }
-            }
-          >
-            {settings.avatarEmoji || (currentUser?.initials ?? 'G')}
-          </motion.button>
-
-          {/* Notifications rail button */}
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setNotificationsOpen(true)}
-            className="rail-btn relative"
-            style={unreadNotifications > 0 ? { color: '#ef4444' } : {}}
-          >
-            <Bell size={18} strokeWidth={2} />
-            <span className="rail-label">Alerts</span>
-            {unreadNotifications > 0 && (
-              <span
-                className="badge-pulse absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[8px] font-black text-white"
-                style={{ background: '#ef4444' }}
-              >
-                {unreadNotifications > 9 ? '9+' : unreadNotifications}
-              </span>
-            )}
-          </motion.button>
         </div>
       </nav>
 
@@ -2836,12 +3126,11 @@ export default function EduTechExOSDashboard() {
                             : explicitStatus ?? getPresenceStatus(member.email);
                           return (
                             <span
-                              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ${
-                                s === 'online'     ? 'bg-emerald-400'
-                                : s === 'away'       ? 'bg-amber-400'
-                                : s === 'in-meeting' ? 'bg-red-400'
-                                : 'bg-[#7C859E]'
-                              }`}
+                              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ${s === 'online' ? 'bg-emerald-400'
+                                : s === 'away' ? 'bg-amber-400'
+                                  : s === 'in-meeting' ? 'bg-red-400'
+                                    : 'bg-[#7C859E]'
+                                }`}
                               style={{ boxShadow: '0 0 0 2px var(--sidebar-bg, #0E1120)' }}
                             />
                           );
@@ -3047,11 +3336,10 @@ export default function EduTechExOSDashboard() {
           )}
         </div>
 
-          {/* ── Restore banner link (shown when banner is dismissed) ── */}
+        {/* ── Restore banner link (shown when banner is dismissed) ── */}
 
         {/* ── Footer / User panel ─────────────────────────── */}
         <div className="sidebar-footer">
-          <UserAttendanceCalendar />
           <SessionTimer />
           <div className="flex items-center gap-2">
             <div className="relative shrink-0">
@@ -3079,8 +3367,8 @@ export default function EduTechExOSDashboard() {
                   const h = Math.floor(sessionSeconds / 3600);
                   const m = Math.floor((sessionSeconds % 3600) / 60);
                   const s = sessionSeconds % 60;
-                  if (h > 0) return `${h}h ${String(m).padStart(2,'0')}m screen time`;
-                  if (m > 0) return `${m}m ${String(s).padStart(2,'0')}s screen time`;
+                  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m screen time`;
+                  if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s screen time`;
                   return `${s}s screen time`;
                 })()}
               </p>
@@ -3128,6 +3416,22 @@ export default function EduTechExOSDashboard() {
             </div>
           </div>
         </div>
+        {/* Floating Sidebar Toggle Button */}
+        <button
+          onClick={() => setSidebarExpanded(!sidebarExpanded)}
+          className="sidebar-toggle-btn absolute -right-3 top-1/2 -translate-y-1/2 z-30 flex h-6 w-6 items-center justify-center rounded-full border bg-white dark:bg-[#1E2235] shadow-md transition-all focus:outline-none"
+          title={sidebarExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
+          style={{
+            borderColor: 'var(--border)',
+          }}
+        >
+          <ChevronLeft
+            size={14}
+            className={`text-slate-600 dark:text-slate-400 transition-transform duration-300 ${
+              sidebarExpanded ? '' : 'rotate-180'
+            }`}
+          />
+        </button>
       </aside>
 
       <main
@@ -3196,16 +3500,20 @@ export default function EduTechExOSDashboard() {
             <div className="relative">
               <button
                 onClick={() => setMeetMenuOpen((value) => !value)}
-                className={`flex h-9 items-center gap-2 rounded-lg px-4 text-xs font-black uppercase text-white shadow-sm transition-all hover:scale-105 ${
-                  meetingButtonState.link ? '' : 'bg-[#7C859E] cursor-default'
+                className={`premium-action-btn flex h-9 items-center gap-2 rounded-lg px-4 text-xs font-black uppercase text-white shadow-sm transition-all hover:scale-105 ${
+                  meetingButtonState.link ? '' : 'disabled-btn'
                 }`}
                 style={
                   meetingButtonState.link
                     ? {
-                        background: 'linear-gradient(135deg, #6C7BF5, #5055E8)',
-                        boxShadow: '0 2px 12px rgba(108,123,245,0.35)',
+                        background: 'linear-gradient(135deg, #6C7BF5 0%, #5055E8 50%, #4338CA 100%)',
+                        boxShadow: '0 4px 15px rgba(99, 102, 241, 0.40)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
                       }
-                    : undefined
+                    : {
+                        background: '#7C859E',
+                        cursor: 'default',
+                      }
                 }
               >
                 <Video size={16} />
@@ -3409,17 +3717,13 @@ export default function EduTechExOSDashboard() {
 
         <section className="chat-scroll">
           <div className="mt-auto w-full">
-            <div className="date-divider my-4 px-3">
-              <span />
-              <strong>{firstMessageDate}</strong>
-              <span />
-            </div>
-
             <div className="pb-6 px-3">
               {visibleMessages.map((message, index) => {
                 const prev = visibleMessages[index - 1];
                 const next = visibleMessages[index + 1];
                 const isOwn = message.sender === currentUser?.name;
+                const showDateDivider =
+                  !prev || !isSameCalendarDay(prev.timestamp, message.timestamp);
                 const gap5m = (a: string, b: string) =>
                   new Date(b).getTime() - new Date(a).getTime() > 5 * 60 * 1000;
                 const isFirst =
@@ -3438,191 +3742,248 @@ export default function EduTechExOSDashboard() {
                 const taskCard = message.taskCard;
 
                 return (
-                  <div
-                    key={message.id}
-                    id={`msg-${message.id}`}
-                    className={`flex items-end gap-2 ${isFirst ? (settings.compactChat ? 'mt-2' : 'mt-4') : 'mt-0.5'} ${isOwn ? 'flex-row-reverse' : ''}`}
-                  >
-                    {/* Avatar — receiver only, first in group */}
-                    {!isOwn && (
-                      <div className="shrink-0">
-                        {isFirst ? (
-                          <div
-                            className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-sm"
-                            style={{ backgroundColor: message.color }}
-                          >
-                            {message.initials}
-                          </div>
-                        ) : (
-                          <div className="h-8 w-8" />
-                        )}
+                  <React.Fragment key={message.id}>
+                    {showDateDivider && (
+                      <div className="date-divider my-4 px-3">
+                        <span />
+                        <strong>{formatDayLabel(message.timestamp)}</strong>
+                        <span />
                       </div>
                     )}
-
-                    {/* Bubble column */}
                     <div
-                      className={`flex flex-col max-w-[70%] ${isOwn ? 'items-end' : 'items-start'}`}
+                      id={`msg-${message.id}`}
+                      className={`flex items-end gap-2 ${isFirst ? (settings.compactChat ? 'mt-2' : 'mt-4') : 'mt-0.5'} ${isOwn ? 'flex-row-reverse' : ''}`}
                     >
-                      {/* Sender name — receiver, first in group only */}
-                      {isFirst && !isOwn && (
-                        <span
-                          className="mb-0.5 ml-1 text-xs font-bold"
-                          style={{ color: message.color }}
-                        >
-                          {message.sender}
-                        </span>
+                      {/* Avatar — receiver only, first in group */}
+                      {!isOwn && (
+                        <div className="shrink-0">
+                          {isFirst ? (
+                            <div
+                              className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-sm"
+                              style={{ backgroundColor: message.color }}
+                            >
+                              {message.initials}
+                            </div>
+                          ) : (
+                            <div className="h-8 w-8" />
+                          )}
+                        </div>
                       )}
 
-                      {/* Main bubble */}
-                      {!message.poll && (
-                        <div
-                          className={`relative group/bubble rounded-2xl px-3.5 py-2.5 shadow-sm
-                        ${
-                          isOwn
-                            ? `bg-[#1E2538] text-white border border-[rgba(62,74,137,0.15)] ${isLast ? 'bubble-own rounded-br-sm' : ''}`
-                            : `bg-white border border-[rgba(62,74,137,0.08)] text-[#1E2636] ${isLast ? 'bubble-other rounded-bl-sm' : ''}`
-                        }
+                      {/* Bubble column */}
+                      <div
+                        className={`flex flex-col max-w-[70%] ${isOwn ? 'items-end' : 'items-start'}`}
+                      >
+                        {/* Sender name — receiver, first in group only */}
+                        {isFirst && !isOwn && (
+                          <span
+                            className="mb-0.5 ml-1 text-xs font-bold"
+                            style={{ color: message.color }}
+                          >
+                            {message.sender}
+                          </span>
+                        )}
+
+                        {/* Main bubble */}
+                        {!message.poll && (
+                          <div
+                            className={`relative group/bubble rounded-2xl px-3.5 py-2.5 shadow-sm
+                        ${isOwn
+                                ? `bg-[#1E2538] text-white border border-[rgba(62,74,137,0.15)] ${isLast ? 'bubble-own rounded-br-sm' : ''}`
+                                : `bg-white border border-[rgba(62,74,137,0.08)] text-[#1E2636] ${isLast ? 'bubble-other rounded-bl-sm' : ''}`
+                              }
                         ${isPinned ? 'ring-2 ring-amber-400' : ''}
                       `}
-                        >
-                          {/* Content */}
-                          {taskCard ? (
-                            /* -- Task Card -- */
-                            <div style={{ width: 272, borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 20px rgba(91,79,219,0.18)', border: '1px solid rgba(91,79,219,0.20)' }}>
-                              <div style={{ height: 3, background: 'linear-gradient(90deg, #5B4FDB, #7B6FEB, #10C98A)' }} />
-                              <div style={{ background: 'linear-gradient(135deg, #1A1B3A, #252D4A)', padding: '14px 16px 12px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                                  <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(91,79,219,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7B6FEB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M7 6H5a2 2 0 00-2 2v12a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-2"/><path d="M9 12l2 2 4-4"/></svg>
+                          >
+                            {/* Content */}
+                            {taskCard ? (
+                              /* -- Task Card -- */
+                              <div style={{ width: 272, borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 20px rgba(91,79,219,0.18)', border: '1px solid rgba(91,79,219,0.20)' }}>
+                                <div style={{ height: 3, background: 'linear-gradient(90deg, #5B4FDB, #7B6FEB, #10C98A)' }} />
+                                <div style={{ background: 'linear-gradient(135deg, #1A1B3A, #252D4A)', padding: '14px 16px 12px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(91,79,219,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7B6FEB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="4" rx="1" /><path d="M7 6H5a2 2 0 00-2 2v12a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-2" /><path d="M9 12l2 2 4-4" /></svg>
+                                    </div>
+                                    <div>
+                                      <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(155,166,211,0.65)', margin: 0 }}>Task Assigned</p>
+                                      <p style={{ fontSize: 11, fontWeight: 700, color: '#fff', margin: '1px 0 0' }}>#{channel?.name}</p>
+                                    </div>
+                                    <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 800, color: '#10C98A', background: 'rgba(16,201,138,0.15)', padding: '3px 8px', borderRadius: 6, letterSpacing: '.06em', textTransform: 'uppercase' }}>TASK</span>
                                   </div>
-                                  <div>
-                                    <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(155,166,211,0.65)', margin: 0 }}>Task Assigned</p>
-                                    <p style={{ fontSize: 11, fontWeight: 700, color: '#fff', margin: '1px 0 0' }}>#{channel?.name}</p>
+                                  <p style={{ fontSize: 13, fontWeight: 500, color: 'rgba(212,216,235,0.90)', margin: 0, lineHeight: 1.5 }}>
+                                    {taskCard.taskText.slice(0, 120)}
+                                  </p>
+                                </div>
+                                <div style={{ background: '#fff', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  <div style={{ width: 30, height: 30, borderRadius: 8, background: taskCard.assigneeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+                                    {taskCard.assigneeInitials}
                                   </div>
-                                  <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 800, color: '#10C98A', background: 'rgba(16,201,138,0.15)', padding: '3px 8px', borderRadius: 6, letterSpacing: '.06em', textTransform: 'uppercase' }}>TASK</span>
-                                </div>
-                                <p style={{ fontSize: 13, fontWeight: 500, color: 'rgba(212,216,235,0.90)', margin: 0, lineHeight: 1.5 }}>
-                                  {taskCard.taskText.slice(0, 120)}
-                                </p>
-                              </div>
-                              <div style={{ background: '#fff', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div style={{ width: 30, height: 30, borderRadius: 8, background: taskCard.assigneeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
-                                  {taskCard.assigneeInitials}
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p style={{ fontSize: 10, color: 'rgba(90,95,128,0.55)', margin: 0, fontWeight: 600 }}>Assigned to</p>
-                                  <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', margin: '1px 0 0' }}>@{taskCard.assignee}</p>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#5B4FDB' }}>
-                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-                                  Kanban
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p style={{ fontSize: 10, color: 'rgba(90,95,128,0.55)', margin: 0, fontWeight: 600 }}>Assigned to</p>
+                                    <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', margin: '1px 0 0' }}>@{taskCard.assignee}</p>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#5B4FDB' }}>
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
+                                    Kanban
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ) : isInstantMeet && instantMeetLink ? (
-                            <MeetingStartedCard
-                              title={`${message.sender} started a meeting`}
-                              subtitle="Join on Google Meet"
-                              meetLink={instantMeetLink}
-                            />
-                          ) : scheduledMeet ? (
-                            /* ── Meeting Scheduled Card ─────────────────── */
-                            <div
-                              className="w-full max-w-[288px] overflow-hidden rounded-2xl"
-                              style={{
-                                boxShadow:
-                                  '0 8px 32px rgba(25,30,47,0.18), 0 2px 8px rgba(25,30,47,0.10)',
-                                border: '1px solid rgba(155,166,211,0.22)',
-                              }}
-                            >
-                              {/* ── Top accent line ── */}
+                            ) : isInstantMeet && instantMeetLink ? (() => {
+                              const access = instantMeetAccess[message.id];
+                              const isRestricted = access?.exists === true;
+                              const isDenied = isRestricted && !access?.canJoin;
+                              const isHost = message.sender === (currentUser?.name ?? 'You');
+                              if (isDenied) {
+                                return (
+                                  <div className="flex items-center gap-2 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-[13px] font-black text-red-600">
+                                    <Lock size={13} />
+                                    You are not invited to this meeting.
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div>
+                                  <MeetingStartedCard
+                                    title={`${message.sender} started a meeting`}
+                                    subtitle={isRestricted ? 'Invite-only · Join on Google Meet' : 'Join on Google Meet'}
+                                    meetLink={instantMeetLink}
+                                    liveCount={meetingRoomCounts[message.id]}
+                                    onJoinClick={() => {
+                                      broadcastStatus('in-meeting');
+                                      currentMeetingIdRef.current = message.id;
+                                      getSocket().emit('meeting_room_join', message.id);
+                                    }}
+                                  />
+                                  {isHost && isRestricted && (
+                                    instantMeetGrantFor === message.id ? (
+                                      <div className="mt-2 flex items-center gap-1">
+                                        <input
+                                          type="email"
+                                          value={instantMeetGrantEmail}
+                                          onChange={(e) => setInstantMeetGrantEmail(e.target.value)}
+                                          placeholder="colleague@email.com"
+                                          className="flex-1 rounded-xl border border-blue-200 bg-white px-3 py-1.5 text-[11px] outline-none focus:border-blue-500"
+                                        />
+                                        <button
+                                          disabled={instantMeetGranting}
+                                          onClick={async () => {
+                                            if (!instantMeetGrantEmail.trim()) return;
+                                            setInstantMeetGranting(true);
+                                            try {
+                                              const tk = JSON.parse(localStorage.getItem('edutechex_token') || '{}')?.token;
+                                              const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+                                              await fetch(`${BACKEND}/api/meeting-access/${message.id}/grant`, {
+                                                method: 'PATCH',
+                                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tk}` },
+                                                body: JSON.stringify({ email: instantMeetGrantEmail.trim() }),
+                                              });
+                                              setInstantMeetGrantEmail('');
+                                              setInstantMeetGrantFor(null);
+                                            } finally {
+                                              setInstantMeetGranting(false);
+                                            }
+                                          }}
+                                          className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                                        >
+                                          <Check size={12} />
+                                        </button>
+                                        <button
+                                          onClick={() => setInstantMeetGrantFor(null)}
+                                          className="flex h-7 w-7 items-center justify-center rounded-xl text-[#7C859E] hover:bg-red-50 hover:text-red-500"
+                                        >
+                                          <X size={12} />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        onClick={() => setInstantMeetGrantFor(message.id)}
+                                        className="mt-2 flex items-center gap-1 rounded-xl border border-blue-100 px-3 py-1.5 text-[11px] font-bold text-blue-600 hover:bg-blue-50 transition-colors"
+                                      >
+                                        <ShieldCheck size={12} /> Grant Access
+                                      </button>
+                                    )
+                                  )}
+                                </div>
+                              );
+                            })() : scheduledMeet ? (
+                              /* ── Meeting Scheduled Card ─────────────────── */
                               <div
+                                className="w-full max-w-[288px] overflow-hidden rounded-2xl"
                                 style={{
-                                  height: '2px',
-                                  background:
-                                    'linear-gradient(90deg, transparent, #3E4A89, #9BA6D3, #3E4A89, transparent)',
-                                }}
-                              />
-
-                              {/* ── Dark header ── */}
-                              <div
-                                className="relative px-4 pt-4 pb-4 overflow-hidden"
-                                style={{
-                                  background:
-                                    'linear-gradient(135deg, #191E2F 0%, #1E2538 60%, #252D4A 100%)',
+                                  boxShadow:
+                                    '0 8px 32px rgba(25,30,47,0.18), 0 2px 8px rgba(25,30,47,0.10)',
+                                  border: '1px solid rgba(155,166,211,0.22)',
                                 }}
                               >
-                                {/* bg glow */}
+                                {/* ── Top accent line ── */}
                                 <div
-                                  className="absolute inset-0 pointer-events-none"
                                   style={{
+                                    height: '2px',
                                     background:
-                                      'radial-gradient(ellipse 70% 80% at 85% 30%, rgba(62,74,137,0.28), transparent 70%)',
+                                      'linear-gradient(90deg, transparent, #3E4A89, #9BA6D3, #3E4A89, transparent)',
                                   }}
                                 />
 
-                                <div className="relative flex items-start gap-3">
-                                  {/* Icon */}
+                                {/* ── Dark header ── */}
+                                <div
+                                  className="relative px-4 pt-4 pb-4 overflow-hidden"
+                                  style={{
+                                    background:
+                                      'linear-gradient(135deg, #191E2F 0%, #1E2538 60%, #252D4A 100%)',
+                                  }}
+                                >
+                                  {/* bg glow */}
                                   <div
-                                    className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0 mt-0.5"
+                                    className="absolute inset-0 pointer-events-none"
                                     style={{
-                                      background: 'linear-gradient(135deg, #3E4A89, #2A3568)',
-                                      boxShadow: '0 4px 14px rgba(62,74,137,0.50)',
+                                      background:
+                                        'radial-gradient(ellipse 70% 80% at 85% 30%, rgba(62,74,137,0.28), transparent 70%)',
                                     }}
-                                  >
-                                    <Video size={17} className="text-white" />
-                                  </div>
+                                  />
 
-                                  <div className="min-w-0 flex-1">
-                                    {/* Status pill */}
-                                    <div className="flex items-center gap-1.5 mb-1.5">
-                                      <span
-                                        className="inline-block w-1.5 h-1.5 rounded-full"
-                                        style={{
-                                          background: '#34D399',
-                                          boxShadow: '0 0 6px rgba(52,211,153,0.70)',
-                                          animation: 'badge-pulse 2.5s ease-in-out infinite',
-                                        }}
-                                      />
-                                      <span
-                                        className="text-[9px] font-black uppercase tracking-[0.22em]"
-                                        style={{ color: 'rgba(155,166,211,0.80)' }}
-                                      >
-                                        Meeting Scheduled
-                                      </span>
+                                  <div className="relative flex items-start gap-3">
+                                    {/* Icon */}
+                                    <div
+                                      className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0 mt-0.5"
+                                      style={{
+                                        background: 'linear-gradient(135deg, #3E4A89, #2A3568)',
+                                        boxShadow: '0 4px 14px rgba(62,74,137,0.50)',
+                                      }}
+                                    >
+                                      <Video size={17} className="text-white" />
                                     </div>
-                                    {/* Title */}
-                                    <h3 className="text-[15px] font-black text-white leading-snug truncate">
-                                      {scheduledMeet.title}
-                                    </h3>
+
+                                    <div className="min-w-0 flex-1">
+                                      {/* Status pill */}
+                                      <div className="flex items-center gap-1.5 mb-1.5">
+                                        <span
+                                          className="inline-block w-1.5 h-1.5 rounded-full"
+                                          style={{
+                                            background: '#34D399',
+                                            boxShadow: '0 0 6px rgba(52,211,153,0.70)',
+                                            animation: 'badge-pulse 2.5s ease-in-out infinite',
+                                          }}
+                                        />
+                                        <span
+                                          className="text-[9px] font-black uppercase tracking-[0.22em]"
+                                          style={{ color: 'rgba(155,166,211,0.80)' }}
+                                        >
+                                          Meeting Scheduled
+                                        </span>
+                                      </div>
+                                      {/* Title */}
+                                      <h3 className="text-[15px] font-black text-white leading-snug truncate">
+                                        {scheduledMeet.title}
+                                      </h3>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
 
-                              {/* ── Light body ── */}
-                              <div className="px-4 pt-3 pb-2" style={{ background: '#FAF8F5' }}>
-                                <div className="space-y-2">
-                                  {scheduledMeet.time && (
-                                    <div className="flex items-center gap-2.5">
-                                      <div
-                                        className="flex h-7 w-7 items-center justify-center rounded-lg flex-shrink-0"
-                                        style={{
-                                          background: 'rgba(62,74,137,0.08)',
-                                          border: '1px solid rgba(62,74,137,0.14)',
-                                        }}
-                                      >
-                                        <CalendarDays size={13} style={{ color: '#3E4A89' }} />
-                                      </div>
-                                      <span
-                                        className="text-[13px] font-bold"
-                                        style={{ color: '#1E2636' }}
-                                      >
-                                        {scheduledMeet.time}
-                                      </span>
-                                    </div>
-                                  )}
-                                  {scheduledMeet.people &&
-                                    scheduledMeet.people !== 'No mentions' && (
+                                {/* ── Light body ── */}
+                                <div className="px-4 pt-3 pb-2" style={{ background: '#FAF8F5' }}>
+                                  <div className="space-y-2">
+                                    {scheduledMeet.time && (
                                       <div className="flex items-center gap-2.5">
                                         <div
                                           className="flex h-7 w-7 items-center justify-center rounded-lg flex-shrink-0"
@@ -3631,448 +3992,522 @@ export default function EduTechExOSDashboard() {
                                             border: '1px solid rgba(62,74,137,0.14)',
                                           }}
                                         >
-                                          <Users size={13} style={{ color: '#3E4A89' }} />
+                                          <CalendarDays size={13} style={{ color: '#3E4A89' }} />
                                         </div>
                                         <span
-                                          className="text-[13px] font-medium truncate"
-                                          style={{ color: '#4A5578' }}
+                                          className="text-[13px] font-bold"
+                                          style={{ color: '#1E2636' }}
                                         >
-                                          {scheduledMeet.people}
+                                          {scheduledMeet.time}
                                         </span>
                                       </div>
                                     )}
+                                    {scheduledMeet.people &&
+                                      scheduledMeet.people !== 'No mentions' && (
+                                        <div className="flex items-center gap-2.5">
+                                          <div
+                                            className="flex h-7 w-7 items-center justify-center rounded-lg flex-shrink-0"
+                                            style={{
+                                              background: 'rgba(62,74,137,0.08)',
+                                              border: '1px solid rgba(62,74,137,0.14)',
+                                            }}
+                                          >
+                                            <Users size={13} style={{ color: '#3E4A89' }} />
+                                          </div>
+                                          <span
+                                            className="text-[13px] font-medium truncate"
+                                            style={{ color: '#4A5578' }}
+                                          >
+                                            {scheduledMeet.people}
+                                          </span>
+                                        </div>
+                                      )}
+                                  </div>
+                                </div>
+
+                                {/* ── Divider ── */}
+                                <div
+                                  style={{
+                                    height: '1px',
+                                    margin: '0 16px',
+                                    background:
+                                      'linear-gradient(90deg, transparent, rgba(62,74,137,0.18), transparent)',
+                                  }}
+                                />
+
+                                {/* ── Join button ── */}
+                                <div className="px-4 pt-3 pb-4" style={{ background: '#FAF8F5' }}>
+                                  {meetJoinState[message.id] === 'denied' ? (
+                                    <div className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-[13px] font-black" style={{ background: '#FEF2F2', color: '#DC2626' }}>
+                                      <Lock size={13} />
+                                      You are not invited
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleJoinMeeting(message.id, scheduledMeet.link)}
+                                      disabled={meetJoinState[message.id] === 'checking'}
+                                      className="group flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-[13px] font-black text-white transition-all duration-200 hover:scale-[1.02] active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
+                                      style={{
+                                        background: 'linear-gradient(135deg, #3E4A89 0%, #2A3568 100%)',
+                                        boxShadow: '0 4px 14px rgba(62,74,137,0.38), inset 0 1px 0 rgba(255,255,255,0.12)',
+                                      }}
+                                    >
+                                      {meetJoinState[message.id] === 'checking' ? (
+                                        <>
+                                          <div className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                                          Checking access...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Video size={14} />
+                                          Join Meeting
+                                        </>
+                                      )}
+                                    </button>
+                                  )}
+                                  {!!meetingRoomCounts[message.id] && (
+                                    <div className="flex items-center justify-center gap-1.5 mt-2">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                                      <span className="text-[11px] font-bold text-red-500">
+                                        {meetingRoomCounts[message.id]} {meetingRoomCounts[message.id] === 1 ? 'person' : 'people'} in this meeting
+                                      </span>
+                                    </div>
+                                  )}
+                                  {(isOwn || isAdmin) && meetJoinState[message.id] !== 'denied' && (
+                                    <div className="flex gap-2 mt-2">
+                                      <button
+                                        onClick={async () => {
+                                          const tk = JSON.parse(localStorage.getItem('edutechex_token') || '{}')?.token;
+                                          const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+                                          try {
+                                            const r = await fetch(`${BACKEND}/api/meeting-access/${message.id}`, { headers: { Authorization: `Bearer ${tk}` } });
+                                            const d = await r.json();
+                                            setEditMeetingTarget({
+                                              messageId: message.id,
+                                              title: d.title || scheduledMeet.title,
+                                              description: d.description || '',
+                                              startAt: d.startAt ? new Date(d.startAt).toISOString().slice(0, 16) : '',
+                                            });
+                                          } catch {
+                                            toast.error('Could not load meeting details.');
+                                          }
+                                        }}
+                                        className="flex-1 flex items-center justify-center gap-1 rounded-lg border border-[rgba(62,74,137,0.16)] py-1.5 text-[11px] font-bold text-[#3E4A89] hover:bg-[rgba(62,74,137,0.06)] transition-colors"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={async () => {
+                                          if (!window.confirm('Cancel this meeting? Invitees will be notified by email.')) return;
+                                          const tk = JSON.parse(localStorage.getItem('edutechex_token') || '{}')?.token;
+                                          const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+                                          try {
+                                            await fetch(`${BACKEND}/api/meeting-access/${message.id}`, {
+                                              method: 'DELETE',
+                                              headers: { Authorization: `Bearer ${tk}` },
+                                            });
+                                            toast.success('Meeting cancelled.');
+                                          } catch {
+                                            toast.error('Could not cancel the meeting.');
+                                          }
+                                        }}
+                                        className="flex-1 flex items-center justify-center gap-1 rounded-lg border border-red-100 py-1.5 text-[11px] font-bold text-red-500 hover:bg-red-50 transition-colors"
+                                      >
+                                        Cancel Meeting
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
-
-                              {/* ── Divider ── */}
+                            ) : (
                               <div
-                                style={{
-                                  height: '1px',
-                                  margin: '0 16px',
-                                  background:
-                                    'linear-gradient(90deg, transparent, rgba(62,74,137,0.18), transparent)',
-                                }}
-                              />
-
-                              {/* ── Join button ── */}
-                              <div className="px-4 pt-3 pb-4" style={{ background: '#FAF8F5' }}>
-                                {meetJoinState[message.id] === 'denied' ? (
-                                  <div className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-[13px] font-black" style={{ background: '#FEF2F2', color: '#DC2626' }}>
-                                    <Lock size={13} />
-                                    You are not invited
-                                  </div>
-                                ) : (
-                                  <button
-                                    onClick={() => handleJoinMeeting(message.id, scheduledMeet.link)}
-                                    disabled={meetJoinState[message.id] === 'checking'}
-                                    className="group flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-[13px] font-black text-white transition-all duration-200 hover:scale-[1.02] active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
-                                    style={{
-                                      background: 'linear-gradient(135deg, #3E4A89 0%, #2A3568 100%)',
-                                      boxShadow: '0 4px 14px rgba(62,74,137,0.38), inset 0 1px 0 rgba(255,255,255,0.12)',
-                                    }}
-                                  >
-                                    {meetJoinState[message.id] === 'checking' ? (
-                                      <>
-                                        <div className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                                        Checking access...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Video size={14} />
-                                        Join Meeting
-                                      </>
-                                    )}
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <div
-                              className={`leading-relaxed ${settings.fontSize === 'large' ? 'text-xl' : 'text-[16px]'} ${isOwn ? 'text-white' : 'text-[#1E2636]'}`}
-                            >
-                              <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                  p: ({ children }) => (
-                                    <p className="mb-1 last:mb-0">
-                                      {React.Children.map(children, (child) =>
-                                        typeof child === 'string'
-                                          ? renderWithMentions(
+                                className={`leading-relaxed ${settings.fontSize === 'large' ? 'text-xl' : 'text-[16px]'} ${isOwn ? 'text-white' : 'text-[#1E2636]'}`}
+                              >
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkGfm]}
+                                  components={{
+                                    p: ({ children }) => (
+                                      <p className="mb-1 last:mb-0">
+                                        {React.Children.map(children, (child) =>
+                                          typeof child === 'string'
+                                            ? renderWithMentions(
                                               child,
                                               isOwn,
                                               members.map((m) => m.name)
                                             )
-                                          : child
-                                      )}
-                                    </p>
-                                  ),
-                                  strong: ({ children }) => (
-                                    <strong className="font-bold">{children}</strong>
-                                  ),
-                                  em: ({ children }) => <em className="italic">{children}</em>,
-                                  code: ({ children, className }) => {
-                                    const isBlock = String(className ?? '').includes('language-');
-                                    return isBlock ? (
-                                      <pre className="my-1 overflow-x-auto rounded-lg bg-black/20 p-2 text-xs text-green-300">
-                                        <code>{children}</code>
-                                      </pre>
-                                    ) : (
-                                      <code
-                                        className={`rounded px-1 py-0.5 font-mono text-xs ${isOwn ? 'bg-white/20 text-white' : 'bg-[rgba(62,74,137,0.08)] text-[#3E4A89]'}`}
+                                            : child
+                                        )}
+                                      </p>
+                                    ),
+                                    strong: ({ children }) => (
+                                      <strong className="font-bold">{children}</strong>
+                                    ),
+                                    em: ({ children }) => <em className="italic">{children}</em>,
+                                    code: ({ children, className }) => {
+                                      const isBlock = String(className ?? '').includes('language-');
+                                      return isBlock ? (
+                                        <pre className="my-1 overflow-x-auto rounded-lg bg-black/20 p-2 text-xs text-green-300">
+                                          <code>{children}</code>
+                                        </pre>
+                                      ) : (
+                                        <code
+                                          className={`rounded px-1 py-0.5 font-mono text-xs ${isOwn ? 'bg-white/20 text-white' : 'bg-[rgba(62,74,137,0.08)] text-[#3E4A89]'}`}
+                                        >
+                                          {children}
+                                        </code>
+                                      );
+                                    },
+                                    blockquote: ({ children }) => (
+                                      <blockquote
+                                        className={`border-l-4 pl-3 italic text-xs ${isOwn ? 'border-white/40 text-white/80' : 'border-[rgba(62,74,137,0.25)] text-[#7C859E]'}`}
                                       >
                                         {children}
-                                      </code>
-                                    );
-                                  },
-                                  blockquote: ({ children }) => (
-                                    <blockquote
-                                      className={`border-l-4 pl-3 italic text-xs ${isOwn ? 'border-white/40 text-white/80' : 'border-[rgba(62,74,137,0.25)] text-[#7C859E]'}`}
-                                    >
-                                      {children}
-                                    </blockquote>
-                                  ),
-                                  a: ({ href, children }) => (
-                                    <a
-                                      href={href}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className={`underline ${isOwn ? 'text-white/90' : 'text-green-700'}`}
-                                    >
-                                      {children}
-                                    </a>
-                                  ),
-                                }}
-                              >
-                                {message.text}
-                              </ReactMarkdown>
-                            </div>
-                          )}
-
-                          {/* Link preview card */}
-                          {message.linkPreview && !scheduledMeet && (
-                            <a
-                              href={message.linkPreview.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className={`mt-2 block overflow-hidden rounded-xl border transition-colors hover:opacity-90
-                              ${isOwn ? 'border-white/20 bg-white/10' : 'border-[rgba(62,74,137,0.12)] bg-[#FAF8F5]'}`}
-                            >
-                              {message.linkPreview.image && (
-                                <img
-                                  src={message.linkPreview.image}
-                                  alt=""
-                                  className="h-32 w-full object-cover"
-                                />
-                              )}
-                              <div className="px-3 py-2">
-                                {message.linkPreview.siteName && (
-                                  <p
-                                    className={`text-[10px] font-black uppercase tracking-wider ${isOwn ? 'text-white/50' : 'text-[#7C859E]'}`}
-                                  >
-                                    {message.linkPreview.siteName}
-                                  </p>
-                                )}
-                                {message.linkPreview.title && (
-                                  <p
-                                    className={`text-sm font-bold leading-snug ${isOwn ? 'text-white' : 'text-[#1E2636]'}`}
-                                  >
-                                    {message.linkPreview.title}
-                                  </p>
-                                )}
-                                {message.linkPreview.description && (
-                                  <p
-                                    className={`mt-0.5 text-xs line-clamp-2 ${isOwn ? 'text-white/70' : 'text-[#7C859E]'}`}
-                                  >
-                                    {message.linkPreview.description}
-                                  </p>
-                                )}
-                                <p
-                                  className={`mt-1 flex items-center gap-1 text-[10px] ${isOwn ? 'text-white/40' : 'text-[#9BA6D3]'}`}
+                                      </blockquote>
+                                    ),
+                                    a: ({ href, children }) => (
+                                      <a
+                                        href={href}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className={`underline ${isOwn ? 'text-white/90' : 'text-green-700'}`}
+                                      >
+                                        {children}
+                                      </a>
+                                    ),
+                                  }}
                                 >
-                                  <ExternalLink size={10} />
-                                  {new URL(message.linkPreview.url).hostname}
+                                  {message.text}
+                                </ReactMarkdown>
+                              </div>
+                            )}
+
+                            {/* Link preview card */}
+                            {message.linkPreview && !scheduledMeet && (
+                              <a
+                                href={message.linkPreview.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={`mt-2 block overflow-hidden rounded-xl border transition-colors hover:opacity-90
+                              ${isOwn ? 'border-white/20 bg-white/10' : 'border-[rgba(62,74,137,0.12)] bg-[#FAF8F5]'}`}
+                              >
+                                {message.linkPreview.image && (
+                                  <img
+                                    src={message.linkPreview.image}
+                                    alt=""
+                                    className="h-32 w-full object-cover"
+                                  />
+                                )}
+                                <div className="px-3 py-2">
+                                  {message.linkPreview.siteName && (
+                                    <p
+                                      className={`text-[10px] font-black uppercase tracking-wider ${isOwn ? 'text-white/50' : 'text-[#7C859E]'}`}
+                                    >
+                                      {message.linkPreview.siteName}
+                                    </p>
+                                  )}
+                                  {message.linkPreview.title && (
+                                    <p
+                                      className={`text-sm font-bold leading-snug ${isOwn ? 'text-white' : 'text-[#1E2636]'}`}
+                                    >
+                                      {message.linkPreview.title}
+                                    </p>
+                                  )}
+                                  {message.linkPreview.description && (
+                                    <p
+                                      className={`mt-0.5 text-xs line-clamp-2 ${isOwn ? 'text-white/70' : 'text-[#7C859E]'}`}
+                                    >
+                                      {message.linkPreview.description}
+                                    </p>
+                                  )}
+                                  <p
+                                    className={`mt-1 flex items-center gap-1 text-[10px] ${isOwn ? 'text-white/40' : 'text-[#9BA6D3]'}`}
+                                  >
+                                    <ExternalLink size={10} />
+                                    {new URL(message.linkPreview.url).hostname}
+                                  </p>
+                                </div>
+                              </a>
+                            )}
+
+                            {/* Audio */}
+                            {message.audioUrl && (
+                              <div
+                                className={`mt-2 rounded-xl p-2 ${isOwn ? 'bg-white/10' : 'bg-[#FAF8F5]'}`}
+                              >
+                                <audio className="w-48 h-8" controls src={message.audioUrl}>
+                                  <track kind="captions" />
+                                </audio>
+                                <p
+                                  className={`mt-0.5 text-[11px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}
+                                >
+                                  Voice note
                                 </p>
                               </div>
-                            </a>
-                          )}
-
-                          {/* Audio */}
-                          {message.audioUrl && (
-                            <div
-                              className={`mt-2 rounded-xl p-2 ${isOwn ? 'bg-white/10' : 'bg-[#FAF8F5]'}`}
-                            >
-                              <audio className="w-48 h-8" controls src={message.audioUrl}>
-                                <track kind="captions" />
-                              </audio>
-                              <p
-                                className={`mt-0.5 text-[11px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}
-                              >
-                                Voice note
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Video */}
-                          {message.videoUrl && (
-                            <div className="mt-2 w-56">
-                              <video
-                                className="w-full rounded-xl bg-black"
-                                controls
-                                src={message.videoUrl}
-                              >
-                                <track kind="captions" />
-                              </video>
-                              <p
-                                className={`mt-0.5 text-[11px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}
-                              >
-                                Screen recording
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Files */}
-                          {message.files && message.files.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                              {message.files.map((file, fi) => (
-                                <a
-                                  key={fi}
-                                  href={file.url}
-                                  {...(file.url?.startsWith('data:')
-                                    ? { download: file.name }
-                                    : { target: '_blank', rel: 'noreferrer' })}
-                                  className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-bold transition-colors
-                                  ${isOwn ? 'border-white/30 bg-white/10 text-white hover:bg-white/20' : 'border-[rgba(62,74,137,0.12)] bg-white text-[#4A5578] hover:border-[rgba(62,74,137,0.15)]'}`}
-                                >
-                                  📎 {file.name}
-                                </a>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Timestamp + double-tick */}
-                          <div
-                            className={`mt-1.5 flex items-center justify-end gap-1 text-[10px] ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}
-                          >
-                            <span>{formatTime(message.timestamp)}</span>
-                            {isOwn && (
-                              <svg
-                                width="16"
-                                height="11"
-                                viewBox="0 0 16 11"
-                                fill="currentColor"
-                                className="opacity-80"
-                              >
-                                <path d="M11.071.653a.75.75 0 0 1 .001 1.06l-5.78 5.79a.75.75 0 0 1-1.063 0L1.928 5.2a.75.75 0 1 1 1.062-1.059l1.769 1.77L10.01.653a.75.75 0 0 1 1.061 0z" />
-                                <path
-                                  d="M15.071.653a.75.75 0 0 1 .001 1.06l-5.78 5.79a.75.75 0 0 1-.532.22.75.75 0 0 1-.532-1.28L13.01.653a.75.75 0 0 1 1.061 0z"
-                                  opacity="0.6"
-                                />
-                              </svg>
                             )}
-                          </div>
 
-                          {/* Hover action bar — floats beside the bubble */}
-                          <div
-                            className={`absolute ${isOwn ? 'left-0 -translate-x-full pr-2' : 'right-0 translate-x-full pl-2'} top-0 hidden group-hover/bubble:flex items-center`}
-                          >
-                            <div className="flex items-center gap-0.5 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-1 shadow-lg">
-                              <div className="relative">
-                                <button
-                                  onClick={() =>
-                                    setHoverEmojiMsgId(
-                                      hoverEmojiMsgId === message.id ? null : message.id
-                                    )
-                                  }
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-sm hover:bg-[rgba(62,74,137,0.08)]"
-                                  title="React"
+                            {/* Video */}
+                            {message.videoUrl && (
+                              <div className="mt-2 w-56">
+                                <video
+                                  className="w-full rounded-xl bg-black"
+                                  controls
+                                  src={message.videoUrl}
                                 >
-                                  😊
-                                </button>
-                                {hoverEmojiMsgId === message.id && (
-                                  <div
-                                    className={`absolute top-full mt-1 z-30 flex gap-1 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white p-1.5 shadow-xl ${isOwn ? 'right-0' : 'left-0'}`}
-                                  >
-                                    {['👍', '❤️', '😂', '🔥', '👀', '✅', '🎉', '💯'].map((em) => (
-                                      <button
-                                        key={em}
-                                        onClick={() => {
-                                          toggleReaction(
-                                            activeChannelId,
-                                            message.id,
-                                            em,
-                                            currentUser?.email ?? ''
-                                          );
-                                          setHoverEmojiMsgId(null);
-                                        }}
-                                        className="flex h-7 w-7 items-center justify-center rounded-lg text-lg hover:scale-110 hover:bg-[rgba(62,74,137,0.08)] transition-all"
-                                      >
-                                        {em}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
+                                  <track kind="captions" />
+                                </video>
+                                <p
+                                  className={`mt-0.5 text-[11px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}
+                                >
+                                  Screen recording
+                                </p>
                               </div>
-                              {!message.isDeleted && (
-                                <button
-                                  onClick={() => {
-                                    setActiveThread(
-                                      activeThreadId === message.id ? null : message.id
-                                    );
-                                    setThreadReplyText('');
-                                  }}
-                                  className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[rgba(62,74,137,0.08)] ${activeThreadId === message.id ? 'text-[#3E4A89]' : 'text-[#7C859E] hover:text-[#3E4A89]'}`}
-                                  title="Reply in thread"
+                            )}
+
+                            {/* Files */}
+                            {message.files && message.files.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {message.files.map((file, fi) => (
+                                  <a
+                                    key={fi}
+                                    href={file.url}
+                                    {...(file.url?.startsWith('data:')
+                                      ? { download: file.name }
+                                      : { target: '_blank', rel: 'noreferrer' })}
+                                    className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-bold transition-colors
+                                  ${isOwn ? 'border-white/30 bg-white/10 text-white hover:bg-white/20' : 'border-[rgba(62,74,137,0.12)] bg-white text-[#4A5578] hover:border-[rgba(62,74,137,0.15)]'}`}
+                                  >
+                                    📎 {file.name}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Timestamp + double-tick */}
+                            <div
+                              className={`mt-1.5 flex items-center justify-end gap-1 text-[10px] ${isOwn ? 'text-white/60' : 'text-[#7C859E]'}`}
+                            >
+                              <span>{formatTime(message.timestamp)}</span>
+                              {isOwn && (
+                                <svg
+                                  width="16"
+                                  height="11"
+                                  viewBox="0 0 16 11"
+                                  fill="currentColor"
+                                  className={dmPartnerEmail && (message.readBy ?? []).includes(dmPartnerEmail) ? 'text-[#53BDEB] opacity-100' : 'opacity-60'}
                                 >
-                                  <MessageSquare size={13} />
-                                </button>
+                                  {dmPartnerEmail && (
+                                    <title>{(message.readBy ?? []).includes(dmPartnerEmail) ? 'Seen' : 'Delivered'}</title>
+                                  )}
+                                  <path d="M11.071.653a.75.75 0 0 1 .001 1.06l-5.78 5.79a.75.75 0 0 1-1.063 0L1.928 5.2a.75.75 0 1 1 1.062-1.059l1.769 1.77L10.01.653a.75.75 0 0 1 1.061 0z" />
+                                  <path
+                                    d="M15.071.653a.75.75 0 0 1 .001 1.06l-5.78 5.79a.75.75 0 0 1-.532.22.75.75 0 0 1-.532-1.28L13.01.653a.75.75 0 0 1 1.061 0z"
+                                    opacity="0.6"
+                                  />
+                                </svg>
                               )}
-                              <button
-                                onClick={() =>
-                                  toggleBookmark(message.id, {
-                                    channelId: activeChannelId,
-                                    text: message.text,
-                                    sender: message.sender,
-                                    timestamp: message.timestamp,
-                                  })
-                                }
-                                className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[rgba(62,74,137,0.08)] ${isBookmarked ? 'text-amber-500' : 'text-[#7C859E] hover:text-amber-500'}`}
-                                title={isBookmarked ? 'Remove bookmark' : 'Save'}
-                              >
-                                <Bookmark size={13} fill={isBookmarked ? 'currentColor' : 'none'} />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (isPinned) {
-                                    unpinMessage(activeChannelId, message.id);
-                                  } else {
-                                    pinMessage(activeChannelId, message.id);
-                                  }
-                                }}
-                                className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[rgba(62,74,137,0.08)] ${isPinned ? 'text-amber-500' : 'text-[#7C859E] hover:text-amber-500'}`}
-                                title={isPinned ? 'Unpin' : 'Pin'}
-                              >
-                                <Pin size={13} />
-                              </button>
-                              {!message.isDeleted && !message.poll && (
+                            </div>
+
+                            {/* Hover action bar — floats beside the bubble */}
+                            <div
+                              className={`absolute ${isOwn ? 'left-0 -translate-x-full pr-2' : 'right-0 translate-x-full pl-2'} top-0 hidden group-hover/bubble:flex items-center`}
+                            >
+                              <div className="flex items-center gap-0.5 rounded-xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] p-1 shadow-lg">
+                                <div className="relative">
+                                  <button
+                                    onClick={() =>
+                                      setHoverEmojiMsgId(
+                                        hoverEmojiMsgId === message.id ? null : message.id
+                                      )
+                                    }
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-sm hover:bg-[rgba(62,74,137,0.08)]"
+                                    title="React"
+                                  >
+                                    😊
+                                  </button>
+                                  {hoverEmojiMsgId === message.id && (
+                                    <div
+                                      className={`absolute top-full mt-1 z-30 flex gap-1 rounded-xl border border-[rgba(62,74,137,0.12)] bg-white p-1.5 shadow-xl ${isOwn ? 'right-0' : 'left-0'}`}
+                                    >
+                                      {['👍', '❤️', '😂', '🔥', '👀', '✅', '🎉', '💯'].map((em) => (
+                                        <button
+                                          key={em}
+                                          onClick={() => {
+                                            toggleReaction(
+                                              activeChannelId,
+                                              message.id,
+                                              em,
+                                              currentUser?.email ?? ''
+                                            );
+                                            setHoverEmojiMsgId(null);
+                                          }}
+                                          className="flex h-7 w-7 items-center justify-center rounded-lg text-lg hover:scale-110 hover:bg-[rgba(62,74,137,0.08)] transition-all"
+                                        >
+                                          {em}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                {!message.isDeleted && (
+                                  <button
+                                    onClick={() => {
+                                      setActiveThread(
+                                        activeThreadId === message.id ? null : message.id
+                                      );
+                                      setThreadReplyText('');
+                                    }}
+                                    className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[rgba(62,74,137,0.08)] ${activeThreadId === message.id ? 'text-[#3E4A89]' : 'text-[#7C859E] hover:text-[#3E4A89]'}`}
+                                    title="Reply in thread"
+                                  >
+                                    <MessageSquare size={13} />
+                                  </button>
+                                )}
                                 <button
                                   onClick={() =>
-                                    setForwardingMsg({
-                                      id: message.id,
-                                      text: message.text ?? '',
+                                    toggleBookmark(message.id, {
+                                      channelId: activeChannelId,
+                                      text: message.text,
                                       sender: message.sender,
+                                      timestamp: message.timestamp,
                                     })
                                   }
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#3E4A89]"
-                                  title="Forward message"
+                                  className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[rgba(62,74,137,0.08)] ${isBookmarked ? 'text-amber-500' : 'text-[#7C859E] hover:text-amber-500'}`}
+                                  title={isBookmarked ? 'Remove bookmark' : 'Save'}
                                 >
-                                  <Share2 size={13} />
+                                  <Bookmark size={13} fill={isBookmarked ? 'currentColor' : 'none'} />
                                 </button>
-                              )}
-                              {(isOwn || isAdmin) && (
                                 <button
-                                  onClick={() => deleteMessage(activeChannelId, message.id)}
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-[#7C859E] hover:bg-red-50 hover:text-red-600"
-                                  title="Delete"
+                                  onClick={() => {
+                                    if (isPinned) {
+                                      unpinMessage(activeChannelId, message.id);
+                                    } else {
+                                      pinMessage(activeChannelId, message.id);
+                                    }
+                                  }}
+                                  className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-[rgba(62,74,137,0.08)] ${isPinned ? 'text-amber-500' : 'text-[#7C859E] hover:text-amber-500'}`}
+                                  title={isPinned ? 'Unpin' : 'Pin'}
                                 >
-                                  <Trash2 size={13} />
+                                  <Pin size={13} />
                                 </button>
-                              )}
+                                {!message.isDeleted && !message.poll && (
+                                  <button
+                                    onClick={() =>
+                                      setForwardingMsg({
+                                        id: message.id,
+                                        text: message.text ?? '',
+                                        sender: message.sender,
+                                      })
+                                    }
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#3E4A89]"
+                                    title="Forward message"
+                                  >
+                                    <Share2 size={13} />
+                                  </button>
+                                )}
+                                {(isOwn || isAdmin) && (
+                                  <button
+                                    onClick={() => deleteMessage(activeChannelId, message.id)}
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-[#7C859E] hover:bg-red-50 hover:text-red-600"
+                                    title="Delete"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {/* Poll */}
-                      {message.poll && (
-                        <div className="mt-1 w-64 rounded-2xl border border-[rgba(62,74,137,0.10)] bg-white p-4 shadow-sm">
-                          <p className="mb-3 text-sm font-bold text-[#1E2636]">
-                            📊 {message.poll.question}
-                          </p>
-                          <div className="space-y-2">
-                            {message.poll.options.map((opt, i) => {
-                              const total = message.poll!.options.reduce(
-                                (s, o) => s + o.votes.length,
-                                0
-                              );
-                              const pct = total ? Math.round((opt.votes.length / total) * 100) : 0;
-                              return (
-                                <div
-                                  key={i}
-                                  className="relative overflow-hidden rounded-xl border border-[rgba(62,74,137,0.15)] bg-white"
-                                >
+                        {/* Poll */}
+                        {message.poll && (
+                          <div className="mt-1 w-64 rounded-2xl border border-[rgba(62,74,137,0.10)] bg-white p-4 shadow-sm">
+                            <p className="mb-3 text-sm font-bold text-[#1E2636]">
+                              📊 {message.poll.question}
+                            </p>
+                            <div className="space-y-2">
+                              {message.poll.options.map((opt, i) => {
+                                const total = message.poll!.options.reduce(
+                                  (s, o) => s + o.votes.length,
+                                  0
+                                );
+                                const pct = total ? Math.round((opt.votes.length / total) * 100) : 0;
+                                return (
                                   <div
-                                    className="absolute inset-y-0 left-0 rounded-l-xl bg-indigo-100"
-                                    style={{ width: `${pct}%` }}
-                                  />
-                                  <div className="relative flex items-center justify-between px-3 py-2">
-                                    <span className="text-sm font-semibold text-[#4A5578]">
-                                      {opt.text}
-                                    </span>
-                                    <span className="text-xs font-bold text-green-700">{pct}%</span>
+                                    key={i}
+                                    className="relative overflow-hidden rounded-xl border border-[rgba(62,74,137,0.15)] bg-white"
+                                  >
+                                    <div
+                                      className="absolute inset-y-0 left-0 rounded-l-xl bg-indigo-100"
+                                      style={{ width: `${pct}%` }}
+                                    />
+                                    <div className="relative flex items-center justify-between px-3 py-2">
+                                      <span className="text-sm font-semibold text-[#4A5578]">
+                                        {opt.text}
+                                      </span>
+                                      <span className="text-xs font-bold text-green-700">{pct}%</span>
+                                    </div>
                                   </div>
-                                </div>
-                              );
-                            })}
+                                );
+                              })}
+                            </div>
+                            <p className="mt-2 text-[11px] text-[#7C859E]">
+                              {message.poll.options.reduce((s, o) => s + o.votes.length, 0)} votes
+                            </p>
                           </div>
-                          <p className="mt-2 text-[11px] text-[#7C859E]">
-                            {message.poll.options.reduce((s, o) => s + o.votes.length, 0)} votes
-                          </p>
-                        </div>
-                      )}
+                        )}
 
-                      {/* Reactions */}
-                      {message.reactions && Object.keys(message.reactions).length > 0 && (
-                        <div
-                          className={`mt-1 flex flex-wrap gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}
-                        >
-                          {Object.entries(message.reactions).map(([emoji, users]: [string, any]) =>
-                            users.length > 0 ? (
-                              <button
-                                key={emoji}
-                                onClick={() =>
-                                  toggleReaction(
-                                    activeChannelId,
-                                    message.id,
-                                    emoji,
-                                    currentUser?.email ?? ''
-                                  )
-                                }
-                                className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-all
-                                ${
-                                  users.includes(currentUser?.email ?? '')
-                                    ? 'border-[rgba(62,74,137,0.15)] bg-indigo-100 font-bold text-[#3E4A89]'
-                                    : 'border-[rgba(62,74,137,0.12)] bg-white text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]'
-                                }`}
-                              >
-                                <span>{emoji}</span>
-                                <span>{users.length}</span>
-                              </button>
-                            ) : null
-                          )}
-                        </div>
-                      )}
+                        {/* Reactions */}
+                        {message.reactions && Object.keys(message.reactions).length > 0 && (
+                          <div
+                            className={`mt-1 flex flex-wrap gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}
+                          >
+                            {Object.entries(message.reactions).map(([emoji, users]: [string, any]) =>
+                              users.length > 0 ? (
+                                <button
+                                  key={emoji}
+                                  onClick={() =>
+                                    toggleReaction(
+                                      activeChannelId,
+                                      message.id,
+                                      emoji,
+                                      currentUser?.email ?? ''
+                                    )
+                                  }
+                                  className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-all
+                                ${users.includes(currentUser?.email ?? '')
+                                      ? 'border-[rgba(62,74,137,0.15)] bg-indigo-100 font-bold text-[#3E4A89]'
+                                      : 'border-[rgba(62,74,137,0.12)] bg-white text-[#4A5578] hover:bg-[rgba(62,74,137,0.06)]'
+                                    }`}
+                                >
+                                  <span>{emoji}</span>
+                                  <span>{users.length}</span>
+                                </button>
+                              ) : null
+                            )}
+                          </div>
+                        )}
 
-                      {/* Thread reply count */}
-                      {!message.isDeleted && replyCount(message.id) > 0 && (
-                        <button
-                          onClick={() => {
-                            setActiveThread(activeThreadId === message.id ? null : message.id);
-                            setThreadReplyText('');
-                          }}
-                          className={`mt-1 flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold transition-colors
-                          ${
-                            activeThreadId === message.id
-                              ? 'bg-indigo-50 text-[#3E4A89]'
-                              : 'text-[#3E4A89] hover:bg-indigo-50'
-                          }`}
-                        >
-                          <MessageSquare size={12} />
-                          {replyCount(message.id)}{' '}
-                          {replyCount(message.id) === 1 ? 'reply' : 'replies'}
-                        </button>
-                      )}
+                        {/* Thread reply count */}
+                        {!message.isDeleted && replyCount(message.id) > 0 && (
+                          <button
+                            onClick={() => {
+                              setActiveThread(activeThreadId === message.id ? null : message.id);
+                              setThreadReplyText('');
+                            }}
+                            className={`mt-1 flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold transition-colors
+                          ${activeThreadId === message.id
+                                ? 'bg-indigo-50 text-[#3E4A89]'
+                                : 'text-[#3E4A89] hover:bg-indigo-50'
+                              }`}
+                          >
+                            <MessageSquare size={12} />
+                            {replyCount(message.id)}{' '}
+                            {replyCount(message.id) === 1 ? 'reply' : 'replies'}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  </React.Fragment>
                 );
               })}
               <div ref={chatBottomRef} className="h-2" />
@@ -4089,10 +4524,10 @@ export default function EduTechExOSDashboard() {
             if (!typers.length) return null;
             const label =
               typers.length === 1
-                ? `${typers[0]} is typing�¦`
+                ? `${typers[0]} is typing...`
                 : typers.length === 2
-                  ? `${typers[0]} and ${typers[1]} are typing�¦`
-                  : 'Several people are typing�¦';
+                  ? `${typers[0]} and ${typers[1]} are typing...`
+                  : 'Several people are typing...';
             return (
               <div className="flex items-center gap-2 px-5 py-1.5 text-[13px] text-[#616161]">
                 <span className="flex gap-[3px] items-center">
@@ -4404,7 +4839,7 @@ export default function EduTechExOSDashboard() {
                   setMentionMenuOpen(false);
                 }
               }}
-              placeholder={`Message #${channel?.name ?? ''}�¦ (Enter to send · Shift+Enter for new line)`}
+              placeholder={`Message #${channel?.name ?? ''}... (Enter to send · Shift+Enter for new line)`}
               className="flex-1 resize-none border-0 bg-transparent px-3 py-2 text-[13.5px] text-[#1E2636] placeholder-[#8a8886] focus:outline-none"
               rows={1}
               style={{ maxHeight: '120px', overflowY: 'auto' }}
@@ -4414,10 +4849,23 @@ export default function EduTechExOSDashboard() {
             <button
               onClick={sendMessage}
               disabled={!composerMessage.trim()}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 transition-all"
-              style={{ background: 'linear-gradient(135deg, #C4CAE0, #7C859E)', color: '#191E2F' }}
+              className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full text-white active:scale-90 disabled:cursor-not-allowed disabled:opacity-40 transition-all shadow-md hover:scale-105"
+              style={
+                composerMessage.trim()
+                  ? {
+                      background: 'linear-gradient(135deg, #6C7BF5, #5055E8)',
+                      boxShadow: '0 3px 10px rgba(108, 123, 245, 0.35)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      color: '#ffffff',
+                    }
+                  : {
+                      background: 'rgba(124, 133, 158, 0.15)',
+                      color: '#9BA6D3',
+                      boxShadow: 'none',
+                    }
+              }
             >
-              <Send size={18} />
+              <Send size={15} />
             </button>
           </div>
         </footer>
@@ -4521,6 +4969,7 @@ export default function EduTechExOSDashboard() {
           </motion.button>
         </div>
       </nav>
+      </div> {/* Close dashboard-workspace-no-panel */}
 
       {/* ── AI Copilot modal overlay ───────────────────────────────── */}
       <AnimatePresence>
@@ -4643,7 +5092,7 @@ export default function EduTechExOSDashboard() {
                               {/* File attachments */}
                               {msg.files && msg.files.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-1 mb-1.5">
-                                  {msg.files.map((f: {name: string; url: string; type: string}, fi: number) => (
+                                  {msg.files.map((f: { name: string; url: string; type: string }, fi: number) => (
                                     <a
                                       key={fi}
                                       href={f.url}
@@ -4976,11 +5425,10 @@ export default function EduTechExOSDashboard() {
                       key={id}
                       type="button"
                       onClick={() => setSettingsTab(id)}
-                      className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs font-bold transition-all ${
-                        settingsTab === id
-                          ? 'bg-[#3E4A89] text-white shadow-sm'
-                          : 'text-[#4A5578] hover:bg-[rgba(62,74,137,0.07)] hover:text-[#1E2636]'
-                      }`}
+                      className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs font-bold transition-all ${settingsTab === id
+                        ? 'bg-[#3E4A89] text-white shadow-sm'
+                        : 'text-[#4A5578] hover:bg-[rgba(62,74,137,0.07)] hover:text-[#1E2636]'
+                        }`}
                     >
                       <Icon size={14} />
                       {label}
@@ -5043,9 +5491,9 @@ export default function EduTechExOSDashboard() {
                           style={
                             settings.avatarEmoji
                               ? {
-                                  background: 'rgba(62,74,137,0.08)',
-                                  border: '2px solid rgba(62,74,137,0.15)',
-                                }
+                                background: 'rgba(62,74,137,0.08)',
+                                border: '2px solid rgba(62,74,137,0.15)',
+                              }
                               : { background: '#3E4A89' }
                           }
                         >
@@ -5100,21 +5548,20 @@ export default function EduTechExOSDashboard() {
                         <div className="mt-2.5 grid grid-cols-4 gap-2">
                           {(
                             [
-                              { id: 'online',     label: 'Online',      dot: 'bg-emerald-500' },
-                              { id: 'away',       label: 'Away',        dot: 'bg-amber-400' },
-                              { id: 'in-meeting', label: 'In Meeting',  dot: 'bg-red-500' },
-                              { id: 'offline',    label: 'Offline',     dot: 'bg-slate-300' },
+                              { id: 'online', label: 'Online', dot: 'bg-emerald-500' },
+                              { id: 'away', label: 'Away', dot: 'bg-amber-400' },
+                              { id: 'in-meeting', label: 'In Meeting', dot: 'bg-red-500' },
+                              { id: 'offline', label: 'Offline', dot: 'bg-slate-300' },
                             ] as const
                           ).map(({ id, label, dot }) => (
                             <button
                               key={id}
                               type="button"
                               onClick={() => setSettings((v) => ({ ...v, status: id }))}
-                              className={`flex flex-col items-center gap-2 rounded-xl border py-3 text-xs font-bold transition-all ${
-                                settings.status === id
-                                  ? 'border-[#3E4A89] bg-indigo-50 text-[#3E4A89]'
-                                  : 'border-[rgba(62,74,137,0.10)] bg-white text-[#7C859E] hover:border-[rgba(62,74,137,0.20)] hover:bg-[rgba(62,74,137,0.04)]'
-                              }`}
+                              className={`flex flex-col items-center gap-2 rounded-xl border py-3 text-xs font-bold transition-all ${settings.status === id
+                                ? 'border-[#3E4A89] bg-indigo-50 text-[#3E4A89]'
+                                : 'border-[rgba(62,74,137,0.10)] bg-white text-[#7C859E] hover:border-[rgba(62,74,137,0.20)] hover:bg-[rgba(62,74,137,0.04)]'
+                                }`}
                             >
                               <span className={`h-3 w-3 rounded-full ${dot}`} />
                               {label}
@@ -5124,46 +5571,6 @@ export default function EduTechExOSDashboard() {
                         <p className="mt-2 text-[11px] text-[#9BA6D3]">
                           Visible to everyone in the People list.
                         </p>
-                      </div>
-
-                      {/* Avatar picker */}
-                      <div
-                        className="rounded-2xl p-4"
-                        style={{ border: '1px solid rgba(62,74,137,0.08)' }}
-                      >
-                        <label className="text-[9px] font-black uppercase tracking-widest text-[#9BA6D3]">
-                          Avatar emoji
-                        </label>
-                        <p className="mt-0.5 text-[11px] text-[#9BA6D3] mb-2.5">
-                          Appears next to your name. Leave blank to use initials.
-                        </p>
-                        <div className="grid grid-cols-8 gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setSettings((v) => ({ ...v, avatarEmoji: '' }))}
-                            className={`flex h-9 w-9 items-center justify-center rounded-xl border text-[10px] font-black transition-all ${
-                              !settings.avatarEmoji
-                                ? 'border-[#3E4A89] bg-[#3E4A89] text-white'
-                                : 'border-[rgba(62,74,137,0.12)] bg-white text-[#4A5578] hover:border-[rgba(62,74,137,0.30)]'
-                            }`}
-                          >
-                            {currentUser?.initials ?? 'G'}
-                          </button>
-                          {AVATAR_OPTIONS.map((emoji) => (
-                            <button
-                              key={emoji}
-                              type="button"
-                              onClick={() => setSettings((v) => ({ ...v, avatarEmoji: emoji }))}
-                              className={`flex h-9 w-9 items-center justify-center rounded-xl border text-lg transition-all ${
-                                settings.avatarEmoji === emoji
-                                  ? 'border-[#3E4A89] bg-indigo-50 scale-110 shadow-sm'
-                                  : 'border-[rgba(62,74,137,0.10)] bg-white hover:border-[rgba(62,74,137,0.25)] hover:scale-110'
-                              }`}
-                            >
-                              {emoji}
-                            </button>
-                          ))}
-                        </div>
                       </div>
                     </>
                   )}
@@ -5282,11 +5689,10 @@ export default function EduTechExOSDashboard() {
                               key={id}
                               type="button"
                               onClick={() => setSettings((v) => ({ ...v, fontSize: id }))}
-                              className={`flex-1 rounded-xl border py-2.5 text-xs font-bold transition-all ${
-                                settings.fontSize === id
-                                  ? 'border-[#3E4A89] bg-indigo-50 text-[#3E4A89]'
-                                  : 'border-[rgba(62,74,137,0.10)] bg-white text-[#7C859E] hover:border-[rgba(62,74,137,0.20)]'
-                              }`}
+                              className={`flex-1 rounded-xl border py-2.5 text-xs font-bold transition-all ${settings.fontSize === id
+                                ? 'border-[#3E4A89] bg-indigo-50 text-[#3E4A89]'
+                                : 'border-[rgba(62,74,137,0.10)] bg-white text-[#7C859E] hover:border-[rgba(62,74,137,0.20)]'
+                                }`}
                             >
                               {label} <span className="opacity-60 font-medium">({sub})</span>
                             </button>
@@ -5589,15 +5995,14 @@ export default function EduTechExOSDashboard() {
                                 {[8, 10, 12].map((t, i) => (
                                   <div
                                     key={i}
-                                    className={`h-1.5 flex-1 rounded-full transition-colors ${
-                                      pwNew.length >= t
-                                        ? i === 0
-                                          ? 'bg-red-400'
-                                          : i === 1
-                                            ? 'bg-amber-400'
-                                            : 'bg-emerald-500'
-                                        : 'bg-slate-100'
-                                    }`}
+                                    className={`h-1.5 flex-1 rounded-full transition-colors ${pwNew.length >= t
+                                      ? i === 0
+                                        ? 'bg-red-400'
+                                        : i === 1
+                                          ? 'bg-amber-400'
+                                          : 'bg-emerald-500'
+                                      : 'bg-slate-100'
+                                      }`}
                                   />
                                 ))}
                               </div>
@@ -5623,11 +6028,10 @@ export default function EduTechExOSDashboard() {
                             onChange={(e) => setPwConfirm(e.target.value)}
                             placeholder="Repeat new password"
                             autoComplete="new-password"
-                            className={`mt-2 h-10 w-full rounded-xl border px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0] ${
-                              pwConfirm && pwNew !== pwConfirm
-                                ? 'border-red-300 focus:border-red-400'
-                                : 'border-[rgba(62,74,137,0.12)] focus:border-[#3E4A89]'
-                            }`}
+                            className={`mt-2 h-10 w-full rounded-xl border px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-100 placeholder:text-[#C4CAE0] ${pwConfirm && pwNew !== pwConfirm
+                              ? 'border-red-300 focus:border-red-400'
+                              : 'border-[rgba(62,74,137,0.12)] focus:border-[#3E4A89]'
+                              }`}
                           />
                           {pwConfirm && pwNew !== pwConfirm && (
                             <p className="mt-1.5 text-[11px] font-semibold text-red-500">
@@ -5883,7 +6287,7 @@ export default function EduTechExOSDashboard() {
                 className="flex flex-col sm:flex-row overflow-hidden flex-1 min-h-0"
                 style={{ background: '#FAF8F5' }}
               >
-                {/* Left � Details */}
+                {/* Left - Details */}
                 <div
                   className="flex flex-col gap-5 p-6 sm:w-[52%] sm:border-r overflow-y-auto"
                   style={{ borderColor: 'rgba(62,74,137,0.10)' }}
@@ -6007,6 +6411,79 @@ export default function EduTechExOSDashboard() {
                     </div>
                   </div>
 
+                  {/* Google Meet link — fresh room per meeting */}
+                  <div>
+                    <p
+                      className="text-[10px] font-black uppercase tracking-[0.14em] mb-2"
+                      style={{ color: '#7C859E' }}
+                    >
+                      Google Meet Link
+                    </p>
+                    <div className="mb-2 rounded-xl bg-blue-50 border border-blue-100 px-3 py-2">
+                      <p className="text-[11px] text-blue-700 font-semibold">
+                        A new Google Meet tab opened — copy its link and paste it here. Every invitee will join this exact room.
+                      </p>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <Video size={15} style={{ color: '#9BA6D3' }} />
+                      </span>
+                      <input
+                        type="url"
+                        value={scheduleMeetGoogleLink}
+                        onChange={(e) => setScheduleMeetGoogleLink(e.target.value)}
+                        placeholder="https://meet.google.com/xxx-yyyy-zzz"
+                        className="w-full h-11 rounded-xl pl-9 pr-3 text-sm font-bold outline-none transition-all"
+                        style={{
+                          background: '#FFFFFF',
+                          border: '1.5px solid rgba(62,74,137,0.14)',
+                          color: '#1E2636',
+                        }}
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = '#3E4A89';
+                          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(62,74,137,0.10)';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = 'rgba(62,74,137,0.14)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Agenda / description */}
+                  <div>
+                    <p
+                      className="text-[10px] font-black uppercase tracking-[0.14em] mb-2"
+                      style={{ color: '#7C859E' }}
+                    >
+                      Agenda (optional)
+                    </p>
+                    <textarea
+                      value={meetDescription}
+                      onChange={(e) => setMeetDescription(e.target.value)}
+                      placeholder="What's this meeting about?"
+                      rows={2}
+                      className="w-full rounded-xl px-3 py-2.5 text-sm font-medium outline-none transition-all resize-none"
+                      style={{ background: '#FFFFFF', border: '1.5px solid rgba(62,74,137,0.14)', color: '#1E2636' }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = '#3E4A89'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(62,74,137,0.10)'; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(62,74,137,0.14)'; e.currentTarget.style.boxShadow = 'none'; }}
+                    />
+                  </div>
+
+                  {/* Recurring toggle */}
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={meetRecurring}
+                      onChange={(e) => setMeetRecurring(e.target.checked)}
+                      className="h-4 w-4 rounded border-[rgba(62,74,137,0.3)] accent-[#3E4A89]"
+                    />
+                    <span className="text-xs font-bold" style={{ color: '#1E2636' }}>
+                      Repeat weekly (same day/time, same room)
+                    </span>
+                  </label>
+
                   {/* Live date preview */}
                   {meetDate && (
                     <div
@@ -6100,7 +6577,7 @@ export default function EduTechExOSDashboard() {
                   </div>
                 </div>
 
-                {/* Right � People selector */}
+                {/* Right - People selector */}
                 <div
                   className="flex flex-col sm:w-[48%] overflow-hidden"
                   style={{ background: '#F2F0EC' }}
@@ -6460,21 +6937,19 @@ export default function EduTechExOSDashboard() {
                           {member.email}
                         </span>
                       </span>
-                      <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black ${
-                        member.status === 'online' ? 'bg-emerald-50 text-emerald-700' :
+                      <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black ${member.status === 'online' ? 'bg-emerald-50 text-emerald-700' :
                         member.status === 'in-meeting' ? 'bg-red-50 text-red-600' :
-                        member.status === 'away' ? 'bg-amber-50 text-amber-700' :
-                        'bg-slate-100 text-slate-500'
-                      }`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${
-                          member.status === 'online' ? 'bg-emerald-500' :
+                          member.status === 'away' ? 'bg-amber-50 text-amber-700' :
+                            'bg-slate-100 text-slate-500'
+                        }`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${member.status === 'online' ? 'bg-emerald-500' :
                           member.status === 'in-meeting' ? 'bg-red-500' :
-                          member.status === 'away' ? 'bg-amber-400' :
-                          'bg-slate-400'
-                        }`} />
+                            member.status === 'away' ? 'bg-amber-400' :
+                              'bg-slate-400'
+                          }`} />
                         {member.status === 'online' ? 'Active now' :
-                         member.status === 'in-meeting' ? 'In Meeting' :
-                         member.status === 'away' ? 'Away' : 'Offline'}
+                          member.status === 'in-meeting' ? 'In Meeting' :
+                            member.status === 'away' ? 'Away' : 'Offline'}
                       </span>
                     </button>
                   ))
@@ -6649,6 +7124,101 @@ export default function EduTechExOSDashboard() {
         {standupOpen && <StandupPanel key="standup" onClose={() => setStandupOpen(false)} />}
       </AnimatePresence>
 
+      {/* ─── Edit Scheduled Meeting Modal ──────────────────────────────────────── */}
+      <AnimatePresence>
+        {editMeetingTarget && (
+          <motion.div
+            key="edit-meeting"
+            {...BACKDROP}
+            className="fixed inset-0 z-[210] flex items-center justify-center bg-[rgba(25,30,47,0.55)] p-4 backdrop-blur-sm"
+            onClick={() => setEditMeetingTarget(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl bg-white dark:bg-[#1E2636] border border-[rgba(62,74,137,0.14)] shadow-2xl p-6"
+            >
+              <p className="text-sm font-black text-[#1E2636] dark:text-white mb-4">Edit Meeting</p>
+
+              <label className="block mb-3">
+                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#7C859E]">Title</span>
+                <input
+                  value={editMeetingTarget.title}
+                  onChange={(e) => setEditMeetingTarget((t) => t && { ...t, title: e.target.value })}
+                  className="mt-1 w-full h-11 rounded-xl px-3 text-sm font-bold outline-none border border-[rgba(62,74,137,0.14)] bg-white dark:bg-[#151B2B] text-[#1E2636] dark:text-white"
+                />
+              </label>
+
+              <label className="block mb-3">
+                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#7C859E]">Agenda</span>
+                <textarea
+                  value={editMeetingTarget.description}
+                  onChange={(e) => setEditMeetingTarget((t) => t && { ...t, description: e.target.value })}
+                  rows={2}
+                  className="mt-1 w-full rounded-xl px-3 py-2 text-sm font-medium outline-none border border-[rgba(62,74,137,0.14)] bg-white dark:bg-[#151B2B] text-[#1E2636] dark:text-white resize-none"
+                />
+              </label>
+
+              <label className="block mb-5">
+                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#7C859E]">Date &amp; time</span>
+                <input
+                  type="datetime-local"
+                  value={editMeetingTarget.startAt}
+                  onChange={(e) => setEditMeetingTarget((t) => t && { ...t, startAt: e.target.value })}
+                  className="mt-1 w-full h-11 rounded-xl px-3 text-sm font-bold outline-none border border-[rgba(62,74,137,0.14)] bg-white dark:bg-[#151B2B] text-[#1E2636] dark:text-white"
+                />
+              </label>
+
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setEditMeetingTarget(null)}
+                  className="rounded-xl px-4 py-2 text-sm font-bold text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={editMeetingSaving}
+                  onClick={async () => {
+                    if (!editMeetingTarget) return;
+                    setEditMeetingSaving(true);
+                    const tk = JSON.parse(localStorage.getItem('edutechex_token') || '{}')?.token;
+                    const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
+                    try {
+                      const res = await fetch(`${BACKEND}/api/meeting-access/${editMeetingTarget.messageId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tk}` },
+                        body: JSON.stringify({
+                          title: editMeetingTarget.title,
+                          description: editMeetingTarget.description,
+                          startAt: editMeetingTarget.startAt ? new Date(editMeetingTarget.startAt).toISOString() : undefined,
+                        }),
+                      });
+                      const d = await res.json();
+                      if (d.success) {
+                        toast.success('Meeting updated.');
+                        setEditMeetingTarget(null);
+                      } else {
+                        toast.error(d.error || 'Could not update the meeting.');
+                      }
+                    } catch {
+                      toast.error('Could not update the meeting.');
+                    } finally {
+                      setEditMeetingSaving(false);
+                    }
+                  }}
+                  className="rounded-xl bg-[#3E4A89] hover:bg-[#2A3568] disabled:opacity-50 px-5 py-2 text-sm font-black text-white transition-colors"
+                >
+                  {editMeetingSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ─── Share Google Meet Link Modal ─────────────────────────────────────── */}
       <AnimatePresence>
         {shareMeetLinkOpen && (
@@ -6695,6 +7265,47 @@ export default function EduTechExOSDashboard() {
                 placeholder="https://meet.google.com/xxx-yyyy-zzz"
                 className="w-full rounded-xl border border-[rgba(62,74,137,0.2)] bg-[#FAF8F5] dark:bg-[#151B2B] px-4 py-2.5 text-sm text-[#1E2636] dark:text-white placeholder-[#C4CAE0] focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4"
               />
+
+              {/* Restrict access toggle */}
+              <label className="mb-3 flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={restrictInstantMeet}
+                  onChange={(e) => setRestrictInstantMeet(e.target.checked)}
+                  className="h-4 w-4 rounded border-[rgba(62,74,137,0.3)] accent-blue-600"
+                />
+                <span className="text-xs font-bold text-[#1E2636] dark:text-white">
+                  Restrict who can join (default: everyone in the channel)
+                </span>
+              </label>
+
+              {restrictInstantMeet && (
+                <div className="mb-4 max-h-40 overflow-y-auto rounded-xl border border-[rgba(62,74,137,0.14)] bg-[#FAF8F5] dark:bg-[#151B2B] p-2 space-y-1">
+                  {members
+                    .filter((m) => m.email.toLowerCase() !== currentUserEmail)
+                    .map((member) => {
+                      const checked = instantMeetInviteeIds.includes(member.id);
+                      return (
+                        <label
+                          key={member.id}
+                          className="flex items-center gap-2 rounded-lg px-2 py-1.5 cursor-pointer hover:bg-[rgba(62,74,137,0.06)]"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              setInstantMeetInviteeIds((ids) =>
+                                checked ? ids.filter((id) => id !== member.id) : [...ids, member.id]
+                              )
+                            }
+                            className="h-3.5 w-3.5 rounded border-[rgba(62,74,137,0.3)] accent-blue-600"
+                          />
+                          <span className="text-xs font-semibold text-[#1E2636] dark:text-white">{member.name}</span>
+                        </label>
+                      );
+                    })}
+                </div>
+              )}
 
               {/* Buttons */}
               <div className="flex gap-2 justify-end">

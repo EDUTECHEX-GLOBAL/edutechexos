@@ -35,29 +35,29 @@
   --a-purple-soft:   #A855F7;
   --a-purple-light:  #FAF5FF;
 
-  /* ── Ink (Typography) scale ────────────────────── */
-  --a-ink-950:       #0F172A;
-  --a-ink-900:       #1E293B;
-  --a-ink-700:       #475569;
-  --a-ink-500:       #64748B;
-  --a-ink-300:       #94A3B8;
-  --a-ink-200:       #E2E8F0;
+  /* ── Ink (Typography) scale (Lightened/Vibrant, No Blacks) ────────────────────── */
+  --a-ink-950:       #312E81;
+  --a-ink-900:       #3730A3;
+  --a-ink-700:       #4F46E5;
+  --a-ink-500:       #6366F1;
+  --a-ink-300:       #A5B4FC;
+  --a-ink-200:       #E0E7FF;
 
   /* ── Surface Scale ─────────────────────────────── */
-  --a-surface:       rgba(255, 255, 255, 0.75);
+  --a-surface:       rgba(255, 255, 255, 0.85);
   --a-surface-solid: #FFFFFF;
-  --a-surface-hover: rgba(255, 255, 255, 0.90);
+  --a-surface-hover: rgba(255, 255, 255, 0.95);
   --a-bg-canvas:     #F8FAFC;
 
   /* ── Border ────────────────────────────────────── */
-  --a-border:        rgba(99, 102, 241, 0.08);
-  --a-border-md:     rgba(99, 102, 241, 0.16);
-  --a-border-strong: rgba(99, 102, 241, 0.28);
+  --a-border:        rgba(99, 102, 241, 0.12);
+  --a-border-md:     rgba(99, 102, 241, 0.20);
+  --a-border-strong: rgba(99, 102, 241, 0.35);
 
-  /* ── Shadows & Glows ───────────────────────────── */
-  --a-shadow-xs:     0 1px 2px rgba(15, 23, 42, 0.04);
-  --a-shadow-sm:     0 2px 8px rgba(99, 102, 241, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-  --a-shadow-md:     0 10px 25px -5px rgba(99, 102, 241, 0.08), 0 8px 16px -6px rgba(99, 102, 241, 0.06);
+  /* ── Shadows & Glows (Colored, No black) ───────────────────────────── */
+  --a-shadow-xs:     0 1px 2px rgba(49, 46, 129, 0.04);
+  --a-shadow-sm:     0 2px 8px rgba(79, 70, 229, 0.06), 0 1px 2px rgba(49, 46, 129, 0.03);
+  --a-shadow-md:     0 10px 25px -5px rgba(79, 70, 229, 0.12), 0 8px 16px -6px rgba(79, 70, 229, 0.08);
   --a-shadow-lg:     0 20px 40px -10px rgba(99, 102, 241, 0.12), 0 12px 24px -12px rgba(99, 102, 241, 0.08);
   --a-glow:          0 0 0 4px rgba(99, 102, 241, 0.12);
 
@@ -126,21 +126,25 @@
   box-sizing: border-box;
 }
 
-/* ── Glassmorphism Card Style ───────────────────────────── */
+/* ── Glassmorphism 2.0 Card Style ───────────────────────────── */
 .glass-card {
-  background: rgba(255, 255, 255, 0.65) !important;
-  backdrop-filter: blur(16px) saturate(120%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  background: rgba(255, 255, 255, 0.60) !important;
+  backdrop-filter: blur(24px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.9) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.7) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3) !important;
   border-radius: var(--a-r-lg) !important;
-  box-shadow: var(--a-shadow-md) !important;
-  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 220ms ease, border-color 220ms ease !important;
+  box-shadow: var(--a-shadow-md), inset 0 1px 0 rgba(255,255,255,0.4) !important;
+  transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 300ms ease, border-color 300ms ease !important;
 }
 
 .glass-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.18) !important;
-  box-shadow: var(--a-shadow-lg) !important;
+  transform: translateY(-3px);
+  border-top-color: #FFFFFF !important;
+  border-left-color: rgba(255,255,255,0.9) !important;
+  box-shadow: var(--a-shadow-lg), inset 0 1px 0 rgba(255,255,255,0.6) !important;
 }
 
 /* ── Sidebar Navigation List ───────────────────────────── */
@@ -176,9 +180,10 @@
 /* Sidebar Count Badges */
 .sidebar-badge {
   margin-left: auto;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 800;
-  padding: 2px 7px;
+  letter-spacing: 0.12em;
+  padding: 3px 8px;
   border-radius: 20px;
   background: rgba(239, 68, 68, 0.1);
   color: var(--a-rose-soft);
@@ -388,28 +393,45 @@
 
 /* ── Premium Buttons ────────────────────────────────────── */
 .btn-premium {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  font-size: 13px !important;
+  font-size: 13.5px !important;
   font-weight: 700 !important;
+  letter-spacing: 0.02em;
   color: #FFFFFF !important;
-  background: linear-gradient(135deg, var(--a-violet) 0%, var(--a-purple) 100%) !important;
+  background: linear-gradient(135deg, var(--a-violet) 0%, #3B82F6 100%) !important;
   border: none !important;
   border-radius: var(--a-r-md) !important;
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.28) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4), 0 4px 14px rgba(99, 102, 241, 0.28) !important;
   cursor: pointer;
-  transition: all 200ms cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  transition: all 300ms cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  overflow: hidden;
+}
+
+.btn-premium::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: all 400ms ease;
+}
+
+.btn-premium:hover::before {
+  left: 100%;
 }
 
 .btn-premium:hover {
-  transform: translateY(-1.5px) !important;
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.36) !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 12px 24px rgba(99, 102, 241, 0.4) !important;
 }
 
 .btn-premium:active {
-  transform: translateY(0.5px) !important;
+  transform: translateY(1px) scale(0.98) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(99, 102, 241, 0.2) !important;
 }
 
 .btn-premium-secondary {
@@ -417,21 +439,30 @@
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  font-size: 13px !important;
+  font-size: 13.5px !important;
   font-weight: 600 !important;
   color: var(--a-ink-700) !important;
-  background: rgba(255, 255, 255, 0.7) !important;
-  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-top: 1px solid #FFFFFF !important;
+  border-left: 1px solid #FFFFFF !important;
+  border-right: 1px solid rgba(226, 232, 240, 0.9) !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9) !important;
   border-radius: var(--a-r-md) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03) !important;
   cursor: pointer;
-  transition: all 180ms ease !important;
+  transition: all 250ms cubic-bezier(0.2, 0.8, 0.2, 1) !important;
 }
 
 .btn-premium-secondary:hover {
   background: #FFFFFF !important;
   color: var(--a-violet) !important;
-  border-color: rgba(99, 102, 241, 0.22) !important;
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.08) !important;
+}
+
+.btn-premium-secondary:active {
+  transform: translateY(1px) scale(0.99);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
 }
 
 /* Spectrum bar (top rainbow strip) */

@@ -1,14 +1,11 @@
 const { VALID_ACCOUNTS } = require('../utils/helpers');
 const { sendBrevoEmail } = require('../services/emailService');
 const { logAudit } = require('../services/auditService');
+const { wantsEmail } = require('../services/notificationPrefsService');
 const Leave = require('../models/Leave');
-const UserSettings = require('../models/UserSettings');
 
 async function userWantsEmail(email) {
-  try {
-    const s = await UserSettings.findOne({ email: email.toLowerCase() }).lean();
-    return s ? s.emailNotifications !== false : true;
-  } catch { return true; }
+  return wantsEmail(email, 'leave');
 }
 
 async function getLeaves(req, res) {

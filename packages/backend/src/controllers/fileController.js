@@ -1,7 +1,28 @@
 const mongoose = require('mongoose');
 const { Readable } = require('stream');
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('../middleware/auth');
 
 let _bucket = null;
+
+// Files are referenced by unguessable ObjectId, but a leaked URL should not grant
+// permanent public access to DM attachments / recordings. We require a valid JWT
+// from EITHER the Authorization header (direct API fetches) OR the `auth_session`
+// cookie (which the browser sends automatically for inline <img>/<a> loads on the
+// same origin, proxied through to the backend). No cookie-parser needed.
+function verifiedUserFromRequest(req) {
+  let token = '';
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.slice(7);
+  } else {
+    const cookieHeader = req.headers.cookie || '';
+    const match = cookieHeader.split(';').map((c) => c.trim()).find((c) => c.startsWith('auth_session='));
+    if (match) token = decodeURIComponent(match.slice('auth_session='.length));
+  }
+  if (!token) return null;
+  try { return jwt.verify(token, JWT_SECRET); } catch { return null; }
+}
 
 function getBucket() {
   if (mongoose.connection.readyState !== 1) throw new Error('MongoDB not connected');
@@ -51,6 +72,9 @@ async function uploadFile(req, res) {
 
 async function serveFile(req, res) {
   try {
+    if (!verifiedUserFromRequest(req)) {
+      return res.status(401).send('Authentication required to access this file.');
+    }
     const { id } = req.params;
 
     let objectId;

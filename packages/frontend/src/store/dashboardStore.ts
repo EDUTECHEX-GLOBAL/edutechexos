@@ -122,6 +122,8 @@ export type Message = {
   linkPreview?: LinkPreview;
   // soft-delete — set by server when "Delete for everyone" is triggered
   isDeleted?: boolean;
+  // DM read receipts — emails of people who've seen this message (DMs only).
+  readBy?: string[];
   taskCard?: {
     assignee: string;
     assigneeInitials: string;
@@ -208,6 +210,7 @@ type DashboardState = {
   deleteMessage: (channelId: string, messageId: string) => void;
   deleteMessageFromSocket: (channelId: string, messageId: string) => void;
   patchLocalMessage: (channelId: string, messageId: string, patch: Partial<Message>) => void;
+  markChannelMessagesRead: (channelId: string, readerEmail: string) => void;
   editMessage: (channelId: string, messageId: string, newText: string) => void;
   loadLocalMessages: () => Promise<void>;
   loadMoreMessages: (channelId: string) => Promise<void>;
@@ -307,6 +310,14 @@ const syncCount = (ch: Channel): Channel => ({
   ...ch,
   memberCount: ch.memberIds?.length ?? ch.memberCount,
 });
+
+// Keep only the first channel per id. Guards against duplicate DM/channel
+// entries (which cause React duplicate-key errors and doubled sidebar rows),
+// including any that were already persisted to localStorage by the store.
+const dedupeById = (list: Channel[]): Channel[] => {
+  const seen = new Set<string>();
+  return list.filter((c) => (seen.has(c.id) ? false : seen.add(c.id) && true));
+};
 
 const INITIAL_MEMBERS: Member[] = [];
 
@@ -460,6 +471,20 @@ export const useDashboardStore = create<DashboardState>()(
             ...s.messages,
             [channelId]: (s.messages[channelId] ?? []).map((m) =>
               m.id === messageId ? { ...m, ...patch } : m
+            ),
+          },
+        }));
+      },
+
+      // Marks every message in this DM channel as read by readerEmail — used
+      // both when the local user opens a DM (optimistic) and when a
+      // `messages_read` socket event arrives saying the OTHER person just read.
+      markChannelMessagesRead: (channelId, readerEmail) => {
+        set((s) => ({
+          messages: {
+            ...s.messages,
+            [channelId]: (s.messages[channelId] ?? []).map((m) =>
+              (m.readBy ?? []).includes(readerEmail) ? m : { ...m, readBy: [...(m.readBy ?? []), readerEmail] }
             ),
           },
         }));
@@ -1005,8 +1030,15 @@ export const useDashboardStore = create<DashboardState>()(
                 ? (channel.memberIds ?? [channel.id])
                 : [];
           const next = syncCount({ ...channel, memberIds });
+          // Idempotent: if a channel with this id already exists, update it in
+          // place instead of appending a duplicate. A DM can otherwise be added
+          // twice (optimistically + via socket echo), causing React
+          // duplicate-key errors and a doubled entry in the sidebar.
+          const exists = s.channels.some((c) => c.id === channel.id);
           return {
-            channels: [...s.channels, next],
+            channels: exists
+              ? s.channels.map((c) => (c.id === channel.id ? { ...c, ...next } : c))
+              : [...s.channels, next],
             messages: { ...s.messages, [channel.id]: s.messages[channel.id] || [] },
           };
         }),
@@ -1071,7 +1103,7 @@ export const useDashboardStore = create<DashboardState>()(
             });
 
             return {
-              channels: [...updatedWorkspaceChannels, ...dmChannels],
+              channels: dedupeById([...updatedWorkspaceChannels, ...dmChannels]),
               messages: { ...s.messages, ...newMsgEntries },
             };
           });
@@ -1152,7 +1184,7 @@ export const useDashboardStore = create<DashboardState>()(
 
             return {
               members: mergedMembers,
-              channels: [...newChannels, ...dmChannelsToAdd],
+              channels: dedupeById([...newChannels, ...dmChannelsToAdd]),
               messages: {
                 ...s.messages,
                 ...Object.fromEntries(

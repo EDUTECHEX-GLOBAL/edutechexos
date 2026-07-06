@@ -7,6 +7,8 @@ export interface MeetingStartedProps {
   subtitle?: string;
   meetLink: string;
   onClose?: () => void;
+  onJoinClick?: () => void;
+  liveCount?: number;
 }
 
 export default function MeetingStartedCard({
@@ -14,6 +16,8 @@ export default function MeetingStartedCard({
   subtitle = 'Join on Google Meet',
   meetLink,
   onClose,
+  onJoinClick,
+  liveCount,
 }: MeetingStartedProps) {
   return (
     <>
@@ -341,6 +345,7 @@ export default function MeetingStartedCard({
             href={meetLink || '#'}
             target="_blank"
             rel="noreferrer"
+            onClick={onJoinClick}
             className="msc-join-btn-new"
             style={{
               display: 'flex',
@@ -382,10 +387,21 @@ export default function MeetingStartedCard({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <Users size={11} color="rgba(255,255,255,0.28)" />
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontWeight: 500 }}>
-                Open to all channel members
-              </span>
+              {liveCount ? (
+                <>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#EA4335', display: 'inline-block', animation: 'msc-liveDot 1.5s ease-in-out infinite' }} />
+                  <span style={{ fontSize: 10.5, color: '#EA4335', fontWeight: 700 }}>
+                    {liveCount} {liveCount === 1 ? 'person' : 'people'} in this meeting
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Users size={11} color="rgba(255,255,255,0.28)" />
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontWeight: 500 }}>
+                    Open to all channel members
+                  </span>
+                </>
+              )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               {['#4285F4', '#EA4335', '#FBBC04', '#34A853'].map((c, i) => (

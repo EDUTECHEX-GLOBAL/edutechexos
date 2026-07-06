@@ -1,9 +1,11 @@
 const cron = require('node-cron');
-const { sendDigestEmails } = require('../services/digestService');
+const { sendDigestEmails, sendWeeklyAdminDigest } = require('../services/digestService');
 const { sendBrevoEmail } = require('../services/emailService');
-const { decryptField } = require('../services/encryptionService');
+const { decryptField, encryptField } = require('../services/encryptionService');
 const { Message, AccessRequest, ActivitySession, Notification } = require('../models');
 const MeetingAccess = require('../models/MeetingAccess');
+const Deadline = require('../models/Deadline');
+const { wantsEmail } = require('../services/notificationPrefsService');
 const { VALID_ACCOUNTS } = require('../utils/helpers');
 
 function startCronJobs(io) {
@@ -22,6 +24,21 @@ function startCronJobs(io) {
   });
 
   console.log('[digest-cron] Scheduled daily digest at 03:30 UTC (09:00 IST) via node-cron');
+
+  // ── Weekly Admin Activity Digest — Monday 03:45 UTC (09:15 IST) ────────
+  cron.schedule('45 3 * * 1', async () => {
+    console.log('[weekly-digest-cron] Firing weekly admin digest');
+    try {
+      const result = await sendWeeklyAdminDigest();
+      console.log(`[weekly-digest-cron] Sent → ${result.recipients} admin(s)`);
+    } catch (err) {
+      console.error('[weekly-digest-cron] Failed:', err);
+    }
+  }, {
+    timezone: 'UTC',
+  });
+
+  console.log('[weekly-digest-cron] Scheduled weekly admin digest for Mondays 03:45 UTC (09:15 IST) via node-cron');
 
   // ── Burnout / Overwork Alert — every hour at minute 0 ─────────────────
   cron.schedule('0 * * * *', async () => {
@@ -112,6 +129,7 @@ function startCronJobs(io) {
       const windowStart = new Date(now.getTime() - 10 * 60 * 1000);
       const due = await MeetingAccess.find({
         started: { $ne: true },
+        cancelled: { $ne: true },
         startAt: { $ne: null, $lte: now, $gte: windowStart },
       }).lean();
 
@@ -139,18 +157,188 @@ function startCronJobs(io) {
           joinLink: link,
         }).catch((e) => console.error('[meeting-cron] notification failed:', e));
         await MeetingAccess.updateOne({ _id: m._id }, { $set: { started: true } });
+
+        // Recurring: spawn next week's occurrence now so there's always one
+        // upcoming instance in the pipeline, using the same room/link.
+        if (m.recurring && !m.cancelled) {
+          try {
+            const nextStart = new Date(new Date(m.startAt).getTime() + 7 * 24 * 60 * 60 * 1000);
+            const nextMsgId = `meeting-${Date.now()}-r`;
+            const timeLabel = nextStart.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+            const text = [
+              `Meeting Scheduled: ${m.title || 'Team meeting'}`,
+              `Time: ${timeLabel}`,
+              `Join Link: ${link}`,
+            ].join('\n');
+            await new Message({
+              clientId: nextMsgId,
+              channelId: m.channelId,
+              sender: 'EduTechExOS',
+              senderEmail: m.hostEmail,
+              initials: 'OS',
+              color: '#6366f1',
+              text: encryptField(text),
+              timestamp: new Date(),
+            }).save();
+            await new MeetingAccess({
+              messageId: nextMsgId,
+              channelId: m.channelId,
+              hostEmail: m.hostEmail,
+              allowedEmails: m.allowedEmails || [],
+              grantedEmails: [],
+              meetingCode: `${m.meetingCode || nextMsgId}-r${nextStart.getTime()}`,
+              meetLink: link,
+              startAt: nextStart,
+              started: false,
+              title: m.title || '',
+              channelName,
+              description: m.description || '',
+              recurring: true,
+              cancelled: false,
+            }).save();
+            console.log(`[meeting-cron] Spawned next recurring occurrence for "${m.title}" at ${nextStart.toISOString()}`);
+          } catch (e) {
+            console.error('[meeting-cron] Failed to spawn recurring occurrence:', e);
+          }
+        }
       }
 
       if (due.length) console.log(`[meeting-cron] Auto-started ${due.length} meeting(s)`);
+
+      // ── Pre-meeting reminder — fires once, ~10 min before start ─────────
+      const reminderWindowStart = new Date(now.getTime() + 9 * 60 * 1000);
+      const reminderWindowEnd   = new Date(now.getTime() + 11 * 60 * 1000);
+      const upcoming = await MeetingAccess.find({
+        started: { $ne: true },
+        cancelled: { $ne: true },
+        reminded: { $ne: true },
+        startAt: { $ne: null, $gte: reminderWindowStart, $lte: reminderWindowEnd },
+      }).lean();
+
+      for (const m of upcoming) {
+        const channelName = m.channelName || m.channelId || 'general';
+        const recipientEmails = Array.from(new Set([m.hostEmail, ...(m.allowedEmails || [])]));
+        await Notification.create({
+          type: 'meeting',
+          actor: 'EduTechExOS',
+          actorInitials: 'OS',
+          actorColor: '#F59E0B',
+          message: `⏰ Meeting "${m.title || 'Team meeting'}" starts in 10 minutes.`,
+          channel: channelName,
+          timestamp: new Date(),
+          recipientEmails,
+          joinLink: m.meetLink || '',
+        }).catch((e) => console.error('[meeting-cron] reminder notification failed:', e));
+        if (io) io.emit('meeting_reminder', { messageId: m.messageId, title: m.title, recipientEmails });
+
+        // Also email each participant (respecting their meeting-email preference).
+        try {
+          const flags = await Promise.all(recipientEmails.map((e) => wantsEmail(e, 'meetings')));
+          const to = recipientEmails.filter((_, i) => flags[i]).map((email) => ({ email }));
+          if (to.length) {
+            const startLabel = new Date(m.startAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
+            await sendBrevoEmail({
+              to,
+              subject: `⏰ Meeting "${m.title || 'Team meeting'}" starts in 10 minutes`,
+              html: `<div style="font-family:Arial,sans-serif;max-width:520px;padding:24px;background:#FAF8F5;border-radius:10px;">
+                <h2 style="color:#1E2636;margin:0 0 12px;font-size:17px;">Your meeting starts soon</h2>
+                <p style="color:#4A5578;font-size:14px;margin:0 0 8px;"><strong>${m.title || 'Team meeting'}</strong> in <strong>#${channelName}</strong> starts at <strong>${startLabel}</strong> (in ~10 minutes).</p>
+                ${m.meetLink ? `<a href="${m.meetLink}" style="display:inline-block;margin-top:8px;background:#3E4A89;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:700;">Join meeting &#x2192;</a>` : ''}
+              </div>`,
+            });
+          }
+        } catch (e) { console.error('[meeting-cron] reminder email failed:', e); }
+
+        await MeetingAccess.updateOne({ _id: m._id }, { $set: { reminded: true } });
+      }
+      if (upcoming.length) console.log(`[meeting-cron] Sent ${upcoming.length} pre-meeting reminder(s)`);
     } catch (err) {
       console.error('[meeting-cron] Failed:', err);
     }
   }, { timezone: 'UTC' });
 
   console.log('[meeting-cron] Scheduled meeting auto-start every minute via node-cron');
+
+  // ── Deadline reminders — daily 03:15 UTC (08:45 IST) ──────────────────────
+  // Emails each user the deadlines (detected from chat, synced by the frontend)
+  // that fall today or tomorrow. Fires once per deadline per day.
+  cron.schedule('15 3 * * *', async () => {
+    console.log('[deadline-cron] Firing daily deadline reminders');
+    try {
+      const result = await runDeadlineReminders();
+      console.log(`[deadline-cron] Emailed ${result.emailed} user(s)`);
+    } catch (err) {
+      console.error('[deadline-cron] Failed:', err);
+    }
+  }, { timezone: 'UTC' });
+
+  console.log('[deadline-cron] Scheduled daily deadline reminders at 03:15 UTC (08:45 IST) via node-cron');
 }
 
-module.exports = { startCronJobs };
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+function escHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+// Email every user their deadlines due today or tomorrow (IST). Exported so it
+// can be force-triggered in tests. Returns { emailed }.
+async function runDeadlineReminders() {
+  const now = Date.now();
+  const todayStr    = new Date(now + IST_OFFSET_MS).toISOString().slice(0, 10);
+  const tomorrowStr = new Date(now + IST_OFFSET_MS + 86400000).toISOString().slice(0, 10);
+
+  const due = await Deadline.find({
+    dueDateStr:   { $in: [todayStr, tomorrowStr] },
+    lastNotified: { $ne: todayStr },
+  }).lean();
+  if (!due.length) return { emailed: 0 };
+
+  const byEmail = new Map();
+  for (const d of due) {
+    if (!byEmail.has(d.email)) byEmail.set(d.email, []);
+    byEmail.get(d.email).push(d);
+  }
+
+  const timeLabel = (ms) => {
+    const hhmm = new Date(ms + IST_OFFSET_MS).toISOString().slice(11, 16);
+    return hhmm === '00:00' ? '' : ` at ${hhmm}`;
+  };
+  const rowsHtml = (items) => items
+    .sort((a, b) => a.dateMs - b.dateMs)
+    .map((i) => `<li style="margin:6px 0;color:#4A5578;font-size:13px;"><strong>${escHtml(i.task) || '(untitled)'}</strong>${i.channel ? ` · #${escHtml(i.channel)}` : ''}${timeLabel(i.dateMs)}</li>`)
+    .join('');
+
+  let emailed = 0;
+  const notifiedIds = [];
+  for (const [email, items] of byEmail) {
+    if (!(await wantsEmail(email, 'deadline'))) continue; // opted out — re-checked tomorrow
+    const today = items.filter((i) => i.dueDateStr === todayStr);
+    const tomor = items.filter((i) => i.dueDateStr === tomorrowStr);
+
+    const html = `<div style="font-family:Arial,sans-serif;max-width:520px;padding:24px;background:#FAF8F5;border-radius:10px;">
+      <h2 style="color:#1E2636;margin:0 0 12px;font-size:17px;">Your upcoming deadlines</h2>
+      ${today.length ? `<p style="margin:12px 0 4px;font-weight:700;color:#B91C1C;font-size:13px;">Due today</p><ul style="margin:0;padding-left:18px;">${rowsHtml(today)}</ul>` : ''}
+      ${tomor.length ? `<p style="margin:12px 0 4px;font-weight:700;color:#B45309;font-size:13px;">Due tomorrow</p><ul style="margin:0;padding-left:18px;">${rowsHtml(tomor)}</ul>` : ''}
+      <a href="${process.env.APP_URL || 'https://edutechexos.vercel.app'}/dashboard" style="display:inline-block;margin-top:16px;background:#3E4A89;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:700;">Open dashboard &#x2192;</a>
+    </div>`;
+
+    const { ok } = await sendBrevoEmail({
+      to: [{ email }],
+      subject: `EduTechExOS — Deadlines: ${today.length} today, ${tomor.length} tomorrow`,
+      html,
+    });
+    if (ok) { emailed += 1; notifiedIds.push(...items.map((i) => i._id)); }
+  }
+
+  if (notifiedIds.length) {
+    await Deadline.updateMany({ _id: { $in: notifiedIds } }, { $set: { lastNotified: todayStr } });
+  }
+  return { emailed };
+}
+
+module.exports = { startCronJobs, runDeadlineReminders };
 
 // ── LEGACY ───────────────────────────────────────────────────────────────────
 // The following cron was the original daily digest at 02:30 UTC (08:00 AM IST).

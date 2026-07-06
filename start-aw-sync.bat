@@ -3,14 +3,19 @@
 :: start-aw-sync.bat — EduTechExOS x ActivityWatch bridge
 ::
 :: HOW TO USE:
-::   1. Set your token in aw-sync.js (line 23) OR set the env var:
-::      Right-click My PC → Properties → Advanced → Environment Variables
-::      Add: EDUTECHEX_TOKEN = <your token from EduTechExOS>
+::   This launches scripts/aw-sync.js, which pairs with the EduTechExOS web app.
+::   There is NO token to paste — the running web app sends it to the agent
+::   automatically when you log in, and syncing stops when you log out.
 ::
-::   2. Double-click this file to start syncing, OR
+::   1. Install ActivityWatch (https://activitywatch.net) and make sure it's running.
+::   2. Double-click this file to start the agent (leave the window minimised), OR
 ::      add it to Windows Startup so it runs automatically:
 ::      Press Win+R, type: shell:startup
 ::      Copy (or create a shortcut of) this .bat file there.
+::   3. Log into EduTechExOS in your browser — syncing begins on its own.
+::
+::   (For a self-contained agent that logs in with your own email/password
+::    instead of the web app, use packages/frontend/public/aw-sync.js.)
 :: ============================================================
 
 title EduTechExOS AW Sync

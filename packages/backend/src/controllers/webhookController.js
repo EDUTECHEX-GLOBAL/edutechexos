@@ -28,9 +28,17 @@ async function postBotMessage(io, channelId, text) {
   return payload;
 }
 
+// Webhooks mint tokens that let outside callers post as the workspace bot into
+// any channel, so managing them is an admin-only capability.
+function requireWebhookAdmin(req, res) {
+  if (!req.user) { res.status(401).json({ success: false, error: 'Unauthorized' }); return false; }
+  if (req.user.role !== 'Admin') { res.status(403).json({ success: false, error: 'Admin access required.' }); return false; }
+  return true;
+}
+
 async function listWebhooks(req, res) {
   try {
-    if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    if (!requireWebhookAdmin(req, res)) return;
     const hooks = await Webhook.find({}).sort({ createdAt: -1 }).lean();
     const formatted = hooks.map(({ _id, __v, ...rest }) => ({
       ...rest,
@@ -46,7 +54,7 @@ async function listWebhooks(req, res) {
 
 async function createWebhook(req, res) {
   try {
-    if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    if (!requireWebhookAdmin(req, res)) return;
     const { name, channelId, type, secret } = req.body;
     if (!name || !channelId || !type) {
       return res.status(400).json({ success: false, error: 'name, channelId, and type are required' });
@@ -70,7 +78,7 @@ async function createWebhook(req, res) {
 
 async function updateWebhook(req, res) {
   try {
-    if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    if (!requireWebhookAdmin(req, res)) return;
     const { id } = req.params;
     const updates = {};
     if (req.body.active  !== undefined) updates.active  = req.body.active;
@@ -95,7 +103,7 @@ async function updateWebhook(req, res) {
 
 async function deleteWebhook(req, res) {
   try {
-    if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    if (!requireWebhookAdmin(req, res)) return;
     await Webhook.findByIdAndDelete(req.params.id);
     res.json({ success: true });
   } catch (err) {
@@ -113,8 +121,12 @@ async function githubReceiver(req, res) {
     if (!hook.secret) {
       return res.status(400).json({ error: 'Webhook secret not configured. Set a secret in webhook settings.' });
     }
+    // HMAC the EXACT bytes GitHub sent (captured by express.json's verify hook in
+    // server.js), not a re-serialization of the parsed body — key order / unicode
+    // escaping / number formatting could otherwise differ and reject valid deliveries.
+    const rawBody = Buffer.isBuffer(req.rawBody) ? req.rawBody : Buffer.from(JSON.stringify(req.body ?? {}));
     const sig = req.headers['x-hub-signature-256'] || '';
-    const expected = 'sha256=' + crypto.createHmac('sha256', hook.secret).update(JSON.stringify(req.body)).digest('hex');
+    const expected = 'sha256=' + crypto.createHmac('sha256', hook.secret).update(rawBody).digest('hex');
     const sigBuf = Buffer.from(sig);
     const expBuf = Buffer.from(expected);
     const valid = sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf);

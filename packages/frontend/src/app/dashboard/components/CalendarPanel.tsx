@@ -8,7 +8,6 @@ import {
   Video,
   Clock,
   Users,
-  Link2,
   ExternalLink,
   AlertCircle,
   ShieldCheck,
@@ -20,17 +19,17 @@ import {
   RefreshCw,
   Plus,
   Hash,
+  Loader2,
+  BellRing,
 } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import type { Message } from '@/store/dashboardStore';
 import { GOOGLE_MEET_LINKS } from '@/lib/meetLinks';
 import { getSocket } from '@/lib/socket';
+import { toast } from 'sonner';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
-// Per-user keys so each team member's calendar and deadline cache are isolated.
-function gcalEmailKey(userEmail: string) {
-  return `edutechex_gcal_email_${userEmail}`;
-}
+// Per-user key so each team member's deadline cache is isolated.
 function deadlinesKey(userEmail: string) {
   return `edutechex_deadlines_v2_${userEmail}`;
 }
@@ -283,8 +282,12 @@ function gcalMeetingUrl(title: string, timeStr: string, link: string) {
     `${dt2.getFullYear()}${p(dt2.getMonth() + 1)}${p(dt2.getDate())}T${p(dt2.getHours())}${p(dt2.getMinutes())}00`;
   return `${base}&dates=${fmt(d)}/${fmt(new Date(dateMs + 3600000))}`;
 }
-function buildSrc(email: string) {
-  return `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(email)}&ctz=Asia%2FKolkata&showNav=1&showPrint=0&showTabs=0&showCalendars=0&mode=WEEK`;
+function authToken(): string {
+  try {
+    return JSON.parse(localStorage.getItem('edutechex_token') || '{}')?.token ?? '';
+  } catch {
+    return '';
+  }
 }
 function urgencyColor(ms: number | null): string {
   if (!ms) return 'bg-[#3E4A89]';
@@ -342,9 +345,11 @@ type Tab = 'upcoming' | 'deadlines' | 'past' | 'mycal';
 export default function CalendarPanel({ onClose }: CalendarPanelProps) {
   const { messages } = useDashboardStore();
   const [tab, setTab] = useState<Tab>('upcoming');
-  const [gcalEmail, setGcalEmail] = useState('');
-  const [gcalSrc, setGcalSrc] = useState('');
-  const [gcalActive, setGcalActive] = useState(false);
+  const [gcalConnected, setGcalConnected] = useState(false);
+  const [gcalGoogleEmail, setGcalGoogleEmail] = useState('');
+  const [gcalStatusLoading, setGcalStatusLoading] = useState(true);
+  const [gcalConnecting, setGcalConnecting] = useState(false);
+  const [gcalDisconnecting, setGcalDisconnecting] = useState(false);
   const [gcalError, setGcalError] = useState('');
   const [deadlines, setDeadlines] = useState<DeadlineRecord[]>([]);
   const [scanning, setScanning] = useState(false);
@@ -382,13 +387,6 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
     setCurrentUser(user);
     const userEmail = user?.email?.toLowerCase() ?? 'guest';
 
-    const saved = localStorage.getItem(gcalEmailKey(userEmail));
-    if (saved) {
-      setGcalEmail(saved);
-      setGcalSrc(buildSrc(saved));
-      setGcalActive(true);
-    }
-
     try {
       const cached = localStorage.getItem(deadlinesKey(userEmail));
       if (cached) {
@@ -403,6 +401,119 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
     }
     runScan(messages as Record<string, Message[]>);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Google Calendar connection status + handle the redirect back from Google's
+     consent screen (?gcal=connected|denied|error on the dashboard URL). */
+  useEffect(() => {
+    const tk = authToken();
+    if (!tk) {
+      setGcalStatusLoading(false);
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const gcalResult = params.get('gcal');
+    if (gcalResult) {
+      if (gcalResult === 'connected') toast.success('Google Calendar connected — meetings & deadlines will sync automatically.');
+      else if (gcalResult === 'denied') toast.info('Google Calendar connection cancelled.');
+      else toast.error('Could not connect Google Calendar. Please try again.');
+      params.delete('gcal');
+      const clean = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`;
+      window.history.replaceState(null, '', clean);
+      setTab('mycal');
+    }
+
+    fetch(`${API_BASE}/api/google-calendar/status`, { headers: { Authorization: `Bearer ${tk}` } })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.connected) {
+          setGcalConnected(true);
+          setGcalGoogleEmail(data.googleEmail || '');
+        }
+      })
+      .catch(() => {})
+      .finally(() => setGcalStatusLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-push detected deadlines to the user's Google Calendar once connected.
+  // The backend upserts by externalId, so re-syncing the same deadline is safe.
+  useEffect(() => {
+    if (!gcalConnected) return;
+    const tk = authToken();
+    if (!tk) return;
+    const future = deadlines.filter((d) => d.dateMs && d.dateMs >= Date.now());
+    future.forEach((d) => {
+      fetch(`${API_BASE}/api/google-calendar/sync-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tk}` },
+        body: JSON.stringify({
+          externalId: `deadline-${d.id}`,
+          title: d.task,
+          description: `From #${d.channel} · ${d.sender}\n\n"${d.snippet}"`,
+          startAt: new Date(d.dateMs as number).toISOString(),
+        }),
+      }).catch(() => {});
+    });
+  }, [deadlines, gcalConnected]);
+
+  // Persist detected deadlines to the backend so the daily reminder cron can
+  // email the user. The browser-only cache can't drive server-side reminders.
+  useEffect(() => {
+    const tk = authToken();
+    if (!tk) return;
+    const dated = deadlines
+      .filter((d) => d.dateMs)
+      .map((d) => ({
+        externalId: `deadline-${d.id}`,
+        task: d.task,
+        channel: d.channel,
+        snippet: d.snippet,
+        dateMs: d.dateMs,
+      }));
+    if (!dated.length) return;
+    fetch(`${API_BASE}/api/deadlines/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tk}` },
+      body: JSON.stringify({ deadlines: dated }),
+    }).catch(() => {});
+  }, [deadlines]);
+
+  async function connectGoogleCalendar() {
+    setGcalError('');
+    setGcalConnecting(true);
+    try {
+      const tk = authToken();
+      const res = await fetch(`${API_BASE}/api/google-calendar/auth-url`, {
+        headers: { Authorization: `Bearer ${tk}` },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setGcalError(data.error || 'Could not start Google connection.');
+        setGcalConnecting(false);
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setGcalError('Network error. Please try again.');
+      setGcalConnecting(false);
+    }
+  }
+
+  async function disconnectGoogleCalendar() {
+    setGcalDisconnecting(true);
+    try {
+      const tk = authToken();
+      await fetch(`${API_BASE}/api/google-calendar/disconnect`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tk}` },
+      });
+      setGcalConnected(false);
+      setGcalGoogleEmail('');
+      toast.success('Google Calendar disconnected.');
+    } finally {
+      setGcalDisconnecting(false);
+    }
+  }
 
   const allMeetings = useMemo(() => {
     const r: Array<{
@@ -475,27 +586,6 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
     return () => { socket.off('meeting_access_granted', onGranted); };
   }, [currentUser, allMeetings]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function connectGcal() {
-    const email = gcalEmail.trim();
-    if (!email || !email.includes('@')) {
-      setGcalError('Enter a valid Gmail address.');
-      return;
-    }
-    const src = buildSrc(email);
-    setGcalSrc(src);
-    setGcalActive(true);
-    setGcalError('');
-    const userEmail = currentUser?.email?.toLowerCase() ?? 'guest';
-    localStorage.setItem(gcalEmailKey(userEmail), email);
-  }
-  function disconnectGcal() {
-    setGcalActive(false);
-    setGcalSrc('');
-    setGcalEmail('');
-    const userEmail = currentUser?.email?.toLowerCase() ?? 'guest';
-    localStorage.removeItem(gcalEmailKey(userEmail));
-  }
-
   const TABS = [
     {
       id: 'upcoming' as Tab,
@@ -545,9 +635,9 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
             </div>
           </div>
           {/* GCal status pill in header */}
-          {gcalActive && (
+          {gcalConnected && (
             <span className="mr-2 flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1 text-[10px] font-bold text-emerald-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Calendar embedded
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Auto-sync on
             </span>
           )}
           <button
@@ -1004,7 +1094,11 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                 transition={{ duration: 0.12 }}
                 className="flex h-full flex-col"
               >
-                {!gcalActive ? (
+                {gcalStatusLoading ? (
+                  <div className="flex flex-1 items-center justify-center py-20">
+                    <Loader2 size={20} className="animate-spin text-indigo-300" />
+                  </div>
+                ) : !gcalConnected ? (
                   <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8">
                     {/* Google Calendar icon */}
                     <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -1036,82 +1130,50 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                     </div>
                     <div className="text-center">
                       <h3 className="text-base font-black text-[#1E2636]">
-                        View Your Google Calendar
+                        Connect Google Calendar
                       </h3>
                       <p className="mt-1 max-w-xs text-sm text-[#7C859E] leading-relaxed">
-                        Embed your Google Calendar here for quick reference. Use the{' '}
-                        <strong className="text-indigo-600">Add to Calendar</strong> buttons on
-                        meetings and deadlines to create events — Google Calendar will then send
-                        phone notifications automatically.
+                        Connect once and every meeting and detected deadline is added to your
+                        Google Calendar automatically — no manual clicking, and Google sends
+                        the phone notification for you.
                       </p>
                     </div>
 
                     {/* Phone notification info box */}
                     <div className="w-full max-w-sm rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-left">
-                      <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-blue-400">
-                        How to get phone notifications
+                      <p className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-blue-400">
+                        <BellRing size={12} /> Automatic phone notifications
                       </p>
                       <p className="text-[11px] leading-relaxed text-slate-600">
-                        Click <strong>Add to Calendar</strong> on any meeting or deadline → Google
-                        Calendar opens with all details pre-filled → Save it. Google will send a
-                        push notification to your phone via the Google Calendar app automatically.
+                        Once connected, new meetings and deadlines show up on your calendar the
+                        moment they&apos;re created — Google&apos;s own app handles the reminder
+                        and push notification on your phone.
                       </p>
                     </div>
 
-                    {/* Steps */}
-                    <div className="w-full max-w-sm rounded-2xl border border-[rgba(62,74,137,0.10)] bg-white p-4">
-                      <p className="mb-3 text-[9px] font-black uppercase tracking-widest text-[#B0B8D1]">
-                        One-time setup to view calendar here
-                      </p>
-                      <div className="space-y-3">
-                        {[
-                          {
-                            n: '1',
-                            text: 'Open Google Calendar → Settings → your calendar → "Access permissions" → tick Make available to public',
-                          },
-                          {
-                            n: '2',
-                            text: 'Enter your Gmail address below and click Connect — your calendar will be embedded here.',
-                          },
-                        ].map((s) => (
-                          <div key={s.n} className="flex items-start gap-3">
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[9px] font-black text-white">
-                              {s.n}
-                            </span>
-                            <p className="text-[11px] leading-relaxed text-slate-600">{s.text}</p>
-                          </div>
-                        ))}
+                    {gcalError && (
+                      <div className="flex w-full max-w-sm items-center gap-1.5 text-xs font-semibold text-red-500">
+                        <AlertCircle size={12} />
+                        {gcalError}
                       </div>
-                    </div>
+                    )}
 
-                    <div className="flex w-full max-w-sm flex-col gap-2">
-                      <div className="flex items-center gap-2 rounded-xl border border-indigo-100 bg-white px-3 py-2.5 focus-within:border-indigo-500 transition-colors">
-                        <Link2 size={14} className="shrink-0 text-slate-400" />
-                        <input
-                          type="email"
-                          value={gcalEmail}
-                          onChange={(e) => {
-                            setGcalEmail(e.target.value);
-                            setGcalError('');
-                          }}
-                          onKeyDown={(e) => e.key === 'Enter' && connectGcal()}
-                          placeholder="yourname@gmail.com"
-                          className="flex-1 bg-transparent text-sm font-semibold text-slate-800 placeholder-slate-300 outline-none"
-                        />
-                      </div>
-                      {gcalError && (
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-red-500">
-                          <AlertCircle size={12} />
-                          {gcalError}
-                        </div>
+                    <button
+                      onClick={connectGoogleCalendar}
+                      disabled={gcalConnecting}
+                      className="flex h-11 w-full max-w-sm items-center justify-center gap-2 rounded-xl bg-indigo-600 text-sm font-black text-white hover:bg-indigo-700 transition-colors disabled:opacity-60"
+                    >
+                      {gcalConnecting ? (
+                        <>
+                          <Loader2 size={15} className="animate-spin" /> Redirecting to Google…
+                        </>
+                      ) : (
+                        <>
+                          <CalendarDays size={15} /> Connect Google Calendar
+                        </>
                       )}
-                      <button
-                        onClick={connectGcal}
-                        className="flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 text-sm font-black text-white hover:bg-indigo-700 transition-colors"
-                      >
-                        <CalendarDays size={15} /> Embed My Calendar
-                      </button>
-                    </div>
+                    </button>
+
                     <a
                       href="https://calendar.google.com"
                       target="_blank"
@@ -1122,24 +1184,35 @@ export default function CalendarPanel({ onClose }: CalendarPanelProps) {
                     </a>
                   </div>
                 ) : (
-                  <div className="relative flex-1 min-h-0">
-                    <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
-                      <span className="rounded-lg border border-[rgba(62,74,137,0.10)] bg-white px-3 py-1.5 text-[10px] font-bold text-[#7C859E] shadow-sm">
-                        {gcalEmail}
-                      </span>
-                      <button
-                        onClick={disconnectGcal}
-                        className="flex items-center gap-1.5 rounded-lg border border-red-100 bg-white px-3 py-1.5 text-[10px] font-bold text-red-400 shadow-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                  <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-50">
+                      <CalendarCheck size={30} className="text-emerald-500" />
+                    </div>
+                    <div className="text-center">
+                      <h3 className="text-base font-black text-[#1E2636]">Auto-sync is on</h3>
+                      <p className="mt-1 max-w-xs text-sm text-[#7C859E] leading-relaxed">
+                        Connected as <strong className="text-slate-700">{gcalGoogleEmail}</strong>.
+                        Meetings and deadlines are pushed to this calendar automatically, and
+                        Google will notify your phone.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href="https://calendar.google.com"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1.5 rounded-xl border border-[rgba(62,74,137,0.10)] bg-white px-4 py-2 text-xs font-bold text-slate-600 shadow-sm hover:border-indigo-300 hover:text-indigo-600 transition-colors"
                       >
-                        <X size={10} /> Disconnect
+                        Open Google Calendar <ExternalLink size={11} />
+                      </a>
+                      <button
+                        onClick={disconnectGoogleCalendar}
+                        disabled={gcalDisconnecting}
+                        className="flex items-center gap-1.5 rounded-xl border border-red-100 bg-white px-4 py-2 text-xs font-bold text-red-400 shadow-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors disabled:opacity-60"
+                      >
+                        {gcalDisconnecting ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />} Disconnect
                       </button>
                     </div>
-                    <iframe
-                      key={gcalSrc}
-                      src={gcalSrc}
-                      title="Google Calendar"
-                      className="h-full w-full border-0"
-                    />
                   </div>
                 )}
               </motion.div>

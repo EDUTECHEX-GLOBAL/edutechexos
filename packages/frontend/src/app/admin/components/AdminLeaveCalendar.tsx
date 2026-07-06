@@ -46,7 +46,11 @@ function fmtDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-export default function AdminLeaveCalendar() {
+interface AdminLeaveCalendarProps {
+  members?: { name: string; email: string }[];
+}
+
+export default function AdminLeaveCalendar({ members = [] }: AdminLeaveCalendarProps) {
   const today    = new Date();
   const [year, setYear]   = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -97,26 +101,35 @@ export default function AdminLeaveCalendar() {
     return map;
   }, [leaves]);
 
-  // Unique users extracted from all leaves
+  // Every team member, plus anyone with a leave record who isn't in the
+  // members list (e.g. a removed member whose past leaves should stay visible).
+  // Without this, "User View" only showed people who'd already taken leave —
+  // someone with zero leave history was simply missing, not clickable at all.
   const users = useMemo(() => {
     const map = new Map<string, { name: string; email: string }>();
+    members.forEach(m => {
+      if (m.email) map.set(m.email.toLowerCase(), { name: m.name, email: m.email });
+    });
     leaves.forEach(l => {
-      if (!map.has(l.email)) map.set(l.email, { name: l.name, email: l.email });
+      const key = l.email.toLowerCase();
+      if (!map.has(key)) map.set(key, { name: l.name, email: l.email });
     });
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [leaves]);
+  }, [members, leaves]);
 
-  // Leaves grouped by user
+  // Leaves grouped by user (keyed by lowercased email so lookups match
+  // regardless of the casing used wherever the email came from)
   const leavesByUser = useMemo(() => {
     const map: Record<string, LeaveRecord[]> = {};
     leaves.forEach(l => {
-      if (!map[l.email]) map[l.email] = [];
-      map[l.email].push(l);
+      const key = l.email.toLowerCase();
+      if (!map[key]) map[key] = [];
+      map[key].push(l);
     });
     return map;
   }, [leaves]);
 
-  const selectedUserLeaves = selectedUser ? (leavesByUser[selectedUser] ?? []) : [];
+  const selectedUserLeaves = selectedUser ? (leavesByUser[selectedUser.toLowerCase()] ?? []) : [];
 
   // Calendar grid
   const firstDay = new Date(year, month, 1).getDay();
@@ -134,6 +147,47 @@ export default function AdminLeaveCalendar() {
   const selectedLeaves = selected ? (leavesOnDay[selected] ?? []) : [];
   const selectedAvail  = selected ? avail[selected] : null;
   const pendingLeaves  = leaves.filter(l => l.status === 'pending');
+
+  // Export a MONTH-SCOPED attendance/absence report: one row per (approved leave
+  // × each absent day that falls in the currently-viewed month) — so the CSV
+  // matches exactly what the calendar shows, with who / date / reason. Admin-only
+  // (this whole component only renders in the admin panel).
+  function exportMonthAttendance() {
+    const header = ['Date', 'Name', 'Email', 'Category', 'Type', 'Duration', 'Reason', 'Status', 'Requested On'];
+    const rows: string[][] = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = toYMD(year, month, d);
+      (leavesOnDay[dateStr] ?? []).forEach(l => {
+        rows.push([
+          dateStr,
+          l.name,
+          l.email,
+          l.leaveCategory,
+          l.type,
+          l.duration ?? 'full',
+          (l.reason ?? '').replace(/\s+/g, ' ').trim(),
+          l.status,
+          l.requestedAt ? new Date(l.requestedAt).toLocaleDateString('en-IN') : '',
+        ]);
+      });
+    }
+    if (rows.length === 0) {
+      alert(`No approved leaves in ${MONTHS[month]} ${year}.`);
+      return;
+    }
+    const esc = (v: string) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = [header, ...rows].map(r => r.map(esc).join(',')).join('\r\n');
+    // Prepend a UTF-8 BOM so Excel opens it with correct encoding.
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance-${monthKey}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -158,6 +212,13 @@ export default function AdminLeaveCalendar() {
           </span>
           <button onClick={fetchAll} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', background: '#fff', fontSize: 12, fontWeight: 600, color: 'rgba(90,95,128,0.70)', cursor: 'pointer' }}>
             <RefreshCw size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} /> Refresh
+          </button>
+          <button
+            onClick={exportMonthAttendance}
+            title={`Download ${MONTHS[month]} ${year} absence report (who's on leave, dates, reason)`}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, border: '1.5px solid rgba(91,79,219,0.20)', background: '#fff', fontSize: 12, fontWeight: 700, color: '#5B4FDB', cursor: 'pointer' }}
+          >
+            Export CSV
           </button>
         </div>
       </div>
@@ -344,7 +405,7 @@ export default function AdminLeaveCalendar() {
                 <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(26,27,58,0.06)', background: 'rgba(91,79,219,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#1A1B3A' }}>
-                      {selectedUserLeaves[0]?.name ?? 'Unknown User'}
+                      {selectedUserLeaves[0]?.name ?? users.find(u => u.email.toLowerCase() === selectedUser.toLowerCase())?.name ?? 'Unknown User'}
                     </p>
                     <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(90,95,128,0.55)' }}>
                       {selectedUser} · {selectedUserLeaves.length} leave{selectedUserLeaves.length !== 1 ? 's' : ''}
@@ -399,7 +460,7 @@ export default function AdminLeaveCalendar() {
                     <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(90,95,128,0.45)', padding: '24px 0' }}>No leave data available.</p>
                   )}
                   {users.map(u => {
-                    const userLeaves = leavesByUser[u.email] ?? [];
+                    const userLeaves = leavesByUser[u.email.toLowerCase()] ?? [];
                     const approved = userLeaves.filter(l => l.status === 'approved').length;
                     const pending = userLeaves.filter(l => l.status === 'pending').length;
                     return (

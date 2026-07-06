@@ -13,6 +13,10 @@ const MeetingAccessSchema = new mongoose.Schema({
   started:         { type: Boolean, default: false },
   title:           { type: String, default: '' },
   channelName:     { type: String, default: '' },
+  description:     { type: String, default: '' },
+  cancelled:       { type: Boolean, default: false },
+  recurring:       { type: Boolean, default: false },
+  reminded:        { type: Boolean, default: false },
   createdAt:       { type: Date, default: Date.now },
 });
 MeetingAccessSchema.index({ messageId: 1, channelId: 1 }, { unique: true });

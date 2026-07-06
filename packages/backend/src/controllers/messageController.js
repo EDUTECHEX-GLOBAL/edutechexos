@@ -1,6 +1,8 @@
-const { getUserEmail, formatMessage, PAGE_SIZE, VALID_ACCOUNTS } = require('../utils/helpers');
+const { getUserEmail, formatMessage, PAGE_SIZE, VALID_ACCOUNTS, getDeterministicColor, getInitials, respondDbError } = require('../utils/helpers');
 const { encryptField, decryptField } = require('../services/encryptionService');
 const { sendBrevoEmail } = require('../services/emailService');
+const { wantsEmail } = require('../services/notificationPrefsService');
+const { isDmChannel, isDmParticipant } = require('../services/dmAccessService');
 const Message = require('../models/Message');
 const WikiPage = require('../models/WikiPage');
 const KanbanTask = require('../models/KanbanTask');
@@ -32,6 +34,8 @@ async function processMentions(text, senderName, channelId, messageId, io, appUr
       });
     }
 
+    if (!(await wantsEmail(matched.email, 'mentions'))) continue;
+
     sendBrevoEmail({
       to: [{ email: matched.email, name: matched.name }],
       subject: `EduTechExOS — ${senderName} mentioned you`,
@@ -60,7 +64,17 @@ async function getMessages(req, res) {
     const pageSize = Math.min(parseInt(limit) || PAGE_SIZE, 100);
 
     if (channelId) {
-      const filter = { channelId: String(channelId) };
+      const chId = String(channelId);
+      // DM history is private to its two participants. Legacy `member-` pseudo
+      // channels are never fetched directly by the client (it always resolves
+      // to a `dm-` id first), so block those outright as defense-in-depth.
+      if (chId.startsWith('member-')) {
+        return res.status(403).json({ success: false, error: 'Not a valid channel.' });
+      }
+      if (isDmChannel(chId) && !(await isDmParticipant(chId, requestingUser))) {
+        return res.status(403).json({ success: false, error: 'You are not a participant in this conversation.' });
+      }
+      const filter = { channelId: chId };
       if (before) filter.timestamp = { $lt: new Date(before) };
 
       const msgs = await Message.find(filter)
@@ -111,6 +125,12 @@ async function postMessage(req, res) {
       messageData.senderEmail = userEmail;
     }
 
+    // Derive display metadata server-side when the client omits it, so the API
+    // never 500s on a missing `color`/`initials` (both are required by the model).
+    if (!messageData.sender) messageData.sender = req.user?.name || (userEmail ? userEmail.split('@')[0] : 'Member');
+    if (!messageData.initials) messageData.initials = getInitials(messageData.sender);
+    if (!messageData.color) messageData.color = getDeterministicColor(userEmail || messageData.sender || 'member');
+
     const preSaveText = messageData.text;
 
     if (messageData.text) messageData.text = encryptField(messageData.text);
@@ -137,8 +157,7 @@ async function postMessage(req, res) {
 
     res.json({ success: true, message: base });
   } catch (err) {
-    console.error('[POST /api/messages] Error:', err);
-    res.status(500).json({ success: false, error: String(err) });
+    respondDbError(res, err, 'Failed to post message.');
   }
 }
 
@@ -253,12 +272,23 @@ async function search(req, res) {
     const limit = Math.min(parseInt(req.query.limit) || 20, 50);
     if (!q) return res.json({ success: true, results: [], total: 0 });
 
-    const textFilter = { $text: { $search: q }, channelId: { $not: /^member-/ } };
+    const requestingUser = getUserEmail(req);
+    // Exclude BOTH DM conventions: legacy `member-` pseudo channels and the real
+    // `dm-<a>-<b>` ids that actual DM messages are stored under. Previously only
+    // `member-` was excluded, which leaked private DMs into everyone's search.
+    const nonDm = { $not: /^(member-|dm-)/ };
+    const textFilter = { $text: { $search: q }, channelId: nonDm };
+    // Private wiki pages must only appear for their author (mirrors getPages).
+    const wikiFilter = {
+      $text: { $search: q },
+      channelId: nonDm,
+      $or: [{ isPrivate: { $ne: true } }, { createdBy: requestingUser }],
+    };
     const scoreProj = { score: { $meta: 'textScore' } };
 
     const [msgDocs, wikiDocs, taskDocs] = await Promise.all([
       Message.find(textFilter, scoreProj).sort({ score: { $meta: 'textScore' } }).limit(limit).lean(),
-      WikiPage.find(textFilter, scoreProj).sort({ score: { $meta: 'textScore' } }).limit(10).lean(),
+      WikiPage.find(wikiFilter, scoreProj).sort({ score: { $meta: 'textScore' } }).limit(10).lean(),
       KanbanTask.find(textFilter, scoreProj).sort({ score: { $meta: 'textScore' } }).limit(10).lean(),
     ]);
 
@@ -284,9 +314,10 @@ async function search(req, res) {
     if (String(err).includes('text index')) {
       const q = String(req.query.q || '').trim();
       const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      // Only search non-DM channels (DMs have channelId starting with 'member-')
+      // Only search non-DM channels. DM messages live under `dm-<a>-<b>` ids
+      // (and legacy `member-` pseudo channels), both excluded here.
       const allMsgs = await Message.find({
-        channelId: { $not: /^member-/ },
+        channelId: { $not: /^(member-|dm-)/ },
         deletedAt: { $exists: false },
       }).sort({ timestamp: -1 }).limit(500).lean();
       const matched = allMsgs.filter(d => re.test(decryptField(d.text) || '')).slice(0, 20);
@@ -396,4 +427,29 @@ async function ogLinkPreview(req, res) {
   }
 }
 
-module.exports = { getMessages, postMessage, deleteMessage, patchMessage, search, ogLinkPreview };
+// DM read receipts — marks every message in this DM channel not sent by the
+// caller as read by them. Only meaningful for 1-on-1 DMs (channelId starts
+// with "dm-"); no-ops for group channels, which don't track this.
+async function markChannelRead(req, res) {
+  try {
+    const email = getUserEmail(req);
+    if (!email) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    const { channelId } = req.body;
+    if (!channelId || !channelId.startsWith('dm-')) {
+      return res.json({ success: true, updated: 0 });
+    }
+    const result = await Message.updateMany(
+      { channelId, senderEmail: { $ne: email }, readBy: { $ne: email } },
+      { $addToSet: { readBy: email } }
+    );
+    const io = req.app.get('io');
+    if (io && result.modifiedCount > 0) {
+      io.to(channelId).emit('messages_read', { channelId, readerEmail: email });
+    }
+    res.json({ success: true, updated: result.modifiedCount });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+module.exports = { getMessages, postMessage, deleteMessage, patchMessage, search, ogLinkPreview, markChannelRead };

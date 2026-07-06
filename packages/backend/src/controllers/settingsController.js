@@ -1,4 +1,5 @@
 const UserSettings = require('../models/UserSettings');
+const { SETTINGS_FIELDS } = require('../utils/helpers');
 
 async function getSettings(req, res) {
   try {
@@ -18,14 +19,8 @@ async function saveSettings(req, res) {
     const email = req.user?.email?.toLowerCase();
     if (!email) return res.status(401).json({ success: false, error: 'Unauthorized.' });
     const updates = req.body;
-    const allowed = [
-      'displayName','avatarEmoji','status','meetLink',
-      'emailNotifications','desktopNotifications','soundNotifications',
-      'compactChat','fontSize','enterToSend','darkMode',
-      'meetLinkThuPM','meetLinkFriday',
-    ];
     const safe = {};
-    for (const k of allowed) {
+    for (const k of SETTINGS_FIELDS) {
       if (k in updates) safe[k] = updates[k];
     }
     await UserSettings.findOneAndUpdate(

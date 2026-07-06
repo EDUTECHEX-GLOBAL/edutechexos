@@ -1,4 +1,5 @@
 const AdminAvailability = require('../models/AdminAvailability');
+const { respondDbError } = require('../utils/helpers');
 
 async function getAvailability(req, res) {
   try {
@@ -35,11 +36,11 @@ async function saveAvailability(req, res) {
     const record = await AdminAvailability.findOneAndUpdate(
       { date, adminEmail: email },
       { $set: { slots, adminEmail: email } },
-      { upsert: true, new: true }
+      { upsert: true, new: true, runValidators: true }
     );
     res.json({ success: true, record });
   } catch (err) {
-    res.status(500).json({ success: false, error: String(err) });
+    respondDbError(res, err, 'Failed to save availability.');
   }
 }
 

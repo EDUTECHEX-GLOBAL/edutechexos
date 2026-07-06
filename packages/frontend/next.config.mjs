@@ -25,6 +25,7 @@ const nextConfig = {
   },
 
   async headers() {
+    const isDev = process.env.NODE_ENV !== 'production';
     return [
       {
         source: '/(.*)',
@@ -42,7 +43,10 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.fontshare.com",
               "font-src 'self' https://fonts.gstatic.com https://api.fontshare.com https://cdn.fontshare.com",
               "img-src 'self' data: blob: https:",
-              "connect-src 'self' https: wss:",
+              // Dev-only: also allow plain http/ws to localhost so `npm run dev`
+              // can talk to the local backend (which isn't served over https).
+              // Production keeps the strict https:/wss:-only policy.
+              `connect-src 'self' https: wss:${isDev ? ' http://localhost:* ws://localhost:*' : ''}`,
               // Allow recordings/voice notes served from Cloudinary, the API
               // (same-origin via rewrite), and inline base64/blob fallbacks.
               "media-src 'self' blob: data: https:",
@@ -61,6 +65,13 @@ const nextConfig = {
     const backendUrl =
       process.env.BACKEND_URL || 'https://edutechexos-ueoq.onrender.com';
     const rules = [
+      // Must come before the generic /api/:path* rule below — otherwise that
+      // catch-all swallows this and sends ActivityWatch calls to the backend
+      // (which has no such route) instead of the local AW app on :5600.
+      {
+        source: '/api/aw-proxy/:path*',
+        destination: 'http://localhost:5600/:path*',
+      },
       {
         source: '/api/:path*',
         destination: `${backendUrl}/api/:path*`,

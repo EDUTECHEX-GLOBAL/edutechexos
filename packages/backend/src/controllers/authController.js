@@ -40,7 +40,7 @@ async function login(req, res) {
         const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
         await LoginEvent.findOneAndUpdate(
           { email: emailClean, dateStr },
-          { $set: { name: hardcoded.name, loginAt: new Date() } },
+          { $set: { name: hardcoded.name, loginAt: new Date(), authMethod: 'password' } },
           { upsert: true }
         );
         const io = req.app.get('io');
@@ -93,7 +93,7 @@ async function login(req, res) {
       const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
       await LoginEvent.findOneAndUpdate(
         { email: emailClean, dateStr },
-        { $set: { name: request.name, loginAt: new Date() } },
+        { $set: { name: request.name, loginAt: new Date(), authMethod: 'password' } },
         { upsert: true }
       );
       const io = req.app.get('io');
@@ -189,11 +189,14 @@ async function resetPassword(req, res) {
 
 async function changePassword(req, res) {
   try {
-    const { email, currentPassword, newPassword } = req.body;
-    if (!email || !currentPassword || !newPassword) {
-      return res.status(400).json({ success: false, error: 'Email, current password, and new password are required.' });
+    const { currentPassword, newPassword } = req.body;
+    // Identity comes from the verified JWT, never the request body — otherwise a
+    // user could target another account by passing someone else's email.
+    const emailClean = req.user?.email?.toLowerCase();
+    if (!emailClean) return res.status(401).json({ success: false, error: 'Authentication required.' });
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, error: 'Current password and new password are required.' });
     }
-    const emailClean = String(email).trim().toLowerCase();
 
     if (VALID_ACCOUNTS.some((a) => a.email === emailClean)) {
       return res.status(400).json({

@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { Clock, X, Coffee } from 'lucide-react';
+import { startOrResumeSession } from '@/lib/sessionTimer';
 
 function pad(n: number) {
   return String(n).padStart(2, '0');
@@ -32,16 +33,9 @@ function isLunchTime(): boolean {
   return inMins >= 12 * 60 + 45 && inMins < 13 * 60 + 15;
 }
 
-function isSameDayIST(date1: Date, date2: Date): boolean {
-  const d1 = new Date(date1.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-  const d2 = new Date(date2.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-  return d1.getFullYear() === d2.getFullYear()
-    && d1.getMonth() === d2.getMonth()
-    && d1.getDate() === d2.getDate();
-}
-
 export default function SessionTimer() {
   const [sessionStart, setSessionStart] = useState<string | null>(null);
+  const [bankedMs, setBankedMs] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [open, setOpen] = useState(false);
   const [onLunch, setOnLunch] = useState(false);
@@ -49,32 +43,22 @@ export default function SessionTimer() {
   const lunchPausedRef = useRef(0);
 
   useEffect(() => {
-    let raw = localStorage.getItem('edutechex_session_start');
-    const now = new Date();
-    if (raw) {
-      const storedDate = new Date(raw);
-      if (!isSameDayIST(storedDate, now)) {
-        // Different day — fresh start
-        localStorage.removeItem('edutechex_session_start');
-        localStorage.removeItem('edutechex_lunch_pause_ms');
-        raw = null;
-      }
-    }
-    if (!raw) {
-      raw = now.toISOString();
-      localStorage.setItem('edutechex_session_start', raw);
-    }
-    setSessionStart(raw);
-    const totalMs = Date.now() - new Date(raw).getTime();
+    // Resumes today's already-banked time if this isn't the first login of
+    // the day, instead of always restarting from zero (or silently counting
+    // through the gap while logged out).
+    const { activeStart, bankedMs } = startOrResumeSession();
+    setSessionStart(activeStart);
+    setBankedMs(bankedMs);
+    const segmentMs = Date.now() - new Date(activeStart).getTime();
     const lunchMs = parseInt(localStorage.getItem('edutechex_lunch_pause_ms') ?? '0', 10);
-    setElapsed(totalMs - lunchMs);
+    setElapsed(bankedMs + segmentMs - lunchMs);
   }, []);
 
   useEffect(() => {
     if (!sessionStart) return;
     const id = setInterval(() => {
       const now = Date.now();
-      const totalMs = now - new Date(sessionStart).getTime();
+      const segmentMs = now - new Date(sessionStart).getTime();
       const lunchMs = parseInt(localStorage.getItem('edutechex_lunch_pause_ms') ?? '0', 10);
       if (isLunchTime()) {
         if (!lunchPausedRef.current) {
@@ -90,10 +74,10 @@ export default function SessionTimer() {
           setOnLunch(false);
         }
       }
-      setElapsed(totalMs - lunchMs);
+      setElapsed(bankedMs + segmentMs - lunchMs);
     }, 1000);
     return () => clearInterval(id);
-  }, [sessionStart]);
+  }, [sessionStart, bankedMs]);
 
   useEffect(() => {
     if (!open) return;
