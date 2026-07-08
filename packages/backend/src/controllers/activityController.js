@@ -372,19 +372,20 @@ async function getAWStatus(req, res) {
   }
 }
 
-// aw-sync.js calls this before each sync to decide whether the user is logged in.
-// Returns { active: true } only if the dashboard has sent a heartbeat in the last 3 min.
+// aw-sync.js calls this before each sync to decide whether to send data.
+// Login-triggered / full-window model: returns { active: true } if the user has
+// opened the dashboard at any point TODAY (an ActivitySession exists) — even if
+// the browser is now closed. ActivitySession is created only by the dashboard
+// heartbeat (never by the agent's own login), so this means "the user logged into
+// the app today". The agent still enforces the 10:00–18:30 work window itself, so
+// a single morning login keeps tracking running all day.
 async function isSessionActive(req, res) {
   try {
     if (!req.user) return res.status(401).json({ success: false });
     const email = req.user.email.toLowerCase();
-    const threeMinAgo = new Date(Date.now() - 3 * 60 * 1000);
     const istOffset = 5.5 * 60 * 60 * 1000;
     const dateStr = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
-    const session = await ActivitySession.findOne(
-      { email, dateStr, lastHeartbeat: { $gte: threeMinAgo } },
-      { lastHeartbeat: 1 }
-    ).lean();
+    const session = await ActivitySession.findOne({ email, dateStr }, { _id: 1 }).lean();
     res.json({ success: true, active: !!session });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
