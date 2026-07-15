@@ -210,13 +210,14 @@ export default function AdminLeaveCalendar({ members = [] }: AdminLeaveCalendarP
           <span style={{ padding: '5px 12px', borderRadius: 20, background: 'rgba(16,201,138,0.10)', border: '1px solid rgba(16,201,138,0.22)', fontSize: 11, fontWeight: 700, color: '#10C98A' }}>
             {leaves.filter(l => l.status === 'approved').length} approved
           </span>
-          <button onClick={fetchAll} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', background: '#fff', fontSize: 12, fontWeight: 600, color: 'rgba(90,95,128,0.70)', cursor: 'pointer' }}>
-            <RefreshCw size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} /> Refresh
+          <button onClick={fetchAll} className="btn-premium-secondary" style={{ height: 36, padding: '0 16px', fontSize: 12 }}>
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
           <button
             onClick={exportMonthAttendance}
             title={`Download ${MONTHS[month]} ${year} absence report (who's on leave, dates, reason)`}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, border: '1.5px solid rgba(91,79,219,0.20)', background: '#fff', fontSize: 12, fontWeight: 700, color: '#5B4FDB', cursor: 'pointer' }}
+            className="btn-premium-secondary"
+            style={{ height: 36, padding: '0 16px', fontSize: 12 }}
           >
             Export CSV
           </button>
@@ -229,14 +230,14 @@ export default function AdminLeaveCalendar({ members = [] }: AdminLeaveCalendarP
         <div style={{ borderRadius: 20, border: '1.5px solid rgba(26,27,58,0.08)', background: '#fff', boxShadow: '0 2px 20px rgba(26,27,58,0.05)', overflow: 'hidden' }}>
           {/* Month nav */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid rgba(26,27,58,0.06)' }}>
-            <button onClick={prevMonth} style={{ width: 32, height: 32, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.10)', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ChevronLeft size={15} color="#5A5F80" />
+            <button onClick={prevMonth} className="btn-premium-secondary" style={{ width: 32, height: 32, padding: 0, borderRadius: 10 }}>
+              <ChevronLeft size={15} />
             </button>
             <span style={{ fontSize: 15, fontWeight: 800, color: '#1A1B3A', letterSpacing: '-0.01em' }}>
               {MONTHS[month]} {year}
             </span>
-            <button onClick={nextMonth} style={{ width: 32, height: 32, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.10)', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ChevronRight size={15} color="#5A5F80" />
+            <button onClick={nextMonth} className="btn-premium-secondary" style={{ width: 32, height: 32, padding: 0, borderRadius: 10 }}>
+              <ChevronRight size={15} />
             </button>
           </div>
 
@@ -331,17 +332,11 @@ export default function AdminLeaveCalendar({ members = [] }: AdminLeaveCalendarP
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
           {/* View mode toggle */}
-          <div style={{ display: 'flex', borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.08)', background: '#F8F9FC', padding: 3 }}>
+          <div className="hub-subnav" style={{ display: 'flex', borderRadius: 12, padding: 3, width: '100%' }}>
             {(['day', 'user'] as const).map(mode => (
               <button key={mode} onClick={() => { setViewMode(mode); setSelectedUser(null); }}
-                style={{
-                  flex: 1, padding: '7px 12px', borderRadius: 10, cursor: 'pointer',
-                  border: 'none', fontSize: 11, fontWeight: 700,
-                  background: viewMode === mode ? '#fff' : 'transparent',
-                  color: viewMode === mode ? '#5B4FDB' : 'rgba(90,95,128,0.55)',
-                  boxShadow: viewMode === mode ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
-                  transition: 'all .15s',
-                }}>
+                className={`hub-subnav-btn ${viewMode === mode ? 'active' : ''}`}
+                style={{ flex: 1, justifyContent: 'center', borderRadius: 10, padding: '7px 12px' }}>
                 {mode === 'day' ? '📅 Day View' : '👥 User View'}
               </button>
             ))}

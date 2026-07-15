@@ -1,0 +1,56 @@
+/* design_system.css */
+:root {
+  /* Color palette */
+  --color-bg: #0a0f24;            /* deep navy */
+  --color-surface: #151c40;        /* slightly lighter for cards */
+  --color-primary: #0ff;          /* teal accent */
+  --color-primary-dark: #0cc;    
+  --color-accent: #ff6f61;        /* warm coral for highlights */
+  --color-text: #e0e6f1;          /* light gray */
+  --color-muted: #8a92b2;         /* muted gray */
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-size-base: 16px;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.5rem;
+  --line-height-base: 1.5;
+}
+
+/* Global resets and base styles */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-lg);
+}

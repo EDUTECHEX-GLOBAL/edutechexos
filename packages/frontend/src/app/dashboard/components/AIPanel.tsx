@@ -1,9 +1,9 @@
 'use client';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Send, Loader2, CheckSquare, Square, Sparkles, Bot,
+  Send, Loader2, CheckSquare, Square, Sparkles,
   MessageSquare, ListChecks, CheckCircle2, Search,
-  ClipboardList, Users, Zap,
+  ClipboardList, Users, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDashboardStore } from '@/store/dashboardStore';
@@ -47,7 +47,7 @@ function ToolResultCard({ toolName, result }: { toolName: string; result: Record
     const results = (result.results as Array<Record<string, unknown>>) ?? [];
     return (
       <div style={{ borderRadius: 10, border: '1px solid #e5e7eb', background: '#f9fafb', padding: '9px 12px', fontSize: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6, color: '#6366f1', fontWeight: 700 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6, color: '#6C7BF5', fontWeight: 700 }}>
           <Search size={11} /> {results.length} result{results.length !== 1 ? 's' : ''} found
         </div>
         {results.slice(0, 3).map((r, i) => (
@@ -62,7 +62,7 @@ function ToolResultCard({ toolName, result }: { toolName: string; result: Record
     const tasks = (result.tasks as Array<Record<string, unknown>>) ?? [];
     return (
       <div style={{ borderRadius: 10, border: '1px solid #e5e7eb', background: '#f9fafb', padding: '9px 12px', fontSize: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6, color: '#6366f1', fontWeight: 700 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6, color: '#6C7BF5', fontWeight: 700 }}>
           <ClipboardList size={11} /> {(result.total as number) ?? tasks.length} task{((result.total as number) ?? 0) !== 1 ? 's' : ''}
         </div>
         {tasks.slice(0, 4).map((t, i) => (
@@ -80,12 +80,12 @@ function ToolResultCard({ toolName, result }: { toolName: string; result: Record
     const members = (result.members as Array<Record<string, unknown>>) ?? [];
     return (
       <div style={{ borderRadius: 10, border: '1px solid #e5e7eb', background: '#f9fafb', padding: '9px 12px', fontSize: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8, color: '#6366f1', fontWeight: 700 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8, color: '#6C7BF5', fontWeight: 700 }}>
           <Users size={11} /> {members.length} team member{members.length !== 1 ? 's' : ''}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
           {members.slice(0, 8).map((m, i) => (
-            <span key={i} style={{ borderRadius: 99, background: '#ede9fe', padding: '2px 8px', fontSize: 10, fontWeight: 700, color: '#6366f1' }}>
+            <span key={i} style={{ borderRadius: 99, background: '#ede9fe', padding: '2px 8px', fontSize: 10, fontWeight: 700, color: '#6C7BF5' }}>
               {String(m.name ?? '')}
             </span>
           ))}
@@ -110,6 +110,57 @@ function getUserEmail(): string {
     const raw = localStorage.getItem('edutechex_token');
     return raw ? (JSON.parse(raw).user?.email ?? '') : '';
   } catch { return ''; }
+}
+
+// Cute astronaut-robot mascot for the Copilot (original SVG, aurora-themed).
+// Fixed gradient ids are shared across instances — every mascot looks identical,
+// which is exactly what we want, so id reuse is harmless.
+export function CopilotMascot({ size = 40 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="cm-helm" x1="16" y1="6" x2="48" y2="60" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#9A6BF5" />
+          <stop offset="0.5" stopColor="#6C7BF5" />
+          <stop offset="1" stopColor="#4B57D6" />
+        </linearGradient>
+        <radialGradient id="cm-face" cx="0.5" cy="0.4" r="0.72">
+          <stop stopColor="#F6F3FF" />
+          <stop offset="1" stopColor="#D8D1F2" />
+        </radialGradient>
+        <linearGradient id="cm-ring" x1="0" y1="0" x2="1" y2="1">
+          <stop stopColor="#FBBF4B" />
+          <stop offset="1" stopColor="#E24BC4" />
+        </linearGradient>
+      </defs>
+      {/* ear pods */}
+      <rect x="1" y="25" width="9" height="17" rx="4.5" fill="url(#cm-helm)" />
+      <rect x="54" y="25" width="9" height="17" rx="4.5" fill="url(#cm-helm)" />
+      {/* helmet */}
+      <circle cx="32" cy="33" r="27" fill="url(#cm-helm)" />
+      {/* faceplate */}
+      <ellipse cx="32" cy="34" rx="21.5" ry="21" fill="url(#cm-face)" />
+      {/* glossy dome highlight */}
+      <path d="M17 21 Q24 13 39 15 Q28 17 21 27 Z" fill="#ffffff" opacity="0.55" />
+      {/* eyes */}
+      <circle cx="23.5" cy="33" r="7.6" fill="url(#cm-ring)" />
+      <circle cx="23.5" cy="33" r="5" fill="#241A3F" />
+      <circle cx="21.6" cy="31.1" r="1.9" fill="#fff" />
+      <circle cx="40.5" cy="33" r="7.6" fill="url(#cm-ring)" />
+      <circle cx="40.5" cy="33" r="5" fill="#241A3F" />
+      <circle cx="38.6" cy="31.1" r="1.9" fill="#fff" />
+      {/* cheeks */}
+      <circle cx="15.5" cy="39" r="2.2" fill="#FF8FB1" opacity="0.55" />
+      <circle cx="48.5" cy="39" r="2.2" fill="#FF8FB1" opacity="0.55" />
+      {/* smile */}
+      <path d="M27.5 42.5 Q32 47.5 36.5 42.5" stroke="#241A3F" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+      {/* chin panel */}
+      <rect x="28.5" y="49" width="7" height="4.5" rx="2.2" fill="url(#cm-helm)" />
+      {/* antenna */}
+      <rect x="31" y="3.5" width="2" height="5" rx="1" fill="url(#cm-helm)" />
+      <circle cx="32" cy="3" r="2.4" fill="#10C98A" />
+    </svg>
+  );
 }
 
 export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
@@ -202,11 +253,11 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: '#f8f9fb', borderRadius: 16, overflow: 'hidden' }}>
 
       {/* ── Header ── */}
-      <div style={{ flexShrink: 0, background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%)', padding: '14px 16px 12px' }}>
+      <div style={{ flexShrink: 0, background: 'linear-gradient(135deg, #1b1541 0%, #2d1b69 55%, #14203f 100%)', padding: '14px 16px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.15)' }}>
-              <Bot size={17} color="#a5b4fc" strokeWidth={2} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CopilotMascot size={40} />
             </div>
             <div>
               <p style={{ fontSize: 14, fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2 }}>EduTechEx Copilot</p>
@@ -224,11 +275,22 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
               </div>
             </div>
           </div>
-          {isLoading && (
-            <button onClick={stop} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, color: '#fbbf24', background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 7, padding: '4px 10px', cursor: 'pointer' }}>
-              Stop
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {isLoading && (
+              <button onClick={stop} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, color: '#fbbf24', background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 7, padding: '4px 10px', cursor: 'pointer' }}>
+                Stop
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              title="Close Copilot"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, color: '#E7E3FB', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer', transition: 'background 0.15s' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.20)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.10)'; }}
+            >
+              <X size={16} />
             </button>
-          )}
+          </div>
         </div>
 
         {/* Tabs */}
@@ -264,8 +326,8 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
             {/* Welcome */}
             {messages.length === 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '28px 16px', textAlign: 'center' }}>
-                <div style={{ width: 48, height: 48, borderRadius: 16, background: 'linear-gradient(135deg, #4338ca, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(99,102,241,0.25)' }}>
-                  <Zap size={20} color="#fff" strokeWidth={2.5} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', filter: 'drop-shadow(0 10px 22px rgba(108,123,245,0.30))' }}>
+                  <CopilotMascot size={68} />
                 </div>
                 <p style={{ fontSize: 14, fontWeight: 800, color: '#111', margin: 0 }}>EduTechEx Copilot</p>
                 <p style={{ fontSize: 12, color: '#9ca3af', maxWidth: 210, lineHeight: 1.6, margin: 0 }}>
@@ -274,7 +336,7 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 4, justifyContent: 'center' }}>
                   {['Create task', 'Team status', 'Search notes'].map((s) => (
                     <button key={s} onClick={() => handleQuickPrompt(s)}
-                      style={{ fontSize: 10, fontWeight: 700, color: '#6366f1', background: '#ede9fe', border: 'none', borderRadius: 99, padding: '4px 10px', cursor: 'pointer' }}>
+                      style={{ fontSize: 10, fontWeight: 700, color: '#6C7BF5', background: '#ede9fe', border: 'none', borderRadius: 99, padding: '4px 10px', cursor: 'pointer' }}>
                       {s}
                     </button>
                   ))}
@@ -292,8 +354,8 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
               return (
                 <div key={msg.id} style={{ display: 'flex', gap: 8, flexDirection: msg.role === 'user' ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
                   {msg.role === 'assistant' && (
-                    <div style={{ width: 26, height: 26, flexShrink: 0, borderRadius: 8, background: 'linear-gradient(135deg, #4338ca, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Bot size={13} color="#fff" strokeWidth={2} />
+                    <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CopilotMascot size={28} />
                     </div>
                   )}
 
@@ -304,7 +366,7 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
                     })}
 
                     {msg.role === 'assistant' && hasPendingTool && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#ede9fe', border: '1px solid #ddd6fe', borderRadius: 10, padding: '6px 12px', fontSize: 11, fontWeight: 600, color: '#6366f1' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#ede9fe', border: '1px solid #ddd6fe', borderRadius: 10, padding: '6px 12px', fontSize: 11, fontWeight: 600, color: '#6C7BF5' }}>
                         <Loader2 size={10} style={{ animation: 'spin 1s linear infinite' }} /> Running action…
                       </div>
                     )}
@@ -313,7 +375,7 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
                       <div style={{
                         borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                         padding: '10px 14px', fontSize: 13, lineHeight: 1.6,
-                        background: msg.role === 'user' ? 'linear-gradient(135deg,#4338ca,#7c3aed)' : '#fff',
+                        background: msg.role === 'user' ? 'linear-gradient(135deg,#6C7BF5,#E24BC4)' : '#fff',
                         color: msg.role === 'user' ? '#fff' : '#111',
                         border: msg.role === 'user' ? 'none' : '1px solid #f0f0f0',
                         boxShadow: msg.role === 'user' ? '0 4px 12px rgba(67,56,202,0.25)' : '0 2px 8px rgba(0,0,0,0.05)',
@@ -326,7 +388,7 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
                             </div>
                           ) : (
                             <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#9ca3af', fontSize: 12 }}>
-                              <Loader2 size={12} color="#6366f1" style={{ animation: 'spin 1s linear infinite' }} /> Thinking…
+                              <Loader2 size={12} color="#6C7BF5" style={{ animation: 'spin 1s linear infinite' }} /> Thinking…
                             </span>
                           )
                         ) : (
@@ -353,7 +415,7 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
             <button onClick={extractTasksAction} style={{
               width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
               padding: '10px 0', borderRadius: 10, border: '1.5px dashed #c7d2fe', background: '#f5f3ff',
-              color: '#6366f1', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginBottom: 12, transition: 'all 0.15s',
+              color: '#6C7BF5', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginBottom: 12, transition: 'all 0.15s',
             }}>
               <Sparkles size={13} /> Extract action items from #{activeChannel}
             </button>
@@ -374,7 +436,7 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontSize: 12, fontWeight: 600, color: '#111', lineHeight: 1.5, margin: 0 }}>{task.text}</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5 }}>
-                          <span style={{ width: 16, height: 16, borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 800, color: '#6366f1' }}>
+                          <span style={{ width: 16, height: 16, borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 800, color: '#6C7BF5' }}>
                             {task.assigneeInitials}
                           </span>
                           <span style={{ fontSize: 10, fontWeight: 600, color: '#6b7280' }}>{task.assignee}</span>
@@ -433,7 +495,7 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
                 padding: '3px 10px', fontSize: 10, fontWeight: 600, color: '#6b7280',
                 cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s',
               }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#6366f1'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#a5b4fc'; (e.currentTarget as HTMLButtonElement).style.background = '#ede9fe'; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#6C7BF5'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#a5b4fc'; (e.currentTarget as HTMLButtonElement).style.background = '#ede9fe'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#6b7280'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e7eb'; (e.currentTarget as HTMLButtonElement).style.background = '#f9fafb'; }}
               >
                 {q}
@@ -456,12 +518,12 @@ export default function AIPanel({ onClose, activeChannel }: AIPanelProps) {
               disabled={!inputValue.trim() || isLoading}
               style={{
                 width: 32, height: 32, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: 'none', cursor: inputValue.trim() && !isLoading ? 'pointer' : 'not-allowed', transition: 'all 0.15s',
-                background: inputValue.trim() && !isLoading ? 'linear-gradient(135deg,#4338ca,#7c3aed)' : '#e5e7eb',
+                background: inputValue.trim() && !isLoading ? 'linear-gradient(135deg,#6C7BF5,#E24BC4)' : '#e5e7eb',
                 boxShadow: inputValue.trim() && !isLoading ? '0 4px 12px rgba(67,56,202,0.3)' : 'none',
               }}
             >
               {isLoading
-                ? <Loader2 size={14} color="#6366f1" style={{ animation: 'spin 1s linear infinite' }} />
+                ? <Loader2 size={14} color="#6C7BF5" style={{ animation: 'spin 1s linear infinite' }} />
                 : <Send size={14} color={inputValue.trim() ? '#fff' : '#9ca3af'} strokeWidth={2.5} />
               }
             </button>

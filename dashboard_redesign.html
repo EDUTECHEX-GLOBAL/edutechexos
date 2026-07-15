@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EduTechExOS — Twilight Aurora redesign preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   EduTechExOS — "Twilight Aurora" redesign preview
+   Design tokens live here so they port 1:1 into dashboard.css
+   ═══════════════════════════════════════════════════════════════ */
+:root{
+  --font-body:'Inter',system-ui,sans-serif;
+  --font-display:'Sora',var(--font-body);
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+
+  /* Aurora nav gradient */
+  --nav-1:#1b1541; --nav-2:#2d1b69; --nav-3:#14203f;
+  --nav-text:#E7E3FB; --nav-muted:#9E97C9; --nav-line:rgba(255,255,255,.08);
+
+  /* Canvas — warm porcelain, not stark white */
+  --canvas:#F7F6F2; --canvas-2:#EFEEF6;
+  --surface:#FFFFFF; --line:rgba(45,27,105,.10);
+
+  /* Ink */
+  --ink:#1E1B34; --ink-2:#4A5578; --ink-muted:#8B93AD;
+
+  /* Aurora accents */
+  --iris:#6C7BF5; --violet:#8B5CF6; --magenta:#E24BC4; --mint:#10C98A;
+  --amber:#F5A524; --rose:#EF476F;
+
+  --aurora:linear-gradient(115deg,var(--iris),var(--magenta) 55%,var(--mint));
+  --glow:0 0 0 1px rgba(108,123,245,.35),0 8px 30px rgba(108,123,245,.18);
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--font-body);color:var(--ink);
+  background:
+    radial-gradient(1200px 600px at 78% -8%,rgba(139,92,246,.10),transparent 60%),
+    radial-gradient(900px 500px at 12% 108%,rgba(16,201,138,.08),transparent 55%),
+    var(--canvas);
+  -webkit-font-smoothing:antialiased;overflow:hidden;
+}
+
+/* ── shell grid ── */
+.shell{display:grid;grid-template-columns:60px 264px minmax(0,1fr);height:100vh}
+
+/* ═══ ICON RAIL ═══ */
+.rail{
+  background:linear-gradient(180deg,var(--nav-1),var(--nav-3));
+  display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0;
+  border-right:1px solid var(--nav-line);
+}
+.rail-logo{
+  width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
+  font-family:var(--font-display);font-weight:800;color:#fff;font-size:15px;
+  background:var(--aurora);background-size:200% 200%;
+  box-shadow:0 6px 18px rgba(139,92,246,.45);animation:auroraShift 8s ease infinite;
+  cursor:pointer;transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+}
+.rail-logo:hover{transform:translateY(-2px) rotate(-4deg) scale(1.06)}
+.rail-sep{width:22px;height:1px;background:var(--nav-line);margin:6px 0}
+.rail-btn{
+  width:42px;height:42px;border:none;border-radius:12px;background:transparent;
+  color:var(--nav-muted);display:grid;place-items:center;cursor:pointer;position:relative;
+  transition:background .18s,color .18s,transform .18s;
+}
+.rail-btn svg{width:20px;height:20px;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.rail-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+.rail-btn:hover svg{transform:translateY(-2px) scale(1.12)}
+.rail-btn.active{color:#fff;background:rgba(255,255,255,.10)}
+.rail-btn.active::before{content:'';position:absolute;left:-1px;top:50%;transform:translateY(-50%);
+  width:3px;height:20px;border-radius:0 3px 3px 0;background:var(--aurora)}
+.rail-spacer{flex:1}
+.rail-me{
+  width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+  font-weight:700;font-size:12px;color:#fff;background:linear-gradient(135deg,#F59E9E,#E24BC4);
+  border:2px solid rgba(255,255,255,.3);cursor:pointer;transition:transform .2s;
+}
+.rail-me:hover{transform:scale(1.08)}
+
+/* ═══ SIDEBAR ═══ */
+.side{
+  background:linear-gradient(165deg,var(--nav-2),var(--nav-1) 60%,var(--nav-3));
+  color:var(--nav-text);display:flex;flex-direction:column;position:relative;overflow:hidden;
+}
+.side::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(600px 300px at 120% -5%,rgba(226,75,196,.18),transparent 60%)}
+.side>*{position:relative;z-index:1}
+.side-head{display:flex;align-items:center;gap:11px;padding:16px 15px;border-bottom:1px solid var(--nav-line)}
+.side-badge{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+  font-family:var(--font-display);font-weight:800;color:#fff;font-size:13px;
+  background:var(--aurora);box-shadow:0 4px 12px rgba(226,75,196,.35)}
+.side-title{font-family:var(--font-display);font-weight:800;font-size:14.5px;letter-spacing:-.01em;line-height:1.1}
+.side-title small{display:block;font-family:var(--font-mono);font-weight:500;font-size:9px;
+  letter-spacing:.14em;color:var(--nav-muted);margin-top:3px}
+
+.side-search{margin:12px 12px 4px;display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.06);border:1px solid var(--nav-line);border-radius:10px;
+  padding:8px 11px;color:var(--nav-muted);font-size:12.5px;cursor:text;transition:.18s}
+.side-search:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}
+.side-search kbd{margin-left:auto;font-family:var(--font-mono);font-size:9px;background:rgba(255,255,255,.08);
+  border-radius:5px;padding:2px 5px;color:var(--nav-muted)}
+
+.side-scroll{flex:1;overflow-y:auto;padding:8px 8px 14px}
+.side-scroll::-webkit-scrollbar{width:4px}
+.side-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:99px}
+.side-label{font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.16em;
+  color:var(--nav-muted);padding:14px 10px 6px;display:flex;justify-content:space-between;align-items:center}
+.side-label span{cursor:pointer;color:rgba(255,255,255,.4);font-size:14px;transition:.15s}
+.side-label span:hover{color:#fff}
+
+/* channel row w/ subtitle */
+.ch{display:flex;align-items:center;gap:10px;width:100%;border:none;background:transparent;
+  color:var(--nav-text);padding:8px 10px;border-radius:10px;cursor:pointer;text-align:left;
+  position:relative;transition:background .14s;opacity:0;animation:rise .5s ease forwards}
+.ch:hover{background:rgba(255,255,255,.07)}
+.ch.active{background:rgba(255,255,255,.11)}
+.ch.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:60%;border-radius:0 3px 3px 0;background:var(--aurora)}
+.ch-hash{font-family:var(--font-mono);font-weight:700;font-size:14px;color:var(--nav-muted);width:14px;text-align:center;flex-shrink:0}
+.ch.active .ch-hash{color:#fff}
+.ch-body{min-width:0}
+.ch-name{font-weight:600;font-size:13px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-sub{font-size:10.5px;color:var(--nav-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.ch-badge{margin-left:auto;background:var(--aurora);color:#fff;font-size:9.5px;font-weight:800;
+  border-radius:99px;padding:1px 6px;flex-shrink:0}
+
+/* people w/ pastel avatars */
+.person{display:flex;align-items:center;gap:10px;width:100%;border:none;background:transparent;
+  color:var(--nav-text);padding:6px 10px;border-radius:10px;cursor:pointer;text-align:left;
+  transition:background .14s;opacity:0;animation:rise .5s ease forwards}
+.person:hover{background:rgba(255,255,255,.07)}
+.pav{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;
+  font-weight:700;font-size:11px;color:#2A1B4A;position:relative}
+.pav::after{content:'';position:absolute;right:-1px;bottom:-1px;width:9px;height:9px;border-radius:50%;
+  border:2px solid var(--nav-1)}
+.pav.on::after{background:var(--mint);animation:pulse 2.4s ease-in-out infinite}
+.pav.away::after{background:var(--amber)}
+.pav.off::after{background:#6B7280}
+.p-name{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-role{font-size:10px;color:var(--nav-muted);margin-top:1px}
+
+/* ═══ CHAT ═══ */
+.chat{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;min-width:0;background:transparent}
+.chat-head{display:flex;align-items:center;gap:14px;padding:0 22px;height:60px;
+  background:rgba(255,255,255,.72);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.chat-hash{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;color:#fff;
+  font-family:var(--font-mono);font-weight:700;font-size:16px;background:var(--aurora);
+  box-shadow:0 4px 14px rgba(108,123,245,.35)}
+.chat-title{font-family:var(--font-display);font-weight:800;font-size:16px;letter-spacing:-.01em}
+.chat-desc{font-size:11.5px;color:var(--ink-muted);margin-top:1px}
+.chat-head-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.icon-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--surface);
+  color:var(--ink-2);display:grid;place-items:center;cursor:pointer;transition:.18s}
+.icon-btn:hover{color:var(--iris);border-color:rgba(108,123,245,.4);transform:translateY(-1px);
+  box-shadow:0 6px 16px rgba(108,123,245,.14)}
+.icon-btn svg{width:17px;height:17px}
+
+/* filter tabs w/ gliding ink pill */
+.filters{display:flex;align-items:center;gap:4px;padding:9px 22px;background:rgba(255,255,255,.5);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line);position:relative}
+.filter-track{position:relative;display:flex;gap:2px;background:var(--canvas-2);border-radius:11px;padding:3px}
+.f-pill{position:absolute;top:3px;left:3px;height:calc(100% - 6px);border-radius:8px;
+  background:var(--surface);box-shadow:0 2px 8px rgba(45,27,105,.12);
+  transition:transform .34s cubic-bezier(.34,1.4,.5,1),width .34s cubic-bezier(.34,1.4,.5,1);z-index:0}
+.f-tab{position:relative;z-index:1;border:none;background:transparent;cursor:pointer;
+  font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--ink-muted);
+  padding:6px 14px;border-radius:8px;transition:color .2s}
+.f-tab.active{color:var(--iris)}
+.filters-right{margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:var(--ink-muted)}
+
+/* feed */
+.feed{overflow-y:auto;padding:10px 0 6px;display:flex;flex-direction:column}
+.feed::-webkit-scrollbar{width:5px}
+.feed::-webkit-scrollbar-thumb{background:rgba(108,123,245,.2);border-radius:99px}
+.divider{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;
+  padding:12px 22px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--ink-muted)}
+.divider i{height:1px;background:var(--line)}
+.divider b{background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:3px 12px;font-style:normal;color:var(--ink-2)}
+
+.msg{display:flex;gap:12px;padding:7px 22px;position:relative;transition:background .1s;
+  opacity:0;animation:rise .5s ease forwards}
+.msg:hover{background:rgba(108,123,245,.03)}
+.mav{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;flex-shrink:0;
+  font-weight:700;font-size:13px;color:#2A1B4A}
+.m-body{flex:1;min-width:0}
+.m-head{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+.m-name{font-weight:700;font-size:13.5px}
+.m-time{font-family:var(--font-mono);font-size:10px;color:var(--ink-muted)}
+.m-text{font-size:14px;line-height:1.6;color:var(--ink-2);word-break:break-word}
+.tag{display:inline-flex;align-items:center;gap:5px;margin-top:7px;font-family:var(--font-mono);
+  font-size:10px;font-weight:700;letter-spacing:.03em;padding:3px 9px;border-radius:99px;
+  background:rgba(245,165,36,.12);color:#B26E00;border:1px solid rgba(245,165,36,.28)}
+.tag::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--amber)}
+
+/* reactions */
+.reacts{display:flex;gap:6px;margin-top:8px}
+.react{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;font-size:11.5px;
+  font-weight:600;color:var(--iris);background:rgba(108,123,245,.08);border:1px solid rgba(108,123,245,.16);
+  cursor:pointer;transition:.15s}
+.react:hover{background:rgba(108,123,245,.16);transform:translateY(-1px)}
+
+/* SIGNATURE — aurora important message */
+.msg.important{margin:8px 18px;padding:14px 16px;border-radius:16px;background:var(--surface)}
+.msg.important::before{content:'';position:absolute;inset:0;border-radius:16px;padding:1.5px;
+  background:var(--aurora);background-size:220% 220%;animation:auroraShift 6s ease infinite;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;box-shadow:var(--glow)}
+.msg.important::after{content:'';position:absolute;inset:-6px;border-radius:20px;z-index:-1;
+  background:var(--aurora);filter:blur(22px);opacity:.28;animation:auroraShift 6s ease infinite}
+.pin-badge{position:absolute;top:-10px;left:18px;display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;color:#fff;
+  padding:3px 10px;border-radius:99px;background:var(--aurora);box-shadow:0 4px 12px rgba(226,75,196,.4)}
+
+/* threaded reply */
+.thread{margin:2px 22px 6px 58px;border-left:2px solid rgba(108,123,245,.25);padding-left:14px}
+.thread .msg{padding:6px 8px;border-radius:10px}
+.thread-label{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--iris);
+  margin:2px 0 2px 58px;display:flex;align-items:center;gap:6px}
+
+/* ═══ COMPOSER ═══ */
+.composer-wrap{padding:12px 20px 18px;background:transparent}
+.composer{background:var(--surface);border:1.5px solid var(--line);border-radius:18px;
+  transition:.22s;box-shadow:0 4px 18px rgba(45,27,105,.05)}
+.composer:focus-within{border-color:var(--iris);box-shadow:var(--glow)}
+.composer-input{padding:13px 16px 6px;font-size:14px;color:var(--ink);min-height:24px}
+.composer-input:empty::before{content:'Message #edutechex';color:var(--ink-muted)}
+.composer-bar{display:flex;align-items:center;gap:7px;padding:6px 10px 9px}
+
+/* unique pill buttons */
+.pill{display:inline-flex;align-items:center;gap:0;height:32px;padding:0 9px;border:none;cursor:pointer;
+  border-radius:99px;background:var(--canvas-2);color:var(--ink-2);font-family:var(--font-mono);
+  font-size:11px;font-weight:700;overflow:hidden;transition:background .2s,color .2s,box-shadow .2s}
+.pill svg{width:16px;height:16px;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.pill span{max-width:0;opacity:0;white-space:nowrap;overflow:hidden;
+  transition:max-width .3s ease,opacity .25s ease,margin .3s ease}
+.pill:hover{background:rgba(108,123,245,.12);color:var(--iris);box-shadow:0 4px 12px rgba(108,123,245,.14)}
+.pill:hover svg{transform:scale(1.15) rotate(-6deg)}
+.pill:hover span{max-width:80px;opacity:1;margin-left:7px}
+.composer-spacer{flex:1}
+
+/* Send — gradient pill w/ sweeping sheen */
+.send{position:relative;display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 18px;
+  border:none;cursor:pointer;border-radius:99px;color:#fff;font-family:var(--font-display);font-weight:700;
+  font-size:12.5px;background:var(--aurora);background-size:200% 200%;overflow:hidden;
+  box-shadow:0 6px 18px rgba(108,123,245,.4);animation:auroraShift 8s ease infinite;transition:transform .2s}
+.send:hover{transform:translateY(-1px) scale(1.03)}
+.send:active{transform:translateY(0) scale(.98)}
+.send svg{width:16px;height:16px;position:relative;z-index:1}
+.send::after{content:'';position:absolute;top:0;left:-60%;width:50%;height:100%;
+  background:linear-gradient(120deg,transparent,rgba(255,255,255,.55),transparent);
+  transform:skewX(-20deg);animation:sheen 3.2s ease-in-out infinite}
+
+/* right rail hint */
+.rrail{position:fixed;top:0;right:0;height:100%;width:52px;
+  background:linear-gradient(180deg,var(--nav-1),var(--nav-3));border-left:1px solid var(--nav-line);
+  display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0}
+
+/* keyframes */
+@keyframes auroraShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+@keyframes sheen{0%,100%{left:-60%}45%,55%{left:120%}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(16,201,138,.5)}50%{box-shadow:0 0 0 5px rgba(16,201,138,0)}}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* preview banner */
+.banner{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:50;
+  font-family:var(--font-mono);font-size:11px;color:var(--ink-2);background:var(--surface);
+  border:1px solid var(--line);border-radius:99px;padding:7px 16px;box-shadow:0 8px 24px rgba(45,27,105,.14)}
+.banner b{color:var(--iris)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- ICON RAIL -->
+  <nav class="rail">
+    <div class="rail-logo">E</div>
+    <div class="rail-sep"></div>
+    <button class="rail-btn active" title="Chat"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+    <button class="rail-btn" title="Tasks"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></button>
+    <button class="rail-btn" title="Calendar"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></button>
+    <button class="rail-btn" title="Activity"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></button>
+    <button class="rail-btn" title="Notifications"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
+    <div class="rail-spacer"></div>
+    <button class="rail-btn" title="Settings"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+    <div class="rail-me">JV</div>
+  </nav>
+
+  <!-- SIDEBAR -->
+  <aside class="side">
+    <div class="side-head">
+      <div class="side-badge">E</div>
+      <div class="side-title">EduTechExOS<small>WORKSPACE</small></div>
+    </div>
+    <div class="side-search">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      Search
+      <kbd>⌘K</kbd>
+    </div>
+    <div class="side-scroll">
+      <div class="side-label">Channels <span>+</span></div>
+      <button class="ch active" style="animation-delay:.05s"><span class="ch-hash">#</span><div class="ch-body"><div class="ch-name">edutechex</div><div class="ch-sub">Core platform · Cambridge, IB</div></div></button>
+      <button class="ch" style="animation-delay:.10s"><span class="ch-hash">#</span><div class="ch-body"><div class="ch-name">skillnaav</div><div class="ch-sub">Career navigation & skill gaps</div></div><span class="ch-badge">3</span></button>
+      <button class="ch" style="animation-delay:.15s"><span class="ch-hash">#</span><div class="ch-body"><div class="ch-name">edutechexassessa</div><div class="ch-sub">Adaptive question engine</div></div></button>
+      <button class="ch" style="animation-delay:.20s"><span class="ch-hash">#</span><div class="ch-body"><div class="ch-name">ggvdv</div><div class="ch-sub">Pilot programme</div></div><span class="ch-badge">1</span></button>
+
+      <div class="side-label">People</div>
+      <button class="person" style="animation-delay:.24s"><div class="pav on" style="background:#C7B8FF">AD</div><div><div class="p-name">Admin</div><div class="p-role">Owner</div></div></button>
+      <button class="person" style="animation-delay:.28s"><div class="pav on" style="background:#B8E6D5">MS</div><div><div class="p-name">mohansai</div><div class="p-role">Manager</div></div></button>
+      <button class="person" style="animation-delay:.32s"><div class="pav away" style="background:#FFD9B8">ED</div><div><div class="p-name">edu</div><div class="p-role">Content</div></div></button>
+      <button class="person" style="animation-delay:.36s"><div class="pav on" style="background:#FFC7D9">JY</div><div><div class="p-name">Jyothsna</div><div class="p-role">Assessment</div></div></button>
+      <button class="person" style="animation-delay:.40s"><div class="pav off" style="background:#C4CAE0">RA</div><div><div class="p-name">ram</div><div class="p-role">Engineering</div></div></button>
+      <button class="person" style="animation-delay:.44s"><div class="pav on" style="background:#B8D9FF">AD</div><div><div class="p-name">Aditya</div><div class="p-role">Design</div></div></button>
+    </div>
+  </aside>
+
+  <!-- CHAT -->
+  <section class="chat">
+    <header class="chat-head">
+      <div class="chat-hash">#</div>
+      <div><div class="chat-title">edutechex</div><div class="chat-desc">Core platform — Cambridge, IB, teacher training · 6 members</div></div>
+      <div class="chat-head-actions">
+        <button class="icon-btn" title="Search"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
+        <button class="icon-btn" title="Pinned"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 17v5M9 10.8V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v5.8l2 3.2H7z"/></svg></button>
+        <button class="icon-btn" title="Members"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></button>
+      </div>
+    </header>
+
+    <!-- filter tabs -->
+    <div class="filters">
+      <div class="filter-track" id="track">
+        <div class="f-pill" id="pill"></div>
+        <button class="f-tab active">All</button>
+        <button class="f-tab">Mentions</button>
+        <button class="f-tab">Files</button>
+        <button class="f-tab">Tasks</button>
+      </div>
+      <div class="filters-right">24 messages · today</div>
+    </div>
+
+    <!-- feed -->
+    <div class="feed">
+      <div class="divider"><i></i><b>YESTERDAY</b><i></i></div>
+
+      <div class="msg" style="animation-delay:.05s">
+        <div class="mav" style="background:#FFC7D9">JY</div>
+        <div class="m-body">
+          <div class="m-head"><span class="m-name">Jyothsna</span><span class="m-time">18:18</span></div>
+          <div class="m-text">Pushed the adaptive-difficulty tweak to staging — the IB cohort question bank now rebalances after every 5 answers.</div>
+          <div class="tag">Status: In Progress</div>
+        </div>
+      </div>
+
+      <div class="msg" style="animation-delay:.12s">
+        <div class="mav" style="background:#C4CAE0">RA</div>
+        <div class="m-body">
+          <div class="m-head"><span class="m-name">ram</span><span class="m-time">19:47</span></div>
+          <div class="m-text">Nice. I'll wire the analytics event so we can see drop-off per difficulty step.</div>
+          <div class="reacts"><span class="react">👍 3</span><span class="react">🚀 1</span></div>
+        </div>
+      </div>
+
+      <div class="divider"><i></i><b>TODAY</b><i></i></div>
+
+      <!-- SIGNATURE: important pinned message -->
+      <div class="msg important" style="animation-delay:.18s">
+        <span class="pin-badge">📌 PINNED · ANNOUNCEMENT</span>
+        <div class="mav" style="background:#C7B8FF">AD</div>
+        <div class="m-body">
+          <div class="m-head"><span class="m-name">Admin</span><span class="m-time">10:19</span></div>
+          <div class="m-text">Cambridge review call moved to <b>Thursday 3pm</b>. Please have the teacher-training module walkthrough ready — this is the go/no-go for the term rollout.</div>
+          <div class="reacts"><span class="react">✅ 5</span><span class="react">👀 2</span></div>
+        </div>
+      </div>
+
+      <div class="thread-label" style="margin-top:10px">↳ 2 replies in thread</div>
+      <div class="thread">
+        <div class="msg" style="animation-delay:.24s">
+          <div class="mav" style="width:28px;height:28px;font-size:11px;background:#B8E6D5">MS</div>
+          <div class="m-body">
+            <div class="m-head"><span class="m-name">mohansai</span><span class="m-time">10:26</span></div>
+            <div class="m-text">On it — walkthrough deck is 80% done, I'll share by EOD.</div>
+          </div>
+        </div>
+        <div class="msg" style="animation-delay:.30s">
+          <div class="mav" style="width:28px;height:28px;font-size:11px;background:#B8D9FF">AD</div>
+          <div class="m-body">
+            <div class="m-head"><span class="m-name">Aditya</span><span class="m-time">10:31</span></div>
+            <div class="m-text">I'll polish the module screens tonight so the demo looks clean.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="msg" style="animation-delay:.36s">
+        <div class="mav" style="background:#FFD9B8">ED</div>
+        <div class="m-body">
+          <div class="m-head"><span class="m-name">edu</span><span class="m-time">11:02</span></div>
+          <div class="m-text">Content pack for the skill-navigation onboarding is uploaded to #skillnaav 🎉</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- composer -->
+    <div class="composer-wrap">
+      <div class="composer">
+        <div class="composer-input" contenteditable="true"></div>
+        <div class="composer-bar">
+          <button class="pill"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21.4 11.05 12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.48-8.49"/></svg><span>Attach</span></button>
+          <button class="pill"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span>File</span></button>
+          <button class="pill"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Camera</span></button>
+          <button class="pill"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg><span>Voice</span></button>
+          <button class="pill"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg><span>Add app</span></button>
+          <div class="composer-spacer"></div>
+          <button class="send">Send<svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="banner"><b>Preview</b> · Twilight Aurora — hover pills, filter tabs & avatars · design-only, all flows preserved</div>
+
+<script>
+// filter ink-pill glide
+const track=document.getElementById('track'),pill=document.getElementById('pill'),tabs=track.querySelectorAll('.f-tab');
+function move(el){pill.style.width=el.offsetWidth+'px';pill.style.transform=`translateX(${el.offsetLeft-3}px)`;}
+tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));t.classList.add('active');move(t);}));
+window.addEventListener('load',()=>move(track.querySelector('.active')));
+move(track.querySelector('.f-tab.active'));
+</script>
+</body>
+</html>

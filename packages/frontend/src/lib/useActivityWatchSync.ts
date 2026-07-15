@@ -91,6 +91,31 @@ function extractDomain(url: string): string {
   catch { return url.split('/')[0] || url; }
 }
 
+// The user's EduTechExOS web-login time for a day (ms), or null if not logged in.
+async function getSessionStartMs(dateStr: string): Promise<number | null> {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(`${API_BASE}/api/activity/session-start?date=${dateStr}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.sessionStart ? Date.parse(data.sessionStart) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Seconds of an AW event that fall AFTER the login gate (clamps pre-login part).
+function secsAfter(ev: Record<string, unknown>, gateMs: number): number {
+  const ts = ev.timestamp as string | undefined;
+  const start = ts ? Date.parse(ts) : NaN;
+  if (!Number.isFinite(start)) return 0;
+  const end = start + ((ev.duration as number) || 0) * 1000;
+  return Math.max(0, (end - Math.max(start, gateMs)) / 1000);
+}
+
 async function buildSummary(forDate: Date = new Date()) {
   const buckets = await getBuckets();
   const keys    = Object.keys(buckets);
@@ -107,6 +132,12 @@ async function buildSummary(forDate: Date = new Date()) {
 
   if (!windowBucket) return null;
 
+  // Only count activity from the moment the user opened EduTechExOS that day.
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const dateStr = new Date(forDate.getTime() + istOffset).toISOString().slice(0, 10);
+  const gateMs = await getSessionStartMs(dateStr);
+  if (!gateMs) return null;
+
   const isToday = forDate.toDateString() === new Date().toDateString();
 
   const cur          = isToday ? await getLatestEvent(windowBucket) : null;
@@ -119,7 +150,8 @@ async function buildSummary(forDate: Date = new Date()) {
   let totalActiveSec  = 0;
 
   for (const ev of windowEvents) {
-    const dur = (ev.duration as number) || 0;
+    const dur = secsAfter(ev, gateMs);
+    if (dur <= 0) continue;
     const d   = ev.data as Record<string, string> | undefined;
     const app = d?.app || d?.title || 'Unknown';
     appSecs[app] = (appSecs[app] || 0) + dur;
@@ -139,14 +171,14 @@ async function buildSummary(forDate: Date = new Date()) {
     const latestAfk  = afkEvents[0] as { data?: { status?: string } } | undefined;
     isAfk = latestAfk?.data?.status === 'afk';
     for (const ev of afkEvents) {
-      const e = ev as { duration?: number; data?: { status?: string } };
-      if (e.data?.status === 'afk') totalAfkSec += e.duration || 0;
+      const e = ev as { data?: { status?: string } };
+      if (e.data?.status === 'afk') totalAfkSec += secsAfter(ev, gateMs);
     }
   }
 
   let currentUrl       = '';
   let currentPageTitle = '';
-  const domainSecs: Record<string, { minutes: number; title: string }> = {};
+  const domainSecs: Record<string, { minutes: number; domain: string }> = {};
 
   for (const wb of webBuckets) {
     if (isToday) {
@@ -162,24 +194,22 @@ async function buildSummary(forDate: Date = new Date()) {
 
     const webEvents = await getEventsForDate(wb, forDate);
     for (const ev of webEvents) {
-      const dur = (ev.duration as number) || 0;
+      const dur = secsAfter(ev, gateMs);
+      if (dur <= 0) continue;
       const d   = ev.data as { url?: string; title?: string; incognito?: boolean } | undefined;
       if (!d?.url || d.incognito) continue;
 
       const domain = extractDomain(d.url);
-      if (!domainSecs[domain]) domainSecs[domain] = { minutes: 0, title: d.title || domain };
-      domainSecs[domain].minutes += dur / 60;
+      const title = (d.title || '').trim() || domain; // group per tab (title)
+      if (!domainSecs[title]) domainSecs[title] = { minutes: 0, domain };
+      domainSecs[title].minutes += dur / 60;
     }
   }
 
   const webBreakdown = Object.entries(domainSecs)
-    .map(([domain, v]) => ({ domain, minutes: Math.round(v.minutes), title: v.title }))
+    .map(([title, v]) => ({ domain: v.domain, minutes: Math.round(v.minutes), title }))
     .sort((a, b) => b.minutes - a.minutes)
     .slice(0, 20);
-
-  // dateStr in IST so backend stores under the correct local date
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const dateStr = new Date(forDate.getTime() + istOffset).toISOString().slice(0, 10);
 
   return {
     dateStr,

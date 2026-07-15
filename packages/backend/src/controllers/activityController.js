@@ -12,9 +12,14 @@ async function heartbeat(req, res) {
     const dateStr = istDate.toISOString().slice(0, 10);
     const session = await ActivitySession.findOneAndUpdate(
       { email, dateStr },
-      { $setOnInsert: { email, name, dateStr, totalMinutes: 0, messageCount: 0, taskCount: 0 } },
+      { $setOnInsert: { email, name, dateStr, totalMinutes: 0, messageCount: 0, taskCount: 0, sessionStart: now } },
       { upsert: true, new: true }
     );
+    // Backfill sessionStart for rows that predate this field (or were created
+    // before the login-gate existed), so the agent's gate works right away.
+    if (!session.sessionStart) {
+      await ActivitySession.updateOne({ email, dateStr }, { $set: { sessionStart: now } });
+    }
     let minutesToAdd = 1;
     const lastBeat = session.lastHeartbeat || session.createdAt;
     if (lastBeat) {
@@ -211,6 +216,67 @@ async function awSync(req, res) {
       isAfk:       isAfk       ?? false,
     });
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+// Lightweight, high-frequency "what am I doing right now" ping. Updates only the
+// current app/tab + freshness, without recomputing the daily breakdown — so the
+// agent can call it every ~15s to keep the admin's live view current, cheaply.
+async function awCurrent(req, res) {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    const email = req.user.email.toLowerCase();
+    const name  = req.user.name || '';
+    const { currentApp, currentTitle, currentUrl, currentPageTitle, isAfk } = req.body || {};
+
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const dateStr = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+    const str = (s, max) => String(s ?? '').slice(0, max);
+
+    await AWActivity.findOneAndUpdate(
+      { email, dateStr },
+      {
+        $set: {
+          name,
+          currentApp:       str(currentApp, 200),
+          currentTitle:     str(currentTitle, 300),
+          currentUrl:       str(currentUrl, 500),
+          currentPageTitle: str(currentPageTitle, 300),
+          isAfk:            !!isAfk,
+          lastSync:         new Date(),
+        },
+      },
+      { upsert: true }
+    );
+
+    const io = req.app.get('io');
+    if (io) io.emit('aw_current', {
+      email,
+      currentApp:   str(currentApp, 200),
+      currentTitle: str(currentTitle, 300),
+      currentUrl:   str(currentUrl, 500),
+      isAfk:        !!isAfk,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+}
+
+// When did this user open the EduTechExOS web app on a given day? The agent uses
+// this to only count desktop activity from login onward (not from laptop boot).
+async function getSessionStart(req, res) {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    const email = req.user.email.toLowerCase();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const todayIST = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+    const dateStr = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date) ? req.query.date : todayIST;
+    const session = await ActivitySession.findOne({ email, dateStr }).lean();
+    const sessionStart = session?.sessionStart ? new Date(session.sessionStart).toISOString() : null;
+    res.json({ success: true, sessionStart });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
@@ -476,4 +542,4 @@ async function getTrend(req, res) {
   }
 }
 
-module.exports = { heartbeat, getLive, getHistory, getStats, awSync, getAw, getAWStatus, isSessionActive, logMessage, getAttendance, getLoginHistory, getMyAttendance, getLoginStatus, resetAwDevice, getTrend };
+module.exports = { heartbeat, getLive, getHistory, getStats, awSync, awCurrent, getAw, getAWStatus, isSessionActive, getSessionStart, logMessage, getAttendance, getLoginHistory, getMyAttendance, getLoginStatus, resetAwDevice, getTrend };

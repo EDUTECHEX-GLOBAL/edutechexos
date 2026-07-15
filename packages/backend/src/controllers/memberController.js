@@ -79,6 +79,7 @@ async function getMembers(req, res) {
         initials,
         channelId: r.channelId,
         channelIds: ids,
+        channelsExplicit: r.channelsExplicit === true,
       };
     });
 

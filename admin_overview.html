@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Overview • Dashboard</title>
+  <meta name="description" content="High‑level overview of system health, user counts and recent alerts for admins." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="design_system.css" />
+  <link rel="stylesheet" href="components.css" />
+  <style>
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-lg); margin-top: var(--space-xl); }
+  </style>
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo"><strong>Admin Console</strong></div>
+    <nav>
+      <a href="admin_overview.html">Overview</a>
+      <a href="admin_directory_access.html">Directory &amp; Access</a>
+      <a href="admin_operations_comms.html">Ops &amp; Comms</a>
+      <a href="admin_time_attendance.html">Time &amp; Attendance</a>
+      <a href="admin_productivity_analytics.html">Productivity</a>
+    </nav>
+  </header>
+
+  <main class="container fade-in-up">
+    <h1 class="fade-in-up" style="font-size: var(--font-size-xl);">Admin Overview</h1>
+    <section class="stats-grid">
+      <div class="card fade-in-up" style="animation-delay: 0.1s;">
+        <h2>Total Users</h2>
+        <p style="font-size: 2rem; color: var(--color-primary);">124</p>
+        <button class="btn" onclick="location.href='admin_directory_access.html'">Manage Users</button>
+      </div>
+      <div class="card fade-in-up" style="animation-delay: 0.2s;">
+        <h2>Active Sessions</h2>
+        <p style="font-size: 2rem; color: var(--color-primary);">17</p>
+        <button class="btn" onclick="location.href='admin_operations_comms.html'">View Sessions</button>
+      </div>
+      <div class="card fade-in-up" style="animation-delay: 0.3s;">
+        <h2>Pending Alerts</h2>
+        <p style="font-size: 2rem; color: var(--color-accent);">3</p>
+        <button class="btn" onclick="location.href='admin_operations_comms.html'">Review</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="container" style="margin-top: var(--space-xl); text-align:center; font-size:0.9rem; color:var(--color-muted);">
+    © 2026 Admin Console – All rights reserved.
+  </footer>
+</body>
+</html>

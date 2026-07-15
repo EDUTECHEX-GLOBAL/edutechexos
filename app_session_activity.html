@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>App Session Activity • Productivity Hub</title>
+  <meta name="description" content="List of application sessions, their status and duration across the team." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="design_system.css" />
+  <link rel="stylesheet" href="components.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo"><strong>Productivity Hub</strong></div>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="desktop_activity.html">Desktop Activity</a>
+      <a href="app_session_activity.html">App Sessions</a>
+      <a href="audit_log.html">Audit Log</a>
+      <a href="live_today_team_overview.html">Team Overview</a>
+      <a href="team_activity.html">Team Activity</a>
+    </nav>
+  </header>
+
+  <main class="container fade-in-up">
+    <h1 style="font-size: var(--font-size-xl); margin-top: var(--space-xl);">App Session Activity</h1>
+    <p>Overview of active and completed application sessions.</p>
+    <div class="toolbar" style="margin: var(--space-md) 0;">
+      <button class="btn">Refresh</button>
+      <button class="btn">Export CSV</button>
+    </div>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Application</th>
+          <th>User</th>
+          <th>Status</th>
+          <th>Duration</th>
+          <th>Started</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>VS Code</td>
+          <td>Alice</td>
+          <td><span style="color: var(--color-primary);">Running</span></td>
+          <td>1h 23m</td>
+          <td>09:15</td>
+        </tr>
+        <tr>
+          <td>Chrome</td>
+          <td>Bob</td>
+          <td><span style="color: var(--color-muted);">Idle</span></td>
+          <td>45m</td>
+          <td>08:50</td>
+        </tr>
+        <!-- More rows as needed -->
+      </tbody>
+    </table>
+  </main>
+
+  <footer class="container" style="margin-top: var(--space-xl); text-align: center; font-size: 0.9rem; color: var(--color-muted);">
+    © 2026 Productivity Hub – All rights reserved.
+  </footer>
+</body>
+</html>

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&family=Sora:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
 
 /* ═══════════════════════════════════════════════════════════════
    EduTechExOS — "Opal Glass" Premium Design System
@@ -7,6 +7,19 @@
    ═══════════════════════════════════════════════════════════════ */
 :root {
   --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Sora', var(--font-family);
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* ── Twilight Aurora accents (redesign) — clean navy-slate nav ── */
+  --aurora-nav-1: #1E2338;
+  --aurora-nav-2: #262C48;
+  --aurora-nav-3: #171A28;
+  --iris:    #6C7BF5;
+  --violet2: #8B5CF6;
+  --magenta: #E24BC4;
+  --mint:    #10C98A;
+  --aurora:  linear-gradient(115deg, var(--iris), var(--magenta) 55%, var(--mint));
+  --aurora-glow: 0 0 0 1px rgba(108,123,245,.35), 0 8px 30px rgba(108,123,245,.18);
 
   /* ── Brand Palette (Indigo / Violet) ── */
   --brand-400: #818cf8;
@@ -15,26 +28,30 @@
   --brand-700: #4338ca;
   --brand-900: #312e81;
 
-  /* ── Frosted Glass Rail ── */
-  --rail-w:       3.75rem;
-  --rail-bg:      rgba(241, 245, 249, 0.85);
-  --rail-border:  rgba(99, 102, 241, 0.08);
+  /* ── Aurora Rail (redesign) ── */
+  --rail-w:       4.5rem;
+  --rail-bg:      #191C2A;
+  --rail-border:  rgba(255, 255, 255, 0.07);
 
-  /* ── Frosted Glass Sidebar ── */
-  --sidebar-bg:     rgba(255, 255, 255, 0.70);
-  --sidebar-hover:  rgba(99, 102, 241, 0.04);
-  --sidebar-active: rgba(99, 102, 241, 0.08);
-  --sidebar-border: rgba(255, 255, 255, 0.5);
-  --sidebar-text:   #000000;
-  --sidebar-muted:  #111111;
+  /* ── Aurora Sidebar (redesign) — solid var kept for presence-dot ring;
+        the visible gradient is set on .workspace-sidebar below ── */
+  --sidebar-bg:     #1E2338;
+  --sidebar-hover:  rgba(255, 255, 255, 0.06);
+  --sidebar-active: rgba(108, 123, 245, 0.16);
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-text:   #EAECF4;
+  --sidebar-muted:  #99A0BC;
 
   /* ── Accent ── */
   --accent:       var(--brand-600);
   --accent-hover: var(--brand-700);
   --accent-light: rgba(99, 102, 241, 0.06);
 
-  /* ── Main Chat Canvas ── */
-  --main-bg:      linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 50%, #ECEEF8 100%);
+  /* ── Main Chat Canvas — warm porcelain with soft aurora tints (redesign) ── */
+  --main-bg:
+    radial-gradient(1100px 560px at 82% -10%, rgba(139, 92, 246, 0.08), transparent 60%),
+    radial-gradient(820px 460px at 10% 110%, rgba(16, 201, 138, 0.06), transparent 55%),
+    linear-gradient(135deg, #F7F6F2 0%, #F1EFF6 55%, #ECEBF4 100%);
   --header-bg:    rgba(255, 255, 255, 0.80);
   --border:       rgba(99, 102, 241, 0.08);
   --msg-hover:    rgba(99, 102, 241, 0.015);
@@ -586,16 +603,20 @@ html.dark, .dark {
   .workspace-sidebar    { display: none !important; }
   .copilot-panel        { display: none !important; }
 
-  .workspace-chat {
+  .workspace-chat,
+  .workspace-chat-has-pin {
     grid-column: 1; grid-row: 1;
     height: 100dvh;
     padding-top: 52px; padding-bottom: 56px;
-    grid-template-rows: 0px minmax(0,1fr) auto !important;
     box-sizing: border-box;
+    /* Flexbox column is far more predictable than the conditional grid rows:
+       feed fills the space, composer always pins to the bottom. */
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-rows: none !important;
   }
-  .workspace-chat-has-pin {
-    grid-template-rows: 0px auto minmax(0,1fr) auto !important;
-  }
+  .workspace-chat > .chat-scroll { flex: 1 1 auto; min-height: 0; }
+  .workspace-chat > .composer-shell { flex: 0 0 auto; }
   .chat-header { display: none !important; }
 
   /* Mobile header */
@@ -807,4 +828,494 @@ html.dark, .dark {
   box-shadow: none !important;
   cursor: default !important;
   opacity: 0.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TWILIGHT AURORA — redesign surface overrides
+   (sidebar + message feed first pass; all flows untouched)
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes aurora-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+/* ── Icon rails ── */
+.workspace-rail,
+.workspace-right-rail {
+  background: linear-gradient(180deg, var(--aurora-nav-1), var(--aurora-nav-3));
+  box-shadow: none;
+}
+.rail-btn            { color: var(--sidebar-muted); }
+.rail-btn:hover      { background: rgba(255,255,255,0.08); color: #ffffff; }
+.rail-btn:hover      { color: #ffffff; }
+.rail-btn.active     { background: rgba(255,255,255,0.10); color: #ffffff; }
+.rail-btn.active::before { background: var(--aurora); }
+.rail-divider        { background: rgba(255,255,255,0.10); }
+/* Right rail buttons hardcode inline color:#000 — force light so the icons show
+   on the dark aurora rail (stylesheet !important beats inline styles). */
+.workspace-right-rail .rail-btn        { color: var(--sidebar-muted) !important; }
+.workspace-right-rail .rail-btn:hover  { color: #ffffff !important; }
+
+/* ── Sidebar (aurora gradient) ── */
+.workspace-sidebar {
+  background: linear-gradient(165deg, var(--aurora-nav-2), var(--aurora-nav-1) 60%, var(--aurora-nav-3));
+}
+.sidebar-workspace-header,
+.sidebar-search-bar { border-bottom-color: rgba(255,255,255,0.08); }
+.sidebar-section-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  color: var(--sidebar-muted);
+}
+.sidebar-search-input {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.10);
+  color: var(--sidebar-muted);
+}
+.sidebar-search-input:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.24);
+}
+.sidebar-channel-btn:hover  { background: var(--sidebar-hover);  color: #ffffff; }
+.sidebar-channel-btn.active { background: var(--sidebar-active); color: #ffffff; }
+.sidebar-channel-btn.active::before { background: var(--aurora); }
+.sidebar-channel-hash { color: var(--sidebar-muted); }
+.sidebar-channel-btn.active .sidebar-channel-hash { color: #ffffff; }
+.sidebar-member-btn:hover  { background: var(--sidebar-hover);  color: #ffffff; }
+.sidebar-member-btn.active { background: var(--sidebar-active); color: #ffffff; }
+
+/* ── Message feed: date divider becomes a mono pill ── */
+.date-divider {
+  font-family: var(--font-mono);
+  letter-spacing: 0.16em;
+}
+.date-divider span   { background: rgba(45,27,105,0.10); }
+.date-divider strong {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 3px 12px;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+/* ── SIGNATURE: aurora glow ring on the pinned/important message ── */
+.msg-aurora-pin { box-shadow: var(--aurora-glow) !important; }
+.msg-aurora-pin::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 16px;
+  padding: 1.5px;
+  background: var(--aurora);
+  background-size: 220% 220%;
+  animation: aurora-shift 6s ease infinite;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .msg-aurora-pin::before,
+  .workspace-rail, .workspace-sidebar { animation: none !important; }
+}
+
+/* ── Message filter bar (sticky, glide pill) ── */
+.chat-filterbar {
+  position: sticky; top: 0; z-index: 6;
+  display: flex; align-items: center;
+  padding: 9px 22px;
+  background: rgba(247, 246, 242, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.chat-filter-track {
+  position: relative; display: flex; gap: 2px;
+  background: rgba(45, 27, 105, 0.06);
+  border-radius: 11px; padding: 3px;
+}
+.chat-filter-tab {
+  position: relative; border: none; background: transparent; cursor: pointer;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  color: var(--text-muted); padding: 6px 14px; border-radius: 8px;
+  transition: color 0.2s;
+}
+.chat-filter-tab.active { color: var(--iris); }
+.chat-filter-pill {
+  position: absolute; inset: 0; z-index: 0;
+  background: var(--surface-card); border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(45, 27, 105, 0.12);
+}
+.chat-filter-empty {
+  padding: 40px 22px; text-align: center;
+  font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);
+}
+
+/* ── Sidebar channel subtitle ── */
+.sidebar-channel-sub {
+  font-size: 10px;
+  line-height: 1.25;
+  color: var(--sidebar-muted);
+  margin-top: 1px;
+}
+.sidebar-channel-btn.active .sidebar-channel-sub { color: rgba(231,227,251,0.75); }
+
+/* ── Composer: springy pill action buttons ── */
+.composer-tools button {
+  border-radius: 999px !important;
+  transition: background .2s, color .2s, box-shadow .2s;
+}
+.composer-tools button svg {
+  transition: transform .3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.composer-tools button:hover {
+  background: rgba(108,123,245,0.12) !important;
+  color: var(--iris) !important;
+  box-shadow: 0 4px 12px rgba(108,123,245,0.14);
+}
+.composer-tools button:hover svg { transform: scale(1.15) rotate(-6deg); }
+
+/* ── Composer: aurora Send button (circular) with sweeping sheen ── */
+.composer-send {
+  position: relative; overflow: hidden; border: none; cursor: pointer;
+  width: 40px; height: 40px; border-radius: 999px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; transition: transform 0.2s;
+}
+.composer-send.is-active {
+  background: var(--aurora);
+  background-size: 200% 200%;
+  box-shadow: 0 6px 18px rgba(108,123,245,0.40);
+  animation: aurora-shift 8s ease infinite;
+}
+.composer-send.is-active:hover { transform: translateY(-1px) scale(1.03); }
+.composer-send.is-idle {
+  background: rgba(124,133,158,0.15);
+  color: #9BA6D3;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.composer-send.is-active::after {
+  content: '';
+  position: absolute; top: 0; left: -60%;
+  width: 50%; height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.55), transparent);
+  transform: skewX(-20deg);
+  animation: send-sheen 3.2s ease-in-out infinite;
+}
+.composer-send svg { position: relative; z-index: 1; }
+@keyframes send-sheen { 0%, 100% { left: -60%; } 45%, 55% { left: 120%; } }
+@media (prefers-reduced-motion: reduce) {
+  .composer-send.is-active, .composer-send.is-active::after { animation: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TWILIGHT AURORA — extra polish (design only, no flow changes)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Aurora-tinted scrollbars */
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--iris), var(--magenta)) !important;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(139,92,246,0.65), rgba(226,75,196,0.5)) !important;
+}
+
+/* Chat header — animated aurora hairline accent along the bottom edge */
+.chat-header::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  background: var(--aurora);
+  background-size: 200% 100%;
+  opacity: 0.55;
+  animation: aurora-shift 9s ease infinite;
+  pointer-events: none;
+}
+
+/* Sidebar active channel — soft aurora glow */
+.sidebar-channel-btn.active {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 4px 18px rgba(108,123,245,0.14);
+}
+
+/* Chat bubbles — wrap long unbroken strings so they never blow out the width */
+.chat-bubble {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}
+/* Chat bubbles — hover micro-lift for depth */
+.chat-bubble { transition: transform 0.16s ease, box-shadow 0.2s ease; }
+.chat-bubble:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(45,27,105,0.10);
+}
+
+/* Reaction chips — aurora hover (applies where the class is used) */
+.reaction-chip:hover {
+  border-color: rgba(108,123,245,0.35);
+  box-shadow: 0 3px 10px rgba(108,123,245,0.16);
+}
+
+/* Shared continuous shimmer for aurora gradient badges */
+.aurora-anim {
+  background-size: 200% 200% !important;
+  animation: aurora-shift 7s ease infinite;
+}
+
+/* Composer — elevated aurora input bar (was a flat, dull footer) */
+.composer-shell {
+  position: relative;
+  border-top: none !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  padding: 12px 16px 16px !important;
+}
+.composer-shell::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(108,123,245,0.28), rgba(226,75,196,0.28), transparent);
+  pointer-events: none;
+}
+.composer-bar {
+  position: relative;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FBFAFF 100%);
+  border: 1px solid transparent;
+  box-shadow: 0 6px 22px rgba(45,27,105,0.07), inset 0 1px 0 rgba(255,255,255,0.7);
+  padding: 6px 10px;
+  transition: box-shadow 0.22s ease;
+}
+/* Aurora gradient border ring — subtle at rest, glows on focus */
+.composer-bar::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 18px;
+  padding: 1.5px;
+  background: linear-gradient(120deg, rgba(108,123,245,0.55), rgba(226,75,196,0.40) 55%, rgba(16,201,138,0.45));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  opacity: 0.45;
+  transition: opacity 0.22s ease;
+  pointer-events: none;
+}
+.composer-bar:focus-within::before { opacity: 1; }
+.composer-bar:focus-within {
+  box-shadow: var(--aurora-glow), inset 0 1px 0 rgba(255,255,255,0.7);
+}
+
+/* ── Rich composer: 3-row layout via flex-wrap + order (no DOM reorder) ── */
+.composer-bar.composer-rich {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 6px;
+  padding: 8px 12px;
+}
+.composer-rich .composer-format-row { flex: 0 0 100%; order: 1; }
+.composer-rich .composer-recording  { flex: 0 0 100%; order: 2; }
+.composer-rich > textarea           { flex: 1 1 100%; order: 3; }
+.composer-rich .composer-tools      { order: 4; }
+.composer-rich .composer-hint       { order: 5; margin-left: auto; }
+.composer-rich .composer-send       { order: 6; }
+.composer-rich .composer-send-more  { order: 7; }
+
+/* Formatting toolbar */
+.composer-format-row {
+  display: flex; align-items: center; gap: 2px;
+  padding: 2px 2px 7px;
+  border-bottom: 1px solid var(--border);
+}
+.composer-format-row button {
+  width: 30px; height: 28px; border-radius: 7px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: #4A5578;
+  cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.composer-format-row button:hover { background: rgba(108,123,245,0.12); color: var(--iris); }
+.composer-format-divider { width: 1px; height: 16px; background: var(--border); margin: 0 5px; }
+
+/* '+' attach button — filled aurora circle */
+.composer-plus {
+  width: 36px; height: 36px; border-radius: 999px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; cursor: pointer; color: #fff;
+  background: var(--aurora); background-size: 200% 200%;
+  box-shadow: 0 3px 10px rgba(108,123,245,0.35);
+  transition: transform 0.18s, box-shadow 0.2s;
+}
+.composer-plus:hover { transform: translateY(-1px) scale(1.05); box-shadow: 0 6px 16px rgba(226,75,196,0.4); }
+/* keep the '+' aurora even inside .composer-tools (whose hover would tint it) */
+.composer-tools .composer-plus,
+.composer-tools .composer-plus:hover { background: var(--aurora) !important; color: #fff !important; }
+
+/* 'Shift + Enter' hint */
+.composer-hint {
+  font-family: var(--font-mono); font-size: 10.5px; color: #8B93AD;
+  white-space: nowrap; margin-right: 2px;
+}
+
+/* Send 'more' chevron button */
+.composer-send-more {
+  width: 34px; height: 40px; border-radius: 12px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; cursor: pointer; color: #fff;
+  background: var(--aurora); background-size: 200% 200%;
+  box-shadow: 0 3px 10px rgba(108,123,245,0.30);
+  transition: transform 0.18s;
+}
+.composer-send-more:hover { transform: translateY(-1px); }
+
+/* ═══════════════════════════════════════════════════════════════
+   LABELED ICON RAIL (redesign) — rounded-square icon + label below
+   ═══════════════════════════════════════════════════════════════ */
+.rail-top, .rail-bottom {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; width: 100%;
+}
+.rail-bottom { margin-top: auto; }
+/* Scroll instead of clipping the last items (e.g. Copilot) on short screens */
+.workspace-rail, .workspace-right-rail { overflow-y: auto; overflow-x: hidden; }
+.workspace-rail::-webkit-scrollbar, .workspace-right-rail::-webkit-scrollbar { width: 0; }
+
+.workspace-rail .rail-btn,
+.workspace-right-rail .rail-btn {
+  flex-direction: column;
+  gap: 3px;
+  width: 60px;
+  min-height: 46px;
+  padding: 4px 2px;
+  border-radius: 13px;
+  background: transparent;
+}
+
+/* Icon sits in a rounded square */
+.workspace-rail .rail-btn svg,
+.workspace-right-rail .rail-btn svg {
+  box-sizing: content-box;
+  width: 19px; height: 19px;
+  padding: 7px;
+  border-radius: 11px;
+  background: rgba(255,255,255,0.06);
+  transition: background 0.18s, transform 0.2s, box-shadow 0.2s;
+}
+.workspace-rail .rail-btn:hover svg,
+.workspace-right-rail .rail-btn:hover svg {
+  background: rgba(255,255,255,0.13);
+}
+.workspace-rail .rail-btn.active svg,
+.workspace-right-rail .rail-btn.active svg {
+  background: linear-gradient(160deg, #7B52E8, #5B6CF8) !important;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(123,82,232,0.5);
+}
+
+/* Button itself is transparent now (the square + label do the work) */
+.workspace-rail .rail-btn:hover,
+.workspace-right-rail .rail-btn:hover { background: transparent; color: #ffffff; }
+.workspace-rail .rail-btn.active,
+.workspace-right-rail .rail-btn.active { background: transparent; color: #ffffff; }
+.workspace-rail .rail-btn.active::before,
+.workspace-right-rail .rail-btn.active::before { display: none; }
+
+/* Label always visible below the icon (was a hover tooltip) */
+.workspace-rail .rail-btn .rail-label,
+.workspace-right-rail .rail-btn .rail-label {
+  position: static;
+  left: auto; right: auto; top: auto;
+  transform: none !important;
+  opacity: 1;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 0;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: inherit;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Unread count pill — aurora badge for channels + people (normal unread) */
+.unread-pill {
+  background: linear-gradient(135deg, #6C7BF5, #8B5CF6) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 7px rgba(108,123,245,0.55);
+  font-weight: 800;
+}
+/* Mentions / DMs get a red pill so they stand out */
+.unread-pill-mention {
+  background: linear-gradient(135deg, #EF476F, #F5576C) !important;
+  box-shadow: 0 2px 7px rgba(239,71,111,0.55) !important;
+}
+/* Total-unread badge on the Chat rail icon (top-right of the icon square) */
+.rail-unread-dot {
+  position: absolute;
+  top: 2px; right: 8px;
+  min-width: 16px; height: 16px; padding: 0 4px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  font-size: 9px; line-height: 1;
+  border: 1.5px solid var(--aurora-nav-1, #1E2338);
+  z-index: 2;
+}
+
+/* Sidebar close arrow (in the EduTechExOS header row) */
+.sidebar-close-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; margin-left: auto; margin-right: 4px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 7px; background: rgba(255,255,255,0.06);
+  color: var(--sidebar-muted); cursor: pointer; flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.sidebar-close-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+
+/* Sidebar reopen arrow (in the icon rail, only when collapsed) */
+.sidebar-open-btn svg {
+  background: rgba(108,123,245,0.20) !important;
+  color: #B9C2FF;
+}
+.sidebar-open-btn:hover svg { background: rgba(108,123,245,0.32) !important; color: #fff; }
+
+/* Copilot rail button — clean accent card with the mascot */
+.copilot-rail-btn {
+  background: rgba(108,123,245,0.16) !important;
+  border: 1px solid rgba(139,92,246,0.30) !important;
+  box-shadow: 0 4px 14px rgba(108,123,245,0.20);
+  transition: transform 0.18s ease, box-shadow 0.22s ease, background 0.2s ease;
+}
+.copilot-rail-btn::after { display: none; }
+.copilot-rail-btn svg {
+  position: relative; z-index: 1;
+  width: 26px !important; height: 26px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  filter: drop-shadow(0 2px 5px rgba(20,10,45,0.35));
+}
+.copilot-rail-btn:hover {
+  transform: translateY(-2px);
+  background: rgba(108,123,245,0.24) !important;
+  box-shadow: 0 8px 20px rgba(139,92,246,0.35);
+}
+.copilot-rail-btn.active {
+  background: rgba(139,92,246,0.26) !important;
+  box-shadow: 0 6px 18px rgba(139,92,246,0.40), 0 0 0 1.5px rgba(139,92,246,0.45);
+}
+.copilot-rail-btn.active::before { display: none; }
+
+/* Rail logo + workspace badge — gentle float on hover */
+.rail-logo-wrap:hover, .sidebar-workspace-dot:hover {
+  transform: translateY(-2px) scale(1.05);
+}
+.sidebar-workspace-dot { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-header::after, .aurora-anim { animation: none !important; }
 }

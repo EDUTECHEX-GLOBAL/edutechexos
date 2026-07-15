@@ -182,6 +182,7 @@ type Member = {
   status: MemberStatus;
   color: string;
   channelIds?: string[];
+  channelsExplicit?: boolean;
   onLeave?: boolean;
   isAvailable?: boolean;
 };
@@ -296,6 +297,8 @@ type DashboardState = {
   incrementUnread: (channelId: string) => void;
   clearUnread: (channelId: string) => void;
   clearAllUnread: () => void;
+  mentionCounts: Record<string, number>;
+  incrementMention: (channelId: string) => void;
   resetUserState: () => void;
 };
 
@@ -1145,21 +1148,24 @@ export const useDashboardStore = create<DashboardState>()(
             // Admins/Managers get access to every channel; regular members only get the
             // channels an admin has explicitly assigned to them (+ #general for everyone).
             const allMemberIds = dbMembers.map((m) => m.id);
-            const privilegedIds = new Set(
-              dbMembers
-                .filter((m) => m.role === 'Admin' || m.role === 'Manager')
-                .map((m) => m.id)
-            );
             const newChannels = s.channels.map((ch) => {
               if (!isWS(ch.id)) return ch;
               if (ch.id === 'general') {
                 // Everyone is in #general
                 return syncCount({ ...ch, memberIds: allMemberIds });
               }
-              // For extra channels: admins/managers + members whose channelIds includes this channel
+              // Extra channels honour each member's explicit channelIds. An
+              // Admin/Manager whose channels have never been edited
+              // (channelsExplicit === false) still defaults into every channel,
+              // so nothing disappears for existing workspaces. But once an admin
+              // edits a privileged user's channels, channelsExplicit flips true
+              // and we honour the exact list (even an empty one) — so admins and
+              // managers can be removed from a channel just like anyone else,
+              // instead of being force-re-added on every reload.
               const assigned = dbMembers
                 .filter((m) => {
-                  if (privilegedIds.has(m.id)) return true;
+                  const isPrivileged = m.role === 'Admin' || m.role === 'Manager';
+                  if (isPrivileged && !m.channelsExplicit) return true;
                   return (m.channelIds ?? []).includes(ch.id);
                 })
                 .map((m) => m.id);
@@ -1452,13 +1458,21 @@ export const useDashboardStore = create<DashboardState>()(
       },
       clearUnread: (channelId) => {
         set((s) => {
-          if (!s.unreadCounts[channelId]) return s;
+          if (!s.unreadCounts[channelId] && !s.mentionCounts[channelId]) return s;
           const next = { ...s.unreadCounts };
           delete next[channelId];
-          return { unreadCounts: next };
+          const nextM = { ...s.mentionCounts };
+          delete nextM[channelId];
+          return { unreadCounts: next, mentionCounts: nextM };
         });
       },
-      clearAllUnread: () => set({ unreadCounts: {} }),
+      clearAllUnread: () => set({ unreadCounts: {}, mentionCounts: {} }),
+      mentionCounts: {},
+      incrementMention: (channelId) => {
+        set((s) => ({
+          mentionCounts: { ...s.mentionCounts, [channelId]: (s.mentionCounts[channelId] ?? 0) + 1 },
+        }));
+      },
       resetUserState: () => {
         // Clear ALL per-user in-memory state when a user logs out so the
         // next user who logs in on the same device starts completely clean.
@@ -1474,6 +1488,7 @@ export const useDashboardStore = create<DashboardState>()(
           activeThreadId: null,
           typingUsers: {},
           unreadCounts: {},
+          mentionCounts: {},
           notifications: [],
           kanbanTasks: [],
           wikiPages: {},
@@ -1496,6 +1511,7 @@ export const useDashboardStore = create<DashboardState>()(
         // messages persisted so they survive refresh when backend is sleeping (Render free tier)
         messages: s.messages,
         unreadCounts: s.unreadCounts,
+        mentionCounts: s.mentionCounts,
         // NOTE: pinnedMessageIds, bookmarkedMessageIds, notifications are NOT persisted —
         // they are user-specific and loaded from backend on login. Persisting them would
         // leak one user's data to the next user who logs in on the same device.

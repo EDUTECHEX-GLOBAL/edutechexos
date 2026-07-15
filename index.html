@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Productivity Hub • Analytics Dashboard</title>
+  <meta name="description" content="Overview of team productivity, desktop activity, app sessions, and audit logs with modern UI and smooth animations." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="design_system.css" />
+  <link rel="stylesheet" href="components.css" />
+  <style>
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--space-lg);
+      margin-top: var(--space-xl);
+    }
+  </style>
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo"><strong>Productivity Hub</strong></div>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="desktop_activity.html">Desktop Activity</a>
+      <a href="app_session_activity.html">App Sessions</a>
+      <a href="audit_log.html">Audit Log</a>
+      <a href="live_today_team_overview.html">Team Overview</a>
+      <a href="team_activity.html">Team Activity</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <h1 class="fade-in-up" style="font-size: var(--font-size-xl);">Welcome to the Productivity Hub</h1>
+    <section class="dashboard-grid">
+      <div class="card fade-in-up" style="animation-delay: 0.1s;">
+        <h2>Desktop Activity</h2>
+        <p>1 online now • 6h 31m team total</p>
+        <button class="btn" onclick="location.href='desktop_activity.html'">View Details</button>
+      </div>
+      <div class="card fade-in-up" style="animation-delay: 0.2s;">
+        <h2>App Session Activity</h2>
+        <p>0/17 agents connected</p>
+        <button class="btn" onclick="location.href='app_session_activity.html'">View Details</button>
+      </div>
+      <div class="card fade-in-up" style="animation-delay: 0.3s;">
+        <h2>Audit Log</h2>
+        <p>Recent actions and security events.</p>
+        <button class="btn" onclick="location.href='audit_log.html'">Open Log</button>
+      </div>
+      <div class="card fade-in-up" style="animation-delay: 0.4s;">
+        <h2>Live Today – Team Overview</h2>
+        <p>Real‑time status of the team.</p>
+        <button class="btn" onclick="location.href='live_today_team_overview.html'">Explore</button>
+      </div>
+      <div class="card fade-in-up" style="animation-delay: 0.5s;">
+        <h2>Team Activity</h2>
+        <p>Deep dive into individual contributions.</p>
+        <button class="btn" onclick="location.href='team_activity.html'">See More</button>
+      </div>
+    </section>
+  </main>
+  <footer class="container" style="margin-top: var(--space-xl); text-align: center; font-size: 0.9rem; color: var(--color-muted);">
+    © 2026 Productivity Hub – All rights reserved.
+  </footer>
+</body>
+</html>

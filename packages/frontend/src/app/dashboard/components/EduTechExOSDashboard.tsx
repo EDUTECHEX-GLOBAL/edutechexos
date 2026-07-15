@@ -11,7 +11,8 @@ import { useTheme } from '@/components/ThemeProvider';
 import { sendMentionEmailNotification, changePassword } from '@/app/actions/dbActions';
 import { smartUpload } from '@/lib/smartUpload';
 import NotificationPanel from './NotificationPanel';
-import AIPanel from './AIPanel';
+import AIPanel, { CopilotMascot } from './AIPanel';
+import { Bold, Italic, Strikethrough, Code, Link2, List, ListOrdered, AtSign } from 'lucide-react';
 import { ToastContainer, type ToastData } from './ToastNotification';
 import { getSocket } from '@/lib/socket';
 import { bankSessionTime } from '@/lib/sessionTimer';
@@ -111,6 +112,7 @@ import {
   Clock,
   Menu,
   ChevronLeft,
+  ChevronRight,
   CalendarX,
   Activity,
   Lock,
@@ -440,6 +442,7 @@ export default function EduTechExOSDashboard() {
   } = useDashboardStore();
   // Separate selector so badge counts always trigger a re-render
   const unreadCounts = useDashboardStore((s) => s.unreadCounts);
+  const mentionCounts = useDashboardStore((s) => s.mentionCounts);
   const [dmToasts, setDmToasts] = useState<ToastData[]>([]);
   const [rightPanel, setRightPanel] = useState<'ai' | 'closed'>('closed');
   const [rightSidePanel, setRightSidePanel] = useState<'pinned' | 'bookmarked' | null>(null);
@@ -467,6 +470,8 @@ export default function EduTechExOSDashboard() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'chat' | 'tasks' | 'ai'>('chat');
   const [composerMessage, setComposerMessage] = useState('');
+  const [msgFilter, setMsgFilter] = useState<'all' | 'mentions' | 'files' | 'tasks'>('all');
+  const [formatBarOpen, setFormatBarOpen] = useState(true);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [activityCalendarOpen, setActivityCalendarOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -979,6 +984,16 @@ export default function EduTechExOSDashboard() {
       // Increment unread count for non-active channels
       if (channelId !== useDashboardStore.getState().activeChannel && message.sender !== currentUserRef.current?.name) {
         useDashboardStore.getState().incrementUnread(channelId);
+        // Red badge if this message @mentions me (or @channel/@everyone), or it's a DM
+        const myName = currentUserRef.current?.name?.toLowerCase() ?? '';
+        const first = myName.split(' ')[0];
+        const t = (displayMessage.text ?? '').toLowerCase();
+        const isDM = channelId.startsWith('member-') || channelId.startsWith('dm-');
+        if (isDM || t.includes('@channel') || t.includes('@everyone')
+          || (myName && t.includes(`@${myName}`))
+          || (first && first.length > 1 && t.includes(`@${first}`))) {
+          useDashboardStore.getState().incrementMention(channelId);
+        }
       }
       // Only notify for messages sent by someone else
       if (message.sender !== currentUserRef.current?.name) {
@@ -1679,6 +1694,20 @@ export default function EduTechExOSDashboard() {
 
   // Only top-level messages in main feed; replies live in the thread panel
   const visibleMessages = channelMessages.filter((m) => !m.parentId);
+  // Filter-bar predicate: Mentions = message @-tags you, Files = has an
+  // attachment/voice/video, Tasks = carries a task card. 'all' shows everything.
+  const matchesMsgFilter = (m: (typeof visibleMessages)[number]) => {
+    if (msgFilter === 'mentions') {
+      const name = currentUser?.name?.toLowerCase() ?? '';
+      const first = name.split(' ')[0];
+      const t = (m.text ?? '').toLowerCase();
+      return !!name && (t.includes(`@${name}`) || (!!first && t.includes(`@${first}`)));
+    }
+    if (msgFilter === 'files') return !!(m.files?.length || m.videoUrl || m.audioUrl);
+    if (msgFilter === 'tasks') return !!m.taskCard;
+    return true;
+  };
+  const shownMessages = msgFilter === 'all' ? visibleMessages : visibleMessages.filter(matchesMsgFilter);
   const replyCount = (msgId: string) => channelMessages.filter((m) => m.parentId === msgId).length;
 
   function insertComposerText(prefix: string, suffix = '') {
@@ -2709,7 +2738,7 @@ export default function EduTechExOSDashboard() {
                     <Hash size={13} style={{ opacity: isActive ? 1 : 0.55, flexShrink: 0 }} />
                     <span className="min-w-0 flex-1 truncate">{ch.name}</span>
                     {unread > 0 && !isActive && (
-                      <span className="ml-auto shrink-0 flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-[#EF476F] px-1 text-[9px] font-black text-white" style={{ height: 18 }}>
+                      <span className="unread-pill ml-auto shrink-0 flex h-4.5 min-w-[18px] items-center justify-center rounded-full px-1 text-[9px] font-black" style={{ height: 18 }}>
                         {unread > 99 ? '99+' : unread}
                       </span>
                     )}
@@ -2763,7 +2792,7 @@ export default function EduTechExOSDashboard() {
                       <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[8px] font-black text-amber-700">Leave</span>
                     )}
                     {dmUnread > 0 && !isActive && (
-                      <span className="ml-1 shrink-0 flex min-w-[18px] items-center justify-center rounded-full bg-[#EF476F] px-1 text-[9px] font-black text-white" style={{ height: 18 }}>
+                      <span className="unread-pill ml-1 shrink-0 flex min-w-[18px] items-center justify-center rounded-full px-1 text-[9px] font-black" style={{ height: 18 }}>
                         {dmUnread > 99 ? '99+' : dmUnread}
                       </span>
                     )}
@@ -2793,15 +2822,15 @@ export default function EduTechExOSDashboard() {
               />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-semibold" style={{ color: '#000000' }}>{currentUser?.name}</p>
-              <p className="truncate text-[10px]" style={{ color: '#333333' }}>
+              <p className="truncate text-[12px] font-semibold" style={{ color: 'var(--sidebar-text)' }}>{currentUser?.name}</p>
+              <p className="truncate text-[10px]" style={{ color: 'var(--sidebar-muted)' }}>
                 {currentUser?.role}
               </p>
             </div>
             <button
               onClick={() => { toast.success('Signed out'); performSignOut(); }}
               className="flex h-7 w-7 items-center justify-center rounded"
-              style={{ color: '#000000' }}
+              style={{ color: 'var(--sidebar-muted)' }}
             >
               <LogOut size={14} />
             </button>
@@ -2888,9 +2917,33 @@ export default function EduTechExOSDashboard() {
 
           <div className="rail-divider" />
 
-          <motion.button whileTap={{ scale: 0.9 }} className="rail-btn active">
+          {!sidebarExpanded && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setSidebarExpanded(true)}
+              className="rail-btn sidebar-open-btn"
+              title="Open sidebar"
+            >
+              <ChevronRight size={19} strokeWidth={2.2} />
+              <span className="rail-label">Open</span>
+            </motion.button>
+          )}
+
+          <motion.button whileTap={{ scale: 0.9 }} className="rail-btn active" style={{ position: 'relative' }}>
             <Hash size={19} strokeWidth={2.2} />
             <span className="rail-label">Chat</span>
+            {(() => {
+              const totalUnread   = Object.values(unreadCounts).reduce((s, n) => s + n, 0);
+              const totalMentions = Object.values(mentionCounts).reduce((s, n) => s + n, 0);
+              if (totalUnread <= 0) return null;
+              return (
+                <span className={`unread-pill${totalMentions > 0 ? ' unread-pill-mention' : ''} rail-unread-dot`}>
+                  {totalUnread > 99 ? '99+' : totalUnread}
+                </span>
+              );
+            })()}
           </motion.button>
 
           {[
@@ -2956,11 +3009,18 @@ export default function EduTechExOSDashboard() {
         <div className="sidebar-search-bar">
           <div className="mb-2.5 flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-[8px] flex-shrink-0" style={{ background: 'linear-gradient(135deg,#6C7BF5,#5055E8)', boxShadow: '0 2px 8px rgba(108,123,245,0.4)' }}>
+              <div className="flex h-7 w-7 items-center justify-center rounded-[8px] flex-shrink-0" style={{ background: 'linear-gradient(115deg,#6C7BF5,#E24BC4 55%,#10C98A)', boxShadow: '0 3px 10px rgba(226,75,196,0.4)' }}>
                 <span className="text-[11px] font-black text-white">E</span>
               </div>
               <span className="text-[13px] font-bold text-white tracking-[-0.01em] truncate">EduTechExOS</span>
             </div>
+            <button
+              onClick={() => setSidebarExpanded(false)}
+              title="Close sidebar"
+              className="sidebar-close-btn"
+            >
+              <ChevronLeft size={15} />
+            </button>
             {unreadNotifications > 0 && (
               <motion.button
                 whileTap={{ scale: 0.88 }}
@@ -3042,21 +3102,26 @@ export default function EduTechExOSDashboard() {
                           <motion.span
                             layoutId="active-channel-bar"
                             className="absolute left-0 top-1.5 bottom-1.5 w-[2.5px] rounded-full"
-                            style={{ background: 'linear-gradient(180deg,#818CF8,#6C7BF5)', boxShadow: '0 0 8px rgba(108,123,245,0.6)' }}
+                            style={{ background: 'linear-gradient(180deg,#6C7BF5,#E24BC4)', boxShadow: '0 0 10px rgba(226,75,196,0.6)' }}
                             transition={{ type: 'spring', stiffness: 600, damping: 32 }}
                           />
                         )}
                         <Hash size={13} style={{ opacity: isActive ? 1 : 0.55, flexShrink: 0 }} />
-                        <span className="min-w-0 flex-1 truncate">{item.name}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate">{item.name}</span>
+                          {item.description && (
+                            <span className="sidebar-channel-sub block truncate">{item.description}</span>
+                          )}
+                        </span>
                         {(() => {
                           const count = (unreadCounts[item.id] ?? 0) + (item.unread ?? 0);
+                          const hasMention = (mentionCounts[item.id] ?? 0) > 0;
                           return count > 0 && !isActive ? (
                             <motion.span
                               initial={{ scale: 0 }}
                               animate={{ scale: 1 }}
                               transition={{ type: 'spring', stiffness: 600, damping: 20 }}
-                              className="rounded-full px-1.5 py-0.5 text-[10px] font-black"
-                              style={{ background: '#EF476F', color: '#ffffff' }}
+                              className={`unread-pill${hasMention ? ' unread-pill-mention' : ''} rounded-full px-1.5 py-0.5 text-[10px] font-black`}
                             >
                               {count > 99 ? '99+' : count}
                             </motion.span>
@@ -3076,13 +3141,13 @@ export default function EduTechExOSDashboard() {
             <div className="space-y-0.5">
               {people.map((member, i) => {
                 const avatarColors = [
-                  '#4338ca',
-                  '#0891b2',
-                  '#7c3aed',
-                  '#059669',
-                  '#d97706',
-                  '#dc2626',
-                  '#2563eb',
+                  '#6C7BF5',
+                  '#8B5CF6',
+                  '#E24BC4',
+                  '#10C98A',
+                  '#F5A524',
+                  '#EF476F',
+                  '#0EA5E9',
                 ];
                 const avatarBg = avatarColors[i % avatarColors.length];
                 return (
@@ -3169,8 +3234,9 @@ export default function EduTechExOSDashboard() {
                       {(() => {
                         const dmChId = member.id;
                         const dmUnread = unreadCounts[dmChId] ?? 0;
+                        const dmMention = (mentionCounts[dmChId] ?? 0) > 0;
                         return dmUnread > 0 ? (
-                          <span className="shrink-0 flex min-w-[18px] items-center justify-center rounded-full bg-[#EF476F] px-1 text-[9px] font-black text-white" style={{ height: 18 }}>
+                          <span className={`unread-pill${dmMention ? ' unread-pill-mention' : ''} shrink-0 flex min-w-[18px] items-center justify-center rounded-full px-1 text-[9px] font-black`} style={{ height: 18 }}>
                             {dmUnread > 99 ? '99+' : dmUnread}
                           </span>
                         ) : null;
@@ -3231,12 +3297,14 @@ export default function EduTechExOSDashboard() {
 
           {/* ── Desktop Tracking Setup Banner ─────────────── */}
           {(showSetupBanner || (awStatus !== 'connected' && !awBannerDismissed)) && (
-            <div style={{ margin: '14px 8px 8px', borderRadius: 14, background: '#1A1F35', border: '1.5px solid rgba(99,102,241,0.35)', overflow: 'hidden' }}>
+            <div style={{ margin: '14px 8px 8px', borderRadius: 16, background: 'linear-gradient(165deg, #262C48, #1E2338)', border: '1px solid rgba(139,92,246,0.28)', overflow: 'hidden', boxShadow: '0 14px 34px rgba(0,0,0,0.30)' }}>
+              {/* Aurora top accent */}
+              <div style={{ height: 3, background: 'linear-gradient(90deg,#6C7BF5,#8B5CF6 55%,#22D3EE)' }} />
 
               {/* Header */}
-              <div style={{ padding: '12px 14px 10px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <div style={{ padding: '13px 15px 11px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF476F', flexShrink: 0, animation: 'ping 1.5s infinite' }} />
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#F5A524', flexShrink: 0, animation: 'ping 1.5s infinite', boxShadow: '0 0 8px rgba(245,165,36,0.7)' }} />
                   <span style={{ fontSize: 12, fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em', flex: 1 }}>
                     Desktop Tracking Not Active
                   </span>
@@ -3256,7 +3324,7 @@ export default function EduTechExOSDashboard() {
 
                 {/* Step 1 */}
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(99,102,241,0.25)', border: '1.5px solid rgba(99,102,241,0.50)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#A5B4FC', flexShrink: 0, marginTop: 1 }}>1</div>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#6C7BF5,#8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0, marginTop: 1, boxShadow: '0 3px 8px rgba(108,123,245,0.4)' }}>1</div>
                   <div style={{ flex: 1 }}>
                     <p style={{ fontSize: 11, fontWeight: 700, color: '#ffffff', margin: '0 0 3px' }}>Download &amp; Install ActivityWatch</p>
                     <p style={{ fontSize: 10.5, color: 'rgba(165,180,252,0.65)', margin: '0 0 6px', lineHeight: 1.5 }}>
@@ -3266,7 +3334,7 @@ export default function EduTechExOSDashboard() {
                       href="https://activitywatch.net/downloads/"
                       target="_blank"
                       rel="noreferrer"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 7, background: 'rgba(99,102,241,0.22)', border: '1px solid rgba(99,102,241,0.40)', padding: '5px 10px', fontSize: 11, fontWeight: 700, color: '#A5B4FC', textDecoration: 'none' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 8, background: 'linear-gradient(135deg,#6C7BF5,#8B5CF6)', border: 'none', padding: '6px 12px', fontSize: 11, fontWeight: 700, color: '#fff', textDecoration: 'none', boxShadow: '0 4px 12px rgba(108,123,245,0.35)' }}
                     >
                       Download ActivityWatch →
                     </a>
@@ -3277,7 +3345,7 @@ export default function EduTechExOSDashboard() {
 
                 {/* Step 2 */}
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(99,102,241,0.25)', border: '1.5px solid rgba(99,102,241,0.50)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#A5B4FC', flexShrink: 0, marginTop: 1 }}>2</div>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#6C7BF5,#8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0, marginTop: 1, boxShadow: '0 3px 8px rgba(108,123,245,0.4)' }}>2</div>
                   <div style={{ flex: 1 }}>
                     <p style={{ fontSize: 11, fontWeight: 700, color: '#ffffff', margin: '0 0 3px' }}>Download the aw-sync.js Agent</p>
                     <p style={{ fontSize: 10.5, color: 'rgba(165,180,252,0.65)', margin: '0 0 6px', lineHeight: 1.5 }}>
@@ -3286,7 +3354,7 @@ export default function EduTechExOSDashboard() {
                     <a
                       href="/aw-sync.js"
                       download="aw-sync.js"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 7, background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.35)', padding: '5px 10px', fontSize: 11, fontWeight: 700, color: '#10B981', textDecoration: 'none' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 8, background: 'rgba(16,201,138,0.16)', border: '1px solid rgba(16,201,138,0.42)', padding: '6px 12px', fontSize: 11, fontWeight: 700, color: '#34D399', textDecoration: 'none' }}
                     >
                       Download aw-sync.js ↓
                     </a>
@@ -3297,13 +3365,13 @@ export default function EduTechExOSDashboard() {
 
                 {/* Step 3 */}
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(99,102,241,0.25)', border: '1.5px solid rgba(99,102,241,0.50)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#A5B4FC', flexShrink: 0, marginTop: 1 }}>3</div>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#6C7BF5,#8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0, marginTop: 1, boxShadow: '0 3px 8px rgba(108,123,245,0.4)' }}>3</div>
                   <div style={{ flex: 1 }}>
                     <p style={{ fontSize: 11, fontWeight: 700, color: '#ffffff', margin: '0 0 3px' }}>Run the command in your terminal</p>
                     <p style={{ fontSize: 10.5, color: 'rgba(165,180,252,0.65)', margin: '0 0 6px', lineHeight: 1.5 }}>
                       Open a terminal in the folder where you saved <code style={{ fontSize: 10, color: '#A5B4FC', background: 'rgba(99,102,241,0.15)', borderRadius: 3, padding: '0 4px' }}>aw-sync.js</code> and run:
                     </p>
-                    <div style={{ background: '#0D1020', borderRadius: 8, padding: '10px 12px', position: 'relative', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ background: '#12152A', borderRadius: 10, padding: '11px 13px', position: 'relative', border: '1px solid rgba(139,92,246,0.20)' }}>
                       <code style={{ fontSize: 10.5, color: '#10B981', display: 'block', lineHeight: 2, whiteSpace: 'pre', fontFamily: 'monospace' }}>{`node aw-sync.js ^\n  --email ${currentUserEmail} ^\n  --password YOUR_PASSWORD ^\n  --startup`}</code>
                       <button
                         onClick={() => {
@@ -3326,7 +3394,7 @@ export default function EduTechExOSDashboard() {
               </div>
 
               {/* Warning footer */}
-              <div style={{ margin: '0 10px 10px', display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 12px', borderRadius: 9, background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.25)' }}>
+              <div style={{ margin: '2px 12px 12px', display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 10, background: 'rgba(245,165,36,0.10)', border: '1px solid rgba(245,165,36,0.28)' }}>
                 <span style={{ fontSize: 14, flexShrink: 0, lineHeight: 1 }}>⚠️</span>
                 <span style={{ fontSize: 11, color: 'rgba(253,186,116,0.90)', lineHeight: 1.55 }}>
                   <strong style={{ color: '#FCD34D' }}>Important:</strong> Make sure ActivityWatch is open and running before you run the command above. This banner disappears automatically as soon as your activity is detected.
@@ -3355,14 +3423,14 @@ export default function EduTechExOSDashboard() {
               />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12.5px] font-semibold leading-tight" style={{ color: '#000000' }}>
+              <p className="truncate text-[12.5px] font-semibold leading-tight" style={{ color: 'var(--sidebar-text)' }}>
                 {currentUser?.name ?? 'Guest'}
               </p>
-              <p className="text-[10.5px]" style={{ color: '#555555' }}>
+              <p className="text-[10.5px]" style={{ color: 'var(--sidebar-muted)' }}>
                 {currentUser?.role ?? 'Viewer'}
               </p>
               {/* Screen time */}
-              <p className="text-[9.5px] font-bold tracking-wide" style={{ color: 'rgba(62,74,137,0.65)' }}>
+              <p className="text-[9.5px] font-bold tracking-wide" style={{ color: 'var(--sidebar-muted)' }}>
                 {(() => {
                   const h = Math.floor(sessionSeconds / 3600);
                   const m = Math.floor((sessionSeconds % 3600) / 60);
@@ -3379,8 +3447,8 @@ export default function EduTechExOSDashboard() {
                 title="Set up desktop tracking"
                 onClick={() => setShowSetupBanner((v) => !v)}
                 className="flex h-7 w-7 items-center justify-center rounded"
-                style={{ color: showSetupBanner ? '#6366f1' : '#000000' }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.07)'; }}
+                style={{ color: showSetupBanner ? 'var(--iris)' : 'var(--sidebar-muted)' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.1)'; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
               >
                 <Monitor size={14} />
@@ -3390,8 +3458,8 @@ export default function EduTechExOSDashboard() {
                 title="Activity"
                 onClick={() => setActivityCalendarOpen(true)}
                 className="flex h-7 w-7 items-center justify-center rounded"
-                style={{ color: '#000000' }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0,0,0,0.07)')}
+                style={{ color: 'var(--sidebar-muted)' }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
                 <CalendarDays size={14} />
@@ -3401,14 +3469,14 @@ export default function EduTechExOSDashboard() {
                 title="Sign out"
                 onClick={() => { toast.success('Signed out'); performSignOut(); }}
                 className="flex h-7 w-7 items-center justify-center rounded"
-                style={{ color: '#000000' }}
+                style={{ color: 'var(--sidebar-muted)' }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = 'rgba(239,68,68,0.14)';
                   e.currentTarget.style.color = '#ef4444';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#000000';
+                  e.currentTarget.style.color = 'var(--sidebar-muted)';
                 }}
               >
                 <LogOut size={14} />
@@ -3443,10 +3511,10 @@ export default function EduTechExOSDashboard() {
             <div className="inline-flex items-center gap-2.5">
               {/* Hash badge */}
               <span
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white text-[14px] font-black"
+                className="aurora-anim flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white text-[14px] font-black"
                 style={{
-                  background: 'linear-gradient(135deg, #6C7BF5, #5055E8)',
-                  boxShadow: '0 2px 12px rgba(108,123,245,0.40)',
+                  background: 'linear-gradient(115deg, #6C7BF5, #E24BC4 55%, #10C98A)',
+                  boxShadow: '0 3px 14px rgba(226,75,196,0.38)',
                 }}
               >
                 #
@@ -3454,7 +3522,7 @@ export default function EduTechExOSDashboard() {
               {/* Channel name */}
               <span
                 className="truncate text-[20px] font-black leading-tight max-w-[140px] sm:max-w-[260px]"
-                style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
+                style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em', fontFamily: 'var(--font-display)' }}
               >
                 {channel?.id.startsWith('member-') ? channel.name : channel?.name}
               </span>
@@ -3716,11 +3784,41 @@ export default function EduTechExOSDashboard() {
           })()}
 
         <section className="chat-scroll">
+          {/* Filter bar — All · Mentions · Files · Tasks (sticky, glides via layoutId) */}
+          <div className="chat-filterbar">
+            <div className="chat-filter-track">
+              {(['all', 'mentions', 'files', 'tasks'] as const).map((f) => {
+                const isActive = msgFilter === f;
+                const label = f === 'all' ? 'All' : f === 'mentions' ? 'Mentions' : f === 'files' ? 'Files' : 'Tasks';
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setMsgFilter(f)}
+                    className={`chat-filter-tab${isActive ? ' active' : ''}`}
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId="chat-filter-pill"
+                        className="chat-filter-pill"
+                        transition={{ type: 'spring', stiffness: 500, damping: 36 }}
+                      />
+                    )}
+                    <span className="relative z-[1]">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="mt-auto w-full">
             <div className="pb-6 px-3">
-              {visibleMessages.map((message, index) => {
-                const prev = visibleMessages[index - 1];
-                const next = visibleMessages[index + 1];
+              {shownMessages.length === 0 && msgFilter !== 'all' && (
+                <div className="chat-filter-empty">
+                  No {msgFilter} here yet.
+                </div>
+              )}
+              {shownMessages.map((message, index) => {
+                const prev = shownMessages[index - 1];
+                const next = shownMessages[index + 1];
                 const isOwn = message.sender === currentUser?.name;
                 const showDateDivider =
                   !prev || !isSameCalendarDay(prev.timestamp, message.timestamp);
@@ -3772,7 +3870,7 @@ export default function EduTechExOSDashboard() {
 
                       {/* Bubble column */}
                       <div
-                        className={`flex flex-col max-w-[70%] ${isOwn ? 'items-end' : 'items-start'}`}
+                        className={`flex min-w-0 flex-col max-w-[70%] ${isOwn ? 'items-end' : 'items-start'}`}
                       >
                         {/* Sender name — receiver, first in group only */}
                         {isFirst && !isOwn && (
@@ -3787,12 +3885,12 @@ export default function EduTechExOSDashboard() {
                         {/* Main bubble */}
                         {!message.poll && (
                           <div
-                            className={`relative group/bubble rounded-2xl px-3.5 py-2.5 shadow-sm
+                            className={`relative group/bubble chat-bubble rounded-2xl px-3.5 py-2.5 shadow-sm
                         ${isOwn
                                 ? `bg-[#1E2538] text-white border border-[rgba(62,74,137,0.15)] ${isLast ? 'bubble-own rounded-br-sm' : ''}`
                                 : `bg-white border border-[rgba(62,74,137,0.08)] text-[#1E2636] ${isLast ? 'bubble-other rounded-bl-sm' : ''}`
                               }
-                        ${isPinned ? 'ring-2 ring-amber-400' : ''}
+                        ${isPinned ? 'msg-aurora-pin' : ''}
                       `}
                           >
                             {/* Content */}
@@ -4544,7 +4642,7 @@ export default function EduTechExOSDashboard() {
             );
           })()}
 
-        <footer className="shrink-0 border-t border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/95 backdrop-blur-md px-4 py-3">
+        <footer className="composer-shell shrink-0 border-t border-[rgba(62,74,137,0.08)] bg-[#FAF8F5]/95 backdrop-blur-md px-4 py-3">
           {/* Mention dropdown */}
           {mentionMenuOpen &&
             (broadcastSuggestions.length > 0 || mentionSuggestions.length > 0) && (
@@ -4615,9 +4713,38 @@ export default function EduTechExOSDashboard() {
 
           <input ref={fileInputRef} onChange={handleFileUpload} type="file" className="hidden" />
 
-          <div className="flex items-end gap-2">
+          <div className="composer-bar composer-rich">
+            {/* Formatting toolbar */}
+            {formatBarOpen && (
+              <div className="composer-format-row">
+                <button type="button" title="Bold" onClick={() => insertComposerText('**', '**')}><Bold size={14} /></button>
+                <button type="button" title="Italic" onClick={() => insertComposerText('_', '_')}><Italic size={14} /></button>
+                <button type="button" title="Strikethrough" onClick={() => insertComposerText('~~', '~~')}><Strikethrough size={14} /></button>
+                <button type="button" title="Code" onClick={() => insertComposerText('`', '`')}><Code size={14} /></button>
+                <button type="button" title="Link" onClick={() => insertComposerText('[', '](url)')}><Link2 size={14} /></button>
+                <span className="composer-format-divider" />
+                <button type="button" title="Bullet list" onClick={() => insertComposerText('\n- ', '')}><List size={14} /></button>
+                <button type="button" title="Numbered list" onClick={() => insertComposerText('\n1. ', '')}><ListOrdered size={14} /></button>
+              </div>
+            )}
             {/* Toolbar icons */}
-            <div className="flex items-center gap-0.5 shrink-0 mb-0.5">
+            <div className="composer-tools flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="composer-plus"
+                title="Attach"
+              >
+                <Plus size={18} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormatBarOpen((v) => !v)}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] transition-colors"
+                title="Formatting"
+              >
+                <span style={{ fontSize: 14, fontWeight: 800 }}>Aa</span>
+              </button>
               <button
                 ref={emojiBtnRef}
                 onClick={() => {
@@ -4628,6 +4755,13 @@ export default function EduTechExOSDashboard() {
                 title="Emoji"
               >
                 <Smile size={18} />
+              </button>
+              <button
+                onClick={() => { insertComposerText('@', ''); setMentionMenuOpen(true); composerRef.current?.focus(); }}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-[#4A5578] transition-colors"
+                title="Mention someone"
+              >
+                <AtSign size={18} />
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -4712,7 +4846,7 @@ export default function EduTechExOSDashboard() {
             {/* Recording badge */}
             {recordingType && (
               <div
-                className="flex shrink-0 items-center gap-2 rounded-2xl px-3 py-2 mb-0.5"
+                className="composer-recording flex items-center gap-2 rounded-2xl px-3 py-2"
                 style={{
                   background: 'rgba(139,92,246,0.10)',
                   border: '1px solid rgba(139,92,246,0.22)',
@@ -4839,33 +4973,29 @@ export default function EduTechExOSDashboard() {
                   setMentionMenuOpen(false);
                 }
               }}
-              placeholder={`Message #${channel?.name ?? ''}... (Enter to send · Shift+Enter for new line)`}
-              className="flex-1 resize-none border-0 bg-transparent px-3 py-2 text-[13.5px] text-[#1E2636] placeholder-[#8a8886] focus:outline-none"
+              placeholder={`Message #${channel?.name ?? ''}...`}
+              className="composer-textarea flex-1 resize-none border-0 bg-transparent px-2 py-1.5 text-[14px] text-[#1E2636] placeholder-[#8a8886] focus:outline-none"
               rows={1}
               style={{ maxHeight: '120px', overflowY: 'auto' }}
             />
 
-            {/* Round indigo send button */}
+            {/* Hint + aurora send + more */}
+            <span className="composer-hint">Shift + Enter for new line</span>
             <button
               onClick={sendMessage}
               disabled={!composerMessage.trim()}
-              className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full text-white active:scale-90 disabled:cursor-not-allowed disabled:opacity-40 transition-all shadow-md hover:scale-105"
-              style={
-                composerMessage.trim()
-                  ? {
-                      background: 'linear-gradient(135deg, #6C7BF5, #5055E8)',
-                      boxShadow: '0 3px 10px rgba(108, 123, 245, 0.35)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      color: '#ffffff',
-                    }
-                  : {
-                      background: 'rgba(124, 133, 158, 0.15)',
-                      color: '#9BA6D3',
-                      boxShadow: 'none',
-                    }
-              }
+              className={`composer-send ${composerMessage.trim() ? 'is-active' : 'is-idle'}`}
+              title="Send"
             >
-              <Send size={15} />
+              <Send size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormatBarOpen((v) => !v)}
+              className="composer-send-more"
+              title="Toggle formatting toolbar"
+            >
+              <ChevronDown size={16} />
             </button>
           </div>
         </footer>
@@ -4959,12 +5089,9 @@ export default function EduTechExOSDashboard() {
               if (next === 'ai') trackEvent('ai_copilot_opened', { channel: channel?.name });
               setRightPanel(next);
             }}
-            className="rail-btn"
-            style={rightPanel === 'ai'
-              ? { color: '#000000', background: 'rgba(139,92,246,0.22)', border: '1px solid rgba(139,92,246,0.30)' }
-              : { color: '#000000', background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.18)' }}
+            className={`rail-btn copilot-rail-btn${rightPanel === 'ai' ? ' active' : ''}`}
           >
-            <Bot size={18} strokeWidth={2} />
+            <CopilotMascot size={28} />
             <span className="rail-label">Copilot</span>
           </motion.button>
         </div>

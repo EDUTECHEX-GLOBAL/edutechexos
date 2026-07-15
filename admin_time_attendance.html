@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Time & Attendance • Admin Console</title>
+  <meta name="description" content="Track employee clock‑in/out times, lateness, overtime and generate attendance reports." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="design_system.css" />
+  <link rel="stylesheet" href="components.css" />
+  <style>
+    .heatmap { display:grid; grid-template-columns:repeat(7,1fr); gap:var(--space-xs); margin-top:var(--space-md); }
+    .day { background:var(--color-surface); padding:var(--space-sm); border-radius:4px; text-align:center; font-size:0.85rem; }
+    .present { background:var(--color-primary); color:#000; }
+    .late { background:#ffb74d; color:#000; }
+    .absent { background:#e57373; color:#000; }
+    .toolbar { margin:var(--space-md) 0; }
+  </style>
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo"><strong>Admin Console</strong></div>
+    <nav>
+      <a href="admin_overview.html">Overview</a>
+      <a href="admin_directory_access.html">Directory &amp; Access</a>
+      <a href="admin_operations_comms.html">Ops &amp; Comms</a>
+      <a href="admin_time_attendance.html">Time &amp; Attendance</a>
+      <a href="admin_productivity_analytics.html">Productivity</a>
+    </nav>
+  </header>
+
+  <main class="container fade-in-up">
+    <h1 class="fade-in-up" style="font-size: var(--font-size-xl);">Time &amp; Attendance</h1>
+    <div class="toolbar">
+      <button class="btn" id="exportBtn">Export CSV</button>
+      <button class="btn" id="refreshBtn">Refresh</button>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Date</th>
+          <th>Clock‑In</th>
+          <th>Clock‑Out</th>
+          <th>Total Hours</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Alice</td>
+          <td>2026‑07‑10</td>
+          <td>09:02</td>
+          <td>17:45</td>
+          <td>8.7</td>
+          <td><span class="present" style="padding:2px 6px; border-radius:4px;">Present</span></td>
+        </tr>
+        <tr>
+          <td>Bob</td>
+          <td>2026‑07‑10</td>
+          <td>09:18</td>
+          <td>17:30</td>
+          <td>8.2</td>
+          <td><span class="late" style="padding:2px 6px; border-radius:4px;">Late</span></td>
+        </tr>
+        <tr>
+          <td>Charlie</td>
+          <td>2026‑07‑10</td>
+          <td>-</td>
+          <td>-</td>
+          <td>0</td>
+          <td><span class="absent" style="padding:2px 6px; border-radius:4px;">Absent</span></td>
+        </tr>
+        <!-- Additional rows -->
+      </tbody>
+    </table>
+
+    <h2 style="margin-top:var(--space-xl); font-size:var(--font-size-lg);">Weekly Attendance Heatmap</h2>
+    <div class="heatmap">
+      <!-- 7 days example -->
+      <div class="day present">Mon<br/>8h</div>
+      <div class="day late">Tue<br/>7h</div>
+      <div class="day present">Wed<br/>8h</div>
+      <div class="day absent">Thu<br/>0h</div>
+      <div class="day present">Fri<br/>8h</div>
+      <div class="day present">Sat<br/>5h</div>
+      <div class="day absent">Sun<br/>0h</div>
+    </div>
+  </main>
+
+  <footer class="container" style="margin-top: var(--space-xl); text-align:center; font-size:0.9rem; color:var(--color-muted);">
+    © 2026 Admin Console – All rights reserved.
+  </footer>
+
+  <script>
+    document.getElementById('exportBtn').addEventListener('click',()=>{
+      alert('Export CSV – placeholder action');
+    });
+    document.getElementById('refreshBtn').addEventListener('click',()=>{
+      alert('Refresh data – placeholder action');
+    });
+  </script>
+</body>
+</html>

@@ -135,10 +135,10 @@ export default function LoginTrackerCalendar() {
   if (!mounted) return <div style={{padding:32,textAlign:'center',color:'#94a3b8',fontSize:13}}>Loading…</div>;
 
   return (
-    <div style={{ borderRadius: 14, border: '1px solid #e8edf5', background: '#fff', boxShadow: '0 2px 12px rgba(15,23,42,0.07)', overflow: 'hidden', fontFamily: 'inherit' }}>
+    <div className="glass-card" style={{ overflow: 'hidden', fontFamily: 'inherit', border: '1px solid rgba(99,102,241,0.15)' }}>
 
       {/* Top bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'linear-gradient(135deg, var(--a-violet-deep) 0%, var(--a-violet) 100%)', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -146,21 +146,21 @@ export default function LoginTrackerCalendar() {
             </svg>
           </div>
           <div>
-            <p style={{margin:0, fontSize:10, fontWeight:700, color:'rgba(199,210,254,0.8)', letterSpacing:'0.1em', textTransform:'uppercase'}}>Attendance</p>
+            <p style={{margin:0, fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.7)', letterSpacing:'0.1em', textTransform:'uppercase'}}>Attendance</p>
             <p style={{margin:0, fontSize:14, fontWeight:800, color:'#fff', lineHeight:1.2}}>Team Calendar</p>
           </div>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'flex-end' }}>
             {[
-              { label: `${totalUsers} members`, color:'rgba(165,180,252,0.9)', bg:'rgba(255,255,255,0.1)' },
-              { label: `${todayActive} today`, color:'#6ee7b7', bg:'rgba(16,185,129,0.18)' },
+              { label: `${totalUsers} members`, color:'rgba(255,255,255,0.95)', bg:'rgba(255,255,255,0.12)' },
+              { label: `${todayActive} today`, color:'#6ee7b7', bg:'rgba(16,185,129,0.22)' },
             ].map(p => (
               <span key={p.label} style={{ fontSize:10.5, fontWeight:700, color:p.color, background:p.bg, padding:'3px 9px', borderRadius:99, border:'1px solid rgba(255,255,255,0.12)' }}>{p.label}</span>
             ))}
           </div>
-          <button type="button" onClick={fetchHistory} title="Refresh" style={{ width:28, height:28, borderRadius:7, background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.20)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0 }}>
-            <RefreshCw size={12} color="rgba(255,255,255,0.85)" className={loading ? 'animate-spin' : ''} />
+          <button type="button" onClick={fetchHistory} title="Refresh" className="btn-premium-secondary" style={{ width:28, height:28, borderRadius:7, padding: 0, background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.25)', color: '#fff' }}>
+            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
@@ -180,8 +180,8 @@ export default function LoginTrackerCalendar() {
               const attStyle = todayAtt ? ATTENDANCE_STYLE[todayAtt] : null;
               return (
                 <button key={m.id} type="button" onClick={() => setSelectedId(m.id)}
-                  style={{ width:'100%', textAlign:'left', padding:'8px 9px', borderRadius:9, border: isSel ? '1px solid #c7d2fe' : '1px solid transparent', background: isSel ? '#eef2ff' : 'transparent', cursor:'pointer', transition:'all 0.1s' }}
-                  onMouseEnter={e => { if(!isSel)(e.currentTarget as HTMLButtonElement).style.background='#f1f5f9'; }}
+                  style={{ width:'100%', textAlign:'left', padding:'8px 9px', borderRadius:9, border: isSel ? '1px solid rgba(99, 102, 241, 0.25)' : '1px solid transparent', background: isSel ? 'rgba(99,102,241,0.06)' : 'transparent', cursor:'pointer', transition:'all 0.1s' }}
+                  onMouseEnter={e => { if(!isSel)(e.currentTarget as HTMLButtonElement).style.background='rgba(99, 102, 241, 0.03)'; }}
                   onMouseLeave={e => { if(!isSel)(e.currentTarget as HTMLButtonElement).style.background='transparent'; }}
                 >
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
@@ -223,10 +223,10 @@ export default function LoginTrackerCalendar() {
                 <p style={{margin:0, fontSize:10, color:'#94a3b8', fontWeight:600}}>{sel?.role}</p>
               </div>
             </div>
-            <div style={{ display:'flex', alignItems:'center', background:'#f8fafc', borderRadius:9, border:'1px solid #e2e8f0', overflow:'hidden' }}>
-              <button onClick={prevMonth} style={{padding:'5px 8px',border:'none',background:'transparent',cursor:'pointer',color:'#64748b',display:'flex',alignItems:'center'}}><ChevronLeft size={13} strokeWidth={2.5}/></button>
-              <span style={{padding:'0 8px',fontSize:11.5,fontWeight:800,color:'#1e293b',minWidth:108,textAlign:'center'}}>{MONTHS_FULL[viewMonth]} {viewYear}</span>
-              <button onClick={nextMonth} style={{padding:'5px 8px',border:'none',background:'transparent',cursor:'pointer',color:'#64748b',display:'flex',alignItems:'center'}}><ChevronRight size={13} strokeWidth={2.5}/></button>
+            <div style={{ display:'flex', alignItems:'center', background:'rgba(99,102,241,0.05)', borderRadius:9, border:'1px solid rgba(99,102,241,0.14)', overflow:'hidden' }}>
+              <button onClick={prevMonth} style={{padding:'6px 10px',border:'none',background:'transparent',cursor:'pointer',color:'var(--a-violet)',display:'flex',alignItems:'center'}}><ChevronLeft size={13} strokeWidth={2.5}/></button>
+              <span style={{padding:'0 8px',fontSize:11.5,fontWeight:800,color:'var(--a-ink-950)',minWidth:108,textAlign:'center'}}>{MONTHS_FULL[viewMonth]} {viewYear}</span>
+              <button onClick={nextMonth} style={{padding:'6px 10px',border:'none',background:'transparent',cursor:'pointer',color:'var(--a-violet)',display:'flex',alignItems:'center'}}><ChevronRight size={13} strokeWidth={2.5}/></button>
             </div>
           </div>
 

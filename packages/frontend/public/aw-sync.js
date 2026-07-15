@@ -247,6 +247,25 @@ async function getCurrentWindow(bucketId) {
   return res.status === 200 && Array.isArray(res.body) && res.body.length > 0 ? res.body[0] : null;
 }
 
+// The user's EduTechExOS web-login time for a day (ms), or null if they never
+// opened the app that day. Desktop activity is only counted from this point.
+async function getSessionStart(dateStr) {
+  try {
+    const res = await request(API_BASE, `/api/activity/session-start?date=${dateStr}`, 'GET', null, { Authorization: `Bearer ${authToken}` });
+    if (res.status === 200 && res.body?.sessionStart) return Date.parse(res.body.sessionStart);
+    return null;
+  } catch { return null; }
+}
+
+// Seconds of an AW event that fall AFTER the login gate — clamps events that
+// started before login so only the post-login portion is counted.
+function secsAfter(ev, gateMs) {
+  const start = Date.parse(ev.timestamp);
+  if (!Number.isFinite(start)) return 0;
+  const end = start + (ev.duration || 0) * 1000;
+  return Math.max(0, (end - Math.max(start, gateMs)) / 1000);
+}
+
 // ── Build today's summary ─────────────────────────────────────────────────────
 async function buildSummary() {
   const buckets = await getAWBuckets();
@@ -274,6 +293,14 @@ async function buildSummary() {
   ).toISOString();
   const endOfDay   = now.toISOString();
 
+  // Only count activity from the moment the user opened EduTechExOS today. If
+  // they haven't logged in yet, count nothing (don't leak pre-login laptop time).
+  const gateMs = await getSessionStart(dateStr);
+  if (!gateMs) {
+    console.log(`[${new Date().toLocaleTimeString()}] not logged into EduTechExOS yet today — nothing counted.`);
+    return null;
+  }
+
   const currentEvent = await getCurrentWindow(windowBucket);
   const currentApp   = currentEvent?.data?.app   || currentEvent?.data?.title || '';
   const currentTitle = currentEvent?.data?.title  || '';
@@ -283,7 +310,8 @@ async function buildSummary() {
   let totalWindowSec = 0;
 
   for (const ev of windowEvents) {
-    const dur = ev.duration || 0;
+    const dur = secsAfter(ev, gateMs);
+    if (dur <= 0) continue;
     const app = ev.data?.app || ev.data?.title || 'Unknown';
     appSeconds[app] = (appSeconds[app] || 0) + dur;
     totalWindowSec += dur;
@@ -303,7 +331,7 @@ async function buildSummary() {
     const latestAfk = afkEvents[0];
     isAfk = latestAfk?.data?.status === 'afk';
     for (const ev of afkEvents) {
-      if (ev.data?.status === 'afk') totalAfkSec += (ev.duration || 0);
+      if (ev.data?.status === 'afk') totalAfkSec += secsAfter(ev, gateMs);
     }
   }
 
@@ -321,16 +349,18 @@ async function buildSummary() {
     currentPageTitle = currentWeb?.data?.title || '';
 
     const webEvents  = await queryEvents(webBucket, startOfDay, endOfDay);
-    const domSeconds = {};
+    const tabSeconds = {}; // keyed by tab title so each tab gets its own time
     for (const ev of webEvents) {
-      const dur = ev.duration || 0;
+      const dur = secsAfter(ev, gateMs);
+      if (dur <= 0 || !ev.data?.url) continue;
       let domain = 'unknown';
-      try { domain = new url.URL(ev.data?.url || '').hostname || 'unknown'; } catch { /* not a URL */ }
-      if (!domSeconds[domain]) domSeconds[domain] = { secs: 0, title: ev.data?.title || '' };
-      domSeconds[domain].secs += dur;
+      try { domain = (new url.URL(ev.data.url).hostname || 'unknown').replace(/^www\./, ''); } catch { /* not a URL */ }
+      const title = (ev.data.title || '').trim() || domain;
+      if (!tabSeconds[title]) tabSeconds[title] = { secs: 0, domain };
+      tabSeconds[title].secs += dur;
     }
-    webBreakdown = Object.entries(domSeconds)
-      .map(([domain, v]) => ({ domain, minutes: Math.round(v.secs / 60), title: v.title }))
+    webBreakdown = Object.entries(tabSeconds)
+      .map(([title, v]) => ({ domain: v.domain, minutes: Math.round(v.secs / 60), title }))
       .filter(({ minutes }) => minutes > 0)
       .sort((a, b) => b.minutes - a.minutes)
       .slice(0, 20);
@@ -402,14 +432,54 @@ async function sync() {
   }
 }
 
+// ── Fast "current activity" ping (every 15s) ──────────────────────────────────
+// Sends only the active app/tab so the admin's live view tracks app/tab switches
+// in near-real-time, without the cost of a full daily-breakdown sync.
+async function pushCurrent() {
+  if (!authToken) return;
+  try {
+    const buckets = await getAWBuckets();
+    const keys = Object.keys(buckets);
+    const windowBucket = keys.find((k) => buckets[k].type === 'currentwindow' || k.includes('aw-watcher-window'));
+    if (!windowBucket) return;
+    const afkBucket  = keys.find((k) => buckets[k].type === 'afkstatus' || k.includes('aw-watcher-afk'));
+    const webBuckets = keys.filter((k) => k.includes('aw-watcher-web') || buckets[k].type === 'web.tab.current');
+
+    const win = await getCurrentWindow(windowBucket);
+    const currentApp   = win?.data?.app   || win?.data?.title || '';
+    const currentTitle = win?.data?.title || '';
+
+    let isAfk = false;
+    if (afkBucket) {
+      const afk = await getCurrentWindow(afkBucket);
+      isAfk = afk?.data?.status === 'afk';
+    }
+    let currentUrl = '', currentPageTitle = '';
+    for (const wb of webBuckets) {
+      const w = await getCurrentWindow(wb);
+      if (w?.data?.url && !w.data.incognito) { currentUrl = w.data.url; currentPageTitle = w.data.title || ''; break; }
+    }
+
+    const res = await request(
+      API_BASE, '/api/activity/aw-current', 'POST',
+      { currentApp, currentTitle, currentUrl, currentPageTitle, isAfk },
+      { Authorization: `Bearer ${authToken}` }
+    );
+    if (res.status === 401) await login();
+  } catch { /* non-fatal */ }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 (async () => {
   const ok = await login();
   if (!ok) process.exit(1);
 
-  console.log(`[agent] Started. Syncing every ${INTERVAL} minute(s). Admin can see your activity in EduTechExOS.`);
+  console.log(`[agent] Started. Syncing every ${INTERVAL} minute(s); live app ping every 15s. Admin can see your activity in EduTechExOS.`);
   console.log(`[agent] Press Ctrl+C to stop.`);
 
   await sync();
   setInterval(sync, INTERVAL * 60 * 1000);
+
+  await pushCurrent(); // immediate live ping
+  setInterval(pushCurrent, 15 * 1000);
 })();

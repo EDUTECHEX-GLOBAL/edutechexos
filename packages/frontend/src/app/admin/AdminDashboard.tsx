@@ -129,8 +129,11 @@ export default function AdminPage() {
   >('people');
   type AWRecord = {
     email: string; name: string; currentApp: string; currentTitle: string;
+    currentUrl?: string; currentPageTitle?: string;
     isAfk: boolean; totalActiveMinutes: number; totalAfkMinutes: number;
-    appBreakdown: { app: string; minutes: number }[]; lastSync: string;
+    appBreakdown: { app: string; minutes: number }[];
+    webBreakdown?: { domain: string; minutes: number; title: string }[];
+    lastSync: string;
   };
   const [awRecords, setAwRecords] = useState<AWRecord[]>([]);
   const [awLoading, setAwLoading] = useState(false);
@@ -450,6 +453,41 @@ export default function AdminPage() {
     socket.on('aw_sync', handler);
     return () => { socket.off('aw_sync', handler); };
   }, [fetchAwData]);
+
+  // Near-live "current app/tab" updates (agent pings every ~15s). Patch just the
+  // one user's record in place instead of refetching the whole dataset. Only
+  // meaningful when the admin is viewing today.
+  useEffect(() => {
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const todayStr = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+    if (awDate !== todayStr) return;
+    const socket = getSocket();
+    const onCurrent = (d: { email?: string; currentApp?: string; currentTitle?: string; currentUrl?: string; isAfk?: boolean }) => {
+      if (!d?.email) return;
+      const email = d.email.toLowerCase();
+      setAwRecords((prev) => {
+        const patch = {
+          currentApp:   d.currentApp   ?? '',
+          currentTitle: d.currentTitle ?? '',
+          currentUrl:   d.currentUrl   ?? '',
+          isAfk:        !!d.isAfk,
+          lastSync:     new Date().toISOString(),
+        };
+        const idx = prev.findIndex((r) => r.email.toLowerCase() === email);
+        if (idx === -1) {
+          return [...prev, {
+            email: d.email!, name: '', totalAfkMinutes: 0, totalActiveMinutes: 0,
+            appBreakdown: [], ...patch,
+          }];
+        }
+        const next = [...prev];
+        next[idx] = { ...next[idx], ...patch };
+        return next;
+      });
+    };
+    socket.on('aw_current', onCurrent);
+    return () => { socket.off('aw_current', onCurrent); };
+  }, [awDate]);
 
   //  Live in-app activity 
   const fetchLiveUsers = useCallback(() => {
@@ -1463,14 +1501,13 @@ export default function AdminPage() {
                     Manage team members, roles, and channel access.
                   </p>
                 </div>
-                <label className="flex h-10 items-center gap-2 rounded-xl px-3.5 md:w-80 transition-all" style={{ border: '1.5px solid rgba(91,79,219,0.14)', background: '#ECEAF8' }}>
-                  <Search size={15} style={{ color: '#9296B0' }} />
+                <label className="flex h-10 items-center gap-2 rounded-xl px-3.5 md:w-80 transition-all border border-slate-200 bg-white/80 shadow-sm focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100">
+                  <Search size={15} className="text-slate-400" />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search people"
-                    className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-                    style={{ color: '#1A1B3A' }}
+                    placeholder="Search people..."
+                    className="min-w-0 flex-1 bg-transparent text-sm outline-none text-slate-800 placeholder-slate-400"
                   />
                 </label>
               </div>
@@ -1553,10 +1590,10 @@ export default function AdminPage() {
                       </div>
                       {/* Footer */}
                       <div style={{ padding: '12px 24px 20px', borderTop: '1px solid rgba(91,79,219,0.08)', display: 'flex', gap: 8 }}>
-                        <button type="button" onClick={() => setChannelPopoverId(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, background: 'rgba(90,95,128,0.08)', color: '#5A5F80', fontSize: 13, fontWeight: 700, border: '1px solid rgba(90,95,128,0.14)', cursor: 'pointer' }}>
+                        <button type="button" onClick={() => setChannelPopoverId(null)} className="btn-premium-secondary" style={{ flex: 1, padding: '10px', borderRadius: 10 }}>
                           Cancel
                         </button>
-                        <button type="button" onClick={() => setChannelPopoverId(null)} style={{ flex: 2, padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg, #5B4FDB, #7B6FEB)', color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(91,79,219,0.30)' }}>
+                        <button type="button" onClick={() => setChannelPopoverId(null)} className="btn-premium" style={{ flex: 2, padding: '10px', borderRadius: 10 }}>
                           Save Access
                         </button>
                       </div>
@@ -1614,8 +1651,8 @@ export default function AdminPage() {
                                 <select
                                   value={member.role}
                                   onChange={(e) => handleRoleChange(member.id, member.name, e.target.value)}
-                                  className="premium-select"
-                                  style={{ border: `1.5px solid ${rc.border}`, background: rc.bg, color: rc.color }}
+                                  className="admin-select"
+                                  style={{ border: `1px solid ${rc.border}`, background: rc.bg, color: rc.color, height: 32, padding: '0 8px', fontSize: 12, fontWeight: 700 }}
                                 >
                                   <option value="Developer">Developer</option>
                                   <option value="Designer">Designer</option>
@@ -1624,9 +1661,9 @@ export default function AdminPage() {
                                   <option value="Admin">Admin</option>
                                 </select>
                                 {!isAdminMember && canAddMoreAdmins && (
-                                  <button type="button" onClick={() => promoteToAdmin(member)} disabled={promoteLoadingId === member.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, background: 'transparent', color: '#5B4FDB', fontSize: 10, fontWeight: 700, border: '1px solid rgba(91,79,219,0.22)', cursor: 'pointer', opacity: promoteLoadingId === member.id ? 0.5 : 1, width: 'fit-content' }}>
-                                    <ShieldCheck size={10} />
-                                    {promoteLoadingId === member.id ? 'Promoting' : 'Make Admin'}
+                                  <button type="button" onClick={() => promoteToAdmin(member)} disabled={promoteLoadingId === member.id} className="btn-premium-secondary" style={{ padding: '4px 8px', fontSize: 10, borderRadius: 6, height: 'auto', width: 'fit-content', marginTop: 2 }}>
+                                    <ShieldCheck size={11} />
+                                    {promoteLoadingId === member.id ? 'Promoting...' : 'Make Admin'}
                                   </button>
                                 )}
                               </div>
@@ -1656,7 +1693,8 @@ export default function AdminPage() {
                                   <button
                                     type="button"
                                     onClick={() => setChannelPopoverId(member.id)}
-                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: 'rgba(91,79,219,0.07)', color: '#5B4FDB', border: '1.5px dashed rgba(91,79,219,0.30)', cursor: 'pointer', transition: 'all .15s' }}
+                                    className="btn-premium-secondary"
+                                    style={{ padding: '4px 8px', fontSize: 10, borderRadius: 6, height: 'auto', borderStyle: 'dashed' }}
                                   >
                                     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
                                     Manage
@@ -1809,7 +1847,8 @@ export default function AdminPage() {
                       placeholder="Search users..."
                       value={requestSearch}
                       onChange={e => setRequestSearch(e.target.value)}
-                      style={{ paddingLeft: 30, paddingRight: 12, height: 34, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.10)', background: '#F7F8FC', fontSize: 12, color: '#1A1B3A', outline: 'none', width: 200 }}
+                      className="admin-input"
+                      style={{ paddingLeft: 30, height: 34, width: 200, fontSize: 12 }}
                     />
                   </div>
                 </div>
@@ -1821,11 +1860,7 @@ export default function AdminPage() {
                       key={f}
                       type="button"
                       onClick={() => setRequestFilter(f)}
-                      style={{ height: 28, padding: '0 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, textTransform: 'capitalize', cursor: 'pointer', transition: 'all .15s',
-                        background: requestFilter === f ? '#1A1B3A' : 'rgba(26,27,58,0.05)',
-                        color: requestFilter === f ? '#fff' : 'rgba(90,95,128,0.70)',
-                        border: requestFilter === f ? 'none' : '1.5px solid rgba(26,27,58,0.08)',
-                      }}
+                      className={`btn-premium-pill ${requestFilter === f ? 'active' : ''}`}
                     >
                       {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
                       <span style={{ marginLeft: 5, fontSize: 9.5, opacity: 0.75 }}>
@@ -1940,9 +1975,10 @@ export default function AdminPage() {
                               type="button"
                               title="View details"
                               onClick={() => setViewingRequest(viewingRequest?.id === request.id ? null : request)}
-                              style={{ width: 30, height: 30, borderRadius: 8, border: '1.5px solid rgba(26,27,58,0.10)', background: viewingRequest?.id === request.id ? 'rgba(99,102,241,0.10)' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: viewingRequest?.id === request.id ? '#6366f1' : 'rgba(90,95,128,0.55)', transition: 'all .15s', flexShrink: 0 }}
+                              className="btn-premium-secondary"
+                              style={{ width: 30, height: 30, padding: 0, borderRadius: 8, flexShrink: 0, border: viewingRequest?.id === request.id ? '1px solid var(--a-violet)' : '1px solid rgba(26,27,58,0.10)' }}
                             >
-                              <Eye size={13} />
+                              <Eye size={13} style={{ color: viewingRequest?.id === request.id ? 'var(--a-violet)' : 'rgba(90,95,128,0.55)' }} />
                             </button>
 
                             {/* Approve */}
@@ -1952,11 +1988,8 @@ export default function AdminPage() {
                                 title={request.status === 'approved' ? 'Already approved' : 'Generate password and email credentials'}
                                 onClick={() => canApprove && generatePasswordForRequest(request)}
                                 disabled={!canApprove || generatingFor === request.id}
-                                style={{ height: 30, padding: '0 10px', borderRadius: 8, fontSize: 10.5, fontWeight: 700, border: 'none', cursor: canApprove ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: 4, transition: 'all .15s', flexShrink: 0,
-                                  background: request.status === 'approved' ? 'rgba(16,201,138,0.10)' : 'linear-gradient(135deg,#10C98A,#059669)',
-                                  color: request.status === 'approved' ? '#059669' : '#fff',
-                                  opacity: !canApprove && request.status !== 'approved' ? 0.45 : 1,
-                                }}
+                                className={request.status === 'approved' ? 'btn-premium-secondary' : 'btn-premium-success'}
+                                style={{ height: 30, padding: '0 10px', borderRadius: 8, fontSize: 10.5, cursor: canApprove ? 'pointer' : 'default', flexShrink: 0, opacity: !canApprove && request.status !== 'approved' ? 0.45 : 1 }}
                               >
                                 {generatingFor === request.id ? <><RefreshCw size={11} className="animate-spin" /> Working</> : request.status === 'approved' ? <><CheckCircle2 size={11} /> Approved</> : <><KeyRound size={11} /> Gen. Password</>}
                               </button>
@@ -1966,11 +1999,8 @@ export default function AdminPage() {
                                 title={request.status === 'invited' ? 'Invite already sent' : request.status === 'approved' ? 'Already approved' : 'Send invite link'}
                                 onClick={() => canApprove && sendInvite(request)}
                                 disabled={!canApprove}
-                                style={{ height: 30, padding: '0 10px', borderRadius: 8, fontSize: 10.5, fontWeight: 700, border: 'none', cursor: canApprove ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: 4, transition: 'all .15s', flexShrink: 0,
-                                  background: request.status === 'approved' || request.status === 'invited' ? 'rgba(99,102,241,0.10)' : 'linear-gradient(135deg,#6366f1,#4f46e5)',
-                                  color: request.status === 'approved' || request.status === 'invited' ? '#6366f1' : '#fff',
-                                  opacity: !canApprove && request.status !== 'approved' && request.status !== 'invited' ? 0.45 : 1,
-                                }}
+                                className={request.status === 'approved' || request.status === 'invited' ? 'btn-premium-secondary' : 'btn-premium'}
+                                style={{ height: 30, padding: '0 10px', borderRadius: 8, fontSize: 10.5, cursor: canApprove ? 'pointer' : 'default', flexShrink: 0, opacity: !canApprove && request.status !== 'approved' && request.status !== 'invited' ? 0.45 : 1 }}
                               >
                                 {request.status === 'approved' ? <><CheckCircle2 size={11} /> Approved</> : request.status === 'invited' ? <><CheckCircle2 size={11} /> Invited</> : <><Mail size={11} /> Send Invite</>}
                               </button>
@@ -1982,9 +2012,8 @@ export default function AdminPage() {
                               title={isRevoked ? 'Already revoked' : 'Revoke access'}
                               onClick={() => !isRevoked && request.status !== 'pending' && rejectRequest(request.id)}
                               disabled={isRevoked || request.status === 'pending'}
-                              style={{ width: 30, height: 30, borderRadius: 8, border: '1.5px solid rgba(239,71,111,0.18)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isRevoked || request.status === 'pending' ? 'default' : 'pointer', color: '#EF476F', transition: 'all .15s', flexShrink: 0, opacity: isRevoked || request.status === 'pending' ? 0.35 : 1 }}
-                              onMouseEnter={e => { if (!isRevoked && request.status !== 'pending') { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.08)'; } }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#fff'; }}
+                              className="btn-premium-danger"
+                              style={{ width: 30, height: 30, padding: 0, borderRadius: 8, flexShrink: 0, opacity: isRevoked || request.status === 'pending' ? 0.35 : 1 }}
                             >
                               <X size={12} />
                             </button>
@@ -2015,9 +2044,8 @@ export default function AdminPage() {
                                   toast.error('Could not reach server.');
                                 }
                               }}
-                              style={{ width: 30, height: 30, borderRadius: 8, border: '1.5px solid rgba(91,79,219,0.20)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--a-rose)', transition: 'all .15s', flexShrink: 0 }}
-                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,71,111,0.08)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.35)'; }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#fff'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,79,219,0.20)'; }}
+                              className="btn-premium-danger"
+                              style={{ width: 30, height: 30, padding: 0, borderRadius: 8, flexShrink: 0 }}
                             >
                               <Trash2 size={12} />
                             </button>
@@ -2056,16 +2084,16 @@ export default function AdminPage() {
                     ].map(({ label, value, setter, placeholder, type }) => (
                       <label key={label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>{label}</span>
-                        <input type={type} required value={value} onChange={(e) => setter(e.target.value)} placeholder={placeholder} style={{ height: 40, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.14)', background: '#ECEAF8', padding: '0 12px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none' }} />
+                        <input type={type} required value={value} onChange={(e) => setter(e.target.value)} placeholder={placeholder} className="admin-input" />
                       </label>
                     ))}
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'rgba(90,95,128,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>Role</span>
-                      <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} style={{ height: 40, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.14)', background: '#ECEAF8', padding: '0 12px', fontSize: 13, fontWeight: 600, color: '#1A1B3A', outline: 'none' }}>
+                      <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="admin-select">
                         {['Developer', 'Designer', 'Lead', 'Manager', 'Admin'].map((r) => <option key={r} value={r}>{r}</option>)}
                       </select>
                     </label>
-                    <button type="submit" disabled={inviteSubmitting} style={{ height: 42, borderRadius: 12, background: inviteSubmitting ? 'rgba(16,201,138,0.35)' : 'linear-gradient(135deg,#10C98A,#059669)', color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: inviteSubmitting ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 14px rgba(16,201,138,0.28)', transition: 'all .2s', marginTop: 4 }}>
+                    <button type="submit" disabled={inviteSubmitting} className={inviteSubmitting ? "btn-premium-secondary" : "btn-premium-success"} style={{ width: '100%', height: 42, marginTop: 4 }}>
                       <Mail size={14} /> {inviteSubmitting ? 'Sending...' : 'Send Invite Link'}
                     </button>
                   </form>
@@ -2077,7 +2105,7 @@ export default function AdminPage() {
                   <p style={{ margin: '0 0 16px', fontSize: 12, color: 'rgba(90,95,128,0.60)' }}>
                     One row per person: <code style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, background: 'rgba(91,79,219,0.08)', padding: '1px 5px', borderRadius: 4 }}>Name, email@edutechex.com, Role</code>
                   </p>
-                  <textarea value={csvText} onChange={(e) => { setCsvText(e.target.value); parseCSV(e.target.value); }} placeholder="Priya Nair, priya@edutechex.com, Designer" rows={6} style={{ width: '100%', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.14)', background: '#ECEAF8', padding: '10px 12px', fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: '#1A1B3A', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+                  <textarea value={csvText} onChange={(e) => { setCsvText(e.target.value); parseCSV(e.target.value); }} placeholder="Priya Nair, priya@edutechex.com, Designer" rows={6} className="admin-textarea" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, resize: 'vertical' }} />
                   {csvParsed.length > 0 && (
                     <div style={{ marginTop: 14, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.10)', overflow: 'hidden' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 90px', padding: '7px 12px', background: 'rgba(26,27,58,0.04)', borderBottom: '1px solid rgba(26,27,58,0.08)' }}>
@@ -2092,7 +2120,7 @@ export default function AdminPage() {
                       ))}
                     </div>
                   )}
-                  <button type="button" disabled={csvParsed.length === 0 || csvSending} onClick={sendBulkInvites} style={{ marginTop: 14, width: '100%', height: 42, borderRadius: 12, background: (csvParsed.length === 0 || csvSending) ? 'rgba(99,102,241,0.25)' : 'linear-gradient(135deg,#6366f1,#4f46e5)', color: (csvParsed.length === 0 || csvSending) ? 'rgba(255,255,255,0.60)' : '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: (csvParsed.length === 0 || csvSending) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all .2s' }}>
+                  <button type="button" disabled={csvParsed.length === 0 || csvSending} onClick={sendBulkInvites} className={(csvParsed.length === 0 || csvSending) ? "btn-premium-secondary" : "btn-premium"} style={{ marginTop: 14, width: '100%', height: 42 }}>
                     <Send size={14} /> {csvSending ? 'Sending...' : 'Send ' + String(csvParsed.length > 0 ? csvParsed.length + ' ' : '') + 'Invite' + String(csvParsed.length !== 1 ? 's' : '')}
                   </button>
                 </div>
@@ -2156,7 +2184,8 @@ export default function AdminPage() {
                     onChange={e => setNewChannelName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleCreateChannel()}
                     placeholder="e.g. design-team"
-                    style={{ height: 38, width: '100%', borderRadius: 10, border: '1.5px solid rgba(13,175,206,0.22)', background: '#fff', padding: '0 12px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box' }}
+                    className="admin-input"
+                    style={{ height: 38 }}
                   />
                 </div>
                 <div style={{ flex: 2 }}>
@@ -2166,14 +2195,16 @@ export default function AdminPage() {
                     onChange={e => setNewChannelDesc(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleCreateChannel()}
                     placeholder="What is this channel for?"
-                    style={{ height: 38, width: '100%', borderRadius: 10, border: '1.5px solid rgba(13,175,206,0.22)', background: '#fff', padding: '0 12px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box' }}
+                    className="admin-input"
+                    style={{ height: 38 }}
                   />
                 </div>
                 <button
                   type="button"
                   onClick={handleCreateChannel}
                   disabled={creatingChannel}
-                  style={{ height: 38, padding: '0 18px', borderRadius: 10, background: creatingChannel ? 'rgba(13,175,206,0.35)' : 'linear-gradient(135deg,#0DAFCE,#3B82F6)', color: '#fff', fontSize: 13, fontWeight: 700, border: 'none', cursor: creatingChannel ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}
+                  className={creatingChannel ? "btn-premium-secondary" : "btn-premium"}
+                  style={{ height: 38, padding: '0 18px', borderRadius: 10, whiteSpace: 'nowrap' }}
                 >
                   <Plus size={14} /> {creatingChannel ? 'Creating…' : 'Create Channel'}
                 </button>
@@ -2279,7 +2310,8 @@ export default function AdminPage() {
                             if (!e.target.value) return;
                             handleChannelToggle(e.target.value, channel.id, true);
                           }}
-                          style={{ height: 40, width: '100%', borderRadius: 12, border: '1.5px solid rgba(13,175,206,0.18)', background: 'rgba(13,175,206,0.04)', padding: '0 12px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', outline: 'none' }}
+                          className="admin-select"
+                          style={{ height: 36, padding: '0 10px', fontSize: 12 }}
                         >
                           <option value="">+ Grant access to a user</option>
                           {members
@@ -2331,9 +2363,7 @@ export default function AdminPage() {
                       onChange={(e) => setBroadcastSubject(e.target.value)}
                       placeholder="e.g. Team update - June 2026"
                       maxLength={150}
-                      style={{ height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.18)', background: '#ECEAF8', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
-                      onFocus={e => { e.target.style.borderColor = 'rgba(192,38,211,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(192,38,211,0.10)'; }}
-                      onBlur={e => { e.target.style.borderColor = 'rgba(192,38,211,0.18)'; e.target.style.boxShadow = 'none'; }}
+                      className="admin-input"
                     />
                   </div>
 
@@ -2347,9 +2377,8 @@ export default function AdminPage() {
                       placeholder="Write your message here. Plain text - line breaks are preserved."
                       rows={7}
                       maxLength={2000}
-                      style={{ width: '100%', resize: 'none', borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.18)', background: '#ECEAF8', padding: '12px 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6, transition: 'border-color .2s, box-shadow .2s' }}
-                      onFocus={e => { e.target.style.borderColor = 'rgba(192,38,211,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(192,38,211,0.10)'; }}
-                      onBlur={e => { e.target.style.borderColor = 'rgba(192,38,211,0.18)'; e.target.style.boxShadow = 'none'; }}
+                      className="admin-textarea"
+                      style={{ resize: 'none', lineHeight: 1.6 }}
                     />
                     <p style={{ marginTop: 4, textAlign: 'right', fontSize: 9.5, color: 'rgba(90,95,128,0.50)', fontFamily: "'JetBrains Mono', monospace" }}>
                       {broadcastMessage.length}/2000
@@ -2357,7 +2386,7 @@ export default function AdminPage() {
                   </div>
 
                   {/* Recipients preview */}
-                  <div style={{ borderRadius: 12, border: '1.5px solid rgba(192,38,211,0.12)', background: 'rgba(192,38,211,0.03)', padding: 16 }}>
+                  <div style={{ borderRadius: 12, border: '1.5px solid rgba(91,79,219,0.12)', background: 'rgba(91,79,219,0.03)', padding: 16 }}>
                     <p style={{ marginBottom: 10, fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.60)' }}>
                       Will be sent to {members.length} members
                     </p>
@@ -2392,9 +2421,8 @@ export default function AdminPage() {
                     type="button"
                     onClick={handleBroadcast}
                     disabled={broadcastSending || !broadcastSubject.trim() || !broadcastMessage.trim()}
-                    style={{ display: 'flex', height: 44, width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 12, background: 'linear-gradient(135deg, #C026D3, #8B3FDB)', color: '#FFFFFF', fontSize: 13, fontWeight: 700, border: 'none', cursor: broadcastSending ? 'not-allowed' : 'pointer', opacity: broadcastSending || !broadcastSubject.trim() || !broadcastMessage.trim() ? 0.5 : 1, transition: 'all .2s', boxShadow: '0 4px 16px rgba(192,38,211,0.25)' }}
-                    onMouseEnter={e => { if (!broadcastSending) { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(192,38,211,0.32)'; } }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(192,38,211,0.25)'; }}
+                    className={broadcastSending || !broadcastSubject.trim() || !broadcastMessage.trim() ? "btn-premium-secondary" : "btn-premium"}
+                    style={{ width: '100%', height: 44 }}
                   >
                     {broadcastSending ? (
                       <>
@@ -2464,9 +2492,8 @@ export default function AdminPage() {
                         .catch(() => {})
                         .finally(() => setActivityLoading(false));
                     }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 12, border: '1.5px solid rgba(59,130,246,0.18)', background: '#FFFFFF', padding: '8px 16px', fontSize: 11, fontWeight: 600, color: '#3B82F6', cursor: 'pointer', transition: 'all .2s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.06)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.35)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#FFFFFF'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.18)'; }}
+                    className="btn-premium-secondary"
+                    style={{ height: 36, padding: '0 16px', fontSize: 12 }}
                   >
                     <RefreshCw size={13} className={activityLoading ? 'animate-spin' : ''} />
                     Refresh
@@ -2670,6 +2697,8 @@ export default function AdminPage() {
               appBreakdown: { app: string; minutes: number }[];
               totalActiveMinutes: number; isAfk: boolean; agentConnected: boolean;
               focusScore: number | null;
+              currentApp: string; currentTitle: string; awLastSync: string | null;
+              currentUrl: string; webBreakdown: { domain: string; minutes: number; title: string }[];
             };
 
             const merged: MergedMember[] = members.map((m) => {
@@ -2701,6 +2730,11 @@ export default function AdminPage() {
                 isAfk:              aw?.isAfk ?? false,
                 agentConnected:     !!aw,
                 focusScore,
+                currentApp:         aw?.currentApp   ?? '',
+                currentTitle:       aw?.currentTitle ?? '',
+                awLastSync:         aw?.lastSync      ?? null,
+                currentUrl:         aw?.currentUrl   ?? '',
+                webBreakdown:       aw?.webBreakdown ?? [],
               };
             }).sort((a, b) => {
               const order: Record<string, number> = { live: 0, away: 1, offline: 2 };
@@ -2748,26 +2782,27 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <input
                     type="date" value={viewDate} max={todayIST}
                     onChange={e => { const d = e.target.value; setAwDate(d); setHistoryDate(d); fetchHistory(d); fetchAwData(d); fetchAttendance(d); }}
-                    style={{ borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', background: '#fff', padding: '8px 12px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', outline: 'none' }}
+                    className="admin-input"
+                    style={{ height: 36, width: 140, padding: '0 10px', fontSize: 12 }}
                   />
                   <button type="button" onClick={refreshAll}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', background: '#fff', padding: '8px 14px', fontSize: 12, fontWeight: 600, color: '#1A1B3A', cursor: 'pointer' }}>
+                    className="btn-premium-secondary"
+                    style={{ height: 36, padding: '0 14px', fontSize: 12 }}>
                     <RefreshCw size={13} className={(awLoading || historyLoading || liveLoading) ? 'animate-spin' : ''} />
                     Refresh
                   </button>
-                  <div style={{ display: 'flex', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', overflow: 'hidden' }}>
-                    {(['attendance', 'activity'] as const).map((t, i) => (
-                      <button key={t} type="button" onClick={() => downloadCsv(t)}
-                        title={`Export ${t} as CSV`}
-                        style={{ borderLeft: i > 0 ? '1px solid rgba(26,27,58,0.10)' : 'none', background: '#fff', padding: '8px 12px', fontSize: 11.5, fontWeight: 700, color: '#5B4FDB', cursor: 'pointer' }}>
-                        Export {t === 'attendance' ? 'Attendance' : 'Activity'}
-                      </button>
-                    ))}
-                  </div>
+                  {(['attendance', 'activity'] as const).map((t) => (
+                    <button key={t} type="button" onClick={() => downloadCsv(t)}
+                      title={`Export ${t} as CSV`}
+                      className="btn-premium-secondary"
+                      style={{ height: 36, padding: '0 14px', fontSize: 12 }}>
+                      Export {t === 'attendance' ? 'Attendance' : 'Activity'}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -2789,11 +2824,15 @@ export default function AdminPage() {
                   const isExpanded = expandedDesktopEmail === person.email;
                   const topApps    = person.appBreakdown.slice(0, 8);
                   const maxMins    = topApps[0]?.minutes || 1;
+                  const topSites   = (person.webBreakdown ?? []).slice(0, 8);
+                  const maxSiteMins = topSites[0]?.minutes || 1;
                   const inAppPct   = Math.min(100, Math.round((person.todayMinutes / 480) * 100));
                   const icon       = panelIcon[person.currentPanel] || '';
                   const dotColor   = isLive ? '#10B981' : isAway ? '#F59E0B' : '#CBD5E1';
                   const statusText = isLive ? 'Online' : isAway ? ago(person.lastSeen) : 'Offline';
                   const statusFg   = isLive ? '#059669' : isAway ? '#B45309' : '#94A3B8';
+                  // AW "current app" is trustworthy only if the agent synced recently
+                  const awFresh    = !!person.awLastSync && (Date.now() - new Date(person.awLastSync).getTime()) < 10 * 60 * 1000;
 
                   return (
                     <div key={person.email}>
@@ -2818,7 +2857,22 @@ export default function AdminPage() {
                           </div>
                           <div style={{ minWidth: 0 }}>
                             <p style={{ fontSize: 13, fontWeight: 700, color: '#1A1B3A', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{person.name}</p>
-                            <p style={{ fontSize: 10.5, color: 'rgba(90,95,128,0.50)', margin: 0 }}>{person.role}</p>
+                            {person.currentApp && awFresh ? (
+                              <p
+                                style={{ fontSize: 10.5, margin: 0, display: 'flex', alignItems: 'center', gap: 5, overflow: 'hidden' }}
+                                title={person.currentTitle ? `${person.currentApp} — ${person.currentTitle}` : person.currentApp}
+                              >
+                                <span
+                                  className={person.isAfk ? '' : 'pdot'}
+                                  style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: person.isAfk ? '#F59E0B' : '#10B981' }}
+                                />
+                                <span style={{ fontWeight: 700, color: person.isAfk ? '#B45309' : '#059669', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {person.isAfk ? 'Idle' : person.currentApp}
+                                </span>
+                              </p>
+                            ) : (
+                              <p style={{ fontSize: 10.5, color: 'rgba(90,95,128,0.50)', margin: 0 }}>{person.role}</p>
+                            )}
                           </div>
                         </div>
 
@@ -2925,6 +2979,37 @@ export default function AdminPage() {
                               </p>
                             </div>
                           )}
+
+                          {/* Website / tab breakdown (needs the ActivityWatch browser extension) */}
+                          {topSites.length > 0 && (
+                            <div style={{ marginTop: 20 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.45)' }}>Websites &amp; Tabs</span>
+                                {person.currentUrl && awFresh && (
+                                  <span style={{ fontSize: 10.5, fontWeight: 700, color: '#0DAFCE', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={person.currentUrl}>
+                                    now: {(() => { try { return new URL(person.currentUrl).hostname.replace(/^www\./, ''); } catch { return person.currentUrl; } })()}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                {topSites.map(({ domain, minutes, title }) => {
+                                  const pct = Math.max(4, Math.round((minutes / maxSiteMins) * 100));
+                                  return (
+                                    <div key={`${title}|${domain}`} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                      <span title={`${title || domain} — ${domain}`} style={{ width: 170, minWidth: 0, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+                                        <span style={{ fontSize: 12, fontWeight: 600, color: '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🌐 {title || domain}</span>
+                                        <span style={{ fontSize: 10, color: 'rgba(90,95,128,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{domain}</span>
+                                      </span>
+                                      <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'rgba(13,175,206,0.10)' }}>
+                                        <div style={{ height: '100%', borderRadius: 4, width: `${pct}%`, background: 'linear-gradient(90deg,#0DAFCE,#22D3EE)', transition: 'width .5s' }} />
+                                      </div>
+                                      <span style={{ width: 52, fontSize: 12, fontWeight: 800, color: '#0DAFCE', textAlign: 'right', flexShrink: 0 }}>{fmt(minutes)}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -2960,7 +3045,7 @@ export default function AdminPage() {
                   <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: 18, fontWeight: 800, color: '#1A1B3A', margin: 0, letterSpacing: '-0.02em' }}>Leave Requests</h2>
                   <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'rgba(90,95,128,0.60)' }}>Review and action leave applications from team members.</p>
                 </div>
-                <button onClick={fetchLeaves} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: '1.5px solid rgba(26,27,58,0.12)', background: '#FFFFFF', fontSize: 12, fontWeight: 600, color: 'rgba(90,95,128,0.70)', cursor: 'pointer' }}>
+                <button onClick={fetchLeaves} className="btn-premium-secondary" style={{ height: 36, padding: '0 16px', fontSize: 12 }}>
                   <RefreshCw size={13} /> Refresh
                 </button>
               </div>
@@ -3022,7 +3107,8 @@ export default function AdminPage() {
                                 placeholder="Optional note to the member..."
                                 value={leaveNotes[leave.id] ?? ''}
                                 onChange={e => setLeaveNotes(prev => ({ ...prev, [leave.id]: e.target.value }))}
-                                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid rgba(26,27,58,0.12)', fontSize: 12.5, color: '#1A1B3A', background: '#fff', outline: 'none', marginBottom: 12, boxSizing: 'border-box' }}
+                                className="admin-input"
+                                style={{ marginBottom: 12 }}
                               />
 
                               <div style={{ display: 'flex', gap: 10 }}>
@@ -3030,7 +3116,8 @@ export default function AdminPage() {
                                   type="button"
                                   onClick={() => handleLeaveAction(leave.id, 'approved')}
                                   disabled={leaveActionLoading === leave.id}
-                                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#10C98A,#059669)', color: '#fff', fontSize: 11.5, fontWeight: 700, border: 'none', cursor: 'pointer', letterSpacing: '.04em', opacity: leaveActionLoading === leave.id ? 0.6 : 1 }}
+                                  className="btn-premium-success"
+                                  style={{ flex: 1, height: 38, borderRadius: 10 }}
                                 >
                                   <CheckCircle2 size={14} /> Approve
                                 </button>
@@ -3038,7 +3125,8 @@ export default function AdminPage() {
                                   type="button"
                                   onClick={() => handleLeaveAction(leave.id, 'rejected')}
                                   disabled={leaveActionLoading === leave.id}
-                                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 38, borderRadius: 10, background: '#fff', color: '#EF476F', fontSize: 11.5, fontWeight: 700, border: '1.5px solid rgba(239,71,111,0.25)', cursor: 'pointer', letterSpacing: '.04em', opacity: leaveActionLoading === leave.id ? 0.6 : 1 }}
+                                  className="btn-premium-danger"
+                                  style={{ flex: 1, height: 38, borderRadius: 10 }}
                                 >
                                   <X size={14} /> Reject
                                 </button>
@@ -3286,9 +3374,8 @@ export default function AdminPage() {
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder="Priya Nair"
-                    style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: '#ECEAF8', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
-                    onFocus={e => { e.target.style.borderColor = 'rgba(91,79,219,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(26,27,58,0.15)'; }}
-                    onBlur={e => { e.target.style.borderColor = 'rgba(26,27,58,0.24)'; e.target.style.boxShadow = 'none'; }}
+                    className="admin-input"
+                    style={{ marginTop: 6 }}
                   />
                 </label>
                 <label className="block">
@@ -3301,9 +3388,8 @@ export default function AdminPage() {
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     placeholder="priya@edutechex.com"
-                    style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: '#ECEAF8', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s, box-shadow .2s' }}
-                    onFocus={e => { e.target.style.borderColor = 'rgba(91,79,219,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(26,27,58,0.15)'; }}
-                    onBlur={e => { e.target.style.borderColor = 'rgba(26,27,58,0.24)'; e.target.style.boxShadow = 'none'; }}
+                    className="admin-input"
+                    style={{ marginTop: 6 }}
                   />
                 </label>
                 <label className="block">
@@ -3313,7 +3399,8 @@ export default function AdminPage() {
                   <select
                     value={newRole}
                     onChange={(e) => setNewRole(e.target.value)}
-                    style={{ display: 'block', marginTop: 6, height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: '#ECEAF8', padding: '0 14px', fontSize: 13, fontWeight: 500, color: '#1A1B3A', outline: 'none', boxSizing: 'border-box' }}
+                    className="admin-select"
+                    style={{ marginTop: 6 }}
                   >
                     <option value="Developer">Developer</option>
                     <option value="Designer">Designer</option>
@@ -3327,15 +3414,15 @@ export default function AdminPage() {
                     Channel access
                   </span>
                   {newRole === 'Admin' ? (
-                    <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.18)', background: '#DDD8F6', padding: '12px 14px', fontSize: 12, fontWeight: 600, color: 'rgba(90,95,128,0.55)' }}>
+                    <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.18)', background: 'rgba(91,79,219,0.06)', padding: '12px 14px', fontSize: 12, fontWeight: 600, color: 'rgba(90,95,128,0.55)' }}>
                       Full access to all channels (Admin)
                     </div>
                   ) : extraChannels.length === 0 ? (
-                    <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.18)', background: '#ECEAF8', padding: '12px 14px', fontSize: 12, color: 'rgba(90,95,128,0.55)' }}>
+                    <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.18)', background: 'rgba(91,79,219,0.03)', padding: '12px 14px', fontSize: 12, color: 'rgba(90,95,128,0.55)' }}>
                       #general only "" no project channels created yet
                     </div>
                   ) : (
-                    <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: '#ECEAF8', padding: '12px 14px' }}>
+                    <div style={{ marginTop: 6, borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.24)', background: 'rgba(91,79,219,0.03)', padding: '12px 14px' }}>
                       <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(90,95,128,0.55)', marginBottom: 10 }}>
                         #general is always included  pick up to 3 more
                       </p>
@@ -3385,16 +3472,14 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  style={{ padding: '10px 20px', borderRadius: 12, border: '1.5px solid rgba(26,27,58,0.22)', background: '#FFFFFF', fontSize: 13, fontWeight: 600, color: '#5A5F80', cursor: 'pointer', transition: 'all .15s' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,71,111,0.30)'; (e.currentTarget as HTMLElement).style.color = '#EF476F'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(26,27,58,0.22)'; (e.currentTarget as HTMLElement).style.color = '#5A5F80'; }}
+                  className="btn-premium-secondary"
+                  style={{ padding: '10px 20px', borderRadius: 12 }}
                 >
                   Cancel
                 </button>
                 <button type="submit"
-                  style={{ padding: '10px 20px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #5B4FDB, #8B3FDB)', color: '#FFFFFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all .2s', boxShadow: '0 4px 14px rgba(91,79,219,0.28)' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(91,79,219,0.35)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(91,79,219,0.28)'; }}
+                  className="btn-premium"
+                  style={{ padding: '10px 20px', borderRadius: 12 }}
                 >
                   Create access
                 </button>

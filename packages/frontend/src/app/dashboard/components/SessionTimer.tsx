@@ -102,12 +102,12 @@ export default function SessionTimer() {
         className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-all"
         style={{
           background: open ? 'rgba(108,123,245,0.12)' : onLunch ? 'rgba(245,158,11,0.08)' : 'transparent',
-          color: open ? '#6C7BF5' : onLunch ? '#D97706' : '#555555',
+          color: open ? '#6C7BF5' : onLunch ? '#D97706' : 'var(--sidebar-muted)',
         }}
-        onMouseEnter={e => { if (!open && !onLunch) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.05)'; }}
+        onMouseEnter={e => { if (!open && !onLunch) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.08)'; }}
         onMouseLeave={e => { if (!open && !onLunch) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
       >
-        {onLunch ? <Coffee size={13} strokeWidth={2.5} style={{ flexShrink: 0 }} /> : <Clock size={13} strokeWidth={2.5} style={{ flexShrink: 0, color: open ? '#6C7BF5' : '#888' }} />}
+        {onLunch ? <Coffee size={13} strokeWidth={2.5} style={{ flexShrink: 0 }} /> : <Clock size={13} strokeWidth={2.5} style={{ flexShrink: 0, color: open ? '#6C7BF5' : 'var(--sidebar-muted)' }} />}
         <span className="min-w-0 flex-1 truncate text-left">{onLunch ? 'Lunch break' : durationLabel}</span>
       </button>
 

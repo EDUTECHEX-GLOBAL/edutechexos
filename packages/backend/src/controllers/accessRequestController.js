@@ -171,7 +171,13 @@ async function reviewRequest(req, res) {
     const updateFields = {};
     if (status !== undefined) updateFields.status = status;
     if (channelId !== undefined) updateFields.channelId = channelId;
-    if (channelIds !== undefined) updateFields.channelIds = Array.isArray(channelIds) ? channelIds : [];
+    if (channelIds !== undefined) {
+      updateFields.channelIds = Array.isArray(channelIds) ? channelIds : [];
+      // Mark this user's channel membership as explicitly managed, so the client
+      // stops auto-including privileged users in every channel and honours this
+      // exact list (letting admins/managers be removed from specific channels).
+      updateFields.channelsExplicit = true;
+    }
     if (role !== undefined) updateFields.role = role;
 
     const updated = await AccessRequest.findByIdAndUpdate(

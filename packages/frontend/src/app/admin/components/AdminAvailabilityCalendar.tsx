@@ -235,20 +235,20 @@ export default function AdminAvailabilityCalendar() {
         </div>
         <button
           onClick={downloadExcel}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#3E4A89] text-white text-sm font-medium hover:bg-[#2A3568] transition-colors"
+          className="btn-premium flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors"
         >
           <Download size={15} /> Export Members Excel
         </button>
       </div>
 
       {/* Sub-tabs */}
-      <div className="flex gap-1 bg-[#F0F2FF] p-1 rounded-xl w-fit">
+      <div className="hub-subnav">
         {([
           { key: 'calendar' as const, label: 'My Calendar', badge: 0 },
           { key: 'requests' as const, label: 'Booking Requests', badge: meetingRequests.filter(r => r.status === 'pending').length },
         ]).map(({ key, label, badge }) => (
           <button key={key} onClick={() => setActiveView(key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeView === key ? 'bg-white text-[#3E4A89] shadow-sm' : 'text-[#9BA6D3] hover:text-[#4A5578]'}`}>
+            className={`${activeView === key ? 'btn-premium' : 'btn-premium-secondary'} flex items-center gap-2 text-sm font-medium`}>
             {label}
             {badge > 0 && (
               <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{badge}</span>
@@ -284,11 +284,11 @@ export default function AdminAvailabilityCalendar() {
                   {req.status === 'pending' ? (
                     <>
                       <button onClick={() => updateRequestStatus(req._id, 'confirmed')}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 border border-emerald-200">
+                        className="btn-premium-success flex items-center gap-1 px-3 py-1.5 text-xs font-semibold">
                         <Check size={12} /> Confirm
                       </button>
                       <button onClick={() => updateRequestStatus(req._id, 'declined')}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-xs font-semibold hover:bg-rose-100 border border-rose-200">
+                        className="btn-premium-danger flex items-center gap-1 px-3 py-1.5 text-xs font-semibold">
                         <X size={12} /> Decline
                       </button>
                     </>
@@ -307,14 +307,12 @@ export default function AdminAvailabilityCalendar() {
       {/* Calendar */}
       {activeView === 'calendar' && (<><div className="bg-white rounded-2xl border border-[#E8EAF6] shadow-sm overflow-hidden">
         {/* Nav */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8EAF6]">
-          <button onClick={() => { const d = new Date(viewYear, viewMonth - 1); setViewYear(d.getFullYear()); setViewMonth(d.getMonth()); }}
-            className="p-2 rounded-lg hover:bg-[#F0F2FF] transition-colors">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8EAF6] glass-card">
+          <button onClick={() => { const d = new Date(viewYear, viewMonth - 1); setViewYear(d.getFullYear()); setViewMonth(d.getMonth()); }} className="btn-premium-secondary">
             <ChevronLeft size={18} className="text-[#3E4A89]" />
           </button>
           <h3 className="font-semibold text-[#1E2636]">{monthName}</h3>
-          <button onClick={() => { const d = new Date(viewYear, viewMonth + 1); setViewYear(d.getFullYear()); setViewMonth(d.getMonth()); }}
-            className="p-2 rounded-lg hover:bg-[#F0F2FF] transition-colors">
+          <button onClick={() => { const d = new Date(viewYear, viewMonth + 1); setViewYear(d.getFullYear()); setViewMonth(d.getMonth()); }} className="btn-premium-secondary">
             <ChevronRight size={18} className="text-[#3E4A89]" />
           </button>
         </div>
@@ -382,7 +380,7 @@ export default function AdminAvailabilityCalendar() {
       {/* Day editor modal — solid overlay, no transparency */}
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1E2636]/80">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+          <div className="glass-card w-full max-w-md mx-4 overflow-hidden">
 
             {/* Modal header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8EAF6] bg-white">
@@ -496,15 +494,13 @@ export default function AdminAvailabilityCalendar() {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs font-medium text-[#4A5578] mb-1 block">Time</label>
-                          <select value={newTime} onChange={(e) => setNewTime(e.target.value)}
-                            className="w-full border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm text-[#1E2636] bg-white focus:outline-none focus:border-[#3E4A89]">
+                          <select value={newTime} onChange={(e) => setNewTime(e.target.value)} className="admin-select">
                             {TIME_OPTIONS.filter(t => t !== 'All Day').map((t) => <option key={t}>{t}</option>)}
                           </select>
                         </div>
                         <div>
                           <label className="text-xs font-medium text-[#4A5578] mb-1 block">Status</label>
-                          <select value={newStatus} onChange={(e) => setNewStatus(e.target.value as SlotStatus)}
-                            className="w-full border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm text-[#1E2636] bg-white focus:outline-none focus:border-[#3E4A89]">
+                          <select value={newStatus} onChange={(e) => setNewStatus(e.target.value as SlotStatus)} className="admin-select">
                             <option value="available">Available</option>
                             <option value="busy">Busy</option>
                             <option value="ooo">Out of Office</option>
@@ -513,21 +509,19 @@ export default function AdminAvailabilityCalendar() {
                       </div>
                       <div>
                         <label className="text-xs font-medium text-[#4A5578] mb-1 block">Label (optional)</label>
-                        <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="e.g. Team standup"
-                          className="w-full border border-[#E8EAF6] rounded-lg px-3 py-2 text-sm text-[#1E2636] bg-white focus:outline-none focus:border-[#3E4A89]" />
+                        <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="e.g. Team standup" className="admin-input" />
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={addSlot} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-[#3E4A89] text-white text-sm font-medium hover:bg-[#2A3568]">
+                        <button onClick={addSlot} className="btn-premium-success flex-1 flex items-center justify-center gap-1.5 py-2 text-sm">
                           <Check size={14} /> Add Slot
                         </button>
-                        <button onClick={() => setShowSlotForm(false)} className="px-4 py-2 rounded-lg border border-[#E8EAF6] text-sm text-[#9BA6D3] hover:bg-[#F0F2FF]">
+                        <button onClick={() => setShowSlotForm(false)} className="btn-premium-secondary px-4 py-2 text-sm">
                           Cancel
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <button onClick={() => setShowSlotForm(true)}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-[#C5CAE0] text-sm text-[#9BA6D3] hover:border-[#3E4A89] hover:text-[#3E4A89] transition-colors">
+                    <button onClick={() => setShowSlotForm(true)} className="btn-premium-secondary">
                       <Plus size={15} /> Add Time Slot
                     </button>
                   )}
@@ -538,25 +532,22 @@ export default function AdminAvailabilityCalendar() {
             {/* Footer actions */}
             <div className="flex items-center gap-3 px-6 py-4 border-t border-[#E8EAF6] bg-white">
               {records[selected] && (
-                <button onClick={() => { clearDay(selected); setSelected(null); setAvailMode(null); }}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-rose-200 text-rose-600 text-sm hover:bg-rose-50">
+                <button onClick={() => { clearDay(selected); setSelected(null); setAvailMode(null); }} className="btn-premium-danger">
                   <Trash2 size={14} /> Clear Day
                 </button>
               )}
               <div className="flex-1" />
-              <button onClick={() => { setSelected(null); setAvailMode(null); }} className="px-4 py-2 rounded-xl border border-[#E8EAF6] text-sm text-[#9BA6D3] hover:bg-[#F0F2FF]">
+              <button onClick={() => { setSelected(null); setAvailMode(null); }} className="btn-premium-secondary">
                 Cancel
               </button>
               {availMode === 'full-day' && (
-                <button onClick={saveFullDay} disabled={saving}
-                  className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-60">
+                <button onClick={saveFullDay} disabled={saving} className="btn-premium-success">
                   {saving ? <Clock size={14} className="animate-spin" /> : <Sun size={14} />}
                   Save Full Day
                 </button>
               )}
               {availMode === 'specific' && (
-                <button onClick={saveDay} disabled={saving || editSlots.length === 0}
-                  className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-[#3E4A89] text-white text-sm font-medium hover:bg-[#2A3568] disabled:opacity-60">
+                <button onClick={saveDay} disabled={saving || editSlots.length === 0} className="btn-premium-success">
                   {saving ? <Clock size={14} className="animate-spin" /> : <Check size={14} />}
                   Save Timings
                 </button>
