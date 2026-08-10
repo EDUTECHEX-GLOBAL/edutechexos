@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import '../dashboard.css';
@@ -267,9 +268,9 @@ function getMeetingButtonState(
 
   if (day === 0 || day === 6) {
     return {
-      label: 'No meeting',
-      link: null,
-      message: 'No meeting is scheduled on Saturday or Sunday.',
+      label: 'Meeting options',
+      link: mainLink,
+      message: 'No recurring meeting scheduled today.',
     };
   }
 
@@ -2159,7 +2160,7 @@ export default function EduTechExOSDashboard() {
     setScheduleMeetGoogleLink('');
     setMeetDescription('');
     setMeetRecurring(false);
-    window.open('https://meet.google.com/new', '_blank');
+    try { window.open('https://meet.google.com/new', '_blank'); } catch { /* popup blocked */ }
     setScheduleMeetOpen(true);
   }
 
@@ -2182,11 +2183,7 @@ export default function EduTechExOSDashboard() {
       toast.error('Please add a title and set a date & time for the meeting.');
       return;
     }
-    const googleMeetLink = scheduleMeetGoogleLink.trim();
-    if (!googleMeetLink) {
-      toast.error('Paste the fresh Google Meet link before scheduling — switch to the tab that just opened and copy it.');
-      return;
-    }
+    const googleMeetLink = scheduleMeetGoogleLink.trim() || settings?.meetLink || DEFAULT_COMPANY_MEET_LINK;
 
     // Generate a unique meeting code so each meeting has its own shareable link
     const meetingCode = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -2306,7 +2303,7 @@ export default function EduTechExOSDashboard() {
 
   function startNewMeeting() {
     if (!channel) return;
-    window.open('https://meet.google.com/new', '_blank');
+    try { window.open('https://meet.google.com/new', '_blank'); } catch { /* popup blocked */ }
     setShareMeetLinkValue('');
     setRestrictInstantMeet(false);
     setInstantMeetInviteeIds([]);
@@ -2315,8 +2312,8 @@ export default function EduTechExOSDashboard() {
   }
 
   function shareInstantMeetLink() {
-    if (!channel || !shareMeetLinkValue.trim()) return;
-    const meetLink = shareMeetLinkValue.trim();
+    if (!channel) return;
+    const meetLink = shareMeetLinkValue.trim() || settings?.meetLink || DEFAULT_COMPANY_MEET_LINK;
     const msgId = `meeting-started-${Date.now()}`;
     const restrictedEmails = restrictInstantMeet
       ? members.filter((m) => instantMeetInviteeIds.includes(m.id)).map((m) => m.email)
@@ -2686,120 +2683,272 @@ export default function EduTechExOSDashboard() {
         <div className="mobile-drawer-overlay" onClick={() => setMobileSidebarOpen(false)} />
       )}
 
-      {/* ══ MOBILE CHANNEL DRAWER ══ */}
+      {/* ══ MOBILE CHANNEL & FEATURE DRAWER ══ */}
       <div className={`mobile-drawer${mobileSidebarOpen ? ' open' : ''}`}>
         <div className="mobile-drawer-header">
           <div className="flex items-center gap-2">
             <div
-              className="h-7 w-7 rounded-lg flex items-center justify-center"
+              className="h-8 w-8 rounded-xl flex items-center justify-center shadow-md"
               style={{ background: 'linear-gradient(135deg,#3E4A89,#4f52a0)' }}
             >
-              <AppLogo size={14} />
+              <AppLogo size={16} />
             </div>
-            <span className="text-[14px] font-black text-white">EduTechExOS</span>
+            <div>
+              <span className="text-[14px] font-black text-[#1E2636] dark:text-white block leading-tight">EduTechEx</span>
+              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Workspace OS</span>
+            </div>
           </div>
           <button className="mobile-drawer-close" onClick={() => setMobileSidebarOpen(false)}>
-            <X size={15} />
+            <X size={18} />
           </button>
         </div>
 
-        <div className="px-3 py-2.5 border-b border-[rgba(62,74,137,0.10)]">
+        <div className="mobile-drawer-body">
+          {/* Global Search Button */}
           <button
             onClick={() => {
               setMobileSidebarOpen(false);
               setGlobalSearchOpen(true);
             }}
-            className="sidebar-search-input w-full"
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-[rgba(255,255,255,0.10)] bg-white/[0.06] text-xs font-semibold text-[#EAECF4] mb-3"
           >
-            <Search size={13} />
-            <span className="text-[12.5px]">Search workspace…</span>
+            <Search size={14} className="text-indigo-500" />
+            <span>Search workspace…</span>
           </button>
-        </div>
 
-        <div className="sidebar-scroll flex-1">
-          <section className="mb-4">
-            <p className="sidebar-section-label mt-2">Channels</p>
-            {channels
-              .filter((c: { id: string }) => !c.id.startsWith('member-'))
-              .map((ch: { id: string; name: string }) => {
-                const isActive = ch.id === activeChannelId;
-                const unread = unreadCounts[ch.id] ?? 0;
-                return (
-                  <button
-                    key={ch.id}
-                    className={`sidebar-channel-btn${isActive ? ' active' : ''}`}
-                    onClick={() => {
-                      setActiveChannel(ch.id);
-                      clearUnread(ch.id);
-                      setMobileSidebarOpen(false);
-                      setMobileTab('chat');
-                    }}
-                  >
-                    <Hash size={13} style={{ opacity: isActive ? 1 : 0.55, flexShrink: 0 }} />
-                    <span className="min-w-0 flex-1 truncate">{ch.name}</span>
-                    {unread > 0 && !isActive && (
-                      <span className="unread-pill ml-auto shrink-0 flex h-4.5 min-w-[18px] items-center justify-center rounded-full px-1 text-[9px] font-black" style={{ height: 18 }}>
-                        {unread > 99 ? '99+' : unread}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-          </section>
-          <section>
-            <p className="sidebar-section-label">Direct Messages</p>
-            {channels
-              .filter((c: { id: string }) => c.id.startsWith('member-'))
-              .map((ch: { id: string; name: string }) => {
-                const isActive = ch.id === activeChannelId;
-                const member = members.find(
-                  (m: { email: string; onLeave?: boolean }) => `member-${m.email}` === ch.id
-                );
-                const initials = ch.name
-                  .split(' ')
-                  .map((p: string) => p[0])
-                  .join('')
-                  .toUpperCase()
-                  .slice(0, 2);
-                const statusColor = (member as { status?: string } | undefined)?.status === 'online'
-                  ? 'bg-emerald-400'
-                  : (member as { status?: string } | undefined)?.status === 'away'
-                    ? 'bg-amber-400'
-                    : (member as { status?: string } | undefined)?.status === 'in-meeting'
-                      ? 'bg-red-400'
-                      : 'bg-[#7C859E]';
-                const dmUnread = unreadCounts[ch.id] ?? 0;
-                return (
-                  <button
-                    key={ch.id}
-                    className={`sidebar-channel-btn${isActive ? ' active' : ''}`}
-                    onClick={() => {
-                      setActiveChannel(ch.id);
-                      clearUnread(ch.id);
-                      setMobileSidebarOpen(false);
-                      setMobileTab('chat');
-                    }}
-                  >
-                    <span
-                      className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-black text-white"
-                      style={{ background: 'linear-gradient(135deg,#3E4A89,#2A3568)' }}
-                    >
-                      {initials}
-                      <span className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-[#191E2F] ${statusColor}`} />
+          {/* Section: Features & Tools */}
+          <p className="mobile-drawer-section">Apps & Features</p>
+
+          <button
+            className="mobile-drawer-item"
+            onClick={() => {
+              setStandupOpen(true);
+              setMobileSidebarOpen(false);
+            }}
+          >
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+              <CheckSquare size={15} />
+            </div>
+            <span>Daily Standup</span>
+          </button>
+
+          <button
+            className="mobile-drawer-item"
+            onClick={() => {
+              setKanbanOpen(true);
+              setMobileSidebarOpen(false);
+            }}
+          >
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+              <Layout size={15} />
+            </div>
+            <span>Tasks (Kanban Board)</span>
+          </button>
+
+          <button
+            className="mobile-drawer-item"
+            onClick={() => {
+              setWikiOpen(true);
+              setMobileSidebarOpen(false);
+            }}
+          >
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <BookOpen size={15} />
+            </div>
+            <span>Wiki Knowledge Base</span>
+          </button>
+
+          <button
+            className="mobile-drawer-item"
+            onClick={() => {
+              setCalendarOpen(true);
+              setMobileSidebarOpen(false);
+            }}
+          >
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
+              <CalendarDays size={15} />
+            </div>
+            <span>Calendar & Schedule</span>
+          </button>
+
+          <button
+            className="mobile-drawer-item"
+            onClick={() => {
+              setActivityCalendarOpen(true);
+              setMobileSidebarOpen(false);
+            }}
+          >
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+              <UserCheck size={15} />
+            </div>
+            <span>My Activity & Attendance</span>
+          </button>
+
+          <button
+            className="mobile-drawer-item"
+            onClick={() => {
+              setLeaveOpen(true);
+              setMobileSidebarOpen(false);
+            }}
+          >
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
+              <CalendarPlus size={15} />
+            </div>
+            <span>Leave Requests</span>
+          </button>
+
+          <button
+            className="mobile-drawer-item"
+            onClick={() => {
+              setPeopleStatusOpen(true);
+              setMobileSidebarOpen(false);
+            }}
+          >
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600">
+              <Users size={15} />
+            </div>
+            <span>People & Team Status</span>
+          </button>
+
+          <button
+            className="mobile-drawer-item"
+            onClick={() => {
+              setAnalyticsOpen(true);
+              setMobileSidebarOpen(false);
+            }}
+          >
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
+              <BarChart2 size={15} />
+            </div>
+            <span>Analytics & Reports</span>
+          </button>
+
+          <button
+            className="mobile-drawer-item"
+            onClick={() => {
+              setBookmarksPanelOpen(true);
+              setMobileSidebarOpen(false);
+            }}
+          >
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+              <Bookmark size={15} />
+            </div>
+            <span>Saved Bookmarks</span>
+          </button>
+
+          <button
+            className="mobile-drawer-item"
+            onClick={() => {
+              setNotepadOpen(true);
+              setMobileSidebarOpen(false);
+            }}
+          >
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-yellow-50 text-yellow-600">
+              <StickyNote size={15} />
+            </div>
+            <span>Quick Notepad</span>
+          </button>
+
+          {isAdmin && (
+            <button
+              className="mobile-drawer-item"
+              onClick={() => {
+                router.push('/admin');
+                setMobileSidebarOpen(false);
+              }}
+            >
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+                <ShieldCheck size={15} />
+              </div>
+              <span>Admin Control Panel</span>
+            </button>
+          )}
+
+          {/* Section: Channels */}
+          <p className="mobile-drawer-section mt-4">Channels</p>
+          {workspaceChannels.map((ch: { id: string; name: string }) => {
+              const isActive = ch.id === activeChannelId;
+              const unread = unreadCounts[ch.id] ?? 0;
+              return (
+                <button
+                  key={ch.id}
+                  className={`sidebar-channel-btn${isActive ? ' active' : ''}`}
+                  onClick={() => {
+                    setActiveChannel(ch.id);
+                    clearUnread(ch.id);
+                    setMobileSidebarOpen(false);
+                    setMobileTab('chat');
+                  }}
+                >
+                  <Hash size={13} style={{ opacity: isActive ? 1 : 0.55, flexShrink: 0 }} />
+                  <span className="min-w-0 flex-1 truncate">{ch.name}</span>
+                  {unread > 0 && !isActive && (
+                    <span className="unread-pill ml-auto shrink-0 flex h-4.5 min-w-[18px] items-center justify-center rounded-full px-1 text-[9px] font-black" style={{ height: 18 }}>
+                      {unread > 99 ? '99+' : unread}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-[13px]">{ch.name}</span>
-                    {(member as { onLeave?: boolean } | undefined)?.onLeave && (
-                      <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[8px] font-black text-amber-700">Leave</span>
-                    )}
-                    {dmUnread > 0 && !isActive && (
-                      <span className="unread-pill ml-1 shrink-0 flex min-w-[18px] items-center justify-center rounded-full px-1 text-[9px] font-black" style={{ height: 18 }}>
-                        {dmUnread > 99 ? '99+' : dmUnread}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-          </section>
+                  )}
+                </button>
+              );
+            })}
+
+          {/* Section: Direct Messages */}
+          <p className="mobile-drawer-section mt-4">Direct Messages</p>
+          {channels
+            .filter((c: { id: string }) => {
+              if (!c.id.startsWith('member-')) return false;
+              return members.some(
+                (m: { email: string; id?: string }) =>
+                  `member-${m.email?.toLowerCase()}` === c.id.toLowerCase() ||
+                  `member-${m.email}` === c.id ||
+                  m.id === c.id
+              );
+            })
+            .map((ch: { id: string; name: string }) => {
+              const isActive = ch.id === activeChannelId;
+              const member = members.find(
+                (m: { email: string; onLeave?: boolean }) => `member-${m.email}` === ch.id
+              );
+              const initials = ch.name
+                .split(' ')
+                .map((p: string) => p[0])
+                .join('')
+                .toUpperCase()
+                .slice(0, 2);
+              const statusColor = (member as { status?: string } | undefined)?.status === 'online'
+                ? 'bg-emerald-400'
+                : (member as { status?: string } | undefined)?.status === 'away'
+                  ? 'bg-amber-400'
+                  : (member as { status?: string } | undefined)?.status === 'in-meeting'
+                    ? 'bg-red-400'
+                    : 'bg-[#7C859E]';
+              const dmUnread = unreadCounts[ch.id] ?? 0;
+              return (
+                <button
+                  key={ch.id}
+                  className={`sidebar-channel-btn${isActive ? ' active' : ''}`}
+                  onClick={() => {
+                    setActiveChannel(ch.id);
+                    clearUnread(ch.id);
+                    setMobileSidebarOpen(false);
+                    setMobileTab('chat');
+                  }}
+                >
+                  <span
+                    className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-black text-white"
+                    style={{ background: 'linear-gradient(135deg,#3E4A89,#2A3568)' }}
+                  >
+                    {initials}
+                    <span className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-[#191E2F] ${statusColor}`} />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[13px]">{ch.name}</span>
+                  {dmUnread > 0 && !isActive && (
+                    <span className="unread-pill ml-1 shrink-0 flex min-w-[18px] items-center justify-center rounded-full px-1 text-[9px] font-black" style={{ height: 18 }}>
+                      {dmUnread > 99 ? '99+' : dmUnread}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
         </div>
 
         <div className="sidebar-footer">
@@ -2967,14 +3116,16 @@ export default function EduTechExOSDashboard() {
         <div className="rail-bottom">
           <div className="rail-divider" />
 
-          {/* ActivityWatch status indicator */}
-          <div
+          {/* ActivityWatch status indicator — click to open the setup guide */}
+          <button
+            type="button"
+            onClick={() => setShowSetupBanner(true)}
             title={
-              awStatus === 'connected' ? 'ActivityWatch connected — syncing desktop activity'
-                : awStatus === 'offline' ? 'ActivityWatch not detected — install & open ActivityWatch on this machine'
-                  : 'Checking for ActivityWatch…'
+              awStatus === 'connected' ? 'ActivityWatch connected — click for the setup guide'
+                : awStatus === 'offline' ? 'Activity tracking not set up — click to see how'
+                  : 'Checking for ActivityWatch… click for the setup guide'
             }
-            className="rail-btn cursor-default select-none"
+            className="rail-btn"
           >
             <div className="relative flex items-center justify-center">
               <Activity
@@ -2998,7 +3149,7 @@ export default function EduTechExOSDashboard() {
             >
               {awStatus === 'connected' ? 'AW Live' : awStatus === 'offline' ? 'AW Off' : 'AW…'}
             </span>
-          </div>
+          </button>
 
         </div>
       </nav>
@@ -3296,8 +3447,15 @@ export default function EduTechExOSDashboard() {
           )}
 
           {/* ── Desktop Tracking Setup Banner ─────────────── */}
-          {(showSetupBanner || (awStatus !== 'connected' && !awBannerDismissed)) && (
-            <div style={{ margin: '14px 8px 8px', borderRadius: 16, background: 'linear-gradient(165deg, #262C48, #1E2338)', border: '1px solid rgba(139,92,246,0.28)', overflow: 'hidden', boxShadow: '0 14px 34px rgba(0,0,0,0.30)' }}>
+          {showSetupBanner && createPortal(
+            <div
+              onClick={() => setShowSetupBanner(false)}
+              style={{ position: 'fixed', inset: 0, zIndex: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, background: 'rgba(12,15,28,0.62)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
+            >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{ width: 'min(470px, 100%)', maxHeight: '88vh', overflowY: 'auto', borderRadius: 16, background: 'linear-gradient(165deg, #262C48, #1E2338)', border: '1px solid rgba(139,92,246,0.28)', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
+            >
               {/* Aurora top accent */}
               <div style={{ height: 3, background: 'linear-gradient(90deg,#6C7BF5,#8B5CF6 55%,#22D3EE)' }} />
 
@@ -3305,17 +3463,17 @@ export default function EduTechExOSDashboard() {
               <div style={{ padding: '13px 15px 11px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#F5A524', flexShrink: 0, animation: 'ping 1.5s infinite', boxShadow: '0 0 8px rgba(245,165,36,0.7)' }} />
-                  <span style={{ fontSize: 12, fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em', flex: 1 }}>
-                    Desktop Tracking Not Active
+                  <span style={{ fontSize: 13.5, fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em', flex: 1 }}>
+                    Set Up Activity Tracking
                   </span>
                   <button
-                    onClick={() => { setAwBannerDismissed(true); localStorage.setItem('aw_banner_dismissed', '1'); setShowSetupBanner(false); }}
-                    title="Dismiss setup banner"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(165,180,252,0.5)', fontSize: 16, lineHeight: 1, padding: '0 2px', flexShrink: 0 }}
+                    onClick={() => setShowSetupBanner(false)}
+                    title="Close"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 7, cursor: 'pointer', color: 'rgba(231,227,251,0.8)', fontSize: 16, lineHeight: 1, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                   >×</button>
                 </div>
-                <p style={{ fontSize: 11, color: 'rgba(165,180,252,0.85)', lineHeight: 1.55, margin: 0 }}>
-                  Follow the 3 steps below so admin can see your <strong style={{ color: '#A5B4FC' }}>VS Code</strong>, <strong style={{ color: '#A5B4FC' }}>Chrome</strong> and <strong style={{ color: '#A5B4FC' }}>Figma</strong> activity in real time.
+                <p style={{ fontSize: 11, color: 'rgba(174,180,212,0.85)', lineHeight: 1.55, margin: 0 }}>
+                  A one-time, ~5-minute setup so the admin can see the <strong style={{ color: '#B9C2FF' }}>desktop apps</strong> and <strong style={{ color: '#B9C2FF' }}>websites</strong> you use during work hours. Follow the steps below.
                 </p>
               </div>
 
@@ -3393,14 +3551,31 @@ export default function EduTechExOSDashboard() {
                 </div>
               </div>
 
-              {/* Warning footer */}
-              <div style={{ margin: '2px 12px 12px', display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 10, background: 'rgba(245,165,36,0.10)', border: '1px solid rgba(245,165,36,0.28)' }}>
+              {/* Step 4 — Chrome extension (website / tab tracking) */}
+              <div style={{ height: 1, margin: '0 14px 8px', background: 'rgba(255,255,255,0.05)' }} />
+              <div style={{ padding: '0 14px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#6C7BF5,#8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0, marginTop: 1, boxShadow: '0 3px 8px rgba(108,123,245,0.4)' }}>4</div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: '#ffffff', margin: '0 0 3px' }}>Install the Chrome extension <span style={{ color: 'rgba(174,180,212,0.6)', fontWeight: 600 }}>(for website &amp; tab tracking)</span></p>
+                  <p style={{ fontSize: 10.5, color: 'rgba(174,180,212,0.65)', margin: '0 0 6px', lineHeight: 1.5 }}>
+                    Optional but recommended. In Chrome, add <strong style={{ color: '#B9C2FF' }}>ActivityWatch Web Watcher</strong>, click its icon and tick <strong style={{ color: '#B9C2FF' }}>Enabled</strong> so it connects.
+                  </p>
+                  <a href="https://chromewebstore.google.com/detail/activitywatch-web-watcher/nglaklhklhcoonedhgnpgddginnjdadi" target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 8, background: 'rgba(16,201,138,0.16)', border: '1px solid rgba(16,201,138,0.42)', padding: '6px 12px', fontSize: 11, fontWeight: 700, color: '#34D399', textDecoration: 'none' }}>
+                    Get the Chrome extension →
+                  </a>
+                </div>
+              </div>
+
+              {/* Info footer */}
+              <div style={{ margin: '2px 12px 14px', display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 10, background: 'rgba(245,165,36,0.10)', border: '1px solid rgba(245,165,36,0.28)' }}>
                 <span style={{ fontSize: 14, flexShrink: 0, lineHeight: 1 }}>⚠️</span>
                 <span style={{ fontSize: 11, color: 'rgba(253,186,116,0.90)', lineHeight: 1.55 }}>
-                  <strong style={{ color: '#FCD34D' }}>Important:</strong> Make sure ActivityWatch is open and running before you run the command above. This banner disappears automatically as soon as your activity is detected.
+                  <strong style={{ color: '#FCD34D' }}>Note:</strong> Keep ActivityWatch running. Time is counted only during working hours (10:00 AM – 6:30 PM) and only from the moment you log in to EduTechExOS.
                 </span>
               </div>
             </div>
+            </div>,
+            document.body
           )}
         </div>
 
@@ -3630,23 +3805,19 @@ export default function EduTechExOSDashboard() {
                       </button>
                     );
                   })}
-                  {meetingButtonState.link && (
-                    <>
-                      <div className="my-1.5 h-px mx-1" style={{ background: 'rgba(62,74,137,0.08)' }} />
-                      <button
-                        onClick={() => { setMeetMenuOpen(false); setScheduleMeetOpen(true); }}
-                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-[rgba(62,74,137,0.06)] transition-colors group"
-                      >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100 transition-colors">
-                          <CalendarDays size={15} />
-                        </span>
-                        <div>
-                          <p className="text-sm font-bold text-[#4A5578]">Schedule Meeting</p>
-                          <p className="text-[11px] text-[#7C859E]">Pick date &amp; invite team</p>
-                        </div>
-                      </button>
-                    </>
-                  )}
+                  <div className="my-1.5 h-px mx-1" style={{ background: 'rgba(62,74,137,0.08)' }} />
+                  <button
+                    onClick={() => { setMeetMenuOpen(false); setScheduleMeetOpen(true); }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-[rgba(62,74,137,0.06)] transition-colors group"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100 transition-colors">
+                      <CalendarDays size={15} />
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-[#4A5578]">Schedule Meeting</p>
+                      <p className="text-[11px] text-[#7C859E]">Pick date &amp; invite team</p>
+                    </div>
+                  </button>
                 </div>
               )}
             </div>
@@ -4728,7 +4899,7 @@ export default function EduTechExOSDashboard() {
               </div>
             )}
             {/* Toolbar icons */}
-            <div className="composer-tools flex items-center gap-0.5">
+            <div className="composer-tools flex items-center gap-0.5 max-w-full py-0.5 relative z-10">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -4789,6 +4960,7 @@ export default function EduTechExOSDashboard() {
               {/* Meet dropdown */}
               <div className="relative" ref={meetInputMenuRef}>
                 <button
+                  type="button"
                   onClick={() => setMeetInputMenuOpen((v) => !v)}
                   className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${meetInputMenuOpen ? 'bg-[rgba(62,74,137,0.08)] text-green-700' : 'text-[#7C859E] hover:bg-[rgba(62,74,137,0.08)] hover:text-green-700'}`}
                   title="Meet options"
@@ -4796,7 +4968,7 @@ export default function EduTechExOSDashboard() {
                   <PhoneCall size={17} />
                 </button>
                 {meetInputMenuOpen && (
-                  <div className="absolute bottom-full left-0 mb-2 z-50 w-52 overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl">
+                  <div className="absolute bottom-full right-0 mb-2 z-[500] w-56 overflow-hidden rounded-2xl border border-[rgba(62,74,137,0.12)] bg-[#FAF8F5] shadow-2xl">
                     <div className="px-3 py-2 bg-[#FAF8F5] border-b border-[rgba(62,74,137,0.08)]">
                       <p className="text-[10px] font-black uppercase tracking-wider text-[#7C859E]">
                         Meeting

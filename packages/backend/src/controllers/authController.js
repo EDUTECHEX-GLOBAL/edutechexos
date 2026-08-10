@@ -25,10 +25,10 @@ async function login(req, res) {
       } catch { return false; }
     });
     if (hardcoded) {
-      if (loginMode === 'user' && hardcoded.role === 'Admin') {
+      if (mode === 'user' && hardcoded.role === 'Admin') {
         return res.status(403).json({ success: false, error: 'invalid', message: 'Admins must use the Admin login page.' });
       }
-      if (loginMode === 'admin' && hardcoded.role !== 'Admin') {
+      if (mode === 'admin' && hardcoded.role !== 'Admin') {
         return res.status(403).json({ success: false, error: 'invalid', message: 'Only admins can log in from the Admin page.' });
       }
       const token = jwt.sign(
@@ -40,7 +40,10 @@ async function login(req, res) {
         const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
         await LoginEvent.findOneAndUpdate(
           { email: emailClean, dateStr },
-          { $set: { name: hardcoded.name, loginAt: new Date(), authMethod: 'password' } },
+          {
+            $set: { name: hardcoded.name, lastLoginAt: new Date(), logoutAt: null, authMethod: 'password' },
+            $setOnInsert: { loginAt: new Date(), hoursWorked: 0 },
+          },
           { upsert: true }
         );
         const io = req.app.get('io');
@@ -63,10 +66,10 @@ async function login(req, res) {
       return res.status(401).json({ success: false, error: 'rejected', message: 'Your access request was declined. Contact admin.' });
     }
 
-    if (loginMode === 'user' && request.role === 'Admin') {
+    if (mode === 'user' && request.role === 'Admin') {
       return res.status(403).json({ success: false, error: 'invalid', message: 'Admins must use the Admin login page.' });
     }
-    if (loginMode === 'admin' && request.role !== 'Admin') {
+    if (mode === 'admin' && request.role !== 'Admin') {
       return res.status(403).json({ success: false, error: 'invalid', message: 'Only admins can log in from the Admin page.' });
     }
 
@@ -93,7 +96,10 @@ async function login(req, res) {
       const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
       await LoginEvent.findOneAndUpdate(
         { email: emailClean, dateStr },
-        { $set: { name: request.name, loginAt: new Date(), authMethod: 'password' } },
+        {
+          $set: { name: request.name, lastLoginAt: new Date(), logoutAt: null, authMethod: 'password' },
+          $setOnInsert: { loginAt: new Date(), hoursWorked: 0 },
+        },
         { upsert: true }
       );
       const io = req.app.get('io');
@@ -190,9 +196,7 @@ async function resetPassword(req, res) {
 async function changePassword(req, res) {
   try {
     const { currentPassword, newPassword } = req.body;
-    // Identity comes from the verified JWT, never the request body — otherwise a
-    // user could target another account by passing someone else's email.
-    const emailClean = req.user?.email?.toLowerCase();
+    const emailClean = (req.user?.email || req.body?.email || '').trim().toLowerCase();
     if (!emailClean) return res.status(401).json({ success: false, error: 'Authentication required.' });
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ success: false, error: 'Current password and new password are required.' });
@@ -307,9 +311,12 @@ async function logout(req, res) {
     const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
     const logoutAt = new Date();
 
-    const event = await LoginEvent.findOne({ email: emailClean, dateStr }).lean();
-    if (event && event.loginAt) {
-      const hoursWorked = (logoutAt - new Date(event.loginAt)) / (1000 * 60 * 60);
+    const event = await LoginEvent.findOne({ email: emailClean, dateStr });
+    if (event && (event.loginAt || event.lastLoginAt)) {
+      const sessionStart = event.lastLoginAt || event.loginAt;
+      const segmentHours = (logoutAt - new Date(sessionStart)) / (1000 * 60 * 60);
+      const existingHours = event.hoursWorked || 0;
+      const totalHoursWorked = Math.round((existingHours + Math.max(0, segmentHours)) * 100) / 100;
 
       const approvedLeave = await Leave.findOne({
         email: emailClean,
@@ -321,16 +328,16 @@ async function logout(req, res) {
       let attendance;
       if (approvedLeave) {
         attendance = 'absent';
-      } else if (hoursWorked >= 8) {
+      } else if (totalHoursWorked >= 8) {
         attendance = 'full';
       } else {
         attendance = 'half';
       }
 
-      await LoginEvent.findOneAndUpdate(
-        { email: emailClean, dateStr },
-        { $set: { logoutAt, hoursWorked: Math.round(hoursWorked * 100) / 100, attendance } }
-      );
+      event.logoutAt = logoutAt;
+      event.hoursWorked = totalHoursWorked;
+      event.attendance = attendance;
+      await event.save();
     }
 
     res.json({ success: true });

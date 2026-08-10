@@ -1,5 +1,49 @@
 const { ActivitySession, AWActivity, LoginEvent, AccessRequest, UserSettings } = require('../models/index');
 
+// ── Work-hours window (IST): 10:00–18:30 — all activity metrics must stay inside this span ──
+const IST_OFFSET_MS   = 5.5 * 60 * 60 * 1000;
+const WORK_START_MIN  = 10 * 60;       // 10:00
+const WORK_END_MIN    = 18 * 60 + 30;  // 18:30
+const MAX_WORK_MIN    = WORK_END_MIN - WORK_START_MIN; // 510
+const MAX_WORK_SEC    = MAX_WORK_MIN * 60;             // 30600
+
+function istDateStr(now = new Date()) {
+  return new Date(now.getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+function istMinutesOfDay(now = new Date()) {
+  const ist = new Date(now.getTime() + IST_OFFSET_MS);
+  return ist.getUTCHours() * 60 + ist.getUTCMinutes();
+}
+
+function isWithinWorkHoursIST(now = new Date()) {
+  const m = istMinutesOfDay(now);
+  return m >= WORK_START_MIN && m < WORK_END_MIN;
+}
+
+function isMinInWorkWindow(mStr) {
+  const p = /^(\d{1,2}):(\d{2})$/.exec(String(mStr || ''));
+  if (!p) return false;
+  const mins = parseInt(p[1], 10) * 60 + parseInt(p[2], 10);
+  return mins >= WORK_START_MIN && mins < WORK_END_MIN;
+}
+
+function clampWorkMinutes(n) {
+  const v = Number(n);
+  return Number.isFinite(v) ? Math.min(MAX_WORK_MIN, Math.max(0, Math.round(v))) : 0;
+}
+
+function clampWorkSeconds(n) {
+  const v = Number(n);
+  return Number.isFinite(v) ? Math.min(MAX_WORK_SEC, Math.max(0, Math.round(v))) : 0;
+}
+
+function itemWorkSeconds(seconds, minutes) {
+  const s = clampWorkSeconds(seconds);
+  if (s > 0) return s;
+  return clampWorkSeconds((Number(minutes) || 0) * 60);
+}
+
 async function heartbeat(req, res) {
   try {
     const email = req.user?.email?.toLowerCase();
@@ -7,9 +51,7 @@ async function heartbeat(req, res) {
     if (!email) return res.status(401).json({ success: false });
     const { currentActivity = '', currentPanel = '' } = req.body || {};
     const now = new Date();
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const istDate = new Date(now.getTime() + istOffset);
-    const dateStr = istDate.toISOString().slice(0, 10);
+    const dateStr = istDateStr(now);
     const session = await ActivitySession.findOneAndUpdate(
       { email, dateStr },
       { $setOnInsert: { email, name, dateStr, totalMinutes: 0, messageCount: 0, taskCount: 0, sessionStart: now } },
@@ -20,19 +62,18 @@ async function heartbeat(req, res) {
     if (!session.sessionStart) {
       await ActivitySession.updateOne({ email, dateStr }, { $set: { sessionStart: now } });
     }
-    let minutesToAdd = 1;
-    const lastBeat = session.lastHeartbeat || session.createdAt;
-    if (lastBeat) {
-      const gapMin = (now - new Date(lastBeat)) / 60000;
-      minutesToAdd = Math.min(Math.max(0, Math.round(gapMin)), 5);
-    }
-    await ActivitySession.updateOne(
-      { email, dateStr },
-      {
-        $set:  { lastHeartbeat: now, name, currentActivity, currentPanel },
-        $inc:  { totalMinutes: minutesToAdd },
+    const update = { $set: { lastHeartbeat: now, name, currentActivity, currentPanel } };
+    // Only accumulate session minutes during the official work window (10:00–18:30 IST).
+    if (isWithinWorkHoursIST(now)) {
+      let minutesToAdd = 1;
+      const lastBeat = session.lastHeartbeat || session.createdAt;
+      if (lastBeat) {
+        const gapMin = (now - new Date(lastBeat)) / 60000;
+        minutesToAdd = Math.min(Math.max(0, Math.round(gapMin)), 5);
       }
-    );
+      update.$inc = { totalMinutes: minutesToAdd };
+    }
+    await ActivitySession.updateOne({ email, dateStr }, update);
     const io = req.app.get('io');
     if (io) io.emit('user_activity_update', {
       email, name, currentActivity, currentPanel,
@@ -50,8 +91,7 @@ async function getLive(req, res) {
       return res.status(403).json({ success: false, error: 'Admin only.' });
     }
     const threeMinAgo = new Date(Date.now() - 3 * 60 * 1000);
-    const istOffset   = 5.5 * 60 * 60 * 1000;
-    const todayStr    = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+    const todayStr = istDateStr();
     const active = await ActivitySession.find({
       dateStr: todayStr,
       lastHeartbeat: { $gte: threeMinAgo },
@@ -62,7 +102,7 @@ async function getLive(req, res) {
       currentActivity: s.currentActivity || 'Active',
       currentPanel:    s.currentPanel    || 'dashboard',
       lastSeen:        s.lastHeartbeat,
-      todayMinutes:    s.totalMinutes    || 0,
+      todayMinutes:    clampWorkMinutes(s.totalMinutes),
     }));
     res.json({ success: true, live });
   } catch (err) {
@@ -75,14 +115,13 @@ async function getHistory(req, res) {
     if (!req.user || req.user.role !== 'Admin') {
       return res.status(403).json({ success: false, error: 'Admin only.' });
     }
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const todayStr  = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+    const todayStr  = istDateStr();
     const dateStr   = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date) ? req.query.date : todayStr;
     const sessions = await ActivitySession.find({ dateStr }).sort({ totalMinutes: -1 }).lean();
     const rows = sessions.map((s) => ({
       email:           s.email,
       name:            s.name,
-      totalMinutes:    s.totalMinutes    || 0,
+      totalMinutes:    clampWorkMinutes(s.totalMinutes),
       messageCount:    s.messageCount    || 0,
       taskCount:       s.taskCount       || 0,
       lastSeen:        s.lastHeartbeat,
@@ -143,7 +182,8 @@ async function awSync(req, res) {
     const {
       currentApp, currentTitle, isAfk,
       totalActiveMinutes, totalAfkMinutes,
-      appBreakdown,
+      totalActiveSeconds, totalAfkSeconds,
+      appBreakdown, recentApps, timeline,
       currentUrl, currentPageTitle, webBreakdown,
       deviceId, deviceName,
       dateStr: payloadDateStr,
@@ -167,27 +207,58 @@ async function awSync(req, res) {
       }
     }
     // ─────────────────────────────────────────────────────────────────────────
-    const istOffset = 5.5 * 60 * 60 * 1000;
     // Use client-supplied dateStr (for historical backfill) or fall back to today in IST
     const dateStr = /^\d{4}-\d{2}-\d{2}$/.test(payloadDateStr)
       ? payloadDateStr
-      : new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+      : istDateStr();
 
-    // ── Sanity-clamp self-reported values ────────────────────────────────────
-    // The agent's numbers are client-supplied and cannot be fully trusted, so
-    // clamp them to physically-possible bounds (a day has 1440 minutes) and cap
-    // string/array sizes to avoid absurd or abusive payloads being stored.
-    const clampMin = (n) => {
-      const v = Number(n);
-      return Number.isFinite(v) ? Math.min(1440, Math.max(0, Math.round(v))) : 0;
-    };
+    // Never store today's AW data outside the work window.
+    if (dateStr === istDateStr() && !isWithinWorkHoursIST()) {
+      return res.json({ success: true, skipped: true });
+    }
+
+    const clampMin = clampWorkMinutes;
+    const clampSec = clampWorkSeconds;
+    const itemSec  = itemWorkSeconds;
     const str = (s, max) => String(s ?? '').slice(0, max);
+    // Keep EVERY app/tab (capped generously for safety, not trimmed to a top-N).
+    const iso = (v) => (typeof v === 'string' && v.length <= 40 ? v : null);
     const safeApps = Array.isArray(appBreakdown)
-      ? appBreakdown.slice(0, 15).map((a) => ({ app: str(a?.app, 200), minutes: clampMin(a?.minutes) }))
+      ? appBreakdown.slice(0, 300).map((a) => ({
+          app: str(a?.app, 200),
+          minutes: clampMin(a?.minutes),
+          seconds: itemSec(a?.seconds, a?.minutes),
+          firstSeen: iso(a?.firstSeen), lastSeen: iso(a?.lastSeen),
+        }))
       : [];
     const safeWeb = Array.isArray(webBreakdown)
-      ? webBreakdown.slice(0, 20).map((w) => ({ domain: str(w?.domain, 200), minutes: clampMin(w?.minutes), title: str(w?.title, 300) }))
+      ? webBreakdown.slice(0, 300).map((w) => ({
+          domain: str(w?.domain, 200),
+          minutes: clampMin(w?.minutes),
+          seconds: itemSec(w?.seconds, w?.minutes),
+          title: str(w?.title, 300), lastSeen: iso(w?.lastSeen),
+        }))
       : [];
+    const safeRecent = Array.isArray(recentApps)
+      ? recentApps.slice(0, 30).map((r) => ({
+          app: str(r?.app, 200),
+          seconds: itemSec(r?.seconds, r?.minutes),
+          lastSeen: iso(r?.lastSeen),
+        }))
+      : [];
+    // Minute-by-minute timeline — only keep entries within the work window.
+    const safeTimeline = Array.isArray(timeline)
+      ? timeline
+          .slice(-1440)
+          .filter((t) => isMinInWorkWindow(t?.m))
+          .map((t) => ({
+            m: str(t?.m, 5), app: str(t?.app, 200), title: str(t?.title, 300),
+            tab: str(t?.tab, 300), seconds: Math.min(60, clampSec(t?.seconds)),
+            afkSeconds: Math.min(60, clampSec(t?.afkSeconds)),
+          }))
+      : [];
+    const safeAppsFiltered = safeApps.filter((a) => itemSec(a.seconds, a.minutes) > 0);
+    const safeWebFiltered  = safeWeb.filter((w) => itemSec(w.seconds, w.minutes) > 0);
 
     await AWActivity.findOneAndUpdate(
       { email, dateStr },
@@ -199,10 +270,14 @@ async function awSync(req, res) {
           isAfk:            !!isAfk,
           totalActiveMinutes: clampMin(totalActiveMinutes),
           totalAfkMinutes:  clampMin(totalAfkMinutes),
-          appBreakdown:     safeApps,
+          totalActiveSeconds: itemSec(totalActiveSeconds, totalActiveMinutes),
+          totalAfkSeconds:  itemSec(totalAfkSeconds, totalAfkMinutes),
+          appBreakdown:     safeAppsFiltered,
+          recentApps:       safeRecent,
+          timeline:         safeTimeline,
           currentUrl:       str(currentUrl, 500),
           currentPageTitle: str(currentPageTitle, 300),
-          webBreakdown:     safeWeb,
+          webBreakdown:     safeWebFiltered,
           lastSync: new Date(),
         },
       },
@@ -227,12 +302,14 @@ async function awSync(req, res) {
 async function awCurrent(req, res) {
   try {
     if (!req.user) return res.status(401).json({ success: false, error: 'Unauthorized.' });
+    if (!isWithinWorkHoursIST()) {
+      return res.json({ success: true, skipped: true });
+    }
     const email = req.user.email.toLowerCase();
     const name  = req.user.name || '';
     const { currentApp, currentTitle, currentUrl, currentPageTitle, isAfk } = req.body || {};
 
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const dateStr = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+    const dateStr = istDateStr();
     const str = (s, max) => String(s ?? '').slice(0, max);
 
     await AWActivity.findOneAndUpdate(
@@ -287,11 +364,41 @@ async function getAw(req, res) {
     if (!req.user || req.user.role !== 'Admin') {
       return res.status(403).json({ success: false, error: 'Admin only.' });
     }
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const todayIST = new Date(Date.now() + istOffset).toISOString().slice(0, 10);
+    const todayIST = istDateStr();
     const dateStr = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date) ? req.query.date : todayIST;
     const records = await AWActivity.find({ dateStr }).lean();
-    res.json({ success: true, records, dateStr });
+    const hideLive  = dateStr === todayIST && !isWithinWorkHoursIST();
+
+    const safeRecords = records.map((r) => ({
+      ...r,
+      currentApp:       hideLive ? '' : (r.currentApp || ''),
+      currentTitle:     hideLive ? '' : (r.currentTitle || ''),
+      currentUrl:       hideLive ? '' : (r.currentUrl || ''),
+      currentPageTitle: hideLive ? '' : (r.currentPageTitle || ''),
+      isAfk:            hideLive ? false : !!r.isAfk,
+      totalActiveMinutes:  clampWorkMinutes(r.totalActiveMinutes),
+      totalAfkMinutes:     clampWorkMinutes(r.totalAfkMinutes),
+      totalActiveSeconds:  itemWorkSeconds(r.totalActiveSeconds, r.totalActiveMinutes),
+      totalAfkSeconds:     itemWorkSeconds(r.totalAfkSeconds, r.totalAfkMinutes),
+      appBreakdown: (r.appBreakdown || [])
+        .map((a) => ({
+          ...a,
+          minutes: clampWorkMinutes(a.minutes),
+          seconds: itemWorkSeconds(a.seconds, a.minutes),
+        }))
+        .filter((a) => itemWorkSeconds(a.seconds, a.minutes) > 0),
+      webBreakdown: (r.webBreakdown || [])
+        .map((w) => ({
+          ...w,
+          minutes: clampWorkMinutes(w.minutes),
+          seconds: itemWorkSeconds(w.seconds, w.minutes),
+        }))
+        .filter((w) => itemWorkSeconds(w.seconds, w.minutes) > 0),
+      recentApps: (r.recentApps || []).filter((ra) => itemWorkSeconds(ra.seconds, ra.minutes) > 0),
+      timeline: (r.timeline || []).filter((t) => isMinInWorkWindow(t?.m)),
+    }));
+
+    res.json({ success: true, records: safeRecords, dateStr });
   } catch (err) {
     res.status(500).json({ success: false, error: String(err) });
   }
@@ -362,14 +469,18 @@ async function getAttendance(req, res) {
 
     const records = events.map(e => {
       let attendance = e.attendance;
+      const prevHours = e.hoursWorked || 0;
+      const currentStart = e.lastLoginAt || e.loginAt;
+      const currentSegment = (!e.logoutAt && currentStart)
+        ? Math.max(0, (new Date() - new Date(currentStart)) / (1000 * 60 * 60))
+        : 0;
+      const computedHours = Math.round((prevHours + currentSegment) * 100) / 100;
+
       if (!attendance) {
         if (approvedLeaveEmails.has(e.email.toLowerCase())) {
           attendance = 'absent';
-        } else if (e.logoutAt) {
-          const hrs = (new Date(e.logoutAt) - new Date(e.loginAt)) / (1000 * 60 * 60);
-          attendance = hrs >= 8 ? 'full' : 'half';
         } else {
-          attendance = null;
+          attendance = computedHours >= 8 ? 'full' : 'half';
         }
       }
       if (!attendance && approvedLeaveEmails.has(e.email.toLowerCase())) {
@@ -379,8 +490,9 @@ async function getAttendance(req, res) {
         email: e.email,
         name: e.name,
         loginAt: e.loginAt,
+        lastLoginAt: e.lastLoginAt || e.loginAt,
         logoutAt: e.logoutAt ?? null,
-        hoursWorked: e.hoursWorked ?? null,
+        hoursWorked: computedHours > 0 ? computedHours : (e.hoursWorked ?? null),
         attendance,
       };
     });
@@ -542,4 +654,6 @@ async function getTrend(req, res) {
   }
 }
 
+
 module.exports = { heartbeat, getLive, getHistory, getStats, awSync, awCurrent, getAw, getAWStatus, isSessionActive, getSessionStart, logMessage, getAttendance, getLoginHistory, getMyAttendance, getLoginStatus, resetAwDevice, getTrend };
+

@@ -128,7 +128,7 @@ export default function WidgetPage() {
 
       <div
         style={{
-          height: '100vh',
+          height: '100dvh',
           display: 'flex',
           flexDirection: 'column',
           fontFamily: "'Inter', system-ui, sans-serif",

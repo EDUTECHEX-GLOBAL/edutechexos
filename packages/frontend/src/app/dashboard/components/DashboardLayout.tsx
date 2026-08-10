@@ -12,7 +12,7 @@ import { getMeetingState } from '@/lib/meetLinks';
 
 export type LayoutTab = 'chats' | 'tasks' | 'docs' | 'calendar' | 'analytics' | 'reports' | 'bookmarks' | 'notepad' | 'leave' | 'dms' | 'people';
 
-interface Channel { id: string; name: string; description?: string; type?: string; }
+interface Channel { id: string; name: string; description?: string; type?: string; memberIds?: string[]; }
 
 interface DashboardLayoutProps {
   activeTab: LayoutTab;
@@ -68,7 +68,15 @@ export default function DashboardLayout({
   currentUserStatus = 'online',
   onStatusChange,
 }: DashboardLayoutProps) {
-  const workspaceChannels = channels.filter(c => c.type !== 'dm');
+  const workspaceChannels = channels.filter(c => {
+    if (c.type === 'dm' || c.id.startsWith('member-')) return false;
+    if (isAdmin || currentUser?.role === 'Manager') return true;
+    if (c.id === 'general') return true;
+    if (!c.memberIds || c.memberIds.length === 0) return true;
+    const userEmail = currentUser?.email?.toLowerCase();
+    const userId = (currentUser as any)?.id;
+    return c.memberIds.some((id: string) => (userId && id === userId) || (userEmail && id.toLowerCase() === userEmail));
+  });
   const [meetOpen, setMeetOpen] = useState(false);
   const meetRef = useRef<HTMLDivElement>(null);
   const meetState = getMeetingState();

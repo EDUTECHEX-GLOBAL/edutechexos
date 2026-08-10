@@ -18,19 +18,38 @@ const DATE_KEY = 'edutechex_session_date';
 const BANKED_KEY = 'edutechex_session_banked_ms';
 const ACTIVE_KEY = 'edutechex_session_active_start';
 const LUNCH_KEY = 'edutechex_lunch_pause_ms';
+const OWNER_KEY = 'edutechex_session_owner'; // email these values belong to
 
 function todayIST(): string {
   const istOffset = 5.5 * 60 * 60 * 1000;
   return new Date(Date.now() + istOffset).toISOString().slice(0, 10);
 }
 
-function ensureFreshDay() {
+// The currently logged-in user's email, read from the stored auth token.
+function currentEmail(): string {
+  try {
+    const raw = localStorage.getItem('edutechex_token');
+    return raw ? String(JSON.parse(raw).user?.email ?? '').toLowerCase() : '';
+  } catch {
+    return '';
+  }
+}
+
+// Reset the session clock when a new IST day starts OR a DIFFERENT user logs in
+// on this browser — so a second user never inherits the previous user's time.
+function ensureFreshSession(email?: string) {
   const today = todayIST();
-  if (localStorage.getItem(DATE_KEY) !== today) {
+  const owner = (email ?? '').toLowerCase();
+  const dateChanged  = localStorage.getItem(DATE_KEY) !== today;
+  const ownerChanged = owner !== '' && localStorage.getItem(OWNER_KEY) !== owner;
+  if (dateChanged || ownerChanged) {
     localStorage.setItem(DATE_KEY, today);
+    if (owner) localStorage.setItem(OWNER_KEY, owner);
     localStorage.setItem(BANKED_KEY, '0');
     localStorage.removeItem(ACTIVE_KEY);
     localStorage.setItem(LUNCH_KEY, '0');
+  } else if (owner && !localStorage.getItem(OWNER_KEY)) {
+    localStorage.setItem(OWNER_KEY, owner);
   }
 }
 
@@ -38,7 +57,7 @@ function ensureFreshDay() {
 // segment only if one isn't already active (e.g. a page refresh while still
 // logged in should NOT start a new segment on top of the existing one).
 export function startOrResumeSession(): { activeStart: string; bankedMs: number } {
-  ensureFreshDay();
+  ensureFreshSession(currentEmail());
   let activeStart = localStorage.getItem(ACTIVE_KEY);
   if (!activeStart) {
     activeStart = new Date().toISOString();
@@ -53,7 +72,7 @@ export function startOrResumeSession(): { activeStart: string; bankedMs: number 
 // the banked total so a later login today resumes from here, then clears the
 // "currently active" marker (but keeps the banked total, so it's not lost).
 export function bankSessionTime() {
-  ensureFreshDay();
+  ensureFreshSession(currentEmail());
   const activeStart = localStorage.getItem(ACTIVE_KEY);
   if (!activeStart) return;
   const lunchMs = parseInt(localStorage.getItem(LUNCH_KEY) ?? '0', 10);
@@ -70,4 +89,5 @@ export function clearSessionTime() {
   localStorage.removeItem(BANKED_KEY);
   localStorage.removeItem(ACTIVE_KEY);
   localStorage.removeItem(LUNCH_KEY);
+  localStorage.removeItem(OWNER_KEY);
 }

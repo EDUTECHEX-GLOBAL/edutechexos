@@ -30,10 +30,11 @@ function makeRateLimiter({ windowMs, max, message }) {
 
 // NOTE: limits are per-IP. A whole team often shares one public IP (same
 // office/college NAT), so these are sized for many users behind one IP plus
-// cold-start login retries — not a single user.
+// cold-start login retries — not a single user. AW-sync agents each log in
+// once and then use a token; allow enough headroom for restarts.
 const authLimiter = makeRateLimiter({
   windowMs: 15 * 60 * 1000,
-  max: 60,
+  max: 200,
   message: { error: 'Too many auth attempts. Please wait a few minutes before trying again.' },
 });
 

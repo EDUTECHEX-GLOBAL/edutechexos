@@ -11,6 +11,7 @@ import {
   Hash, MessageSquare, Send, Smile, Paperclip, Pin,
   Bookmark, Trash2, Users, Loader2, Bot, X, ChevronLeft,
   Globe, Lock, AtSign, Sparkles, ExternalLink, CheckSquare, Menu, Clock, CalendarCheck,
+  BookOpen, CalendarDays, CalendarOff, NotebookPen, BarChart2, ShieldCheck,
 } from 'lucide-react';
 import { getSocket } from '@/lib/socket';
 import { toast } from 'sonner';
@@ -87,10 +88,21 @@ export default function DashboardRedesigned() {
   );
   const unreadNotifications = visibleNotifications.filter((n) => !n.read).length;
 
+  const accessibleChannels = useMemo(() => {
+    return channels.filter((c: any) => {
+      if (c.type === 'dm' || c.id?.startsWith('member-')) return false;
+      if (isAdmin || currentUser?.role === 'Manager') return true;
+      if (c.id === 'general') return true;
+      if (!c.memberIds || c.memberIds.length === 0) return true;
+      const userEmail = currentUser?.email?.toLowerCase();
+      return c.memberIds.some((id: string) => userEmail && id.toLowerCase() === userEmail);
+    });
+  }, [channels, isAdmin, currentUser?.role, currentUser?.email]);
+
   const channel = useMemo(() => {
-    if (!activeChannel) return channels[0];
-    return channels.find((c) => c.id === activeChannel) ?? channels[0];
-  }, [activeChannel, channels]);
+    if (!activeChannel) return accessibleChannels[0] ?? channels[0];
+    return accessibleChannels.find((c) => c.id === activeChannel) ?? accessibleChannels[0] ?? channels[0];
+  }, [activeChannel, accessibleChannels, channels]);
 
   const channelMessages = useMemo(() => {
     return messages[channel?.id ?? 'general'] ?? [];
@@ -369,7 +381,7 @@ export default function DashboardRedesigned() {
       darkMode={darkMode}
       onToggleTheme={() => { toggleTheme(); toggleDarkMode(); }}
       onSettingsOpen={() => isAdmin ? setAdminPanelOpen(true) : setProfileOpen(true)}
-      channels={channels.filter((c: any) => c.type !== 'dm')}
+      channels={accessibleChannels}
       activeChannel={channel?.id ?? ''}
       onChannelChange={(id: string) => { setActiveChannel(id); setActiveTab('chats'); clearUnread?.(id); }}
       unreadCounts={unreadCounts}
@@ -571,23 +583,70 @@ export default function DashboardRedesigned() {
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100">
-                <span className="text-sm font-black text-slate-800">Channels</span>
+                <span className="text-sm font-black text-slate-800">Workspace Menu</span>
                 <button onClick={() => setMobileSidebarOpen(false)}
                   className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
                   <X size={14} />
                 </button>
               </div>
-              <div className="flex-1 px-2 py-2">
-                {channels.filter((c: any) => c.type !== 'dm').map((ch: any) => (
-                  <button key={ch.id}
-                    onClick={() => { setActiveChannel(ch.id); setActiveTab('chats'); setMobileSidebarOpen(false); }}
-                    className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl transition-all text-left mb-0.5 ${
-                      channel?.id === ch.id ? 'bg-teal-50 text-teal-700 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                    }`}>
-                    <Hash size={13} className="shrink-0" />
-                    <span className="text-xs font-bold truncate">{ch.name}</span>
+              <div className="flex-1 px-2 py-3 overflow-y-auto space-y-4">
+                <div>
+                  <p className="px-3 pb-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Apps & Features</p>
+                  <button onClick={() => { setActiveTab('tasks'); setMobileSidebarOpen(false); }} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all text-left mb-0.5">
+                    <CheckSquare size={14} className="text-emerald-600 shrink-0" />
+                    <span>Tasks & Kanban</span>
                   </button>
-                ))}
+                  <button onClick={() => { setActiveTab('docs'); setMobileSidebarOpen(false); }} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all text-left mb-0.5">
+                    <BookOpen size={14} className="text-blue-600 shrink-0" />
+                    <span>Wiki Docs</span>
+                  </button>
+                  <button onClick={() => { setActiveTab('calendar'); setMobileSidebarOpen(false); }} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all text-left mb-0.5">
+                    <CalendarDays size={14} className="text-purple-600 shrink-0" />
+                    <span>Calendar & Schedule</span>
+                  </button>
+                  <button onClick={() => { setActiveTab('people'); setMobileSidebarOpen(false); }} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all text-left mb-0.5">
+                    <Users size={14} className="text-cyan-600 shrink-0" />
+                    <span>People & Team</span>
+                  </button>
+                  <button onClick={() => { setActiveTab('leave'); setMobileSidebarOpen(false); }} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all text-left mb-0.5">
+                    <CalendarOff size={14} className="text-rose-600 shrink-0" />
+                    <span>Leave Requests</span>
+                  </button>
+                  <button onClick={() => { setActiveTab('bookmarks'); setMobileSidebarOpen(false); }} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all text-left mb-0.5">
+                    <Bookmark size={14} className="text-amber-600 shrink-0" />
+                    <span>Saved Messages</span>
+                  </button>
+                  <button onClick={() => { setActiveTab('notepad'); setMobileSidebarOpen(false); }} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all text-left mb-0.5">
+                    <NotebookPen size={14} className="text-yellow-600 shrink-0" />
+                    <span>Quick Notes</span>
+                  </button>
+                  {isAdmin && (
+                    <>
+                      <button onClick={() => { setActiveTab('analytics'); setMobileSidebarOpen(false); }} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all text-left mb-0.5">
+                        <BarChart2 size={14} className="text-teal-600 shrink-0" />
+                        <span>Analytics</span>
+                      </button>
+                      <button onClick={() => { setAdminPanelOpen(true); setMobileSidebarOpen(false); }} className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all text-left mb-0.5">
+                        <ShieldCheck size={14} className="text-violet-600 shrink-0" />
+                        <span>Admin Control Panel</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                <div>
+                  <p className="px-3 pb-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Channels</p>
+                  {accessibleChannels.map((ch: any) => (
+                    <button key={ch.id}
+                      onClick={() => { setActiveChannel(ch.id); setActiveTab('chats'); setMobileSidebarOpen(false); }}
+                      className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl transition-all text-left mb-0.5 ${
+                        channel?.id === ch.id ? 'bg-teal-50 text-teal-700 font-semibold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      }`}>
+                      <Hash size={13} className="shrink-0" />
+                      <span className="text-xs font-bold truncate">{ch.name}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </motion.div>
           </motion.div>

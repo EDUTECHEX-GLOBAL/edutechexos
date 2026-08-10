@@ -4,6 +4,7 @@ const LoginEventSchema = new mongoose.Schema({
   email:       { type: String, required: true, index: true },
   name:        { type: String, default: '' },
   loginAt:     { type: Date, default: Date.now, index: true },
+  lastLoginAt: { type: Date, default: Date.now },
   logoutAt:    { type: Date, default: null },
   hoursWorked: { type: Number, default: null },
   attendance:  { type: String, enum: ['full', 'half', 'absent', null], default: null },

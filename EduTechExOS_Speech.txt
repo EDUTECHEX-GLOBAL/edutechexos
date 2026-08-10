@@ -576,55 +576,9 @@ is real.
 The fifth reason is the single-login experience. Your team members don't have
 to context-switch between five applications. Everything — communication, tasks,
 knowledge, meetings, HR — is in one tab. Cognitive overhead drops dramatically.
-
+	
 And the sixth reason is growth potential. Because we own the codebase, we can
 add a mobile app, calendar sync, LMS integration, or anything else we need.
 We are not dependent on any vendor's roadmap.
 
 ============================================================
-SLIDE 17 - FUTURE ROADMAP & THANK YOU (3 minutes)
-============================================================
-
-Let me close by showing you where EduTechExOS is going.
-
-In Q3 2026, we plan to ship a native mobile app using React Native. iOS and
-Android, with push notifications, so the team is connected even away from
-their desks.
-
-Also in Q3, we'll add Google Calendar and Outlook sync. Scheduled meetings
-and approved leave requests will automatically appear in your personal calendar.
-
-In Q4 2026, we'll fully configure Backblaze B2 storage, lifting the file size
-restrictions for raw uploads. We'll also add multi-workspace support — one
-platform instance serving multiple independent teams within EduTechEx.
-
-In Q1 2027, we'll integrate with the LMS — linking course materials and
-assessments directly to channel discussions. We'll also add AI-generated
-meeting minutes: after a recorded meeting ends, Gemini transcribes and
-summarizes it automatically.
-
-In Q2 2027, a public API and Zapier integration will let external tools trigger
-EduTechExOS actions — for example, automatically creating a Kanban card when a
-support ticket is filed. And we'll implement end-to-end encrypted direct
-messages using the Signal protocol.
-
-This is a living platform. It evolves with us.
-
-I want to close by saying: EduTechExOS is not just software. It's infrastructure
-for how this team thinks, communicates, and works together. Every feature we've
-built — the AI that knows your workspace, the attendance that tracks itself,
-the meetings that anyone can join with one click — was built with one goal:
-to make your workday more focused, more connected, and more productive.
-
-Thank you very much. I'm happy to take questions.
-
-============================================================
-TOTAL ESTIMATED SPEAKING TIME: 45-55 minutes
-============================================================
-
-Tips for Q&A:
-- If asked about cost: emphasize zero per-seat SaaS licensing
-- If asked about security: AES-256, bcrypt, JWT, single-use invite tokens
-- If asked about mobile: React Native app is Q3 2026 roadmap
-- If asked about file limits: mention B2 integration on Q4 2026 roadmap
-- If asked about offline: currently not supported; PWA is a possible future direction

@@ -121,42 +121,62 @@ async function sync() {
     ]);
 
     // App time breakdown — only the slice of each event spent while logged in
-    const appMinutes = {};
+    const appSeconds = {};
     for (const ev of windowEvents) {
       const secs = eventSecondsInWindows(ev, windows, nowMs);
       if (secs <= 0) continue;
       const app = ev.data?.app || ev.data?.title || 'Unknown';
-      appMinutes[app] = (appMinutes[app] || 0) + secs / 60;
-    }
-    for (const ev of webEvents) {
-      const secs = eventSecondsInWindows(ev, windows, nowMs);
-      if (secs <= 0) continue;
-      try {
-        const site = new URL(ev.data?.url || '').hostname.replace('www.', '');
-        appMinutes[`🌐 ${site}`] = (appMinutes[`🌐 ${site}`] || 0) + secs / 60;
-      } catch { /* bad URL */ }
+      appSeconds[app] = (appSeconds[app] || 0) + secs;
     }
 
+    // Web activity breakdown
+    const tabSeconds = {};
+    let currentUrl = '', currentPageTitle = '';
+    for (const ev of webEvents) {
+      const secs = eventSecondsInWindows(ev, windows, nowMs);
+      if (secs <= 0 || !ev.data?.url || ev.data?.incognito) continue;
+      let domain = 'unknown';
+      try { domain = new URL(ev.data.url).hostname.replace(/^www\./, ''); } catch { continue; }
+      const title = (ev.data.title || '').trim() || domain;
+      if (!tabSeconds[title]) tabSeconds[title] = { secs: 0, domain };
+      tabSeconds[title].secs += secs;
+      if (!currentUrl) {
+        currentUrl = ev.data.url;
+        currentPageTitle = ev.data.title || '';
+      }
+    }
+
+    const webBreakdown = Object.entries(tabSeconds)
+      .map(([title, v]) => ({ domain: v.domain, seconds: Math.round(v.secs), minutes: Math.round(v.secs / 60), title }))
+      .filter(({ seconds }) => seconds >= 1)
+      .sort((a, b) => b.seconds - a.seconds)
+      .slice(0, 25);
+
     // AFK (also restricted to logged-in windows)
-    let totalAfkMinutes = 0;
+    let totalAfkSec = 0;
     let isAfk = false;
     for (const ev of afkEvents) {
       if (ev.data?.status !== 'afk') continue;
-      totalAfkMinutes += eventSecondsInWindows(ev, windows, nowMs) / 60;
+      totalAfkSec += eventSecondsInWindows(ev, windows, nowMs);
     }
     const lastAfk = afkEvents[afkEvents.length - 1];
     if (lastAfk?.data?.status === 'afk') isAfk = true;
 
-    const rawTotal          = Object.values(appMinutes).reduce((s, v) => s + v, 0);
-    const totalActiveMinutes = Math.max(0, Math.round(rawTotal - totalAfkMinutes));
-    const lastWindow        = windowEvents[windowEvents.length - 1];
-    const currentApp        = lastWindow?.data?.app   || '';
-    const currentTitle      = lastWindow?.data?.title || '';
+    const rawTotalSec        = Object.values(appSeconds).reduce((s, v) => s + v, 0);
+    const totalActiveSeconds = Math.max(0, Math.round(rawTotalSec - totalAfkSec));
+    const totalAfkSeconds    = Math.round(totalAfkSec);
+    const totalActiveMinutes = Math.round(totalActiveSeconds / 60);
+    const totalAfkMinutes    = Math.round(totalAfkSeconds / 60);
 
-    const appBreakdown = Object.entries(appMinutes)
-      .map(([app, minutes]) => ({ app, minutes: Math.round(minutes * 10) / 10 }))
-      .sort((a, b) => b.minutes - a.minutes)
-      .slice(0, 15);
+    const lastWindow   = windowEvents[windowEvents.length - 1];
+    const currentApp   = lastWindow?.data?.app   || '';
+    const currentTitle = lastWindow?.data?.title || '';
+
+    const appBreakdown = Object.entries(appSeconds)
+      .map(([app, secs]) => ({ app, seconds: Math.round(secs), minutes: Math.round(secs / 60) }))
+      .filter(({ seconds }) => seconds >= 1)
+      .sort((a, b) => b.seconds - a.seconds)
+      .slice(0, 25);
 
     // IST date string so backend stores under the right local date
     const istOffset = 5.5 * 60 * 60 * 1000;
@@ -165,7 +185,12 @@ async function sync() {
     const res = await fetch(`${BACKEND}/api/activity/aw-sync`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentToken}` },
-      body:    JSON.stringify({ dateStr, currentApp, currentTitle, isAfk, totalActiveMinutes, totalAfkMinutes: Math.round(totalAfkMinutes), appBreakdown }),
+      body:    JSON.stringify({
+        dateStr, currentApp, currentTitle, currentUrl, currentPageTitle,
+        isAfk, totalActiveMinutes, totalAfkMinutes,
+        totalActiveSeconds, totalAfkSeconds,
+        appBreakdown, webBreakdown,
+      }),
     });
 
     if (res.status === 401) {
@@ -219,6 +244,9 @@ const ALLOWED_ORIGINS = [
   'https://edutechexos.vercel.app',
   'http://localhost:3000',
   'http://localhost:3001',
+  'http://localhost:4034',
+  'http://localhost:4035',
+  'http://localhost:5173',
 ];
 
 const server = http.createServer((req, res) => {

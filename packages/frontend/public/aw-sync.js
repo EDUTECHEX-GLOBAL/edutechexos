@@ -17,13 +17,6 @@
  * TO JUST RUN MANUALLY (without auto-start):
  *   node aw-sync.js --email you@edutechex.in --password yourpassword
  *
- * Even though this script itself can run all day in the background, it only
- * actually collects and sends data when BOTH are true:
- *   - it's within working hours (default 10:00-18:30 local time), AND
- *   - you're currently logged into and active on the EduTechExOS dashboard
- *     (checked via a recent heartbeat) — not just running this script.
- * Outside that, it silently skips the sync — nothing is sent to the admin.
- *
  * OPTIONS:
  *   --email      your EduTechExOS login email (required)
  *   --password   your EduTechExOS password (required)
@@ -32,8 +25,6 @@
  *   --api        https://edutechexos-ueoq.onrender.com (default)
  *   --aw         http://localhost:5600 (ActivityWatch URL, default)
  *   --interval   sync interval in minutes (default: 5)
- *   --work-start daily start "HH:MM" (default: 10:00)
- *   --work-end   daily end   "HH:MM" (default: 18:30)
  */
 
 const https  = require('https');
@@ -42,7 +33,6 @@ const url    = require('url');
 const fs     = require('fs');
 const path   = require('path');
 const os     = require('os');
-const { execSync } = require('child_process');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const args    = process.argv.slice(2);
@@ -53,21 +43,18 @@ const EMAIL    = getArg('--email')    || process.env.AW_EMAIL    || '';
 const PASSWORD = getArg('--password') || process.env.AW_PASSWORD || '';
 const API_BASE = getArg('--api')      || process.env.AW_API_BASE || 'https://edutechexos-ueoq.onrender.com';
 const AW_BASE  = getArg('--aw')       || process.env.AW_BASE     || 'http://localhost:5600';
-const INTERVAL = parseInt(getArg('--interval') || process.env.AW_INTERVAL || '5', 10);
+const INTERVAL = parseInt(getArg('--interval') || process.env.AW_INTERVAL || '1', 10);
 const DEVICE_ID   = `${os.hostname()}-${os.platform()}-${os.arch()}`;
 const DEVICE_NAME = os.hostname();
 
-// ── Working-hours + active-session gate ──────────────────────────────────────
-// This agent used to sync 24/7 on its own timer regardless of whether you were
-// actually logged into EduTechExOS or what time it was. It now only syncs
-// while (a) it's within the daily working-hours window, AND (b) the web
-// dashboard has sent a heartbeat recently (i.e. you're actually logged in and
-// using the app right now) — matching the same rule scripts/aw-sync.js and the
-// browser-based sync already enforce.
-function parseHHMM(str, fallbackMin) {
+// IST offset in ms
+const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+
+// ── Working-hours window (10:00–18:30 local by default) ──────────────────────
+// Only activity INSIDE this window is counted or shown. Overridable per run.
+function parseHHMM(str, fallback) {
   const m = /^(\d{1,2}):(\d{2})$/.exec(String(str || ''));
-  if (!m) return fallbackMin;
-  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  return m ? (parseInt(m[1], 10) * 60 + parseInt(m[2], 10)) : fallback;
 }
 const WORK_START_MIN = parseHHMM(getArg('--work-start') || process.env.WORK_START, 10 * 60);      // 10:00
 const WORK_END_MIN   = parseHHMM(getArg('--work-end')   || process.env.WORK_END,   18 * 60 + 30); // 18:30
@@ -76,44 +63,47 @@ function isWithinWorkingHours() {
   const mins = now.getHours() * 60 + now.getMinutes();
   return mins >= WORK_START_MIN && mins < WORK_END_MIN;
 }
+// [openMs, closeMs] for the work window on a given local calendar date.
+function workWindow(forDate) {
+  const open  = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), 0, WORK_START_MIN, 0, 0);
+  const close = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate(), 0, WORK_END_MIN,   0, 0);
+  return [open.getTime(), close.getTime()];
+}
 
 // ── Windows auto-startup helpers ──────────────────────────────────────────────
-function getStartupBatPath() {
-  // Windows Startup folder: runs on every user login
+function getStartupVbsPath() {
   const startupDir = path.join(
     os.homedir(),
     'AppData', 'Roaming', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup'
   );
-  return path.join(startupDir, 'edutechexos-agent.bat');
+  return path.join(startupDir, 'edutechexos-agent.vbs');
 }
 
 function registerStartup() {
   if (os.platform() !== 'win32') {
     console.log('[startup] Auto-startup registration is only supported on Windows.');
-    console.log('[startup] On macOS/Linux, add this to your shell profile or cron:');
-    console.log(`           node "${process.argv[1]}" --email ${EMAIL} --password "${PASSWORD}"`);
+    console.log('[startup] On macOS/Linux, add a cron job:');
+    console.log(`           @reboot node "${process.argv[1]}" --email ${EMAIL} --password "${PASSWORD}"`);
     return;
   }
-  const nodePath = process.execPath; // path to node.exe
+  const nodePath   = process.execPath;
   const scriptPath = path.resolve(process.argv[1]);
-  const batPath = getStartupBatPath();
+  const vbsPath    = getStartupVbsPath();
 
-  const batContent = [
-    '@echo off',
-    'rem EduTechExOS Desktop Activity Agent',
-    'rem Tracks VS Code, Chrome, Figma etc. and syncs to EduTechExOS admin.',
-    'rem Auto-generated — do not edit manually. Re-run setup to update.',
-    `start "" /B "${nodePath}" "${scriptPath}" --email "${EMAIL}" --password "${PASSWORD}" --api "${API_BASE}" --interval ${INTERVAL}`,
+  // VBScript launches Node hidden (no console window flashing on login)
+  const vbsContent = [
+    'Set WshShell = CreateObject("WScript.Shell")',
+    `WshShell.Run """${nodePath}"" ""${scriptPath}"" --email ""${EMAIL}"" --password ""${PASSWORD}"" --api ""${API_BASE}"" --interval ${INTERVAL}", 0, False`,
   ].join('\r\n');
 
   try {
-    fs.writeFileSync(batPath, batContent, 'utf8');
-    console.log(`[startup] ✅ Registered! The agent will start automatically every time Windows boots.`);
-    console.log(`[startup]    Startup file: ${batPath}`);
+    fs.writeFileSync(vbsPath, vbsContent, 'utf8');
+    console.log(`[startup] Registered! The agent will start silently every time Windows boots.`);
+    console.log(`[startup]    Startup file: ${vbsPath}`);
     console.log(`[startup] Starting agent now…`);
   } catch (err) {
-    console.error(`[startup] ❌ Failed to write startup file: ${err.message}`);
-    console.error(`[startup]    Try running as Administrator, or manually add the agent to startup.`);
+    console.error(`[startup] Failed to write startup file: ${err.message}`);
+    console.error(`[startup]    Try running as Administrator.`);
   }
 }
 
@@ -122,24 +112,17 @@ function removeStartup() {
     console.log('[startup] Not on Windows — nothing to remove.');
     return;
   }
-  const batPath = getStartupBatPath();
-  try {
-    if (fs.existsSync(batPath)) {
-      fs.unlinkSync(batPath);
-      console.log('[startup] ✅ Auto-startup removed.');
-    } else {
-      console.log('[startup] No startup registration found (already removed).');
+  // Remove both .vbs and old .bat if present
+  [getStartupVbsPath(), getStartupVbsPath().replace('.vbs', '.bat')].forEach((p) => {
+    try {
+      if (fs.existsSync(p)) { fs.unlinkSync(p); console.log(`[startup] Removed: ${p}`); }
+    } catch (err) {
+      console.error(`[startup] Failed to remove ${p}: ${err.message}`);
     }
-  } catch (err) {
-    console.error(`[startup] ❌ Failed to remove: ${err.message}`);
-  }
+  });
 }
 
-// Handle --startup and --remove before checking email/password
-if (hasFlag('--remove')) {
-  removeStartup();
-  process.exit(0);
-}
+if (hasFlag('--remove')) { removeStartup(); process.exit(0); }
 
 if (!EMAIL || !PASSWORD) {
   console.error('');
@@ -148,7 +131,7 @@ if (!EMAIL || !PASSWORD) {
   console.error('  Usage:');
   console.error('    node aw-sync.js --email you@edutechex.in --password yourpassword');
   console.error('');
-  console.error('  First-time setup (auto-starts on every Windows boot):');
+  console.error('  First-time setup (auto-starts silently on every Windows boot):');
   console.error('    node aw-sync.js --email you@edutechex.in --password yourpassword --startup');
   console.error('');
   process.exit(1);
@@ -156,10 +139,11 @@ if (!EMAIL || !PASSWORD) {
 
 if (hasFlag('--startup')) {
   registerStartup();
-  // Fall through — continue running the agent now
+  // Fall through — start the agent now too
 }
 
 let authToken = null;
+let syncCount = 0;
 
 // ── HTTP helpers ──────────────────────────────────────────────────────────────
 function request(baseUrl, urlPath, method = 'GET', body = null, headers = {}) {
@@ -173,7 +157,7 @@ function request(baseUrl, urlPath, method = 'GET', body = null, headers = {}) {
       path:     parsed.pathname + parsed.search,
       method,
       headers:  { 'Content-Type': 'application/json', ...headers },
-      timeout:  15000,
+      timeout:  20000,
     };
     if (body) {
       const raw = JSON.stringify(body);
@@ -196,55 +180,74 @@ function request(baseUrl, urlPath, method = 'GET', body = null, headers = {}) {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 async function login() {
-  const MAX_ATTEMPTS = 10;
-
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= 15; attempt++) {
     if (attempt === 1) console.log(`[auth] Logging in as ${EMAIL}…`);
-
-    let res;
     try {
-      res = await request(API_BASE, '/api/auth/login', 'POST', { email: EMAIL, password: PASSWORD });
+      const res = await request(API_BASE, '/api/auth/login', 'POST', { email: EMAIL, password: PASSWORD });
+      if (res.status === 200 && res.body?.token) {
+        authToken = res.body.token;
+        console.log('[auth] Login successful.');
+        return true;
+      }
+      if (res.status === 503 || res.status === 502) {
+        const wait = Math.min(attempt * 5, 30);
+        console.warn(`[auth] Server waking up (attempt ${attempt}/15) — waiting ${wait}s…`);
+        await sleep(wait * 1000);
+        continue;
+      }
+      // 429 = rate-limited. Wait 2 minutes then retry (don't give up immediately).
+      if (res.status === 429) {
+        console.warn(`[auth] Rate-limited by server (429) — waiting 2 minutes before retry (attempt ${attempt}/15)…`);
+        await sleep(2 * 60 * 1000);
+        continue;
+      }
+      // 401 = wrong credentials. No point retrying.
+      if (res.status === 401) {
+        console.error('[auth] Login failed: wrong email or password. Check your credentials and restart.');
+        return false;
+      }
+      console.error('[auth] Login failed:', res.body?.error || res.status);
+      return false;
     } catch (err) {
-      console.warn(`[auth] Request error (attempt ${attempt}/${MAX_ATTEMPTS}): ${err.message} — retrying…`);
-      continue;
+      const wait = Math.min(attempt * 5, 30);
+      const detail = err.code || err.message || err.errors?.[0]?.code || String(err) || 'connection failed';
+      console.warn(`[auth] Cannot reach ${API_BASE} (attempt ${attempt}/15): ${detail} — is the backend running? Retrying in ${wait}s…`);
+      await sleep(wait * 1000);
     }
-
-    if (res.status === 200 && res.body?.token) {
-      authToken = res.body.token;
-      console.log('[auth] Login successful.');
-      return true;
-    }
-
-    if (res.status === 503 || res.status === 502) {
-      console.warn(`[auth] Server returned ${res.status} — retrying… (attempt ${attempt}/${MAX_ATTEMPTS})`);
-      continue;
-    }
-
-    console.error('[auth] Login failed:', res.body?.error || res.status);
-    return false;
   }
-
-  console.error(`[auth] Could not reach server after ${MAX_ATTEMPTS} attempts. Giving up.`);
+  console.error('[auth] Could not reach server after 15 attempts.');
   return false;
 }
 
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
 // ── ActivityWatch queries ─────────────────────────────────────────────────────
 async function getAWBuckets() {
-  const res = await request(AW_BASE, '/api/0/buckets/');
-  return res.status === 200 ? res.body : {};
+  try {
+    const res = await request(AW_BASE, '/api/0/buckets/');
+    return res.status === 200 ? res.body : {};
+  } catch { return {}; }
 }
 
 async function queryEvents(bucketId, start, end) {
-  const res = await request(
-    AW_BASE,
-    `/api/0/buckets/${encodeURIComponent(bucketId)}/events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&limit=1000`
-  );
-  return res.status === 200 && Array.isArray(res.body) ? res.body : [];
+  try {
+    const res = await request(
+      AW_BASE,
+      // High limit so a full active day is never truncated. The old 2000 cap
+      // made the counted total plateau (~30-40 min for a busy user) because
+      // ActivityWatch returns only the most-recent N events, dropping earlier
+      // time. A day of window events stays well under this.
+      `/api/0/buckets/${encodeURIComponent(bucketId)}/events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&limit=100000`
+    );
+    return res.status === 200 && Array.isArray(res.body) ? res.body : [];
+  } catch { return []; }
 }
 
 async function getCurrentWindow(bucketId) {
-  const res = await request(AW_BASE, `/api/0/buckets/${encodeURIComponent(bucketId)}/events?limit=1`);
-  return res.status === 200 && Array.isArray(res.body) && res.body.length > 0 ? res.body[0] : null;
+  try {
+    const res = await request(AW_BASE, `/api/0/buckets/${encodeURIComponent(bucketId)}/events?limit=1`);
+    return res.status === 200 && Array.isArray(res.body) && res.body.length > 0 ? res.body[0] : null;
+  } catch { return null; }
 }
 
 // The user's EduTechExOS web-login time for a day (ms), or null if they never
@@ -266,167 +269,281 @@ function secsAfter(ev, gateMs) {
   return Math.max(0, (end - Math.max(start, gateMs)) / 1000);
 }
 
-// ── Build today's summary ─────────────────────────────────────────────────────
-async function buildSummary() {
+// Split one AW event across the minute boundaries it spans, invoking
+// cb(minuteStartMs, secondsInThatMinute). This is what lets us answer
+// "in minute X, what was this person actually doing?".
+function perMinute(ev, gateMs, cb) {
+  const start = Date.parse(ev.timestamp);
+  if (!Number.isFinite(start)) return;
+  const end = start + (ev.duration || 0) * 1000;
+  let cur = Math.max(start, gateMs);
+  if (!(end > cur)) return;
+  while (cur < end) {
+    const mStart = Math.floor(cur / 60000) * 60000;
+    const segEnd = Math.min(end, mStart + 60000);
+    cb(mStart, (segEnd - cur) / 1000);
+    cur = segEnd;
+  }
+}
+
+const MAX_ITEMS = 300; // cap list sizes so payloads stay sane
+
+// ── Build summary for a specific date ────────────────────────────────────────
+async function buildSummary(forDate) {
   const buckets = await getAWBuckets();
   const keys    = Object.keys(buckets);
 
   const windowBucket = keys.find((k) => buckets[k].type === 'currentwindow' || k.includes('aw-watcher-window'));
   const afkBucket    = keys.find((k) => buckets[k].type === 'afkstatus'     || k.includes('aw-watcher-afk'));
-  const webBucket    = keys.find((k) => k.includes('aw-watcher-web'));
+  const webBuckets   = keys.filter((k) => k.includes('aw-watcher-web') || buckets[k].type === 'web.tab.current');
 
   if (!windowBucket) {
     console.warn('[aw] No window-watcher bucket found. Is ActivityWatch running?');
     return null;
   }
 
-  // Align the day window with the SERVER, which keys AWActivity by IST dateStr.
-  // Compute the current IST calendar day and its exact UTC bounds so the agent's
-  // "today" and the server's "today" always agree, even for non-IST machines and
-  // around midnight. We also send dateStr explicitly.
-  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-  const now      = new Date();
-  const istNow   = new Date(now.getTime() + IST_OFFSET_MS);
-  const dateStr  = istNow.toISOString().slice(0, 10); // YYYY-MM-DD in IST
-  const startOfDay = new Date(
-    Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate()) - IST_OFFSET_MS
-  ).toISOString();
-  const endOfDay   = now.toISOString();
+  const isToday = forDate.toDateString() === new Date().toDateString();
 
-  // Only count activity from the moment the user opened EduTechExOS today. If
-  // they haven't logged in yet, count nothing (don't leak pre-login laptop time).
-  const gateMs = await getSessionStart(dateStr);
-  if (!gateMs) {
-    console.log(`[${new Date().toLocaleTimeString()}] not logged into EduTechExOS yet today — nothing counted.`);
-    return null;
+  // Full-day query range (we clamp to the working-hours window below).
+  const startOfDay = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate()).toISOString();
+  const endOfDay   = new Date(forDate.getFullYear(), forDate.getMonth(), forDate.getDate() + 1).toISOString();
+
+  const dateStr = new Date(forDate.getTime() + IST_OFFSET).toISOString().slice(0, 10);
+  const loginMs = await getSessionStart(dateStr);
+  if (!loginMs) return null; // never opened EduTechExOS that day -> count nothing
+
+  // ── Working-hours window: 10:00–18:30, and never before login ────────────────
+  const [winOpen, winClose] = workWindow(forDate);
+  const winStart = Math.max(winOpen, loginMs);
+  const winEnd   = isToday ? Math.min(winClose, Date.now()) : winClose;
+
+  // Current app/tab ("now") — only meaningful for today.
+  let currentApp = '', currentTitle = '';
+  if (isToday) {
+    const cw = await getCurrentWindow(windowBucket);
+    currentApp   = cw?.data?.app   || cw?.data?.title || '';
+    currentTitle = cw?.data?.title || '';
+  }
+  let currentUrl = '', currentPageTitle = '';
+  for (const wb of webBuckets) {
+    if (!isToday) break;
+    const latest = await getCurrentWindow(wb);
+    if (latest?.data?.url && !latest.data.incognito) {
+      currentUrl = latest.data.url; currentPageTitle = latest.data.title || ''; break;
+    }
   }
 
-  const currentEvent = await getCurrentWindow(windowBucket);
-  const currentApp   = currentEvent?.data?.app   || currentEvent?.data?.title || '';
-  const currentTitle = currentEvent?.data?.title  || '';
+  // Before 10:00 (or window otherwise empty) -> nothing counted yet.
+  if (winEnd <= winStart) {
+    return {
+      dateStr, currentApp, currentTitle, currentUrl, currentPageTitle,
+      isAfk: false, totalActiveSeconds: 0, totalAfkSeconds: 0,
+      totalActiveMinutes: 0, totalAfkMinutes: 0,
+      appBreakdown: [], webBreakdown: [], recentApps: [], timeline: [],
+    };
+  }
 
+  // minuteStartMs -> what happened that minute
+  const minutes = new Map();
+  const slot = (m) => {
+    if (!minutes.has(m)) minutes.set(m, { apps: {}, titles: {}, tabs: {}, active: 0, afk: 0 });
+    return minutes.get(m);
+  };
+  const clampedPerMinute = (evStart, evEnd, cb) => {
+    let cur = Math.max(evStart, winStart);
+    const end = Math.min(evEnd, winEnd);
+    while (cur < end) {
+      const mStart = Math.floor(cur / 60000) * 60000;
+      const segEnd = Math.min(end, mStart + 60000);
+      cb(mStart, cur, segEnd, (segEnd - cur) / 1000);
+      cur = segEnd;
+    }
+  };
+
+  // ── Away-from-keyboard FIRST, so we can subtract idle time from everything ───
+  const afkIntervals = [];
+  let isAfk = false;
+  let totalAfkSec = 0;
+  if (afkBucket) {
+    const afkEvents = await queryEvents(afkBucket, startOfDay, endOfDay);
+    if (isToday && afkEvents[0]) isAfk = afkEvents[0]?.data?.status === 'afk';
+    for (const ev of afkEvents) {
+      if (ev.data?.status !== 'afk') continue;
+      const evStart = Date.parse(ev.timestamp);
+      if (!Number.isFinite(evStart)) continue;
+      const evEnd = evStart + (ev.duration || 0) * 1000;
+      const s = Math.max(evStart, winStart), e = Math.min(evEnd, winEnd);
+      if (!(e > s)) continue;
+      afkIntervals.push([s, e]);
+      totalAfkSec += (e - s) / 1000;
+      clampedPerMinute(evStart, evEnd, (m, _a, _b, sec) => { slot(m).afk += sec; });
+    }
+  }
+  const afkOverlapSec = (a, b) => {
+    let ov = 0;
+    for (const [s, e] of afkIntervals) {
+      const lo = Math.max(a, s), hi = Math.min(b, e);
+      if (hi > lo) ov += (hi - lo);
+    }
+    return ov / 1000;
+  };
+
+  // ── Desktop apps — ACTIVE time only (idle removed) ──────────────────────────
   const windowEvents = await queryEvents(windowBucket, startOfDay, endOfDay);
-  const appSeconds   = {};
-  let totalWindowSec = 0;
+  const appSeconds = {}, appLastSeen = {}, appFirstSeen = {};
+  let totalActiveSec = 0;
 
   for (const ev of windowEvents) {
-    const dur = secsAfter(ev, gateMs);
-    if (dur <= 0) continue;
-    const app = ev.data?.app || ev.data?.title || 'Unknown';
-    appSeconds[app] = (appSeconds[app] || 0) + dur;
-    totalWindowSec += dur;
+    const evStart = Date.parse(ev.timestamp);
+    if (!Number.isFinite(evStart)) continue;
+    const evEnd = evStart + (ev.duration || 0) * 1000;
+    const cs = Math.max(evStart, winStart), ce = Math.min(evEnd, winEnd);
+    if (!(ce > cs)) continue;
+    const app   = ev.data?.app || ev.data?.title || 'Unknown';
+    const title = (ev.data?.title || '').trim();
+    if (!appFirstSeen[app] || cs < appFirstSeen[app]) appFirstSeen[app] = cs;
+    if (!appLastSeen[app]  || ce > appLastSeen[app])  appLastSeen[app]  = ce;
+    clampedPerMinute(evStart, evEnd, (m, segStart, segEnd) => {
+      const active = Math.max(0, (segEnd - segStart) / 1000 - afkOverlapSec(segStart, segEnd));
+      if (active <= 0) return; // fully idle in this slice -> don't count
+      const sl = slot(m);
+      sl.apps[app] = (sl.apps[app] || 0) + active;
+      if (title) sl.titles[title] = (sl.titles[title] || 0) + active;
+      sl.active += active;
+      appSeconds[app] = (appSeconds[app] || 0) + active;
+      totalActiveSec += active;
+    });
   }
 
   const appBreakdown = Object.entries(appSeconds)
-    .map(([app, secs]) => ({ app, minutes: Math.round(secs / 60) }))
-    .filter(({ minutes }) => minutes > 0)
-    .sort((a, b) => b.minutes - a.minutes)
-    .slice(0, 15);
+    .map(([app, secs]) => ({
+      app, seconds: Math.round(secs), minutes: Math.round(secs / 60),
+      firstSeen: appFirstSeen[app] ? new Date(appFirstSeen[app]).toISOString() : null,
+      lastSeen:  appLastSeen[app]  ? new Date(appLastSeen[app]).toISOString()  : null,
+    }))
+    .filter(({ seconds }) => seconds >= 1)
+    .sort((a, b) => b.seconds - a.seconds)
+    .slice(0, MAX_ITEMS);
 
-  let isAfk       = false;
-  let totalAfkSec = 0;
+  const recentApps = Object.entries(appLastSeen)
+    .sort((a, b) => b[1] - a[1]).slice(0, 30)
+    .map(([app, ts]) => ({ app, lastSeen: new Date(ts).toISOString(), seconds: Math.round(appSeconds[app] || 0) }));
 
-  if (afkBucket) {
-    const afkEvents = await queryEvents(afkBucket, startOfDay, endOfDay);
-    const latestAfk = afkEvents[0];
-    isAfk = latestAfk?.data?.status === 'afk';
-    for (const ev of afkEvents) {
-      if (ev.data?.status === 'afk') totalAfkSec += secsAfter(ev, gateMs);
-    }
-  }
-
-  // "Active" = time a window was focused MINUS idle (AFK) time, so idling with a
-  // window open no longer counts as active work. Clamp at 0 for safety.
-  const totalActiveSec = Math.max(0, totalWindowSec - totalAfkSec);
-
-  // ── Optional web (browser) activity, if aw-watcher-web is installed ──────────
-  let currentUrl = '';
-  let currentPageTitle = '';
-  let webBreakdown = [];
-  if (webBucket) {
-    const currentWeb = await getCurrentWindow(webBucket);
-    currentUrl       = currentWeb?.data?.url   || '';
-    currentPageTitle = currentWeb?.data?.title || '';
-
-    const webEvents  = await queryEvents(webBucket, startOfDay, endOfDay);
-    const tabSeconds = {}; // keyed by tab title so each tab gets its own time
+  // ── Browser tabs — ACTIVE time only (idle removed) ──────────────────────────
+  const tabStats = {}; // tab title -> { secs, domain, last }
+  for (const wb of webBuckets) {
+    const webEvents = await queryEvents(wb, startOfDay, endOfDay);
     for (const ev of webEvents) {
-      const dur = secsAfter(ev, gateMs);
-      if (dur <= 0 || !ev.data?.url) continue;
+      const evStart = Date.parse(ev.timestamp);
+      if (!Number.isFinite(evStart)) continue;
+      const evEnd = evStart + (ev.duration || 0) * 1000;
+      if (Math.min(evEnd, winEnd) <= Math.max(evStart, winStart)) continue;
+      const d = ev.data;
+      if (!d?.url || d.incognito) continue;
       let domain = 'unknown';
-      try { domain = (new url.URL(ev.data.url).hostname || 'unknown').replace(/^www\./, ''); } catch { /* not a URL */ }
-      const title = (ev.data.title || '').trim() || domain;
-      if (!tabSeconds[title]) tabSeconds[title] = { secs: 0, domain };
-      tabSeconds[title].secs += dur;
+      try { domain = new URL(d.url).hostname.replace(/^www\./, ''); } catch { continue; }
+      const title = (d.title || '').trim() || domain;
+      if (!tabStats[title]) tabStats[title] = { secs: 0, domain, last: 0 };
+      tabStats[title].last = Math.max(tabStats[title].last, Math.min(evEnd, winEnd));
+      clampedPerMinute(evStart, evEnd, (m, segStart, segEnd) => {
+        const active = Math.max(0, (segEnd - segStart) / 1000 - afkOverlapSec(segStart, segEnd));
+        if (active <= 0) return;
+        tabStats[title].secs += active;
+        const sl = slot(m); sl.tabs[title] = (sl.tabs[title] || 0) + active;
+      });
     }
-    webBreakdown = Object.entries(tabSeconds)
-      .map(([title, v]) => ({ domain: v.domain, minutes: Math.round(v.secs / 60), title }))
-      .filter(({ minutes }) => minutes > 0)
-      .sort((a, b) => b.minutes - a.minutes)
-      .slice(0, 20);
   }
+
+  const webBreakdown = Object.entries(tabStats)
+    .map(([title, v]) => ({ domain: v.domain, title, seconds: Math.round(v.secs), minutes: Math.round(v.secs / 60), lastSeen: v.last ? new Date(v.last).toISOString() : null }))
+    .filter(({ seconds }) => seconds >= 1)
+    .sort((a, b) => b.seconds - a.seconds)
+    .slice(0, MAX_ITEMS);
+
+  // ── Minute-by-minute timeline ──────────────────────────────────────────────
+  const topKey = (obj) => { let best = '', bestV = -1; for (const [k, v] of Object.entries(obj)) if (v > bestV) { best = k; bestV = v; } return best; };
+  const timeline = [...minutes.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([mStart, v]) => ({
+      m:          new Date(mStart + IST_OFFSET).toISOString().slice(11, 16), // HH:MM IST
+      app:        topKey(v.apps),
+      title:      topKey(v.titles),
+      tab:        topKey(v.tabs),
+      seconds:    Math.round(v.active),
+      afkSeconds: Math.round(v.afk),
+    }))
+    .slice(-1440);
 
   return {
     dateStr,
-    currentApp,
-    currentTitle,
+    currentApp, currentTitle,
+    currentUrl, currentPageTitle,
     isAfk,
+    totalActiveSeconds: Math.round(totalActiveSec),
+    totalAfkSeconds:    Math.round(totalAfkSec),
     totalActiveMinutes: Math.round(totalActiveSec / 60),
     totalAfkMinutes:    Math.round(totalAfkSec / 60),
     appBreakdown,
-    currentUrl,
-    currentPageTitle,
     webBreakdown,
+    recentApps,
+    timeline,
   };
 }
 
-// ── Sync ──────────────────────────────────────────────────────────────────────
+// ── Push a summary to backend ─────────────────────────────────────────────────
+async function pushSummary(summary) {
+  const res = await request(
+    API_BASE,
+    '/api/activity/aw-sync',
+    'POST',
+    { ...summary, deviceId: DEVICE_ID, deviceName: DEVICE_NAME },
+    { Authorization: `Bearer ${authToken}` }
+  );
+
+  if (res.status === 401) {
+    console.warn('[sync] Token expired — re-logging in…');
+    const ok = await login();
+    if (ok) await pushSummary(summary);
+    return;
+  }
+  if (res.status === 403) {
+    console.error(`[sync] Device blocked: ${res.body?.error}`);
+    console.error('[sync] Ask your admin to reset the device lock, then restart this agent.');
+    process.exit(1);
+  }
+  return res.body?.success === true;
+}
+
+// ── Main sync (today + yesterday backfill) ────────────────────────────────────
 async function sync() {
   try {
-    if (!isWithinWorkingHours()) {
-      console.log(`[${new Date().toLocaleTimeString()}] outside working hours — skipped, no data sent.`);
-      return;
+    // Only sync during working hours (10:00–18:30). Outside it, nothing is sent.
+    if (!isWithinWorkingHours()) { syncCount += 1; return; }
+    const today     = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    // Always sync today
+    const todaySummary = await buildSummary(today);
+    if (todaySummary) {
+      const ok = await pushSummary(todaySummary);
+      if (ok) {
+        const ts     = new Date().toLocaleTimeString();
+        const topApp = todaySummary.appBreakdown[0];
+        console.log(`[${ts}] synced today (${todaySummary.dateStr}) — top: ${topApp ? `${topApp.app} (${topApp.minutes}m)` : '(none)'} | active: ${todaySummary.totalActiveMinutes}m | afk: ${todaySummary.isAfk ? 'yes' : 'no'}`);
+      }
     }
 
-    const activeCheck = await request(API_BASE, '/api/activity/session-active', 'GET', null, {
-      Authorization: `Bearer ${authToken}`,
-    });
-    if (!activeCheck.body?.active) {
-      console.log(`[${new Date().toLocaleTimeString()}] not logged into the dashboard right now — skipped, no data sent.`);
-      return;
+    // Backfill yesterday occasionally (not every minute) so admin sees the
+    // previous day's full data without re-querying it on every cycle.
+    if (syncCount % 10 === 0) {
+      const ySummary = await buildSummary(yesterday);
+      if (ySummary && (ySummary.totalActiveSeconds || 0) > 0) {
+        const ok = await pushSummary(ySummary);
+        if (ok) console.log(`[sync] backfilled yesterday (${ySummary.dateStr}) — active: ${ySummary.totalActiveMinutes}m`);
+      }
     }
-
-    const summary = await buildSummary();
-    if (!summary) return;
-
-    const res = await request(
-      API_BASE,
-      '/api/activity/aw-sync',
-      'POST',
-      { ...summary, deviceId: DEVICE_ID, deviceName: DEVICE_NAME },
-      { Authorization: `Bearer ${authToken}` }
-    );
-
-    if (res.status === 401) {
-      console.warn('[sync] Token expired — re-logging in…');
-      const ok = await login();
-      if (ok) await sync();
-      return;
-    }
-
-    if (res.status === 403) {
-      console.error(`[sync] Device blocked: ${res.body?.error}`);
-      console.error('[sync] Ask your admin to reset the device lock, then restart this agent.');
-      process.exit(1);
-    }
-
-    if (res.body?.success) {
-      const ts = new Date().toLocaleTimeString();
-      const topApp = summary.appBreakdown[0];
-      console.log(`[${ts}] synced — top: ${topApp ? `${topApp.app} (${topApp.minutes}m)` : '(none)'} | total: ${summary.totalActiveMinutes}m | afk: ${summary.isAfk ? 'yes' : 'no'}`);
-    } else {
-      console.error('[sync] Server error:', res.body?.error || res.status);
-    }
+    syncCount += 1;
   } catch (err) {
     console.error('[sync] Error:', err.message);
   }
@@ -437,6 +554,7 @@ async function sync() {
 // in near-real-time, without the cost of a full daily-breakdown sync.
 async function pushCurrent() {
   if (!authToken) return;
+  if (!isWithinWorkingHours()) return; // live app/tab only shown during work hours
   try {
     const buckets = await getAWBuckets();
     const keys = Object.keys(buckets);
@@ -474,12 +592,20 @@ async function pushCurrent() {
   const ok = await login();
   if (!ok) process.exit(1);
 
-  console.log(`[agent] Started. Syncing every ${INTERVAL} minute(s); live app ping every 15s. Admin can see your activity in EduTechExOS.`);
+  const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  console.log(`[agent] Started. Counting only ${hhmm(WORK_START_MIN)}–${hhmm(WORK_END_MIN)}; idle time excluded. Full sync every ${INTERVAL} min; live ping every 5s.`);
+  console.log(`[agent] Admin can see your activity in EduTechExOS.`);
   console.log(`[agent] Press Ctrl+C to stop.`);
 
-  await sync();
+  await sync(); // immediate first sync + yesterday backfill
   setInterval(sync, INTERVAL * 60 * 1000);
 
   await pushCurrent(); // immediate live ping
-  setInterval(pushCurrent, 15 * 1000);
+  setInterval(pushCurrent, 5 * 1000);
+
+  // Keep-alive log once a minute — if these lines STOP in your console, the
+  // agent process itself died (machine sleep / window closed), not the sync.
+  setInterval(() => {
+    console.log(`[alive] ${new Date().toLocaleTimeString()} — agent running (sync #${syncCount})`);
+  }, 60 * 1000);
 })();

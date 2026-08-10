@@ -280,7 +280,12 @@ export default function DMPanel({ currentUser, members }: Props) {
       {dmChannels.length > 0 && (
         <div className="px-3 pt-3">
           <div className="text-[9px] font-bold uppercase tracking-widest text-slate-400 px-1 mb-2">Recent</div>
-          {dmChannels.map(ch => {
+          {dmChannels
+            .filter(ch => {
+              const otherEmail = getOtherEmail(ch)?.toLowerCase();
+              return members.some(m => m.email?.toLowerCase() === otherEmail);
+            })
+            .map(ch => {
             const name = getOtherName(ch);
             const member = members.find(m => m.email?.toLowerCase() === getOtherEmail(ch));
             return (

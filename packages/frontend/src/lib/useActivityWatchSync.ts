@@ -138,19 +138,65 @@ async function buildSummary(forDate: Date = new Date()) {
   const gateMs = await getSessionStartMs(dateStr);
   if (!gateMs) return null;
 
+  // ── Working-hours window: 10:00–18:30, and never before login ────────────────
+  const today = new Date(forDate);
+  const winOpen = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, WORK_START_MIN, 0, 0).getTime();
+  const winClose = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, WORK_END_MIN, 0, 0).getTime();
+  const winStart = Math.max(winOpen, gateMs);
   const isToday = forDate.toDateString() === new Date().toDateString();
+  const winEnd   = isToday ? Math.min(winClose, Date.now()) : winClose;
 
-  const cur          = isToday ? await getLatestEvent(windowBucket) : null;
-  const curData      = cur?.data as Record<string, string> | undefined;
-  const currentApp   = curData?.app   || curData?.title || '';
-  const currentTitle = curData?.title || '';
+  // Clamps an event's timestamp to the working hours window
+  const secsInWindow = (ev: Record<string, unknown>): number => {
+    const ts = ev.timestamp as string | undefined;
+    const start = ts ? Date.parse(ts) : NaN;
+    if (!Number.isFinite(start)) return 0;
+    const end = start + ((ev.duration as number) || 0) * 1000;
+    const cs = Math.max(start, winStart);
+    const ce = Math.min(end, winEnd);
+    return Math.max(0, (ce - cs) / 1000);
+  };
+
+  const isTimeOverlap = (ev: Record<string, unknown>): boolean => {
+    const ts = ev.timestamp as string | undefined;
+    const start = ts ? Date.parse(ts) : NaN;
+    if (!Number.isFinite(start)) return false;
+    const end = start + ((ev.duration as number) || 0) * 1000;
+    return Math.min(end, winEnd) > Math.max(start, winStart);
+  };
+
+  let currentApp = '';
+  let currentTitle = '';
+  let currentUrl = '';
+  let currentPageTitle = '';
+
+  // Before 10:00 (or window otherwise empty) → nothing counted yet.
+  if (winEnd <= winStart) {
+    return {
+      dateStr,
+      currentApp, currentTitle, currentUrl, currentPageTitle,
+      isAfk: false,
+      totalActiveSeconds: 0,
+      totalAfkSeconds: 0,
+      totalActiveMinutes: 0,
+      totalAfkMinutes:    0,
+      appBreakdown: [], webBreakdown: [],
+    };
+  }
+
+  if (isToday) {
+    const cur = await getLatestEvent(windowBucket);
+    const curData = cur?.data as Record<string, string> | undefined;
+    currentApp = curData?.app || curData?.title || '';
+    currentTitle = curData?.title || '';
+  }
 
   const windowEvents  = await getEventsForDate(windowBucket, forDate);
   const appSecs: Record<string, number> = {};
   let totalActiveSec  = 0;
 
   for (const ev of windowEvents) {
-    const dur = secsAfter(ev, gateMs);
+    const dur = secsInWindow(ev);
     if (dur <= 0) continue;
     const d   = ev.data as Record<string, string> | undefined;
     const app = d?.app || d?.title || 'Unknown';
@@ -159,9 +205,10 @@ async function buildSummary(forDate: Date = new Date()) {
   }
 
   const appBreakdown = Object.entries(appSecs)
-    .map(([app, secs]) => ({ app, minutes: Math.round(secs / 60) }))
-    .sort((a, b) => b.minutes - a.minutes)
-    .slice(0, 15);
+    .map(([app, secs]) => ({ app, seconds: Math.round(secs), minutes: Math.round(secs / 60) }))
+    .filter((a) => a.seconds >= 1)
+    .sort((a, b) => b.seconds - a.seconds)
+    .slice(0, 300);
 
   let isAfk       = false;
   let totalAfkSec = 0;
@@ -172,18 +219,16 @@ async function buildSummary(forDate: Date = new Date()) {
     isAfk = latestAfk?.data?.status === 'afk';
     for (const ev of afkEvents) {
       const e = ev as { data?: { status?: string } };
-      if (e.data?.status === 'afk') totalAfkSec += secsAfter(ev, gateMs);
+      if (e.data?.status === 'afk') totalAfkSec += secsInWindow(ev);
     }
   }
 
-  let currentUrl       = '';
-  let currentPageTitle = '';
-  const domainSecs: Record<string, { minutes: number; domain: string }> = {};
+  const domainSecs: Record<string, { seconds: number; domain: string }> = {};
 
   for (const wb of webBuckets) {
-    if (isToday) {
+    if (isToday && !currentUrl) {
       const latestWeb = await getLatestEvent(wb);
-      if (latestWeb) {
+      if (latestWeb && isTimeOverlap(latestWeb)) {
         const wd = latestWeb.data as { url?: string; title?: string; incognito?: boolean } | undefined;
         if (wd?.url && !wd.incognito) {
           currentUrl       = wd.url;
@@ -194,27 +239,30 @@ async function buildSummary(forDate: Date = new Date()) {
 
     const webEvents = await getEventsForDate(wb, forDate);
     for (const ev of webEvents) {
-      const dur = secsAfter(ev, gateMs);
+      const dur = secsInWindow(ev);
       if (dur <= 0) continue;
       const d   = ev.data as { url?: string; title?: string; incognito?: boolean } | undefined;
       if (!d?.url || d.incognito) continue;
 
       const domain = extractDomain(d.url);
       const title = (d.title || '').trim() || domain; // group per tab (title)
-      if (!domainSecs[title]) domainSecs[title] = { minutes: 0, domain };
-      domainSecs[title].minutes += dur / 60;
+      if (!domainSecs[title]) domainSecs[title] = { seconds: 0, domain };
+      domainSecs[title].seconds += dur;
     }
   }
 
   const webBreakdown = Object.entries(domainSecs)
-    .map(([title, v]) => ({ domain: v.domain, minutes: Math.round(v.minutes), title }))
-    .sort((a, b) => b.minutes - a.minutes)
+    .map(([title, v]) => ({ domain: v.domain, seconds: Math.round(v.seconds), minutes: Math.round(v.seconds / 60), title }))
+    .filter((w) => w.seconds >= 5)
+    .sort((a, b) => b.seconds - a.seconds)
     .slice(0, 20);
 
   return {
     dateStr,
     currentApp, currentTitle, currentUrl, currentPageTitle,
     isAfk,
+    totalActiveSeconds: Math.round(totalActiveSec),
+    totalAfkSeconds:    Math.round(totalAfkSec),
     totalActiveMinutes: Math.round(totalActiveSec / 60),
     totalAfkMinutes:    Math.round(totalAfkSec / 60),
     appBreakdown, webBreakdown,

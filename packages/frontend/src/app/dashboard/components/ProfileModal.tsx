@@ -162,11 +162,11 @@ export default function ProfileModal({ open, onClose, currentUser, onProfileUpda
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 px-5 pt-4">
+        <div className="flex gap-1 px-5 pt-4 overflow-x-auto scrollbar-none">
           {(['profile', 'security', 'notifications'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${tab === t ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
-              {t === 'profile' ? <User size={11} /> : t === 'security' ? <Lock size={11} /> : <Bell size={11} />}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all shrink-0 min-h-[38px] ${tab === t ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
+              {t === 'profile' ? <User size={12} /> : t === 'security' ? <Lock size={12} /> : <Bell size={12} />}
               {t === 'profile' ? 'Profile' : t === 'security' ? 'Security' : 'Notifications'}
             </button>
           ))}

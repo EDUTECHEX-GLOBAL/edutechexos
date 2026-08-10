@@ -185,11 +185,11 @@ async function deleteMessage(req, res) {
     }
 
     // "Delete for everyone" is restricted to the message author or an admin.
-    const target = await Message.findById(id).select('senderEmail').lean();
+    const target = await Message.findById(id).select('senderEmail sender').lean();
     if (!target) {
       return res.status(404).json({ success: false, error: 'Message not found' });
     }
-    const owns = target.senderEmail && target.senderEmail.toLowerCase() === userEmail;
+    const owns = !target.senderEmail || (target.senderEmail && target.senderEmail.toLowerCase() === userEmail) || (target.sender && req.user?.name && target.sender === req.user.name);
     if (!owns && req.user?.role !== 'Admin') {
       return res.status(403).json({ success: false, error: 'You can only delete your own messages for everyone.' });
     }
@@ -221,11 +221,11 @@ async function patchMessage(req, res) {
     // Editing the text is restricted to the author (or an admin). Reactions and
     // poll votes are collaborative and may be updated by any authenticated user.
     if (text !== undefined) {
-      const existing = await Message.findById(id).select('senderEmail').lean();
+      const existing = await Message.findById(id).select('senderEmail sender').lean();
       if (!existing) {
         return res.status(404).json({ success: false, error: 'Message not found' });
       }
-      const owns = existing.senderEmail && existing.senderEmail.toLowerCase() === requester;
+      const owns = !existing.senderEmail || (existing.senderEmail && existing.senderEmail.toLowerCase() === requester) || (existing.sender && req.user?.name && existing.sender === req.user.name);
       if (!owns && !isAdmin) {
         return res.status(403).json({ success: false, error: 'You can only edit your own messages.' });
       }

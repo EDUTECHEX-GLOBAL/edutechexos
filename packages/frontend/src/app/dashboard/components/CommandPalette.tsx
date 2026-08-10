@@ -38,7 +38,24 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
     }
   }, [isOpen]);
 
-  const workspaceChannels = channels.filter((ch) => !ch.id.startsWith('member-'));
+  const currentUser = React.useMemo(() => {
+    try {
+      const authData = typeof window !== 'undefined' ? localStorage.getItem('edutechex_token') : null;
+      return authData ? JSON.parse(authData).user : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const workspaceChannels = channels.filter((ch) => {
+    if (ch.id.startsWith('member-')) return false;
+    if (currentUser?.role === 'Admin' || currentUser?.role === 'Manager') return true;
+    if (ch.id === 'general') return true;
+    if (!ch.memberIds || ch.memberIds.length === 0) return true;
+    const userEmail = currentUser?.email?.toLowerCase();
+    const userId = currentUser?.id;
+    return ch.memberIds.some((id) => (userId && id === userId) || (userEmail && id.toLowerCase() === userEmail));
+  });
 
   const allResults: ResultItem[] = [
     ...workspaceChannels.map((ch) => ({

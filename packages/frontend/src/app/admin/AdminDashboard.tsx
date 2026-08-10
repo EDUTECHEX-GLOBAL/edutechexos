@@ -27,6 +27,7 @@ import {
   UserPlus,
   Users,
   Sparkles,
+  ChevronDown,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -131,8 +132,11 @@ export default function AdminPage() {
     email: string; name: string; currentApp: string; currentTitle: string;
     currentUrl?: string; currentPageTitle?: string;
     isAfk: boolean; totalActiveMinutes: number; totalAfkMinutes: number;
-    appBreakdown: { app: string; minutes: number }[];
-    webBreakdown?: { domain: string; minutes: number; title: string }[];
+    totalActiveSeconds?: number; totalAfkSeconds?: number;
+    appBreakdown: { app: string; minutes: number; seconds?: number; firstSeen?: string | null; lastSeen?: string | null }[];
+    recentApps?: { app: string; seconds?: number; lastSeen?: string | null }[];
+    timeline?: { m: string; app: string; title: string; tab: string; seconds: number; afkSeconds: number }[];
+    webBreakdown?: { domain: string; minutes: number; seconds?: number; title: string; lastSeen?: string | null }[];
     lastSync: string;
   };
   const [awRecords, setAwRecords] = useState<AWRecord[]>([]);
@@ -186,10 +190,6 @@ export default function AdminPage() {
     lastSeen: string | null; currentActivity: string; currentPanel: string;
   };
   const [historyUsers, setHistoryUsers] = useState<HistoryUser[]>([]);
-  const [historyDate, setHistoryDate] = useState<string>(() => {
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    return new Date(Date.now() + istOffset).toISOString().slice(0, 10);
-  });
   const [historyLoading, setHistoryLoading] = useState(false);
 
   type AttendanceRecord = { email: string; name: string; loginAt: string | null; logoutAt: string | null };
@@ -322,6 +322,23 @@ export default function AdminPage() {
     }
   }
 
+  async function resetAwDevice(email: string) {
+    const token = getAdminToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/activity/reset-aw-device`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email: email.toLowerCase() }),
+      });
+      const data = await res.json();
+      if (data.success) toast.success(`Device lock cleared for ${email}`);
+      else toast.error(data.error || 'Failed to reset device lock.');
+    } catch {
+      toast.error('Failed to reset device lock.');
+    }
+  }
+
   async function downloadCsv(type: 'attendance' | 'leaves' | 'activity') {
     const token = getAdminToken();
     if (!token) return;
@@ -443,7 +460,12 @@ export default function AdminPage() {
   }, [awDate]);
 
   useEffect(() => {
-    if (activeTab === 'desktop') fetchAwData();
+    if (activeTab !== 'desktop') return;
+    fetchAwData();
+    // Poll every 30s so the apps/websites data stays current even if a socket
+    // aw_sync event is missed or the socket drops (mirrors the live-users poll).
+    const id = setInterval(fetchAwData, 30_000);
+    return () => clearInterval(id);
   }, [activeTab, fetchAwData]);
 
   // Real-time AW updates via socket
@@ -529,7 +551,7 @@ export default function AdminPage() {
     const token = getAdminToken();
     if (!token) return;
     setHistoryLoading(true);
-    const d = date ?? historyDate;
+    const d = date ?? awDate;
     fetch(`${API_BASE}/api/activity/history?date=${d}`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data: { success: boolean; sessions?: HistoryUser[] } | null) => {
@@ -537,22 +559,26 @@ export default function AdminPage() {
       })
       .catch(() => {})
       .finally(() => setHistoryLoading(false));
-  }, [historyDate]);
+  }, [awDate]);
 
   const fetchAttendance = useCallback((date?: string) => {
     const token = getAdminToken();
     if (!token) return;
-    const d = date ?? historyDate;
+    const d = date ?? awDate;
     fetch(`${API_BASE}/api/activity/attendance?date=${d}`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((data: { success: boolean; records?: AttendanceRecord[] } | null) => {
         if (data?.success && Array.isArray(data.records)) setAttendanceRecords(data.records);
       })
       .catch(() => {});
-  }, [historyDate]);
+  }, [awDate]);
 
   useEffect(() => {
-    if (activeTab === 'desktop') { fetchHistory(); fetchAttendance(); }
+    if (activeTab !== 'desktop') return;
+    fetchHistory(); fetchAttendance();
+    // Keep in-app time / messages / tasks / attendance current too.
+    const id = setInterval(() => { fetchHistory(); fetchAttendance(); }, 30_000);
+    return () => clearInterval(id);
   }, [activeTab, fetchHistory, fetchAttendance]);
 
   useEffect(() => {
@@ -2673,6 +2699,17 @@ export default function AdminPage() {
             };
 
             const fmt = (m: number) => m <= 0 ? '0m' : m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`;
+            const itemSecs = (item: { minutes?: number; seconds?: number }) => {
+              const s = item.seconds ?? 0;
+              const m = item.minutes ?? 0;
+              return s > 0 ? s : m * 60;
+            };
+            const awActiveSecs = (rec?: AWRecord | null) => {
+              if (!rec) return 0;
+              const s = rec.totalActiveSeconds ?? 0;
+              const m = rec.totalActiveMinutes ?? 0;
+              return s > 0 ? s : m * 60;
+            };
             const fmtLoginTime = (iso: string | null | undefined) =>
               iso ? new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—';
             const ago = (iso: string | null | undefined) => {
@@ -2694,11 +2731,14 @@ export default function AdminPage() {
               lastSeen: string | null;
               loginAt: string | null;
               todayMinutes: number; messageCount: number; taskCount: number;
-              appBreakdown: { app: string; minutes: number }[];
-              totalActiveMinutes: number; isAfk: boolean; agentConnected: boolean;
+              appBreakdown: { app: string; minutes: number; seconds?: number; lastSeen?: string | null }[];
+              recentApps: { app: string; seconds?: number; lastSeen?: string | null }[];
+              timeline: { m: string; app: string; title: string; tab: string; seconds: number; afkSeconds: number }[];
+              totalActiveMinutes: number; totalActiveSeconds?: number; totalAfkSeconds?: number;
+              isAfk: boolean; agentConnected: boolean;
               focusScore: number | null;
               currentApp: string; currentTitle: string; awLastSync: string | null;
-              currentUrl: string; webBreakdown: { domain: string; minutes: number; title: string }[];
+              currentUrl: string; webBreakdown: { domain: string; minutes: number; seconds?: number; title: string }[];
             };
 
             const merged: MergedMember[] = members.map((m) => {
@@ -2711,6 +2751,11 @@ export default function AdminPage() {
               const totalAppMins = appBreakdown.reduce((s, a) => s + a.minutes, 0);
               const distractionMins = appBreakdown.filter(a => isDistraction(a.app)).reduce((s, a) => s + a.minutes, 0);
               const focusScore = totalAppMins > 0 ? Math.round(((totalAppMins - distractionMins) / totalAppMins) * 100) : null;
+              const awLastSync = aw?.lastSync ?? null;
+              const awFresh = !!awLastSync && (Date.now() - new Date(awLastSync).getTime()) < 10 * 60 * 1000;
+              const agentConnected = viewDate === todayIST
+                ? awFresh
+                : !!(aw && ((aw.totalActiveMinutes ?? 0) > 0 || (aw.appBreakdown?.length ?? 0) > 0));
               return {
                 email:              m.email,
                 name:               m.name,
@@ -2726,13 +2771,17 @@ export default function AdminPage() {
                 messageCount:       history?.messageCount ?? 0,
                 taskCount:          history?.taskCount    ?? 0,
                 appBreakdown,
+                recentApps:         aw?.recentApps ?? [],
+                timeline:           aw?.timeline ?? [],
                 totalActiveMinutes: aw?.totalActiveMinutes ?? 0,
+                totalActiveSeconds: awActiveSecs(aw),
+                totalAfkSeconds:    aw?.totalAfkSeconds ?? (aw?.totalAfkMinutes ?? 0) * 60,
                 isAfk:              aw?.isAfk ?? false,
-                agentConnected:     !!aw,
+                agentConnected,
                 focusScore,
                 currentApp:         aw?.currentApp   ?? '',
                 currentTitle:       aw?.currentTitle ?? '',
-                awLastSync:         aw?.lastSync      ?? null,
+                awLastSync,
                 currentUrl:         aw?.currentUrl   ?? '',
                 webBreakdown:       aw?.webBreakdown ?? [],
               };
@@ -2780,12 +2829,16 @@ export default function AdminPage() {
                     <div style={{ background: 'rgba(13,175,206,0.09)', borderRadius: 20, padding: '5px 12px' }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: '#0E7490' }}>{agentCount}/{members.length} agents connected</span>
                     </div>
+                    <div style={{ background: 'rgba(245,158,11,0.10)', borderRadius: 20, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <Clock size={11} style={{ color: '#B45309' }} />
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#B45309' }}>Work Hrs: 10:00 – 18:30</span>
+                    </div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <input
                     type="date" value={viewDate} max={todayIST}
-                    onChange={e => { const d = e.target.value; setAwDate(d); setHistoryDate(d); fetchHistory(d); fetchAwData(d); fetchAttendance(d); }}
+                    onChange={e => { const d = e.target.value; setAwDate(d); fetchHistory(d); fetchAwData(d); fetchAttendance(d); }}
                     className="admin-input"
                     style={{ height: 36, width: 140, padding: '0 10px', fontSize: 12 }}
                   />
@@ -2822,10 +2875,17 @@ export default function AdminPage() {
                   const isLive     = person.status === 'live';
                   const isAway     = person.status === 'away';
                   const isExpanded = expandedDesktopEmail === person.email;
-                  const topApps    = person.appBreakdown.slice(0, 8);
-                  const maxMins    = topApps[0]?.minutes || 1;
-                  const topSites   = (person.webBreakdown ?? []).slice(0, 8);
-                  const maxSiteMins = topSites[0]?.minutes || 1;
+                  const topApps    = person.appBreakdown;            // ALL apps opened
+                  const siteSecs   = itemSecs;
+                  const appSecs    = itemSecs;
+                  const maxAppSecs = appSecs(topApps[0] ?? { minutes: 0 }) || 1;
+                  const afkSecs    = person.totalAfkSeconds ?? 0;
+                  const timeline   = person.timeline ?? [];
+                  const recent     = person.recentApps ?? [];
+                  // Show seconds so short bursts read correctly: 20s, 1m 20s, 1h 5m.
+                  const fmtSec     = (s: number) => s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
+                  const topSites   = person.webBreakdown ?? [];      // ALL tabs visited
+                  const maxSiteSecs = siteSecs(topSites[0] ?? { minutes: 0 }) || 1;
                   const inAppPct   = Math.min(100, Math.round((person.todayMinutes / 480) * 100));
                   const icon       = panelIcon[person.currentPanel] || '';
                   const dotColor   = isLive ? '#10B981' : isAway ? '#F59E0B' : '#CBD5E1';
@@ -2899,7 +2959,9 @@ export default function AdminPage() {
                         </span>
 
                         {/* Chevron */}
-                        <span style={{ fontSize: 14, color: 'rgba(90,95,128,0.35)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}></span>
+                        <span style={{ fontSize: 14, color: 'rgba(90,95,128,0.35)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <ChevronDown size={16} />
+                        </span>
                       </div>
 
                       {/*  Expanded detail panel  */}
@@ -2918,11 +2980,12 @@ export default function AdminPage() {
                           )}
 
                           {/* Quick stats */}
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
                             {[
-                              { label: 'In-app time', value: fmt(person.todayMinutes), color: '#10B981', bg: 'rgba(16,185,129,0.08)' },
+                              { label: 'Active Hrs', value: (person.totalActiveSeconds ?? 0) > 0 ? fmtSec(person.totalActiveSeconds ?? 0) : fmt(person.todayMinutes), color: '#10B981', bg: 'rgba(16,185,129,0.08)' },
+                              { label: 'Away from KB', value: afkSecs > 0 ? fmtSec(afkSecs) : '—', color: '#B45309', bg: 'rgba(245,158,11,0.08)' },
                               { label: 'Messages sent', value: String(person.messageCount), color: '#6366F1', bg: 'rgba(99,102,241,0.08)' },
-                              { label: 'Tasks updated', value: String(person.taskCount), color: '#F59E0B', bg: 'rgba(245,158,11,0.08)' },
+                              { label: 'Tasks updated', value: String(person.taskCount), color: '#F59E0B', bg: 'rgba(245,158,11,0.06)' },
                             ].map(({ label, value, color, bg }) => (
                               <div key={label} style={{ borderRadius: 12, background: bg, padding: '12px 14px' }}>
                                 <p style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.50)', margin: '0 0 4px' }}>{label}</p>
@@ -2948,25 +3011,34 @@ export default function AdminPage() {
                           {topApps.length > 0 ? (
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.45)' }}>Desktop Apps</span>
-                                <span style={{ fontSize: 10.5, fontWeight: 700, color: '#6366F1' }}>
-                                  {fmt(person.totalActiveMinutes)} tracked
-                                  {person.isAfk && <span style={{ marginLeft: 8, color: '#D97706' }}>  AFK now</span>}
+                                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.45)' }}>
+                                  Desktop Apps · {topApps.length} opened
+                                </span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10.5, fontWeight: 700 }}>
+                                  <span style={{ color: '#10B981', background: 'rgba(16,185,129,0.10)', borderRadius: 8, padding: '2px 8px' }}>
+                                    ⏱ {fmtSec(person.totalActiveSeconds || person.totalActiveMinutes * 60)} active
+                                  </span>
+                                  {person.isAfk && (
+                                    <span style={{ color: '#D97706', background: 'rgba(245,158,11,0.10)', borderRadius: 8, padding: '2px 8px' }}>
+                                      ⌨️ Away from keyboard
+                                    </span>
+                                  )}
                                 </span>
                               </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                {topApps.map(({ app, minutes }) => {
-                                  const pct    = Math.max(4, Math.round((minutes / maxMins) * 100));
-                                  const isDist = isDistraction(app);
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 260, overflowY: 'auto', paddingRight: 4 }}>
+                                {topApps.map((a) => {
+                                  const secs   = appSecs(a);
+                                  const pct    = Math.max(4, Math.round((secs / maxAppSecs) * 100));
+                                  const isDist = isDistraction(a.app);
                                   return (
-                                    <div key={app} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <div key={a.app} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                       <span style={{ width: 140, fontSize: 12, fontWeight: isDist ? 700 : 500, color: isDist ? '#EF476F' : '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                        {isDist ? ' ' : ''}{app}
+                                        {isDist ? ' ' : ''}{a.app}
                                       </span>
                                       <div style={{ flex: 1, height: 8, borderRadius: 4, background: isDist ? 'rgba(239,71,111,0.10)' : 'rgba(99,102,241,0.10)' }}>
                                         <div style={{ height: '100%', borderRadius: 4, width: `${pct}%`, background: isDist ? 'linear-gradient(90deg,#EF476F,#F59E0B)' : 'linear-gradient(90deg,#6366F1,#818CF8)', transition: 'width .5s' }} />
                                       </div>
-                                      <span style={{ width: 48, fontSize: 12, fontWeight: 700, color: isDist ? '#EF476F' : '#6366F1', textAlign: 'right', flexShrink: 0 }}>{fmt(minutes)}</span>
+                                      <span style={{ width: 56, fontSize: 12, fontWeight: 700, color: isDist ? '#EF476F' : '#6366F1', textAlign: 'right', flexShrink: 0 }}>{fmtSec(secs)}</span>
                                     </div>
                                   );
                                 })}
@@ -2974,9 +3046,17 @@ export default function AdminPage() {
                             </div>
                           ) : (
                             <div style={{ borderRadius: 10, border: '1.5px dashed rgba(99,102,241,0.20)', padding: '14px 16px', background: 'rgba(99,102,241,0.03)' }}>
-                              <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.55)', margin: 0 }}>
-                                 Desktop app tracking not set up  ask this member to follow the setup banner in their sidebar.
+                              <p style={{ fontSize: 12, color: 'rgba(90,95,128,0.55)', margin: '0 0 10px' }}>
+                                Desktop app tracking not set up — ask this member to follow the setup banner in their sidebar.
                               </p>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); resetAwDevice(person.email); }}
+                                className="btn-premium-secondary"
+                                style={{ height: 32, padding: '0 12px', fontSize: 11 }}
+                              >
+                                Reset device lock
+                              </button>
                             </div>
                           )}
 
@@ -2984,16 +3064,19 @@ export default function AdminPage() {
                           {topSites.length > 0 && (
                             <div style={{ marginTop: 20 }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.45)' }}>Websites &amp; Tabs</span>
+                                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.45)' }}>
+                                  Websites &amp; Tabs · {topSites.length} visited
+                                </span>
                                 {person.currentUrl && awFresh && (
                                   <span style={{ fontSize: 10.5, fontWeight: 700, color: '#0DAFCE', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={person.currentUrl}>
                                     now: {(() => { try { return new URL(person.currentUrl).hostname.replace(/^www\./, ''); } catch { return person.currentUrl; } })()}
                                   </span>
                                 )}
                               </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                {topSites.map(({ domain, minutes, title }) => {
-                                  const pct = Math.max(4, Math.round((minutes / maxSiteMins) * 100));
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 260, overflowY: 'auto', paddingRight: 4 }}>
+                                {topSites.map(({ domain, minutes, seconds, title }) => {
+                                  const secs = itemSecs({ minutes, seconds });
+                                  const pct = Math.max(4, Math.round((secs / maxSiteSecs) * 100));
                                   return (
                                     <div key={`${title}|${domain}`} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                       <span title={`${title || domain} — ${domain}`} style={{ width: 170, minWidth: 0, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
@@ -3003,7 +3086,68 @@ export default function AdminPage() {
                                       <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'rgba(13,175,206,0.10)' }}>
                                         <div style={{ height: '100%', borderRadius: 4, width: `${pct}%`, background: 'linear-gradient(90deg,#0DAFCE,#22D3EE)', transition: 'width .5s' }} />
                                       </div>
-                                      <span style={{ width: 52, fontSize: 12, fontWeight: 800, color: '#0DAFCE', textAlign: 'right', flexShrink: 0 }}>{fmt(minutes)}</span>
+                                      <span style={{ width: 52, fontSize: 12, fontWeight: 800, color: '#0DAFCE', textAlign: 'right', flexShrink: 0 }}>{fmtSec(secs)}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Recently used apps — what they had open most recently */}
+                          {recent.length > 0 && (
+                            <div style={{ marginTop: 20 }}>
+                              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.45)' }}>Recently Used</span>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                                {recent.slice(0, 12).map((r) => (
+                                  <span
+                                    key={r.app}
+                                    title={r.lastSeen ? `last used ${new Date(r.lastSeen).toLocaleTimeString()}` : r.app}
+                                    style={{ fontSize: 11, fontWeight: 600, color: '#4A5578', background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 999, padding: '4px 10px' }}
+                                  >
+                                    {r.app} <span style={{ color: '#6366F1', fontWeight: 800 }}>{fmtSec(itemSecs(r))}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Minute-by-minute timeline — what was open in each minute */}
+                          {timeline.length > 0 && (
+                            <div style={{ marginTop: 20 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.10em', color: 'rgba(90,95,128,0.45)' }}>
+                                  Minute by Minute · {timeline.length} min tracked
+                                </span>
+                                <span style={{ fontSize: 10, color: 'rgba(90,95,128,0.45)' }}>newest first</span>
+                              </div>
+                              <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid rgba(26,27,58,0.07)', borderRadius: 10 }}>
+                                {[...timeline].reverse().map((t, i) => {
+                                  const idle = t.afkSeconds > t.seconds;
+                                  return (
+                                    <div
+                                      key={`${t.m}-${i}`}
+                                      style={{
+                                        display: 'grid', gridTemplateColumns: '52px 1fr 56px',
+                                        alignItems: 'center', gap: 10, padding: '7px 12px',
+                                        borderBottom: i < timeline.length - 1 ? '1px solid rgba(26,27,58,0.05)' : 'none',
+                                        background: idle ? 'rgba(245,158,11,0.05)' : '#fff',
+                                      }}
+                                    >
+                                      <span style={{ fontSize: 11, fontWeight: 800, color: '#6366F1', fontVariantNumeric: 'tabular-nums' }}>{t.m}</span>
+                                      <span style={{ minWidth: 0 }}>
+                                        <span style={{ fontSize: 12, fontWeight: 700, color: idle ? '#B45309' : '#1A1B3A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                                          {idle ? 'Away from keyboard' : (t.app || '—')}
+                                        </span>
+                                        {!idle && (t.title || t.tab) && (
+                                          <span title={t.tab || t.title} style={{ fontSize: 10, color: 'rgba(90,95,128,0.60)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                                            {t.tab ? `🌐 ${t.tab}` : t.title}
+                                          </span>
+                                        )}
+                                      </span>
+                                      <span style={{ fontSize: 11, fontWeight: 700, textAlign: 'right', color: idle ? '#B45309' : '#059669', fontVariantNumeric: 'tabular-nums' }}>
+                                        {idle ? fmtSec(t.afkSeconds) : fmtSec(t.seconds)}
+                                      </span>
                                     </div>
                                   );
                                 })}

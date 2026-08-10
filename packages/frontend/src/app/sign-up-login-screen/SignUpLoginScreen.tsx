@@ -90,7 +90,7 @@ function SignUpLoginScreen() {
         {/* ══════════════════════════════════════════════════
             LEFT — Vibrant brand panel
         ══════════════════════════════════════════════════ */}
-        <section className="relative lg:w-[44%] flex flex-col justify-center px-10 md:px-14 lg:px-20 xl:px-24 py-20 lg:py-0 min-h-[360px] lg:min-h-screen overflow-hidden" style={{ background: 'linear-gradient(150deg, #5B4FDB 0%, #8B3FDB 55%, #C026D3 100%)' }}>
+        <section className="relative lg:w-[44%] flex flex-col justify-center px-6 sm:px-10 md:px-14 lg:px-20 xl:px-24 py-10 lg:py-0 min-h-[320px] lg:min-h-screen overflow-hidden" style={{ background: 'linear-gradient(150deg, #5B4FDB 0%, #8B3FDB 55%, #C026D3 100%)' }}>
 
           {/* Mesh grid */}
           <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />

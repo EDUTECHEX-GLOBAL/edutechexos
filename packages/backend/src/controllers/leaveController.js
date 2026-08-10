@@ -59,11 +59,6 @@ async function createLeave(req, res) {
     if (isNaN(start.getTime())) {
       return res.status(400).json({ success: false, error: 'startDate must be a valid date.' });
     }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (start < today) {
-      return res.status(400).json({ success: false, error: 'startDate cannot be in the past.' });
-    }
     if (endDate) {
       const end = new Date(endDate);
       if (isNaN(end.getTime())) {

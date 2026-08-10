@@ -98,7 +98,10 @@ async function googleLoginCallback(req, res) {
       const dateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
       await LoginEvent.findOneAndUpdate(
         { email: emailClean, dateStr },
-        { $set: { name: user.name, loginAt: new Date(), authMethod: 'google' } },
+        {
+          $set: { name: user.name, lastLoginAt: new Date(), logoutAt: null, authMethod: 'google' },
+          $setOnInsert: { loginAt: new Date(), hoursWorked: 0 },
+        },
         { upsert: true }
       );
     } catch (_) { /* non-fatal */ }

@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import AdminGuard from '@/app/components/AdminGuard';
-import LoginTrackerCalendar from '../components/LoginTrackerCalendar';
+import LoginTrackerCalendar from '@/app/dashboard/components/LoginTrackerCalendar';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://edutechexos-ueoq.onrender.com';
 
@@ -334,7 +334,7 @@ export default function ActivityPage() {
                 Member Breakdown
               </h2>
               {/* Sort controls */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-xs font-semibold text-ink-light">Sort by:</span>
                 {(
                   [
