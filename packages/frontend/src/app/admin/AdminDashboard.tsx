@@ -2980,10 +2980,9 @@ export default function AdminPage() {
                           )}
 
                           {/* Quick stats */}
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
                             {[
                               { label: 'Active Hrs', value: (person.totalActiveSeconds ?? 0) > 0 ? fmtSec(person.totalActiveSeconds ?? 0) : fmt(person.todayMinutes), color: '#10B981', bg: 'rgba(16,185,129,0.08)' },
-                              { label: 'Away from KB', value: afkSecs > 0 ? fmtSec(afkSecs) : '—', color: '#B45309', bg: 'rgba(245,158,11,0.08)' },
                               { label: 'Messages sent', value: String(person.messageCount), color: '#6366F1', bg: 'rgba(99,102,241,0.08)' },
                               { label: 'Tasks updated', value: String(person.taskCount), color: '#F59E0B', bg: 'rgba(245,158,11,0.06)' },
                             ].map(({ label, value, color, bg }) => (

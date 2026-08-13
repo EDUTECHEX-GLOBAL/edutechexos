@@ -35,6 +35,7 @@ function isLunchTime(): boolean {
 
 export default function SessionTimer() {
   const [sessionStart, setSessionStart] = useState<string | null>(null);
+  const [firstStart, setFirstStart] = useState<string | null>(null);
   const [bankedMs, setBankedMs] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [open, setOpen] = useState(false);
@@ -46,8 +47,9 @@ export default function SessionTimer() {
     // Resumes today's already-banked time if this isn't the first login of
     // the day, instead of always restarting from zero (or silently counting
     // through the gap while logged out).
-    const { activeStart, bankedMs } = startOrResumeSession();
+    const { activeStart, bankedMs, firstStart } = startOrResumeSession();
     setSessionStart(activeStart);
+    setFirstStart(firstStart);
     setBankedMs(bankedMs);
     const segmentMs = Date.now() - new Date(activeStart).getTime();
     const lunchMs = parseInt(localStorage.getItem('edutechex_lunch_pause_ms') ?? '0', 10);
@@ -150,7 +152,7 @@ export default function SessionTimer() {
             <div className="flex flex-col gap-1 rounded-xl px-3 py-2.5" style={{ background: '#F8FAFC', border: '1px solid rgba(108,123,245,0.08)' }}>
               <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#9CA3AF' }}>Logged in at</span>
               <span className="text-[13px] font-bold" style={{ color: '#1E293B' }}>
-                {formatLoginTime(sessionStart)}
+                {formatLoginTime(firstStart || sessionStart)}
               </span>
             </div>
           </div>

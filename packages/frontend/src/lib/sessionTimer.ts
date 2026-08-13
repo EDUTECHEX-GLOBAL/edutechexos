@@ -17,6 +17,7 @@
 const DATE_KEY = 'edutechex_session_date';
 const BANKED_KEY = 'edutechex_session_banked_ms';
 const ACTIVE_KEY = 'edutechex_session_active_start';
+const FIRST_KEY = 'edutechex_session_first_start';
 const LUNCH_KEY = 'edutechex_lunch_pause_ms';
 const OWNER_KEY = 'edutechex_session_owner'; // email these values belong to
 
@@ -47,6 +48,7 @@ function ensureFreshSession(email?: string) {
     if (owner) localStorage.setItem(OWNER_KEY, owner);
     localStorage.setItem(BANKED_KEY, '0');
     localStorage.removeItem(ACTIVE_KEY);
+    localStorage.removeItem(FIRST_KEY);
     localStorage.setItem(LUNCH_KEY, '0');
   } else if (owner && !localStorage.getItem(OWNER_KEY)) {
     localStorage.setItem(OWNER_KEY, owner);
@@ -56,16 +58,24 @@ function ensureFreshSession(email?: string) {
 // Called on login / whenever the session clock UI mounts. Starts a fresh
 // segment only if one isn't already active (e.g. a page refresh while still
 // logged in should NOT start a new segment on top of the existing one).
-export function startOrResumeSession(): { activeStart: string; bankedMs: number } {
+export function startOrResumeSession(): { activeStart: string; bankedMs: number; firstStart: string } {
   ensureFreshSession(currentEmail());
   let activeStart = localStorage.getItem(ACTIVE_KEY);
+  let firstStart = localStorage.getItem(FIRST_KEY);
+
+  const nowIso = new Date().toISOString();
+  if (!firstStart) {
+    firstStart = nowIso;
+    localStorage.setItem(FIRST_KEY, firstStart);
+  }
+
   if (!activeStart) {
-    activeStart = new Date().toISOString();
+    activeStart = nowIso;
     localStorage.setItem(ACTIVE_KEY, activeStart);
     localStorage.setItem(LUNCH_KEY, '0');
   }
   const bankedMs = parseInt(localStorage.getItem(BANKED_KEY) ?? '0', 10);
-  return { activeStart, bankedMs };
+  return { activeStart, bankedMs, firstStart };
 }
 
 // Called at every logout point. Folds the current segment's elapsed time into
@@ -88,6 +98,7 @@ export function clearSessionTime() {
   localStorage.removeItem(DATE_KEY);
   localStorage.removeItem(BANKED_KEY);
   localStorage.removeItem(ACTIVE_KEY);
+  localStorage.removeItem(FIRST_KEY);
   localStorage.removeItem(LUNCH_KEY);
   localStorage.removeItem(OWNER_KEY);
 }

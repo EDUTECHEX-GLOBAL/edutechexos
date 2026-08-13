@@ -116,16 +116,24 @@ async function disconnect(userEmail) {
 // Returns a valid access token for this user, refreshing it if expired.
 // Returns null if the user hasn't connected Google Calendar.
 async function getValidAccessToken(userEmail) {
+  if (!isConfigured()) return null;
   const doc = await GoogleCalendarToken.findOne({ userEmail });
   if (!doc) return null;
 
   if (Date.now() < doc.expiryDate - 60000) return doc.accessToken;
 
-  const refreshed = await refreshAccessToken(doc.refreshToken);
-  doc.accessToken = refreshed.access_token;
-  doc.expiryDate = Date.now() + (refreshed.expires_in || 3600) * 1000;
-  await doc.save();
-  return doc.accessToken;
+  if (!doc.refreshToken) return null;
+
+  try {
+    const refreshed = await refreshAccessToken(doc.refreshToken);
+    doc.accessToken = refreshed.access_token;
+    doc.expiryDate = Date.now() + (refreshed.expires_in || 3600) * 1000;
+    await doc.save();
+    return doc.accessToken;
+  } catch (err) {
+    console.error(`[google-calendar] Failed to refresh token for ${userEmail}:`, err.message);
+    return null;
+  }
 }
 
 // Creates (or updates, if already synced once) a Google Calendar event for
